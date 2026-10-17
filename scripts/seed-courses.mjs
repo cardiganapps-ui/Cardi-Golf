@@ -364,6 +364,7 @@ async function main() {
   // A local target never gets production's key from .env.local: only what the environment already holds.
   const ownKey = process.env.SUPABASE_SECRET_KEY
   loadEnv()
+  /** @type {Record<string, string | undefined>} */
   const env = { ...process.env, SUPABASE_SECRET_KEY: target.kind === 'local' ? ownKey : process.env.SUPABASE_SECRET_KEY }
   const listFile = path.resolve(opt('--list') ?? path.join(root, 'docs', 'strategy', 'courses-mx.json'))
   const reportFile = path.resolve(opt('--report') ?? 'seed-courses-report.json')

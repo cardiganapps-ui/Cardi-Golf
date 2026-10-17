@@ -217,7 +217,7 @@ export function inboxChanged(c: InboxChange | null): void {
   // A design fixture's list is read by nothing (`loadRejectedInbox`).
   if (!tid) return
   if (c?.eventType === 'DELETE') {
-    const id = c.old?.id
+    const id = c.old?.id as string | number | undefined
     if (s.status !== 'loading' && (id == null || !s.items.some((x) => x.id === String(id)))) return
   } else if (c && c.new?.tournament_id !== tid) return
   // Armed for the list the Comité held before (a change heard just before it moved here): that one

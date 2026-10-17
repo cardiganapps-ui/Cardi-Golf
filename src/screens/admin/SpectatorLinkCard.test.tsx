@@ -117,7 +117,7 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(server.link.money).toBe(false)
     await confirm(S.moneyOnTitle, S.withMoney)
     await waitFor(() => expect(choice(S.withMoney).getAttribute('aria-checked')).toBe('true'))
-    expect(server.link!.money).toBe(true)
+    expect(server.link.money).toBe(true)
     fireEvent.click(choice(S.noMoney))
     await waitFor(() => expect(server.link!.money).toBe(false))
   })
@@ -131,9 +131,9 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(await screen.findByText(S.rotateBody)).toBeTruthy()
     await confirm(S.rotate, S.rotate)
     await waitFor(() => expect(screen.queryByText(`${window.location.origin}/v/${old}`)).toBeNull())
-    expect(server.link!.token).not.toBe(old)
-    expect(server.link!.money).toBe(true)
-    expect(screen.getByText(`${window.location.origin}/v/${server.link!.token}`)).toBeTruthy()
+    expect(server.link.token).not.toBe(old)
+    expect(server.link.money).toBe(true)
+    expect(screen.getByText(`${window.location.origin}/v/${server.link.token}`)).toBeTruthy()
   })
 
   it('«Apagar» asks, then there is no link', async () => {

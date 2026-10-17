@@ -10,6 +10,6 @@ const digest = (s: string) => createHash('sha256').update(s, 'utf8').digest()
 /** True when the request's Authorization header is exactly `Bearer <secret>`. False for a missing secret. */
 export function bearerMatches(header: string | string[] | undefined, secret: string | undefined): boolean {
   if (!secret) return false
-  const got = Array.isArray(header) ? header.join(',') : String(header ?? '')
+  const got = Array.isArray(header) ? header.join(',') : (header ?? '')
   return timingSafeEqual(digest(got), digest(`Bearer ${secret}`))
 }

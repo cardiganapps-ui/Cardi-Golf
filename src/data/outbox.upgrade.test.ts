@@ -45,7 +45,7 @@ describe('outbox upgrade from v2', () => {
     _outboxTest.setPush(async () => {
       throw new Error('TypeError: Failed to fetch')
     })
-    await _outboxTest.enqueue({ ...legacy(9, 4000), kind: 'score' as const, attempts: 0 } as Parameters<typeof _outboxTest.enqueue>[0])
+    await _outboxTest.enqueue({ ...legacy(9, 4000), kind: 'score' as const, attempts: 0 })
     expect(_outboxTest.queue().at(-1)!.key).toBe('score:r1:p1:9')
   })
 })

@@ -14,8 +14,8 @@ import { fetchWithTimeout } from '../lib/fetchWithTimeout'
 import { ApiError } from './apiError'
 import { asCall, type ArgsOf, type Call, type FnName, type FnReturns } from './rpc'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const url = import.meta.env.VITE_SUPABASE_URL
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 /**
  * PostgREST's answer to `rpc/<name>`, or an `ApiError` with its code and the

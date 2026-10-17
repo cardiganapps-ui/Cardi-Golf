@@ -84,15 +84,15 @@ type Scope = 'tournament' | 'round' | 'lot'
 /** How one table's rows live in the snapshot. */
 interface Spec<T> {
   scope: Scope
-  get(s: Snapshot): T[]
-  set(s: Snapshot, list: T[]): void
+  get: (s: Snapshot) => T[]
+  set: (s: Snapshot, list: T[]) => void
   /** Whether a snapshot row has this database row's key (an insert or update: the table's unique key). */
-  same(x: T, row: Row): boolean
+  same: (x: T, row: Row) => boolean
   /** Whether a snapshot row is the one a delete names, when that is not `same` (a score's delete names only its id). */
-  deletes?(x: T, key: Row): boolean
+  deletes?: (x: T, key: Row) => boolean
   /** The order a fetch returns the table in (`SNAPSHOT_KEYS`), on the snapshot's own fields. */
-  order(a: T, b: T): number
-  map(row: Row): T
+  order: (a: T, b: T) => number
+  map: (row: Row) => T
   /**
    * Whether the row held is newer than one this phone's own write brought
    * back: its answer can come after a later write was heard or fetched. Never
@@ -100,7 +100,7 @@ interface Spec<T> {
    * when its transaction began, so a write that waited on the row's lock
    * commits last with the earlier stamp (#92's third verifier, R1).
    */
-  stale?(held: T, coming: T): boolean
+  stale?: (held: T, coming: T) => boolean
 }
 const spec = <T>(x: Spec<T>) => x as unknown as Spec<unknown>
 
@@ -316,7 +316,7 @@ export const RELOADED_TABLES = ['tournaments', 'players', 'pairs', 'rounds', 'gr
 
 /** Whether the snapshot holds the row this key names (a member: of the group or team it names). */
 function holds(s: Snapshot, tournamentId: string, table: string, key: Row): boolean | undefined {
-  const id = key.id
+  const id: unknown = key.id
   switch (table) {
     case 'tournaments': return id === undefined ? undefined : id === tournamentId
     case 'players': return id === undefined ? undefined : s.players.some((x) => x.id === id)
@@ -325,9 +325,9 @@ function holds(s: Snapshot, tournamentId: string, table: string, key: Row): bool
     case 'groups': return id === undefined ? undefined : s.groups.some((x) => x.id === id)
     case 'teams': return id === undefined ? undefined : (s.teams ?? []).some((x) => x.id === id)
     case 'group_members':
-      return key.group_id === undefined || key.player_id === undefined ? undefined : s.groups.some((g) => g.id === key.group_id && g.playerIds.includes(key.player_id))
+      return key.group_id === undefined || key.player_id === undefined ? undefined : s.groups.some((g) => g.id === key.group_id && g.playerIds.includes(key.player_id as string))
     case 'team_members':
-      return key.team_id === undefined || key.player_id === undefined ? undefined : (s.teams ?? []).some((t) => t.id === key.team_id && t.playerIds.includes(key.player_id))
+      return key.team_id === undefined || key.player_id === undefined ? undefined : (s.teams ?? []).some((t) => t.id === key.team_id && t.playerIds.includes(key.player_id as string))
     default: return undefined
   }
 }

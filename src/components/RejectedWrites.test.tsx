@@ -264,7 +264,7 @@ describe('the refused list says what stands in the way now, and who can send it 
   })
 
   it('a mixed list keeps both instructions: resend what can go, send the rest to the Comité', () => {
-    const day1: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4 } as RejectedItem['payload'] }
+    const day1: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4 } }
     mount('list', { rejected: [hole11, day1] })
     expect(list().getByText(IB.rejectedHintMixed)).toBeTruthy()
     expect(list().getByRole('button', { name: `${IB.resend}: ${HOLE11}` })).toBeTruthy()

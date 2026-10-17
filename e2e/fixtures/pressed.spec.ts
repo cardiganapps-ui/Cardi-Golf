@@ -37,7 +37,7 @@ async function unpressable(page: Page) {
       ([i, props]) => {
         const el = document.querySelector(`[data-press-i="${i}"]`)!
         const cs = getComputedStyle(el)
-        return (props as string[]).map((p) => cs.getPropertyValue(p))
+        return (props).map((p) => cs.getPropertyValue(p))
       },
       [i, PAINT] as const,
     )

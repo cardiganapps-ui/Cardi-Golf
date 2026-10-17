@@ -32,7 +32,7 @@ interface AuthState {
    * page when the token refresh stalled on a phone's 4G.
    */
   bootError: 'timeout' | 'error' | null
-  init(): Promise<void>
+  init: () => Promise<void>
 }
 
 let inited = false

@@ -141,7 +141,7 @@ for (const scheme of ['light', 'dark'] as const) {
     const ratios = await page.locator('[class*="_mine_"]').first().evaluate((row) => {
       const lum = (c: string) => {
         const [r, g, b] = c.match(/\d+(\.\d+)?/g)!.slice(0, 3).map((v) => Number(v) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
-        return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
       }
       const bg = lum(getComputedStyle(row).backgroundColor)
       return Array.from(row.querySelectorAll('[class*="_pos_"], [class*="_today_"], [class*="_thru_"]')).map((el) => {
@@ -162,7 +162,7 @@ test('forced colors: the chosen segment, the tab you are on and my row still sho
   const tabs = await page.getByRole('navigation').last().getByRole('link').evaluateAll((els) => els.map((el) => `${getComputedStyle(el).backgroundColor}|${el.getAttribute('aria-current')}`))
   const current = tabs.filter((x) => x.endsWith('|page'))
   expect(current).toHaveLength(1)
-  expect(tabs.filter((x) => x.split('|')[0] === current[0]!.split('|')[0])).toHaveLength(1)
+  expect(tabs.filter((x) => x.split('|')[0] === current[0].split('|')[0])).toHaveLength(1)
   const outline = await page.locator('[class*="_mine_"]').first().evaluate((el) => getComputedStyle(el).outlineStyle)
   expect(outline).toBe('solid')
 })

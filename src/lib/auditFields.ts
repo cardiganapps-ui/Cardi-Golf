@@ -130,6 +130,9 @@ function statusValue(table: string, v: string): string {
   return v
 }
 
+/** A scalar's text; an object reads as its JSON, never «[object Object]». */
+const text = (v: unknown): string => (typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint' ? String(v) : JSON.stringify(v))
+
 /** One column's value, as the Comité reads it: money in the tournament's currency, moments in its zone (ARCH-06). */
 export function fieldValue(key: string, v: unknown, table: string, names: AuditNames, timeZone: string, cur: string): string {
   if (v == null || v === '') return V.none
@@ -153,11 +156,11 @@ export function fieldValue(key: string, v: unknown, table: string, names: AuditN
     case 'course':
       return named(names.course)
     case 'money':
-      return typeof v === 'number' ? formatMoney(v, cur) : String(v)
+      return typeof v === 'number' ? formatMoney(v, cur) : text(v)
     case 'moment':
-      return id ? localWhen(id, timeZone) : String(v)
+      return id ? localWhen(id, timeZone) : text(v)
     case 'clock':
-      return id ? id.slice(0, 5) : String(v)
+      return id ? id.slice(0, 5) : text(v)
     case 'flag':
       return v === true ? V.yes : V.no
     case 'image':
@@ -169,13 +172,15 @@ export function fieldValue(key: string, v: unknown, table: string, names: AuditN
     case 'opaque':
       return V.changed
     case 'status':
-      return statusValue(table, String(v))
+      return statusValue(table, text(v))
     case 'source':
-      return V.source[String(v)] ?? String(v)
+      return V.source[text(v)] ?? text(v)
     case 'pin':
-      return V.pin[String(v)] ?? V.changed
+      return V.pin[text(v)] ?? V.changed
+    case undefined:
+      break
   }
   if (typeof v === 'boolean') return v ? V.yes : V.no
   if (typeof v === 'object') return V.changed
-  return String(v)
+  return text(v)
 }

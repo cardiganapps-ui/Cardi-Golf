@@ -34,7 +34,7 @@ describe('CountUp', () => {
     const { container } = render(<CountUp value={73} format={fmt} />)
     expect(seen(container)).toBe('0 puntos')
     advance(COUNT_MS / 3)
-    const mid = parseInt(seen(container)!, 10)
+    const mid = parseInt(seen(container), 10)
     expect(mid).toBeGreaterThan(0)
     expect(mid).toBeLessThan(73)
     advance(COUNT_MS)

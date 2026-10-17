@@ -62,7 +62,6 @@ function mount(edit: (s: Snapshot) => void, opts: { isComite?: boolean } = {}) {
 }
 const rule = (cardSigning?: TournamentSettings['cardSigning']) => (s: Snapshot) => {
   const { cardSigning: _drop, ...rest } = s.tournament.settings as TournamentSettings
-  void _drop
   s.tournament.settings = cardSigning ? { ...rest, cardSigning } : rest
 }
 const nameOf = (s: Snapshot, id: string) => s.players.find((p) => p.id === id)!.displayName

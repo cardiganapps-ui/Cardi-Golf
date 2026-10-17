@@ -14,9 +14,9 @@ import { applyAdjustments } from '../engine/core/unassigned'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
-const ins = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'INSERT', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const upd = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'UPDATE', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const del = (table: string, key: Record<string, unknown>): LiveChange => ({ table, eventType: 'DELETE', new: {} as LiveChange['new'], old: key as LiveChange['old'] })
+const ins = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'INSERT', new: row, old: {} })
+const upd = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'UPDATE', new: row, old: {} })
+const del = (table: string, key: Record<string, unknown>): LiveChange => ({ table, eventType: 'DELETE', new: {}, old: key })
 
 describe('scores', () => {
   it('a hole saved on another phone replaces that hole, in its place, and only that hole', () => {

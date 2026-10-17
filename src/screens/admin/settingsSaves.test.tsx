@@ -200,7 +200,7 @@ describe('the prize check never assumes a field of 12 (ARCH-13, UX-16)', () => {
 
 describe('Juegos writes only the games (ARCH-13)', () => {
   /** A game's card on Juegos, by its title. */
-  const section = (label: string) => screen.getByText(label).closest('section') as HTMLElement
+  const section = (label: string) => screen.getByText(label).closest('section')!
 
   it('an entry changed on another phone stays when a game changes here', async () => {
     const { fx, reload } = world('friends8')

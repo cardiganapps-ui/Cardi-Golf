@@ -9,7 +9,7 @@ describe('stats and awards (§12)', () => {
     // p1: PH 5. Birdie on hole 3 (par 3 → gross 2), par elsewhere, pick-up on 18. One-putt on 3, three-putt on 9.
     const gross = [4, 4, 2, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 3, 4, 0]
     const putts = [2, 2, 1, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-    for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', 'p1', h, gross[h - 1]! || null, putts[h - 1]!, gross[h - 1] === 0))
+    for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', 'p1', h, gross[h - 1]! || null, putts[h - 1], gross[h - 1] === 0))
     const st = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).stats
     const s = st.players.p1!
     expect(s.holesPlayed).toBe(18)

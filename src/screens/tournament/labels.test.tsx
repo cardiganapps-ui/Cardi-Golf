@@ -35,7 +35,7 @@ import { TvScreen } from './TvScreen'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 afterEach(() => {

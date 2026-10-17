@@ -101,7 +101,7 @@ try {
   const { data } = sb.storage.from('tournament-assets').getPublicUrl(p)
   await sb.from('tournaments').update({ logo_url: data.publicUrl }).eq('id', t.id)
   console.log('logo uploaded')
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.warn('logo skipped:', e.message)
 }
 
@@ -205,6 +205,7 @@ if (!pairCount) {
 }
 for (const rid of rounds) {
   const groups = must(await sb.from('groups').select('id, number').eq('round_id', rid), 'select groups')
+  /** @type {Array<[number, string[]]>} */
   const plan = [
     [1, [P(0), P(9), P(3), P(6)]],
     [2, [P(1), P(10), P(4), P(7)]],

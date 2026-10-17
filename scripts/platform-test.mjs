@@ -59,7 +59,10 @@ async function account(tag, name) {
   return { sb, id: made.user.id, email, password }
 }
 
-// Every platform_* RPC with harmless arguments.
+/**
+ * Every platform_* RPC with harmless arguments.
+ * @returns {Array<[string, Record<string, unknown>]>}
+ */
 const PLATFORM_CALLS = (tid, uid) => [
   ['platform_overview', {}],
   ['platform_daily', { p_days: 7 }],
@@ -123,7 +126,7 @@ try {
   await query(`insert into public.platform_admins (auth_user_id, note) values ('${uuid(P.id)}', 'platform-test')`)
 
   console.log('nobody else reaches the platform:')
-  for (const [who, sb] of [['an account', N.sb], ['an organizer', A.sb], ['an anonymous device', dev]]) {
+  for (const [who, sb] of /** @type {Array<[string, typeof dev]>} */ ([['an account', N.sb], ['an organizer', A.sb], ['an anonymous device', dev]])) {
     const { data: isAdmin } = await sb.rpc('is_platform_admin')
     const results = await Promise.all(PLATFORM_CALLS(T.id, A.id).map(([fn, args]) => sb.rpc(fn, args)))
     const leaks = PLATFORM_CALLS(T.id, A.id).filter((_, i) => !denied(results[i].error)).map(([fn]) => fn)
@@ -409,7 +412,7 @@ try {
       select set_config('request.jwt.claims', '{"sub":"${uuid(P.id)}","role":"authenticated"}', true);
       select public.platform_broadcast('Prueba', 'Nunca debe salir', null, null);
       rollback;`)
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     limitErr = String(e.message)
   }
   await query('rollback').catch(() => {})
@@ -443,7 +446,7 @@ try {
   const { data: comitePhones, error: cpErr } = await A.sb.rpc('tournament_devices', { p_tournament_id: T.id })
   const { error: strangerErr } = await N.sb.rpc('tournament_devices', { p_tournament_id: T.id })
   check(!cpErr && Array.isArray(comitePhones) && denied(strangerErr), 'tournament_devices: the Comité reads its phones, a stranger is refused', cpErr?.message ?? strangerErr)
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {

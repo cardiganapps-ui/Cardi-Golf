@@ -44,7 +44,7 @@ async function ragged(page: Page): Promise<string[]> {
       for (const [i, xs] of edges) {
         const min = Math.min(...xs.map((e) => e.x))
         const max = Math.max(...xs.map((e) => e.x))
-        if (max - min > 1) out.push(`cell ${i + 1} after the text ends anywhere from x=${Math.round(min)} to x=${Math.round(max)} down one list (e.g. «${xs[0]!.row}»)`)
+        if (max - min > 1) out.push(`cell ${i + 1} after the text ends anywhere from x=${Math.round(min)} to x=${Math.round(max)} down one list (e.g. «${xs[0].row}»)`)
       }
     }
     return out

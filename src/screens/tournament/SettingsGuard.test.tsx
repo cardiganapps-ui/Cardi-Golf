@@ -37,7 +37,7 @@ import { TournamentShell } from './TournamentShell'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 const FX = 'full12-live'

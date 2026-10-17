@@ -349,7 +349,7 @@ for (const c of spec.cases) {
   let got
   try {
     got = runCase(c)
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     failed++
     console.log(`  ✗ ${c.name}\n      ${String(e.message ?? e).split('\n').join('\n      ')}`)
     continue

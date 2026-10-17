@@ -72,7 +72,7 @@ for (const [what, width, height] of SIZES) {
       expect(f.y, 'the feed starts near the top, not under the board').toBeLessThan(b.y + b.height / 2)
       // The tabs sit together, not spread across the screen.
       const tabs = await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()))
-      const span = tabs.at(-1)!.right - tabs[0]!.left
+      const span = tabs.at(-1)!.right - tabs[0].left
       expect(span, 'the tab bar spans').toBeLessThanOrEqual(720)
       expect(await widestMeasure(page)).toBeLessThanOrEqual(72)
       await sound(page, pageErrors, width)

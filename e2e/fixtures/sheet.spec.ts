@@ -23,7 +23,7 @@ async function openSheet(page: Page) {
   })
 }
 
-type Frame = { at: number; present: boolean; opacity: number; top: number }
+interface Frame { at: number; present: boolean; opacity: number; top: number }
 /**
  * From the Escape on (the clock starts in the key's own listener, so a busy machine can't start it late): every
  * frame for 600 ms, whether the dialog is in the DOM and how visible it is (its opacity times its backdrop's), and
@@ -92,7 +92,7 @@ test('Escape: the sheet stays on screen fading for its exit, then goes; the page
   expect(goneAt!, trace).toBeLessThan(1000)
   // While it was there, more transparent from frame to frame, and visibly on its way: fading and lower.
   const leaving = frames.filter((x) => x.present)
-  for (let i = 1; i < leaving.length; i++) expect(leaving[i]!.opacity, trace).toBeLessThanOrEqual(leaving[i - 1]!.opacity + 1e-6)
+  for (let i = 1; i < leaving.length; i++) expect(leaving[i].opacity, trace).toBeLessThanOrEqual(leaving[i - 1].opacity + 1e-6)
   expect(leaving.some((x) => x.opacity < 0.95 && x.top > top0), trace).toBe(true)
   await expect(page.locator(DIALOG)).toHaveCount(0)
   expect(await page.evaluate(() => document.querySelectorAll('[inert]').length)).toBe(0)

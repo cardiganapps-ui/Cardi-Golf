@@ -148,7 +148,7 @@ describe('V2: mutate after assigning — no double pay, flagged, conserved', () 
     const statuses = st2.money.unassigned.assignments.map((a) => a.status)
     // Either still fits or flagged; never both the new slot and the full refund beyond the pot.
     const calcuttaOut = st2.prizes.filter((p) => p.potId === 'calcutta').reduce((s, p) => s + p.amount, 0)
-    expect(calcuttaOut, `statuses ${statuses}`).toBeLessThanOrEqual(st2.modules.auction!.pot)
+    expect(calcuttaOut, `statuses ${statuses.join(',')}`).toBeLessThanOrEqual(st2.modules.auction!.pot)
   })
 
   it('void after marked paid: exact prior state, the player owes it back', () => {

@@ -67,7 +67,7 @@ export function RouteAnnouncer() {
     }
     const land = () => {
       // Focus found its own way meanwhile (a field that focuses itself, a sheet): leave it, and say the page.
-      if (!focusLost()) return say()
+      if (!focusLost()) { say(); return; }
       if (focusQuietly(pageHeading())) return
       if (performance.now() - started < HEADING_WAIT_MS) {
         timer = setTimeout(land, HEADING_POLL_MS)

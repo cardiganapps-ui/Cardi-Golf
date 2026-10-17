@@ -77,7 +77,7 @@ function slowReload() {
     ;(q as unknown as { then: typeof then }).then = ((a, b) => {
       reached()
       return gate.then(() => then(a, b))
-    }) as typeof then
+    })
     return q
   }
   const reloading = store().reload()
@@ -131,7 +131,7 @@ describe('a score this phone saved, once the server took it', () => {
     return structuredClone(row)
   }
   beforeEach(async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const group = fx.snapshot.groups.find((g) => g.roundId === round.id)!
@@ -536,7 +536,7 @@ describe('a hole contest’s winners (the push deletes the group’s winners for
   }
   const award = (ids: string[]) => enqueueAward(TID, { round_id: R, group_id: G1, hole: HOLE, game_id: GAME, player_ids: ids, decided_by: 'p1' })
   beforeEach(async () => {
-    const fx = (await open('friends8'))!
+    const fx = (await open('friends8'))
     TID = fx.snapshot.tournament.id
     server.tables.hole_awards = server.tables.hole_awards!.filter((x) => !(x.round_id === R && x.hole === HOLE && x.game_id === GAME))
     await store().reload()
@@ -613,7 +613,7 @@ describe('a hole contest’s winners (the push deletes the group’s winners for
 
 describe('a snake answer changed', () => {
   it('the first answer’s echo during the second push does not leave the first showing (T1)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -635,7 +635,7 @@ describe('a snake answer changed', () => {
   })
 
   it('the group’s other phone answers after this one’s echo, before this push’s answer: its answer shows, not this one’s again (T2)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -655,7 +655,7 @@ describe('a snake answer changed', () => {
   })
 
   it('a late answer after a reconnect: the fetch read the group mate’s changed answer; this push’s older one shows only until the one more fetch brings the mate’s back (R3b)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -674,7 +674,7 @@ describe('a snake answer changed', () => {
   })
 
   it('the phone’s clock set back while the answer is out: the reconnect fetch still counts as after it, and one more fetch brings the mate’s answer back (N6)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -699,7 +699,7 @@ describe('a snake answer changed', () => {
   })
 
   it('the phone’s clock set forward while the answer is out: the log still holds the echoes, so the mate’s later answer shows, not this one’s again (N6b)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -732,7 +732,7 @@ describe('a snake answer changed', () => {
    * Whichever fetch reads b, one more fetch must follow it, or this push's older a stays on the boards until the heal.
    */
   async function answerOut() {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -823,7 +823,7 @@ describe('a snake answer changed', () => {
   })
 
   it('changed and changed back while the first answer was out (a → b → a), on a coarse clock: the first a’s landing is not taken for the second’s echo, so the second lands over the mate’s b heard meanwhile (K-V20)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -859,7 +859,7 @@ describe('a snake answer changed', () => {
 describe('a write to a day this phone has not loaded (parked until the day comes)', () => {
   const day = (TID: string, courseId: string | null) => ({ id: 'r3-new', tournament_id: TID, number: 3, date: '2027-04-11', course_id: courseId, holes: 18, status: 'live' })
   async function setup() {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const P = fx.snapshot.groups.find((g) => g.roundId === 'r2')!.playerIds[0]!
     server.tables.rounds!.push(day(TID, fx.snapshot.rounds[0]!.courseId))
@@ -905,7 +905,7 @@ describe('a write to a day this phone has not loaded (parked until the day comes
 
 describe('Dinero: «Marcar pagado» on an account with no row yet', () => {
   it('the mark laid on the boards and the server’s insert are one row: the payment counts once (M1)', async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const pid = fx.snapshot.players.find((p) => !server.tables.payments!.some((x) => x.from_player_id === p.id && x.kind === 'entry'))?.id
     expect(pid).toBeTruthy()
@@ -929,7 +929,7 @@ describe('changes of a day this phone has not loaded, and the change log', () =>
   let R: string
   let P: string
   beforeEach(async () => {
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     TID = fx.snapshot.tournament.id
     R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
@@ -1057,7 +1057,7 @@ describe('changes of a day this phone has not loaded, and the change log', () =>
 describe('another tab of the app on this phone', () => {
   it('its write the server took shows here before this tab’s own echo comes (X1)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
@@ -1072,7 +1072,7 @@ describe('another tab of the app on this phone', () => {
 
   it('its answer, after this tab heard its echo and the group’s other phone’s answer, does not come back over the other phone’s (X2)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -1097,7 +1097,7 @@ describe('another tab of the app on this phone', () => {
 
   it('its write sent before this tab’s last fetch does not land: that fetch may have read past it, so one more fetch shows the server (X3)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
@@ -1124,7 +1124,7 @@ describe('another tab of the app on this phone', () => {
 
   it('an earlier identical row is not its write’s echo: a → b → a from the other tab, after this tab heard a’s and b’s echoes, shows a (N3)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
     const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
@@ -1146,7 +1146,7 @@ describe('another tab of the app on this phone', () => {
 
   it('a message posted «in the future» (the wall clock went back while it waited) counts as not saying: one more fetch, the later row stands (#92 round 6, E2c)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
@@ -1172,7 +1172,7 @@ describe('another tab of the app on this phone', () => {
   /** Hole 16 of the live round's first player, as the server stored the other tab's write. */
   async function stored(strokes: number) {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
@@ -1240,7 +1240,7 @@ describe('another tab of the app on this phone', () => {
   // between as before the push: the message says when it was posted, and the wait is taken off.
   it('its write sent before this tab’s last fetch, heard while this tab is busy, still asks one more fetch (X3b)', async () => {
     await startOutbox()
-    const fx = (await open('full12-live'))!
+    const fx = (await open('full12-live'))
     const TID = fx.snapshot.tournament.id
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!

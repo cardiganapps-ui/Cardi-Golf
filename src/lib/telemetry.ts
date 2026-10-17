@@ -81,7 +81,7 @@ const once = new Set<string>()
 /** The JavaScript engine's own errors: their messages name code, never a person. Not SyntaxError: a JSON one quotes its input. */
 const BUILTIN = new Set(['TypeError', 'RangeError', 'ReferenceError', 'EvalError', 'URIError', 'AggregateError'])
 
-type Env = { PROD?: boolean; MODE?: string; VITE_DESIGN_ROUTES?: string }
+interface Env { PROD?: boolean; MODE?: string; VITE_DESIGN_ROUTES?: string }
 /** Telemetry is on in a production build with Supabase configured, off in tests, dev and the fixtures build. */
 export function telemetryAllowed(env: Env = import.meta.env): boolean {
   return !!env.PROD && env.MODE !== 'test' && env.VITE_DESIGN_ROUTES !== '1' && supabaseConfigured
@@ -107,8 +107,8 @@ export function getDeviceId(): string {
 
 function stored(): ClientEvent[] {
   try {
-    const kept = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
-    return Array.isArray(kept) ? kept.filter((e) => e && typeof e.name === 'string' && typeof e.id === 'string') : []
+    const kept: unknown = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
+    return Array.isArray(kept) ? (kept as Array<Partial<ClientEvent> | null>).filter((e): e is ClientEvent => !!e && typeof e.name === 'string' && typeof e.id === 'string') : []
   } catch {
     return []
   }
@@ -241,7 +241,7 @@ export function saveAnswered(sentAt: number, answeredAt: number, rows: Array<Rec
   if (!(rtt >= 0)) return
   track('sync', 'save_ack', rtt)
   if (replayed) return
-  const stamp = rows?.map((r) => Date.parse(String(r.updated_at ?? ''))).find((t) => Number.isFinite(t))
+  const stamp = rows?.map((r) => (typeof r.updated_at === 'string' ? Date.parse(r.updated_at) : NaN)).find((t) => Number.isFinite(t))
   if (stamp != null && (offset == null || rtt < offset.rtt)) offset = { ms: (sentAt + answeredAt) / 2 - stamp, rtt }
 }
 
@@ -257,11 +257,11 @@ export function clockOffset(): number | null {
  */
 export function changeArrived(row: Record<string, unknown>) {
   if (!enabled) return
-  const key = `${row.round_id}:${row.player_id}:${row.hole}`
+  const key = `${String(row.round_id)}:${String(row.player_id)}:${String(row.hole)}`
   const now = Date.now()
   for (const [k, at] of ownPushes) if (now - at > OWN_ECHO_MS) ownPushes.delete(k)
   if (ownPushes.has(key)) return
-  const stamp = Date.parse(String(row.updated_at ?? ''))
+  const stamp = typeof row.updated_at === 'string' ? Date.parse(row.updated_at) : NaN
   if (!Number.isFinite(stamp)) return
   const lag = now - (offset?.ms ?? 0) - stamp
   // A lag beyond ten minutes is a phone that slept or a clock far off, not a delivery time.
@@ -286,7 +286,7 @@ async function signedIn(): Promise<boolean> {
 /** Send what is queued, 50 at a time. Kept for the next try if the network or the session fails. */
 export async function flush(): Promise<void> {
   if (!enabled || flushing || !queue.length) return
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) return scheduleFlush()
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) { scheduleFlush(); return; }
   flushing = true
   try {
     if (!(await signedIn())) return
@@ -351,7 +351,7 @@ export async function heartbeat(): Promise<void> {
 export function outboxChanged() {
   if (!enabled || beatTimer) return
   const s = snapshot()
-  if (lastBeat && lastBeat.pending === s.pending && lastBeat.rejected === s.rejected) return
+  if (lastBeat?.pending === s.pending && lastBeat.rejected === s.rejected) return
   beatTimer = setTimeout(() => {
     beatTimer = null
     void heartbeat()
@@ -387,7 +387,7 @@ export function startTelemetry(env?: Env) {
       onFCP(send)
       onTTFB(send)
     })
-    .catch(() => {})
+    .catch(() => undefined)
   step('app_open')
   void heartbeat()
   scheduleFlush(5_000)

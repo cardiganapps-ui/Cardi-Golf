@@ -85,8 +85,10 @@ try {
       try {
         const headers = { ...req.headers() }
         delete headers['content-length']
-        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer() })
+        const data = req.postDataBuffer()
+        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) || !data ? undefined : new Uint8Array(data) })
         const body = Buffer.from(await res.arrayBuffer())
+        /** @type {Record<string, string>} */
         const h = {}
         res.headers.forEach((v, k) => {
           if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k)) h[k] = v
@@ -163,7 +165,7 @@ try {
   check(disabledBefore && !gone?.user, 'deleting waits for the email and a reason, then the account is gone', { disabledBefore })
 
   check(errors.length === 0, 'no page errors', errors)
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {

@@ -82,7 +82,7 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
           </button>
         </div>
       ) : null}
-      {profile && profile.status === 'confirmed' && profile.index != null && onUseIndex ? (
+      {profile?.status === 'confirmed' && profile.index != null && onUseIndex ? (
         <div className={a.chipRow}>
           <button className="btn btn--secondary btn--sm" type="button" onClick={() => onUseIndex(profile.index!)}>
             {P.applyIndex(formatIndex(profile.index), profile.indexSource === 'manual')}

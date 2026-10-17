@@ -16,7 +16,7 @@ async function wholeInStrip(tab: Locator) {
     return r.left >= strip.left - 0.5 && r.right <= strip.right + 0.5
   })
 }
-const fades = (strip: Locator) => strip.evaluate((el) => ({ start: el.hasAttribute('data-more-start'), end: el.hasAttribute('data-more-end'), mask: getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage }))
+const fades = (strip: Locator) => strip.evaluate((el) => ({ start: el.hasAttribute('data-more-start'), end: el.hasAttribute('data-more-end'), mask: getComputedStyle(el).maskImage || getComputedStyle(el).getPropertyValue('-webkit-mask-image') }))
 
 for (const width of [375, 393]) {
   test(`the game tabs are underlined, fade where more hide, and keep the chosen one in view at ${width}px (VIS-26)`, async ({ page }) => {

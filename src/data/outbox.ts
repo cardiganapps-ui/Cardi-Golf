@@ -248,7 +248,7 @@ function isCurrent(item: OutboxItem): boolean {
 let db: OutboxDb | null = null
 function getDb(): OutboxDb | null {
   if (typeof indexedDB === 'undefined') return null
-  if (!db) db = new OutboxDb()
+  db ??= new OutboxDb()
   return db
 }
 
@@ -540,7 +540,7 @@ export async function rejectGoneRounds(tournamentId: string): Promise<number> {
       .retry(false)
       .single()
     const row = r.data as { id?: unknown; rounds?: unknown } | null
-    if (r.error || !row || row.id !== tournamentId || !Array.isArray(row.rounds)) return 0
+    if (r.error || row?.id !== tournamentId || !Array.isArray(row.rounds)) return 0
     still = new Set((row.rounds as Array<{ id: string }>).map((x) => x.id))
   } catch {
     return 0
@@ -565,7 +565,7 @@ export function hasUnsentWrites(): boolean {
 }
 /** Distinct holes among queued score writes. */
 function holesIn(list: OutboxItem[]): number {
-  return new Set(list.filter((x) => x.kind === 'score' || x.kind === 'hole').map((x) => `${(x.payload as ScorePayload | HolePayload).round_id}:${(x.payload as ScorePayload | HolePayload).hole}`)).size
+  return new Set(list.filter((x) => x.kind === 'score' || x.kind === 'hole').map((x) => `${(x.payload).round_id}:${(x.payload).hole}`)).size
 }
 
 /** Call when the open tournament changes so the counters follow it. */
@@ -1034,12 +1034,12 @@ function listen() {
       // The wall clock counts whole milliseconds, so the wait read from it can come out short by up to two: taken off too,
       // so a push that went out just before a fetch landed never reads as after it. One more fetch is the cheap side.
       const sentAt = known ? liveClock() - Math.max(0, age) - waited - WALL_CLOCK_SLACK_MS : 0
-      return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, sentAt)
+      useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, sentAt); return;
     }
     void loadQueue().then(() => void flush())
   }
 }
-type LockManagerLike = { request(name: string, opts: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<unknown>): Promise<unknown> }
+interface LockManagerLike { request(name: string, opts: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<unknown>): Promise<unknown> }
 let locks: LockManagerLike | null | undefined
 function lockManager(): LockManagerLike | null {
   if (locks === undefined) locks = (typeof navigator !== 'undefined' && (navigator as { locks?: LockManagerLike }).locks) || null
@@ -1185,9 +1185,9 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
       .rpc('save_group_awards', { p_round_id: p.round_id, p_group_id: p.group_id, p_game_id: p.game_id, p_hole: p.hole, p_player_ids: p.player_ids, p_decided_by: p.decided_by })
       .setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
-    const answer = (data ?? {}) as { deleted?: Row[]; rows?: Row[] }
+    const answer = (data ?? {}) as { deleted?: Array<{ round_id: string; game_id: string; hole: number; player_id: string; source: string }>; rows?: Row[] }
     // The winners it took away, by the key a delete names; then the ones it put in.
-    const gone: LiveChange[] = (answer.deleted ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source } }))
+    const gone: LiveChange[] = (answer.deleted ?? []).map((r) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source } }))
     return [...gone, ...stored('hole_awards', answer.rows ?? [])]
   }
   if (item.kind === 'signature') {
@@ -1327,7 +1327,7 @@ async function rebaseOnNewer(item: HoleItem, entries: HoleEntry[]): Promise<Set<
       await d.items.put(next)
     })
   } else done = rebase(target)
-  const taken = done as HoleItem | null
+  const taken = done
   if (!taken) return left
   queue = queue.map((x) => (x.key === taken.key ? taken : x))
   for (const y of taken.payload.entries) left.delete(y.player_id)

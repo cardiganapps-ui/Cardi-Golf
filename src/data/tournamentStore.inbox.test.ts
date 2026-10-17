@@ -102,7 +102,7 @@ describe('money_adjustments on the channel (0027, MONEY-05)', () => {
       ['adj-1', 'call-1'],
       ['adj-2', 'call-1'],
     ])
-    expect(store().data!.state.money.unassigned!.assignments.map((a) => [a.callId, a.total])).toEqual([['call-1', 300]])
+    expect(store().data!.state.money.unassigned.assignments.map((a) => [a.callId, a.total])).toEqual([['call-1', 300]])
     await vi.advanceTimersByTimeAsync(10_000)
     expect(requests()).toBe(before)
   })
@@ -118,7 +118,7 @@ describe('money_adjustments on the channel (0027, MONEY-05)', () => {
     emit('money_adjustments', { eventType: 'UPDATE', new: adjustment({ id: 'adj-2', to_player_id: p(1), ...voided }), old: {} })
     await vi.advanceTimersByTimeAsync(40)
     expect(store().data!.snapshot.moneyAdjustments!.map((x) => x.voidReason)).toEqual(['Era de otro', 'Era de otro'])
-    expect(store().data!.state.money.unassigned!.assignments).toEqual([])
+    expect(store().data!.state.money.unassigned.assignments).toEqual([])
 
     const shown = store().data
     emit('money_adjustments', { eventType: 'DELETE', new: {}, old: { id: 'adj-de-otro-torneo' } })

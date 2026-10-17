@@ -485,7 +485,7 @@ function RaceTable({ title, entrants, days, played, format, pairs }: { title: st
   const groups: Array<{ day: number; span: number }> = []
   for (const c of cols) {
     const g = groups.at(-1)
-    if (g && g.day === c.day) g.span++
+    if (g?.day === c.day) g.span++
     else groups.push({ day: c.day, span: 1 })
   }
   const multi = days.length > 1

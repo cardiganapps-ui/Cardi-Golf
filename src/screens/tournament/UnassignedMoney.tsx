@@ -203,20 +203,20 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
 
   async function confirm() {
     if (!bucketKey) return
-    if (!bucket) return setError(U.gone)
+    if (!bucket) { setError(U.gone); return; }
     // Another phone's decision came over the channel while the sheet was open: its amounts were chosen against another line.
-    if (remaining !== opened) return changed(remaining)
-    if (!entries.length) return setError(U.nothing)
-    if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining, cur)))
-    if (reason.trim().length < 3) return setError(U.reasonShort)
+    if (remaining !== opened) { changed(remaining); return; }
+    if (!entries.length) { setError(U.nothing); return; }
+    if (sum > remaining) { setError(U.tooMuch(formatMoney(remaining, cur))); return; }
+    if (reason.trim().length < 3) { setError(U.reasonShort); return; }
     setBusy(true)
     setError(null)
     try {
       // A decision another phone just sent may still be on its way over the channel: read the line again first.
       await onDone()
       const now = useTournament.getState().data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey)
-      if (!now) return setError(U.gone)
-      if (now.remaining !== opened) return changed(now.remaining)
+      if (!now) { setError(U.gone); return; }
+      if (now.remaining !== opened) { changed(now.remaining); return; }
       await assignUnassigned(tournamentId, bucketKey, entries, reason.trim())
       await onDone()
       toast(U.assigned)

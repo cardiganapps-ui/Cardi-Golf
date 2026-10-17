@@ -14,7 +14,7 @@
  * a hole that never reached the server cannot pass for the server's, nor hide
  * what the server said after it (another phone's later value, a discrepancy).
  */
-import type { RealtimeChannel } from '@supabase/supabase-js'
+import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { computeTournament, type TournamentState } from '../engine/computeTournament'
 import { shareSnapshot } from './share'
@@ -106,22 +106,22 @@ interface StoreState {
   source: 'cache' | 'server' | null
   /** Whether the snapshots shown are kept on the phone for offline use: not on a platform-admin visit, where the tournament is not his. */
   keepOnPhone: boolean
-  load(tournamentId: string, opts?: { keepOnPhone?: boolean }): Promise<void>
-  reload(): Promise<void>
+  load: (tournamentId: string, opts?: { keepOnPhone?: boolean }) => Promise<void>
+  reload: () => Promise<void>
   /**
    * «Actualizar» (PWA-15): the boards from the server now, because the person asked. A fetch already on its
    * way is waited for, not sent twice, and a live channel that failed is opened again now rather than at
    * the end of its wait.
    */
-  refreshNow(): Promise<void>
+  refreshNow: () => Promise<void>
   /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
-  seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
-  subscribe(): void
-  unsubscribe(): void
+  seed: (tournamentId: string, snapshot: Snapshot, savedAt: number) => void
+  subscribe: () => void
+  unsubscribe: () => void
   /** Optimistic local patch of a write the server took: apply it to the server's rows and recompute. */
-  patch(fn: (s: Snapshot) => void): void
+  patch: (fn: (s: Snapshot) => void) => void
   /** Recompute from the server's rows with the outbox as it is now (a write queued, sent or refused). */
-  refresh(): void
+  refresh: () => void
   /**
    * A write of this phone the server took, as the server stored it (the rows
    * the push got back): applied to the server's rows like a live change,
@@ -132,9 +132,9 @@ interface StoreState {
    * the server at an unknown point around the write: then nothing lands and
    * one more fetch says what the server holds.
    */
-  landChanges(tournamentId: string, changes: LiveChange[], since: number, sentAt: number, opts?: { flushing?: boolean; fetch?: boolean }): void
+  landChanges: (tournamentId: string, changes: LiveChange[], since: number, sentAt: number, opts?: { flushing?: boolean; fetch?: boolean }) => void
   /** The outbox's flush ended: the one more fetch its landings asked for goes now, once. */
-  pushesDone(): void
+  pushesDone: () => void
 }
 
 let channel: RealtimeChannel | null = null
@@ -245,7 +245,7 @@ function flushChanges() {
   const st = useTournament.getState()
   const d = st.data
   const id = st.tournamentId
-  if (!d || !id) return scheduleReload()
+  if (!d || !id) { scheduleReload(); return; }
   const next = structuredClone(d.base)
   const now = Date.now()
   // What waited for its day or lot goes first, in the order it came: a lot just sold places its bids.
@@ -371,22 +371,22 @@ const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? has
  * `last` itself does, so nothing re-renders and the engine does not run (PERF-09). Only the same tournament's.
  */
 function compute(raw: Snapshot, playersKey = playersKeyOf(raw), last: TournamentData | null = null): TournamentData {
-  const prev = last && last.base.tournament.id === raw.tournament.id ? last : null
+  const prev = last?.base.tournament.id === raw.tournament.id ? last : null
   // A snapshot cached by an older build has no instance-game tables.
   const base = shareSnapshot(prev?.base, { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [], moneyAdjustments: raw.moneyAdjustments ?? [] })
   // The overlays write into lists of their own: the server's rows stay the server's.
   const laid: Snapshot = overlays.length
-    ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards!] }
+    ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards] }
     : base
   for (const fn of overlays) fn(laid)
   const snapshot = shareSnapshot(prev?.snapshot, laid)
-  if (prev && snapshot === prev.snapshot) {
+  if (snapshot === prev?.snapshot) {
     // The boards read as they did: their state, settings and every object a screen holds stay as they are.
     return base === prev.base && playersKey === prev.playersKey ? prev : { ...prev, base, playersKey }
   }
   let settings: TournamentSettings
   let settingsError: string | null = null
-  if (prev && snapshot.tournament === prev.snapshot.tournament) {
+  if (snapshot.tournament === prev?.snapshot.tournament) {
     settings = prev.settings
     settingsError = prev.settingsError
   } else {
@@ -512,7 +512,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     tees,
     holes,
   })
-  fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => String(a.id).localeCompare(String(b.id))))))
+  fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => a.id.localeCompare(b.id)))))
   return snapshot
 }
 
@@ -646,7 +646,7 @@ export const useTournament = create<StoreState>((set, get) => ({
         // and the one more fetch a write asked for while both were out (#92's fourth verifier, N2).
         if (get().data) set({ loading: false })
         if (leaves === leavesAtStart) get().subscribe()
-        return afterFetch()
+        afterFetch(); return;
       }
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, tournamentId, since)
@@ -662,7 +662,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     } catch (e) {
       if (seq !== fetchSeq) {
         if (get().tournamentId === tournamentId && get().data) set({ loading: false })
-        return afterFetch()
+        afterFetch(); return;
       }
       set({ loading: false, error: humanError(e) })
       // Over the phone's copy the gate keeps asking; over the server's boards, the store does.
@@ -689,7 +689,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       const snapshot = await out
       if (get().tournamentId !== id) return
       // Superseded: the newer fetch brings the boards, and the one more fetch asked for while both were out still goes (N2).
-      if (seq !== fetchSeq) return afterFetch()
+      if (seq !== fetchSeq) { afterFetch(); return; }
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, id, since)
       lastFetchAt = Date.now()
@@ -703,7 +703,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     } catch (e) {
       // The heal waits longer after each fetch that failed (a released device, a deleted tournament, a server down).
       healWait = Math.min(Math.max(healWait * 2, HEAL_MS * 2), HEAL_MAX_MS)
-      if (seq !== fetchSeq) return afterFetch()
+      if (seq !== fetchSeq) { afterFetch(); return; }
       set({ error: humanError(e) })
       if (isTransient(e)) retryReloadSoon()
       // A failed fetch read nothing: the one more fetch a landing asked for still goes, once (V22).
@@ -759,12 +759,12 @@ export const useTournament = create<StoreState>((set, get) => ({
         // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
         const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
         // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
-        if (INBOX.has(table)) return inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row } : null)
+        if (INBOX.has(table)) { inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) } : null); return; }
         // How long another phone's hole took to get here (STRAT-02).
         if (table === 'scores' && payload?.eventType && payload.eventType !== 'DELETE' && payload.new) changeArrived(payload.new)
-        if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
+        if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) })
         // A structural row reloads, unless it is plainly another tournament's (DB-05: the filter keeps them away, and this holds without it).
-        else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row }, fetching > 0)) scheduleReload()
+        else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) }, fetching > 0)) scheduleReload()
       })
     }
     const degrade = () => {
@@ -809,12 +809,12 @@ export const useTournament = create<StoreState>((set, get) => ({
     }, HEAL_MS / 20)
     ch.subscribe((status) => {
       if (channel !== ch) return
-      const live = status === 'SUBSCRIBED'
+      const live = status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED
       if (live) {
         stopDegraded()
         retryDelay = RETRY_MIN_MS
         set({ realtime: 'live' })
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      } else if (status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR || status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT || status === REALTIME_SUBSCRIBE_STATES.CLOSED) {
         // CLOSED here means the server dropped a channel we still want (e.g. a
         // token that expired while the app was hidden): realtime-js won't
         // rejoin it, so treat it as an outage. Our own removals clear

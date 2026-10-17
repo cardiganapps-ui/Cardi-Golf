@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -41,7 +41,7 @@ export function OrganizerLoginScreen() {
     return write.run(action)
   }
 
-  function submit(e: FormEvent) {
+  function submit(e: SubmitEvent) {
     e.preventDefault()
     void attempt(async () => {
       // Signing in makes this phone another account: not while it holds writes that would then wait for a PIN.

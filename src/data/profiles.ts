@@ -284,7 +284,7 @@ export async function myDeviceClaim(): Promise<{ playerId: string; tournamentId:
 /** The names of this device's player, to start a profile with. */
 export async function claimNameHint(playerId: string): Promise<NameHint | null> {
   const { data } = await supabase().from('players').select('display_name, full_name').eq('id', playerId).maybeSingle()
-  return data ? { displayName: data.display_name as string, fullName: (data.full_name as string) ?? null } : null
+  return data ? { displayName: data.display_name, fullName: (data.full_name) ?? null } : null
 }
 
 // ---------------------------------------------------------------------------
@@ -364,9 +364,9 @@ interface MyProfileState {
    * when the account has none (Mi Polo, the editor); the shell only reads, so
    * a sign-in flow can create it first with the player's names.
    */
-  load(create?: boolean): Promise<void>
-  setProfile(p: MyProfile): void
-  clear(): void
+  load: (create?: boolean) => Promise<void>
+  setProfile: (p: MyProfile) => void
+  clear: () => void
 }
 
 /** Only the latest load applies: a slow earlier read must not overwrite a newer profile. */

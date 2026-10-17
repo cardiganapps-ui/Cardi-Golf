@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 
-type Answer = { data: unknown; error: { message: string; code?: string } | null }
+interface Answer { data: unknown; error: { message: string; code?: string } | null }
 const rpc = vi.fn<(name: string, args: Record<string, unknown>) => Promise<Answer>>()
 const from = vi.fn(() => {
   throw new Error('a link to watch reads and writes no table')
@@ -61,7 +61,7 @@ await Promise.all([screens.TournamentShell, screens.LiveScreen, screens.GamesScr
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 const TOKEN = 'sSjvTXmU1SDUNaaBFsFGLc7N'

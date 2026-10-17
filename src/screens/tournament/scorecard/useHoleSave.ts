@@ -11,7 +11,7 @@
  * page closed inside it lost the hole.
  */
 import { burst } from '../../../lib/confetti'
-import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { toast } from '../../../components/toast'
 import { useOutbox } from '../../../data/outbox'
 import type { HoleResult } from '../../../engine/core/types'
@@ -60,7 +60,7 @@ export interface HoleSaveInput {
   answered: boolean
   entry: ReturnType<typeof useHoleDrafts>
   say: (text: string) => void
-  sayWithNextHole: MutableRefObject<string>
+  sayWithNextHole: RefObject<string>
   /** Who carries the snake: on the boards as the screen drew them, and on the boards now. */
   snakeHolder: string | null
   holderNow: () => string | null
@@ -254,7 +254,7 @@ export function useHoleSave(o: HoleSaveInput) {
     if (!note || note.restored) return
     setSavedNote(null)
     const u = undo.current
-    if (note.canUndo && u && u.hole === note.hole) {
+    if (note.canUndo && u?.hole === note.hole) {
       // The Comité's path (a closed day, a signed card) can fail: no signal, a refusal. The undo stays offered
       // until it lands, and says why it didn't (#98's second verifier).
       void write(u.drafts, u.hole).then(

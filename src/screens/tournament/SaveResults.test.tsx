@@ -14,9 +14,9 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-const auth = vi.hoisted(() => ({ state: { ready: true, user: { id: 'anon' } as unknown, isAnonymous: true } }))
+const auth = vi.hoisted(() => ({ state: { ready: true, user: { id: 'anon' }, isAnonymous: true } }))
 vi.mock('../../data/auth', async (orig) => ({ ...(await orig<typeof import('../../data/auth')>()), useAuth: (sel?: (s: unknown) => unknown) => (sel ? sel(auth.state) : auth.state) }))
-const link = vi.hoisted(() => vi.fn(async () => ({ ok: true }) as { ok: true }))
+const link = vi.hoisted(() => vi.fn(async () => ({ ok: true })))
 vi.mock('../../data/profiles', async (orig) => ({
   ...(await orig<typeof import('../../data/profiles')>()),
   linkMyProfile: link,

@@ -41,8 +41,10 @@ async function newPage(viewport, { relay = false, storage = {} } = {}) {
       try {
         const headers = { ...req.headers() }
         delete headers['content-length']
-        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer() })
+        const data = req.postDataBuffer()
+        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) || !data ? undefined : new Uint8Array(data) })
         const body = Buffer.from(await res.arrayBuffer())
+        /** @type {Record<string, string>} */
         const h = {}
         res.headers.forEach((v, k) => {
           if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k)) h[k] = v

@@ -150,7 +150,7 @@ export function MoneyScreen() {
     return n
   }
   function undo(accounts: Account[], n: number) {
-    if (!accounts.every((a) => taps.current.byKey.get(keyOf(a)) === n)) return toast(M.undoStale)
+    if (!accounts.every((a) => taps.current.byKey.get(keyOf(a)) === n)) { toast(M.undoStale); return; }
     tap(accounts)
     void run(() => write(restorePaidWrites(accounts)))
   }

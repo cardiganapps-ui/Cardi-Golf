@@ -155,16 +155,16 @@ describe('motion tokens', () => {
       for (const m of text.matchAll(/<motion\.\w+\b/g)) {
         // The opening tag runs to the first `>` outside braces.
         let depth = 0
-        let end = m.index! + m[0].length
+        let end = m.index + m[0].length
         for (; end < text.length; end++) {
           const c = text[end]
           if (c === '{') depth++
           else if (c === '}') depth--
           else if (c === '>' && depth === 0) break
         }
-        const tag = text.slice(m.index!, end)
+        const tag = text.slice(m.index, end)
         if (/\b(initial|animate|exit)=/.test(tag) && !/\btransition=/.test(tag)) {
-          offenders.push(`${file.slice(src.length)}:${text.slice(0, m.index!).split('\n').length}`)
+          offenders.push(`${file.slice(src.length)}:${text.slice(0, m.index).split('\n').length}`)
         }
       }
     }

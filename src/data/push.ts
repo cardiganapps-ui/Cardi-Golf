@@ -166,7 +166,7 @@ export function startBadgeSync() {
   }
   const refresh = async () => {
     if (!useAuth.getState().ready) return
-    if (!account()) return setAppBadge(0)
+    if (!account()) { setAppBadge(0); return; }
     await useUnread.getState().refresh()
     setAppBadge(useUnread.getState().count)
   }

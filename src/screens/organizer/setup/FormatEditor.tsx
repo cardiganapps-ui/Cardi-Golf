@@ -75,7 +75,12 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
               </button>
             </span>
           ))}
-          <input className="input input--sm" style={{ width: '8em' }} value={newTier} placeholder={W.tierName} aria-label={W.tierName} onChange={(e) => setNewTier(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTier())} />
+          <input className="input input--sm" style={{ width: '8em' }} value={newTier} placeholder={W.tierName} aria-label={W.tierName} onChange={(e) => setNewTier(e.target.value)} onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              addTier()
+            }}
+          />
           <Button size="sm" onClick={addTier}>
             {W.tierAdd}
           </Button>

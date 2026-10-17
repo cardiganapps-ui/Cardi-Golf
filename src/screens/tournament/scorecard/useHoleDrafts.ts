@@ -3,7 +3,7 @@
  * when he was, and what the phone keeps of a half-entered hole (PWA-05). The decisions are `holeEntry.ts`'s;
  * this keeps the refs and the state, and the effects that run when the hole or its server values change.
  */
-import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { useOutbox, type HoleFields } from '../../../data/outbox'
 import type { HoleResult } from '../../../engine/core/types'
 import { readKept, sweepKept, writeKept, type Draft, type KeptDraft } from '../tarjetaDrafts'
@@ -22,7 +22,7 @@ export interface HoleDraftsInput {
   rowOf: (pid: string) => HoleFields
   /** The card's live region, and what the last save left to say with the next hole («Hoyo 12 guardado»). */
   say: (text: string) => void
-  sayWithNextHole: MutableRefObject<string>
+  sayWithNextHole: RefObject<string>
 }
 
 export function useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editableFor, rowOf, say, sayWithNextHole }: HoleDraftsInput) {

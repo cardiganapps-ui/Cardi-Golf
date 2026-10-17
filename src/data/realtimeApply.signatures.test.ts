@@ -12,8 +12,8 @@ import { applyChange, type LiveChange } from './realtimeApply'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
-const ins = (row: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'INSERT', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const del = (key: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'DELETE', new: {} as LiveChange['new'], old: key as LiveChange['old'] })
+const ins = (row: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'INSERT', new: row, old: {} })
+const del = (key: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'DELETE', new: {}, old: key })
 
 describe('a player’s signature on the live channel', () => {
   it('lands as the player’s card, beside a pair’s of the same day, in card order', () => {
@@ -27,7 +27,7 @@ describe('a player’s signature on the live channel', () => {
       [
         { roundId: r1, pairId: null, playerId: 'p9', signedBy: 'p1', signedAt: '2027-04-09T15:00:00Z' },
         { roundId: r1, pairId: pair.id, signedBy: 'p1', signedAt: '2027-04-09T15:01:00Z' },
-      ].sort((a, b) => ((a.pairId ?? a.playerId)! < (b.pairId ?? b.playerId)! ? -1 : 1)),
+      ].sort((a, b) => ((a.pairId ?? a.playerId) < (b.pairId ?? b.playerId) ? -1 : 1)),
     )
     // Its echo is the same row: nothing doubles.
     expect(applyChange(s, T(s), ins({ round_id: r1, pair_id: null, player_id: 'p9', card_id: 'p9', signed_by: 'p1', signed_at: '2027-04-09T15:00:00Z', tournament_id: T(s) }))).toBe('applied')

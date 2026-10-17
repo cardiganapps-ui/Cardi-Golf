@@ -4,7 +4,7 @@
  * what needs you now: in play, coming up, played. The join code and the
  * organizer's way in stay at the bottom.
  */
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type SubmitEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -166,7 +166,7 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
     setBusy(null)
   }
 
-  function onJoin(e: FormEvent) {
+  function onJoin(e: SubmitEvent) {
     e.preventDefault()
     const clean = code.trim().toUpperCase()
     if (clean.length === 6) navigate(`/t/${clean}`)

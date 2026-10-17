@@ -269,19 +269,21 @@ export function AdminRounds() {
                       className="select"
                       value={rt?.teeId ?? ''}
                       aria-label={`${R.tees}, ${p.displayName}`}
-                      onChange={async (e) => {
-                        const teeId = e.target.value || null
-                        try {
-                          await setRoundTee(teesFor.id, p.id, teeId)
-                          patch((s) => {
-                            s.roundTees = s.roundTees.filter((x) => !(x.roundId === teesFor.id && x.playerId === p.id))
-                            if (teeId) s.roundTees.push({ roundId: teesFor.id, playerId: p.id, teeId })
-                          })
-                          toast(R.teeSaved)
-                        } catch (err) {
-                          toast(humanError(err))
-                        }
-                      }}
+                      onChange={(e) =>
+                        void (async () => {
+                          const teeId = e.target.value || null
+                          try {
+                            await setRoundTee(teesFor.id, p.id, teeId)
+                            patch((s) => {
+                              s.roundTees = s.roundTees.filter((x) => !(x.roundId === teesFor.id && x.playerId === p.id))
+                              if (teeId) s.roundTees.push({ roundId: teesFor.id, playerId: p.id, teeId })
+                            })
+                            toast(R.teeSaved)
+                          } catch (err) {
+                            toast(humanError(err))
+                          }
+                        })()
+                      }
                     >
                       <option value="">{R.teeDefault}</option>
                       {otherCourse && <option value={otherCourse.teeId}>{R.teeOtherCourse(teeName(otherCourse.teeId))}</option>}

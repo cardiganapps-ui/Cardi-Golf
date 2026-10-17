@@ -932,7 +932,7 @@ try {
   const { data: sCardBlocked } = await S.sb.rpc('profile_card', { p_handle: uProfile.handle })
   const { data: ended } = await U.sb.from('rivalries').select('status').eq('id', rivalryId).single()
   check(blockedReq === 'not_found' && ended?.status === 'ended' && !sCardBlocked?.related, 'a block hides U from S, refuses requests and ends the rivalry', { blockedReq, ended, related: sCardBlocked?.related })
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {

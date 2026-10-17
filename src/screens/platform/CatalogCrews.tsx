@@ -38,7 +38,7 @@ export function CatalogCrews() {
         <h2>{t.platform.sections.crews}</h2>
         <Input type="search" value={q} placeholder={K.search} aria-label={K.search} onChange={(e) => setQ(e.target.value)} />
         {error ? (
-          <ErrorBox error={error} onRetry={() => void reload()} />
+          <ErrorBox error={error} onRetry={() => reload()} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -52,7 +52,7 @@ export function CatalogCrews() {
               ))}
             </div>
             {rows.length < total && (
-              <Button disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => more()}>
                 {t.platform.more}
               </Button>
             )}
@@ -60,7 +60,7 @@ export function CatalogCrews() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => void reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{K.pickOne}</p>}
+        {outlet ? <Outlet context={{ onChanged: () => reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{K.pickOne}</p>}
       </div>
     </div>
   )

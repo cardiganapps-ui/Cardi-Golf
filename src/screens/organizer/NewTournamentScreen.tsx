@@ -16,7 +16,7 @@
  * (`wizardDraft.ts`), and leaving the wizard with something typed asks first.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useBlocker, useLocation, useNavigate, useSearchParams, type BlockerFunction } from 'react-router'
+import { Link, NavigationType, useBlocker, useLocation, useNavigate, useSearchParams, type BlockerFunction } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { IconChevronRight } from '../../components/icons'
@@ -161,8 +161,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       if (leaving.current || !guard || currentLocation.pathname === nextLocation.pathname) return false
       // On a back the history has already moved: its state is the entry it was going to.
       const index = historyIndex()
-      blocked.current = { pop: historyAction === 'POP', index }
-      if (historyAction === 'POP' && index !== undefined) {
+      blocked.current = { pop: historyAction === NavigationType.Pop, index }
+      if (historyAction === NavigationType.Pop && index !== undefined) {
         // This runs inside that popstate, so the listener added now hears only the next one: the undo.
         setRestoring(true)
         const done = () => {
@@ -195,7 +195,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         const delta = how?.pop ? (how.index !== undefined && here !== undefined ? how.index - here : -1) : 0
         if (delta < 0) void navigate(delta)
         // A push, or a forward the sheet's entry cut off (a push drops what lies ahead): a new entry.
-        else void navigate({ pathname: to.pathname, search: to.search, hash: to.hash }, { state: to.state })
+        else void navigate({ pathname: to.pathname, search: to.search, hash: to.hash }, { state: to.state as unknown })
       }, 0),
     )
   }

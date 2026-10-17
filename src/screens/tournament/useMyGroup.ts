@@ -6,7 +6,7 @@ import { useTournamentCtx } from './tournamentContext'
 /** The round to score now: the tournament's current round if live, else the first live round, else the next scheduled. */
 export function pickActiveRound(rounds: Round[], currentRoundId: string | null): Round | null {
   const cur = rounds.find((r) => r.id === currentRoundId)
-  if (cur && cur.status === 'live') return cur
+  if (cur?.status === 'live') return cur
   return rounds.find((r) => r.status === 'live') ?? cur ?? rounds.find((r) => r.status === 'scheduled') ?? rounds.at(-1) ?? null
 }
 

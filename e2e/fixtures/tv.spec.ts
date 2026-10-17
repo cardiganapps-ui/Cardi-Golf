@@ -63,8 +63,8 @@ test('Matrimonios and Calcutta boards: names in full, totals at the right edge (
       els.map((row) => {
         const box = row.getBoundingClientRect()
         const cells = Array.from(row.children) as HTMLElement[]
-        const name = row.querySelector('[class*="_name_"]') as HTMLElement
-        const big = cells[cells.length - 1]!
+        const name = row.querySelector('[class*="_name_"]')!
+        const big = cells[cells.length - 1]
         return {
           nameLeft: name.getBoundingClientRect().left - box.left,
           clipped: Array.from(name.children).some((c) => (c as HTMLElement).scrollWidth > (c as HTMLElement).clientWidth + 1),
@@ -225,7 +225,7 @@ test('each figure sits under its column label: hoyo, hoy, total (VIS-05)', async
     const right = (el: Element) => el.getBoundingClientRect().right
     const heads = Array.from(head.children).slice(-3)
     const cells = Array.from(row.children).slice(-3)
-    return { labels: heads.map((x) => x.textContent), gaps: heads.map((x, i) => Math.abs(right(x) - right(cells[i]!))) }
+    return { labels: heads.map((x) => x.textContent), gaps: heads.map((x, i) => Math.abs(right(x) - right(cells[i]))) }
   })
   expect(gaps.labels).toEqual([t.tv.thru, t.tv.today, t.tv.total])
   for (const g of gaps.gaps) expect(g).toBeLessThan(4)

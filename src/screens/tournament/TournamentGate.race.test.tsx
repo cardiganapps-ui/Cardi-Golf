@@ -41,7 +41,7 @@ vi.mock('../../data/auth', async () => {
     ensureSession: server.ensureSession,
     signedOutOnPurpose: () => server.signedOut,
     signOutsAsked: () => server.signOuts,
-    useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } as { id: string } | null })),
+    useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } })),
   }
 })
 vi.mock('../../data/api', () => ({

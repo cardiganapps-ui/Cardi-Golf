@@ -44,7 +44,7 @@ const SOLMAR_HIT = { id: '79fb43c9', name: 'Solmar Golf Links', course_name: 'So
 
 const json = (b: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json', ...headers } })
 
-type CatalogRow = { id: string; name: string; source: string; external_id: string | null; location?: string | null }
+interface CatalogRow { id: string; name: string; source: string; external_id: string | null; location?: string | null }
 function world(catalog: CatalogRow[] = []) {
   const asked: Array<{ url: string; method: string; headers: Record<string, string>; body: unknown }> = []
   const fetch = (async (input: string | URL, init: RequestInit = {}) => {

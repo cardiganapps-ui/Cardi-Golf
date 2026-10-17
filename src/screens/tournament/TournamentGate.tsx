@@ -308,8 +308,8 @@ export function TournamentGate() {
       void resolve()
     }
     retryNow.current = retry
-    const timer = setInterval(() => void retry(), CACHE_RETRY_MS)
-    const onOnline = () => void retry()
+    const timer = setInterval(() => retry(), CACHE_RETRY_MS)
+    const onOnline = () => retry()
     window.addEventListener('online', onOnline)
     document.addEventListener('visibilitychange', onOnline)
     return () => {

@@ -91,7 +91,7 @@ describe('a flush that cannot start', () => {
       sent.push(item)
       return ok
     })
-    _outboxTest.setLocks({ request: () => Promise.reject(new Error('locks unavailable')) } as never)
+    _outboxTest.setLocks({ request: () => Promise.reject(new Error('locks unavailable')) })
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 } }])
     await expect(flush()).resolves.toBeUndefined()
     expect(sent).toEqual([])
@@ -137,7 +137,7 @@ describe('held for the PIN, in memory', () => {
     const sent: OutboxItem[] = []
     _outboxTest.setPush(async (item) => {
       sent.push(item)
-      return { status: 'not_member' } as HoleAnswer
+      return { status: 'not_member' }
     })
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 } }])
     await hole(5, [{ player_id: 'p2', fields: { strokes: 4 } }])

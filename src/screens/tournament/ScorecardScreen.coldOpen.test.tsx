@@ -37,7 +37,7 @@ let clock = 0
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 let base: Snapshot
@@ -48,7 +48,6 @@ function seedBoards(s: Snapshot) {
   useTournament.setState({ tournamentId: s.tournament.id, data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 /** What Tarjeta's save writes through: the outbox overlays it, as the store's compute does. */
-const refresh = () => useTournament.getState().refresh()
 
 function mount(opts: { isComite?: boolean } = {}) {
   const f = fx()
@@ -239,7 +238,7 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
     await tapSave(20_000)
     expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
     await readQueue()
-    const direct = admin.saves.map((s) => `${s.row.player_id}@${s.row.hole}=${s.row.strokes}/${s.row.putts}`)
+    const direct = admin.saves.map((s) => `${String(s.row.player_id)}@${String(s.row.hole)}=${String(s.row.strokes)}/${String(s.row.putts)}`)
     expect({ direct, q: queuedAt(10) }).toEqual({ direct: [], q: TYPED_Q })
   })
 
@@ -303,4 +302,3 @@ describe('the hole-following, under a user who has not touched anything', () => 
   })
 })
 
-void refresh

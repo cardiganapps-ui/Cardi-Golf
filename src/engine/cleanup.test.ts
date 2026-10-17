@@ -129,13 +129,10 @@ describe('Money', () => {
   })
 
   it('the prize check uses the real group sizes once groups exist', () => {
-    const players = Array.from({ length: 11 }, (_, i) => makePlayer(i + 1))
-    const snap = makeSnapshot({ players, rounds: 2, settings: S })
     const planned = checkPrizePool(S, { players: 11 })
     expect(planned.lines.find((l) => l.moduleId === 'snake')!.amount).toBe(3600)
     const real = checkPrizePool(S, { players: 11, groupSizes: [[4, 4, 3], [4, 4, 3]] })
     expect(real.lines.find((l) => l.moduleId === 'snake')!.amount).toBe(3200)
-    void snap
   })
 })
 

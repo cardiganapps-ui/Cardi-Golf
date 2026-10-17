@@ -56,7 +56,7 @@ export async function roundRivalries(tournamentId: string): Promise<RoundRivalry
 export async function finishQuickRounds(tournamentId: string): Promise<void> {
   const store = useTournament.getState()
   const snap = store.data?.snapshot
-  if (!snap || snap.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
+  if (snap?.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
   for (const r of snap.rounds.filter((x) => x.status === 'live')) await setRoundStatus(r.id, 'finished')
   await store.reload()
 }
@@ -65,7 +65,7 @@ export async function finishQuickRounds(tournamentId: string): Promise<void> {
 export async function finishQuickRound(tournamentId: string): Promise<{ players: number }> {
   const store = useTournament.getState()
   const snap = store.data?.snapshot
-  if (!snap || snap.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
+  if (snap?.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
   for (const r of snap.rounds.filter((x) => x.status === 'live')) await setRoundStatus(r.id, 'finished')
   await updateTournament(tournamentId, { status: 'finished' })
   await store.reload()

@@ -87,7 +87,7 @@ export function SpectatorLinkCard() {
               { value: 'money', label: S.withMoney },
             ]}
             onChange={(v) => {
-              if (!link) return setChoice(v)
+              if (!link) { setChoice(v); return; }
               if (busy || v === shown) return
               // Money on: whoever already has the link sees it from now on, so it asks first.
               if (v === 'money') setAsk('money')

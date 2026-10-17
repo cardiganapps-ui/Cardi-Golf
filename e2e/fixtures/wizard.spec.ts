@@ -53,7 +53,7 @@ for (const width of [375, 393]) {
     expect(rows.find((r) => r.key === W.reviewFormat)?.value).toBe('Stableford, puntos')
     for (const r of rows) {
       // The label's box ends before the value's begins: two columns, not one run of text.
-      expect(r.keyRight, `${r.key}`).toBeLessThanOrEqual(r.valueLeft)
+      expect(r.keyRight, r.key).toBeLessThanOrEqual(r.valueLeft)
       expect(r.ruled, `${r.key} has its rule`).toBe(true)
     }
   })

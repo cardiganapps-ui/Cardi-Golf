@@ -153,7 +153,7 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
         roundValue += v
         st.race.push(cum)
         st.pointsRace.push(cumPoints)
-        const par = (h.par === 3 || h.par === 5 ? h.par : 4) as 3 | 4 | 5
+        const par = (h.par === 3 || h.par === 5 ? h.par : 4)
         st.pointsByPar[par] += h.points
         st.valueByPar[par] += v
         if (h.pickedUp) st.pickUps++
@@ -241,7 +241,7 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   top('mostConsistent', 'variance', (s) => s.variance, { min: true, ok: (s) => s.holesPlayed >= 9 })
   if (mods.snake) top('snakeGold', 'count', (s) => s.snakeHoles)
   if (mods.auction && mods.auction.soldCount > 0) {
-    const roi = new Map(mods.auction.portfolios.filter((pf) => pf.roi != null).map((pf) => [pf.ownerId, pf.roi as number]))
+    const roi = new Map(mods.auction.portfolios.filter((pf) => pf.roi != null).map((pf) => [pf.ownerId, pf.roi!]))
     if (roi.size > 0) {
       const best = Math.max(...roi.values())
       const worst = Math.min(...roi.values())

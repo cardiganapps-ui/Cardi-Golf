@@ -47,7 +47,7 @@ describe('Torneo › Estado: the state is a choice that asks first (A11Y-17)', (
     await act(async () => fireEvent.click(screen.getByRole('tab', { name: A.tabs.status })))
     const group = screen.getByRole('radiogroup', { name: A.status })
     const radios = Array.from(group.querySelectorAll('[role="radio"]')) as HTMLElement[]
-    expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent)).toEqual([t.status[snap.tournament.status as keyof typeof t.status]])
+    expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent)).toEqual([t.status[snap.tournament.status]])
     expect(radios.filter((r) => r.tabIndex === 0)).toHaveLength(1)
   })
 

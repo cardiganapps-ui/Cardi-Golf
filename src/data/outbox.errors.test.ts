@@ -97,7 +97,7 @@ describe('what the server says about them', () => {
     await settle(useOutbox)
     const boards = { tournament: { id: 't1' }, scores: [], snakeTiebreaks: [], cardSignatures: [], holeAwards: [{ roundId: 'r1', groupId: 'g2', hole: 5, gameId: 'closest', playerId: 'p7' }] } as unknown as Snapshot
     overlayPending(boards)
-    expect(boards.holeAwards!.map((a) => `${a.groupId}:${a.playerId}`).sort()).toEqual(['g1:p2', 'g2:p7'])
+    expect(boards.holeAwards.map((a) => `${a.groupId}:${a.playerId}`).sort()).toEqual(['g1:p2', 'g2:p7'])
   })
 
   it('«nadie» as a contest’s answer takes the old winners away on the server', async () => {

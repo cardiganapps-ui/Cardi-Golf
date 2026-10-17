@@ -118,7 +118,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         const g = pick(groupsOf(rid))
         const hole = int(1, 18)
         const cur = find('snake_tiebreaks', { round_id: rid, group_id: g.id, hole })
-        if (cur && r() < 0.35) return del('snake_tiebreaks', cur)
+        if (cur && r() < 0.35) { del('snake_tiebreaks', cur); return; }
         if (cur) {
           cur.last_holed_player_id = pick(g.playerIds)
           upd('snake_tiebreaks', cur)
@@ -142,7 +142,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         const rid = pick(rounds)
         const pid = pick(players)
         const cur = find('handicap_overrides', { round_id: rid, player_id: pid })
-        if (cur && r() < 0.4) return del('handicap_overrides', cur)
+        if (cur && r() < 0.4) { del('handicap_overrides', cur); return; }
         if (cur) {
           cur.playing_hcp = int(0, 36)
           upd('handicap_overrides', cur)
@@ -158,7 +158,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         if (!options.length) return
         const pid = pick(players)
         const cur = find('round_tees', { round_id: rid, player_id: pid })
-        if (cur && r() < 0.4) return del('round_tees', cur)
+        if (cur && r() < 0.4) { del('round_tees', cur); return; }
         if (cur) {
           cur.tee_id = pick(options).id
           upd('round_tees', cur)
@@ -173,7 +173,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         const from = kind === 'payout' ? null : pick(players)
         const to = kind === 'payout' ? pick(players) : null
         const cur = find('payments', { tournament_id: TID, kind, from_player_id: from, to_player_id: to })
-        if (cur && r() < 0.15) return del('payments', cur)
+        if (cur && r() < 0.15) { del('payments', cur); return; }
         if (cur) {
           cur.paid = !cur.paid
           cur.amount = pick([cur.amount, 2500, 1200])
@@ -206,7 +206,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         if (!lots.length) return
         const lot = pick(lots)
         const bids = T().calcutta_bids!.filter((b) => b.lot_id === lot.id)
-        if (bids.length && r() < 0.35) return del('calcutta_bids', pick(bids))
+        if (bids.length && r() < 0.35) { del('calcutta_bids', pick(bids)); return; }
         ins('calcutta_bids', { id: nid('bid'), lot_id: lot.id, bidder_id: pick(players), amount: 250 * int(1, 16), created_at: ts() })
       },
     ],
@@ -217,7 +217,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
         if (!lots.length) return
         const lot = pick(lots)
         const cur = find('calcutta_buybacks', { lot_id: lot.id })
-        if (cur && r() < 0.35) return del('calcutta_buybacks', cur)
+        if (cur && r() < 0.35) { del('calcutta_buybacks', cur); return; }
         const pct = pick([25, 50, 10])
         if (cur) {
           Object.assign(cur, { pct, amount: Math.round(((lot.price ?? 1000) * pct) / 100), paid: r() < 0.5 })
@@ -281,7 +281,7 @@ function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
   return () => {
     let x = r() * total
     for (const [w, f] of ops) {
-      if ((x -= w) < 0) return f()
+      if ((x -= w) < 0) { f(); return; }
     }
   }
 }
@@ -295,7 +295,7 @@ function diffPaths(a: unknown, b: unknown, path = '', out: string[] = []): strin
       out.push(`${path}: length ${a.length} vs ${b.length}`)
       return out
     }
-    for (const k of new Set([...Object.keys(a as object), ...Object.keys(b as object)])) diffPaths((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`, out)
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) diffPaths((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`, out)
     return out
   }
   out.push(`${path}: applied=${JSON.stringify(a)?.slice(0, 200)} fresh=${JSON.stringify(b)?.slice(0, 200)}`)

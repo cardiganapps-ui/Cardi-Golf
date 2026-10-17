@@ -64,7 +64,7 @@ export function FixtureGate() {
 
   if (!fixture) return <FixtureIndex />
   // `?as=new-phone`: the same tournament on a phone that has not picked its face yet (the grid, then the PIN).
-  if (as === 'new-phone') return <EnterScreen lookup={fixture.lookup} onEntered={() => navigate(`/t/_/${fixture.name}`)} />
+  if (as === 'new-phone') return <EnterScreen lookup={fixture.lookup} onEntered={() => void navigate(`/t/_/${fixture.name}`)} />
   if (tournamentId !== `fixture:${fixture.name}`) return null
   // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
   const me: Me =

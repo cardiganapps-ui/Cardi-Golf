@@ -48,7 +48,7 @@ function contrastOf(el: Locator) {
         const s = v / 255
         return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
       }
-      return 0.2126 * linear(r!) + 0.7152 * linear(g!) + 0.0722 * linear(b!)
+      return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
     }
     let back = [255, 255, 255]
     for (let n: Element | null = e; n; n = n.parentElement) {
@@ -59,7 +59,7 @@ function contrastOf(el: Locator) {
       }
     }
     const [hi, lo] = [luminance(channels(getComputedStyle(e).color)), luminance(back)].sort((a, b) => b - a)
-    return (hi! + 0.05) / (lo! + 0.05)
+    return (hi + 0.05) / (lo + 0.05)
   })
 }
 
@@ -87,7 +87,7 @@ async function expectReadable(el: Locator) {
 /** `a` comes before `b` in reading and keyboard order. */
 async function expectBefore(a: Locator, b: Locator) {
   const other = await b.elementHandle()
-  expect(await a.evaluate((x, y) => !!(x.compareDocumentPosition(y!) & Node.DOCUMENT_POSITION_FOLLOWING), other)).toBe(true)
+  expect(await a.evaluate((x, y) => !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING), other)).toBe(true)
 }
 
 async function seriousViolations(page: Page) {

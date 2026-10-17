@@ -10,13 +10,11 @@
  * A team is a pair the Comité drew. Larger teams arrive with the auto draw.
  */
 import type { TournamentSettings } from '../settings/schema'
-import { msg, say, type Msg, type TeamMode } from '../messages'
+import { msg, say, type Msg } from '../messages'
 import type { Explanation, Id } from '../types'
 import { countbackFrom, emptyCountback, teamEntrants } from './entrants'
 import { toParFigure, type Entrant, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
 import { holeStrokes } from './strokePlay'
-
-type Mode = TeamMode
 
 /**
  * The team's ball on one hole: most points, or the best score *to par*. Each
@@ -50,7 +48,7 @@ export const teamFormat: MainFormat = {
 
   describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions
-    const mode = (o.teamMode ?? 'bestBall') as Mode
+    const mode = o.teamMode
     const points = o.teamScoring === 'stableford'
     return {
       title: msg('format.team', { mode }),

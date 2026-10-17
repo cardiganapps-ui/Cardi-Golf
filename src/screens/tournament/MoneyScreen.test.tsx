@@ -19,7 +19,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-type Write = { from_player_id: string | null; to_player_id: string | null; amount: number; kind: string; paid: boolean }
+interface Write { from_player_id: string | null; to_player_id: string | null; amount: number; kind: string; paid: boolean }
 const api = vi.hoisted(() => ({ writes: [] as Write[], gate: null as Promise<void> | null }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),

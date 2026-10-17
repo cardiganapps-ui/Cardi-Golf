@@ -50,7 +50,7 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
   const sb = supabase()
   const { data: tournament, error } = await sb.from('tournaments').select('*').eq('id', tournamentId).single()
   if (error) throw error
-  const tables: Record<string, Row[]> = { tournaments: [tournament as Row] }
+  const tables: Record<string, Row[]> = { tournaments: [tournament] }
   for (const t of BY_TOURNAMENT) tables[t] = await rows(t, 'tournament_id', [tournamentId])
   const roundIds = tables.rounds!.map((r) => r.id as string)
   for (const t of BY_ROUND) tables[t] = await rows(t, 'round_id', roundIds)
@@ -75,9 +75,6 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
 export async function restoreBackup(tournamentId: string, backup: Backup): Promise<{ players: number; rounds: number; scores: number }> {
   if (backup.version !== 1 || backup.tournamentId !== tournamentId) throw new Error('wrong-tournament')
   const { courses: _c, tees: _t, holes: _h, ...tables } = backup.tables
-  void _c
-  void _t
-  void _h
   const res = await supabase().rpc('restore_tournament', { p_tournament_id: tournamentId, p_backup: { ...backup, tables } })
   if (res.error) throw ApiError.from(res.error)
   // A player missing from the backup goes, and his PIN and link with him.

@@ -18,7 +18,7 @@ import { ApiError } from './apiError'
 import type { Database, Json } from './database.types'
 
 type Functions = Database['public']['Functions']
-export type FnName = keyof Functions & string
+export type FnName = Extract<keyof Functions, string>
 export type FnArgs<N extends FnName> = Functions[N]['Args']
 export type FnReturns<N extends FnName> = Functions[N]['Returns']
 
@@ -78,7 +78,7 @@ export function rpc<N extends FnName>(name: N, ...[args]: ArgsOf<N>): Call<FnRet
   // Everything inside the promise: a client that can't be made (no env) is a rejected call, never a throw at the caller.
   const answer = (async () => {
     const client = supabase()
-    const res = await (client.rpc as unknown as LooseRpc).call(client, name, args as Record<string, unknown> | undefined)
+    const res = await (client.rpc as unknown as LooseRpc).call(client, name, args)
     if (res.error) throw ApiError.from(res.error)
     return res.data as FnReturns<N>
   })()

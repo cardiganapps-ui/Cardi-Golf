@@ -90,7 +90,11 @@ export function RejectedInbox() {
       reason,
     )
     if (failed && isStaleHole(failed)) await reload()
-    if (failed) throw done ? new UserError(SI.partly(done, list.length)) : failed
+    if (failed) {
+      if (done) throw new UserError(SI.partly(done, list.length))
+      // As it was caught (the test above narrows it to `{}`, which only-throw-error would refuse).
+      throw failed as unknown
+    }
     toast(SI.dismissed)
   }
 

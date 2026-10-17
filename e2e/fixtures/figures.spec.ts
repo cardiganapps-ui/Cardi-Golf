@@ -16,7 +16,7 @@ const clipped = (page: Page) =>
         const s = getComputedStyle(e)
         return own && s.display !== 'inline' && s.display !== 'none' && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 0.5
       })
-      .map((e) => `«${e.textContent!.trim().slice(0, 40)}» ${e.scrollWidth} > ${e.clientWidth}`),
+      .map((e) => `«${e.textContent.trim().slice(0, 40)}» ${e.scrollWidth} > ${e.clientWidth}`),
   )
 
 for (const width of [375, 393]) {

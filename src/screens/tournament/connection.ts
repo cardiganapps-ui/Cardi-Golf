@@ -55,7 +55,7 @@ export function connectionOf(f: ConnectionFacts): Connection | null {
   return f.realtime === 'live' ? { kind: 'live', mayBeOld: false } : { kind: 'connecting', mayBeOld: false }
 }
 
-type StoreFacts = { data: unknown; tournamentId: string | null; source: ConnectionFacts['source']; realtime: ConnectionFacts['realtime']; error: string | null }
+interface StoreFacts { data: unknown; tournamentId: string | null; source: ConnectionFacts['source']; realtime: ConnectionFacts['realtime']; error: string | null }
 export const factsOf = (s: StoreFacts, online: boolean): ConnectionFacts => ({
   online,
   hasData: !!s.data,

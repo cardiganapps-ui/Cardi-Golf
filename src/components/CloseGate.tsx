@@ -61,7 +61,7 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
 
   async function guard(opts: GateOptions, proceed: () => Promise<void>) {
     const d = useTournament.getState().data
-    if (!d || d.snapshot.tournament.id !== tournamentId) return
+    if (d?.snapshot.tournament.id !== tournamentId) return
     setChecking(true)
     let check: CloseCheck
     try {

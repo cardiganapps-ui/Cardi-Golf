@@ -167,7 +167,7 @@ export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'c
 /** A pot line's label as the settings name it: its module's, or its game's. */
 function lineLabel(settings: TournamentSettings, id: string): string {
   if (id.startsWith('game:')) return settings.games.find((g) => `game:${g.id}` === id)?.label ?? id
-  return settings.modules[id as keyof TournamentSettings['modules']]?.label ?? id
+  return (settings.modules as Partial<Record<string, { label: string }>>)[id]?.label ?? id
 }
 
 export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
@@ -288,7 +288,7 @@ export function bucketLabel(key: string, settings: TournamentSettings): Msg {
   if (key === 'pool') return say('unassigned.pool')
   if (key === 'calcutta') return label(settings.modules.auction.label)
   if (key.startsWith('game:')) return label(settings.games.find((g) => g.id === key.slice(5))?.label ?? key.slice(5))
-  return label(settings.modules[key as keyof TournamentSettings['modules']]?.label ?? key)
+  return label((settings.modules as Partial<Record<string, { label: string }>>)[key]?.label ?? key)
 }
 
 const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0)

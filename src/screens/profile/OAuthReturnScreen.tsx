@@ -49,7 +49,7 @@ export function OAuthReturnScreen() {
     }
     finishProfileSignIn()
       .then((done) => navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, { replace: true }))
-      .catch((e) => {
+      .catch((e: unknown) => {
         setState('error')
         setMessage(accountError(e))
       })
@@ -70,7 +70,7 @@ export function OAuthReturnScreen() {
             disabled={busy}
             onClick={() => {
               setBusy(true)
-              signInWithGoogleInstead(next).catch((e) => {
+              signInWithGoogleInstead(next).catch((e: unknown) => {
                 setBusy(false)
                 setState('error')
                 setMessage(accountError(e))

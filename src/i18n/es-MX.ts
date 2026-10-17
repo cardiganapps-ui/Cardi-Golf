@@ -201,12 +201,12 @@ export function netScoreName(points: number): string {
  */
 export interface MsgFormat {
   /** Whole units: «$10,000», «−$1,200». */
-  money(n: number): string
+  money: (n: number) => string
   /** With centavos when there are any: «$6,462.50». */
-  moneyCents(n: number): string
+  moneyCents: (n: number) => string
   /** Signed for a part of a line: «+$2,500», «−$500», «$0». */
-  signedMoney(n: number): string
-  msg(m: Msg): string
+  signedMoney: (n: number) => string
+  msg: (m: Msg) => string
 }
 /** The engine's every code, in words (`explain`). TypeScript holds it to the contract in src/engine/messages.ts. */
 type ExplainCatalog = { [K in keyof MsgParams]: (p: MsgParams[K], f: MsgFormat) => string }
@@ -4441,7 +4441,7 @@ export const explain: ExplainCatalog = {
   'rules.noBanker': () => 'El Comité dice quién es el banquero: quien junta el dinero y paga los premios.',
   'rules.settle': () => 'En Dinero se ve en todo momento lo que cada quien ganaría si el torneo terminara ahora, y al final, quién le paga a quién.',
   'rules.field': (p) =>
-    `${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, ${p.days === 1 ? 'un día' : `${p.days} días`}${p.holes && p.holes.length ? ` de ${orList([...new Set(p.holes)].sort((a, b) => a - b).map(String))} hoyos` : ''}, en grupos de hasta ${p.groupSize}.`,
+    `${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, ${p.days === 1 ? 'un día' : `${p.days} días`}${p.holes?.length ? ` de ${orList([...new Set(p.holes)].sort((a, b) => a - b).map(String))} hoyos` : ''}, en grupos de hasta ${p.groupSize}.`,
   'rules.tiers': (p) => `Categorías por hándicap: ${andList(p.tiers)}, asignadas por el Comité.`,
   'rules.scratch': () => 'Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.',
   'rules.hcpWhat': () => 'El hándicap dice el nivel de cada quien: a más hándicap, más golpes de ventaja, que se le restan a sus golpes para que todos compitan parejo.',

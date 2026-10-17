@@ -32,7 +32,7 @@ describe('the simulator’s strokes are the engine’s (ARCH-16)', () => {
       }
     }
     expect(state.core.rounds[r1]![snap.players[1]!.id]!.playingHcp).toBe(7)
-    expect(state.core.rounds[r1]![snap.players[0]!.id]!.playingHcp).toBeLessThan(0)
+    expect(state.core.rounds[r1]![snap.players[0].id]!.playingHcp).toBeLessThan(0)
   })
 
   it('refuses settings this build cannot read rather than simulate on defaults', () => {

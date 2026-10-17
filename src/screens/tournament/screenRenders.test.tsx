@@ -20,7 +20,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const renders = vi.hoisted(() => {
-  type Fiber = { tag: number; flags: number; type: unknown; elementType: unknown; child: Fiber | null; sibling: Fiber | null; alternate: Fiber | null }
+  interface Fiber { tag: number; flags: number; type: unknown; elementType: unknown; child: Fiber | null; sibling: Fiber | null; alternate: Fiber | null }
   const out = { commits: 0, total: 0, byName: new Map<string, number>() }
   // FunctionComponent, ClassComponent, ForwardRef, MemoComponent, SimpleMemoComponent.
   const COMPONENT = new Set([0, 1, 11, 14, 15])
@@ -82,7 +82,7 @@ const { TournamentContext } = await import('./tournamentContext')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 const fx = getFixture('full12-live')!

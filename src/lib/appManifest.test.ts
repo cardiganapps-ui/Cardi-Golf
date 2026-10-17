@@ -98,7 +98,7 @@ describe('what the installed app says about itself (PWA-14)', () => {
       [t.app.shortcuts.card, '/continuar/tarjeta'],
       [t.nav.live, '/continuar'],
     ])
-    expect(APP_MANIFEST.shortcuts[0]!.short_name).toBe(t.nav.card)
+    expect(APP_MANIFEST.shortcuts[0].short_name).toBe(t.nav.card)
   })
 
   it('every icon it names is there, at the size it says', () => {
@@ -124,7 +124,7 @@ describe('what the installed app says about itself (PWA-14)', () => {
       expect(meta.format).toBe('webp')
       expect(shot.form_factor).toBe('narrow')
       // Chrome takes 320 to 3840 px a side, the long side at most 2.3 times the short one, one shape per form factor.
-      const [w, h] = [meta.width!, meta.height!]
+      const [w, h] = [meta.width, meta.height]
       expect(Math.min(w, h)).toBeGreaterThanOrEqual(320)
       expect(Math.max(w, h)).toBeLessThanOrEqual(3840)
       expect(Math.max(w, h) / Math.min(w, h)).toBeLessThanOrEqual(2.3)

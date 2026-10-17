@@ -539,8 +539,10 @@ export function msg<K extends MsgCode>(code: K, params: MsgParams[K]): Msg {
 }
 
 const NONE = Object.freeze({}) as Record<string, never>
+/** The codes whose message carries no figures. */
+type BareCode = { [C in MsgCode]: MsgParams[C] extends Record<string, never> ? C : never }[MsgCode]
 /** A message with no figures, shared (it is never written into). */
-export function say<K extends { [C in MsgCode]: MsgParams[C] extends Record<string, never> ? C : never }[MsgCode]>(code: K): Msg {
+export function say(code: BareCode): Msg {
   return { code, params: NONE } as Msg
 }
 

@@ -68,7 +68,7 @@ const ourBack = (repush: boolean, done?: () => void) => ourMove(-1, repush, done
 
 /** An entry left behind with no sheet open: off it, the way the person was going. */
 function stepOver(prev: unknown) {
-  const here = window.history.state
+  const here: unknown = window.history.state
   // Up from the page under it (the same router entry, not one of ours), with a page beyond it: on to that page.
   const fromBelow = !isMark(prev) && field(prev, 'key') !== undefined && field(prev, 'key') === field(here, 'key')
   const id = field(here, MARK_ID)

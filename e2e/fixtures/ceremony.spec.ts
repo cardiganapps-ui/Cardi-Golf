@@ -270,7 +270,7 @@ test('the champion is revealed in beats: the name, then the figures counting up,
     }
     return out
   })
-  const final = samples[samples.length - 1]!
+  const final = samples[samples.length - 1]
   const points = parseInt(final.figure, 10)
   expect(points).toBeGreaterThan(0)
   expect(final.name).toBe(1)
@@ -323,7 +323,7 @@ test('between steps the stage is never blank, and nothing bounces past its place
   const frames = await samples
   for (const f of frames) expect(f.shown, 'a frame with no view on the stage').toBeGreaterThanOrEqual(0.3)
   // The coming view rises to its place and stops there (the old spring overshot it by 3.6 px).
-  const ys = frames.flatMap((f) => f.titles.map((title, i) => ({ title, y: f.ys[i]! })).filter((v) => v.title && v.title !== from)).map((v) => v.y)
+  const ys = frames.flatMap((f) => f.titles.map((title, i) => ({ title, y: f.ys[i] })).filter((v) => v.title && v.title !== from)).map((v) => v.y)
   expect(ys.length).toBeGreaterThan(0)
   for (const y of ys) expect(y).toBeGreaterThanOrEqual(-0.5)
 })
@@ -461,7 +461,7 @@ test('3840×2160: a lone winner keeps a big name, and a tie of four stays full s
           return range.getBoundingClientRect().height
         }),
       )
-      if (names.length === 1) expect(names[0]!, `${label}: a lone winner's name`).toBeGreaterThanOrEqual(5.5 * vh)
+      if (names.length === 1) expect(names[0], `${label}: a lone winner's name`).toBeGreaterThanOrEqual(5.5 * vh)
       if (names.length > 1 && names.length <= 4) {
         tie = true
         await expect(page.locator('[data-area] [data-compact]'), `${label}: a tie of ${names.length}`).toHaveCount(0)

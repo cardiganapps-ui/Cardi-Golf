@@ -175,7 +175,9 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     try {
       showBoards({ source: 'cache', minutesAgo: 5 })
       expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
-      act(() => vi.advanceTimersByTime(60_000))
+      act(() => {
+        vi.advanceTimersByTime(60_000)
+      })
       expect(age()).toBe(t.sync.boardsAge('hace 6 min'))
     } finally {
       vi.useRealTimers()

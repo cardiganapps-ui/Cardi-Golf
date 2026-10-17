@@ -10,7 +10,7 @@ export const QUIET_ROUTE = /^\/(privacidad|terminos)(\/|$)|^\/t\/_\/|^\/v\/|^\/d
 /** How long after a session change the shell asks: the sign-in records its own acceptance first. */
 export const SETTLE_MS = 2_500
 
-export type Changed = { privacy: boolean; terms: boolean; first?: boolean }
+export interface Changed { privacy: boolean; terms: boolean; first?: boolean }
 
 /**
  * Asked once per user per app load (an anonymous phone that becomes an

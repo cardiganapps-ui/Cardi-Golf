@@ -118,7 +118,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
 
   // Holes 1–3: Beto's Tarjeta, on the same hole, takes the four values.
   for (const hole of [1, 2, 3]) {
-    const entry = ROUND[hole - 1]!
+    const entry = ROUND[hole - 1]
     await expect(holeHeading(beto.page, hole)).toBeVisible()
     await typeRoundHole(hole, entry)
     card.set(hole, entry)
@@ -130,7 +130,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   await tab(beto.page, t.nav.live).click()
   await expectLive(beto.page)
   for (let hole = 4; hole <= 18; hole++) {
-    const entry = ROUND[hole - 1]!
+    const entry = ROUND[hole - 1]
     await typeRoundHole(hole, entry)
     card.set(hole, entry)
     await measure('board', hole, { board: boardAfter(card, hole) })

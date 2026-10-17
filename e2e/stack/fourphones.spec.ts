@@ -73,11 +73,11 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
 
   const samples: Sample[] = []
   for (let hole = 1; hole <= HOLES; hole++) {
-    const all = FRONT_NINE_ALL[hole - 1]!
+    const all = FRONT_NINE_ALL[hole - 1]
     // The four type their twosome's hole at the same time, as four groups on the course do.
     await Promise.all(
       scorers.map((s) => {
-        const entry: HoleEntry = Object.fromEntries(s.names.map((n) => [n, all[n]!]))
+        const entry: HoleEntry = Object.fromEntries(s.names.map((n) => [n, all[n]]))
         s.card.set(hole, entry)
         return typeHole(s.phone.page, hole, entry)
       }),
@@ -103,9 +103,9 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
         console.log(`::error::${detail.replace(/\n/g, '%0A')}`)
         throw new Error(detail, { cause: e })
       }
-      for (const s of scorers) samples.push({ hole, group: s.group, on: w.name, ms: Math.round(at[s.name]! - tapped.get(s.name)!) })
+      for (const s of scorers) samples.push({ hole, group: s.group, on: w.name, ms: Math.round(at[s.name] - tapped.get(s.name)!) })
     }
-    const now = samples.filter((x) => x.hole === hole).map((x) => `${x.on}←${scorers[x.group - 1]!.name} ${x.ms}`)
+    const now = samples.filter((x) => x.hole === hole).map((x) => `${x.on}←${scorers[x.group - 1].name} ${x.ms}`)
     console.log(`[e2e-stack] 4 phones on 4G: hole ${hole}: ${now.join(', ')} ms`)
   }
 
@@ -120,7 +120,7 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
     '',
     '| Hole | Twosome | Shown on | ms |',
     '|---:|---|---|---:|',
-    ...samples.map((x) => `| ${x.hole} | ${scorers[x.group - 1]!.names.join(' y ')} | ${x.on} | ${x.ms} |`),
+    ...samples.map((x) => `| ${x.hole} | ${scorers[x.group - 1].names.join(' y ')} | ${x.on} | ${x.ms} |`),
   ].join('\n'))
 
   expect(samples.filter((x) => x.ms >= BUDGET_MS), `saves that took ${BUDGET_MS} ms or more to show on another phone`).toEqual([])

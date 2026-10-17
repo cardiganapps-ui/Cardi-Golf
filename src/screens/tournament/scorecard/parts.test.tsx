@@ -130,7 +130,7 @@ describe('SigningPanel and SignSheet', () => {
     const sigs = (ids: string[]) => ids.map((pairId) => ({ roundId: 'r1', pairId, signedBy: 'x', signedAt: '' }))
     const el = (signed: string[]) => <SigningPanel roundId="r1" groupPlayerIds={['a', 'b', 'c', 'd']} pairs={pairs} signatures={sigs(signed)} players={players} myPairId="p1" isComite onSign={noop} />
     // Motion draws a stamp that lands from its first frame (opacity 0); one already there, at rest.
-    const stamps = () => screen.queryAllByText(S.stamp).map((x) => (x as HTMLElement).style.opacity)
+    const stamps = () => screen.queryAllByText(S.stamp).map((x) => (x).style.opacity)
     // The grid opened on a day whose card was signed long ago: the stamp is simply there.
     const { rerender, unmount } = render(el(['p2']))
     expect(stamps()).toEqual(['1'])

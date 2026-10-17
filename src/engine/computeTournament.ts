@@ -90,7 +90,7 @@ export interface ComputeOptions {
    * Stand in for instance-game types (tests): a stand-in knows no type's
    * config and its state is its test's own, so it is typed as neither.
    */
-  games?: { [K in GameType]?: GameImpl }
+  games?: Partial<Record<GameType, GameImpl>>
 }
 
 /** What running one game gives: its state, its prizes and its warnings. */

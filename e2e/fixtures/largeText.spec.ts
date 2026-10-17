@@ -21,13 +21,13 @@ import { expect, open, test } from './base'
 async function dynamicType(page: Page, px: number) {
   await page.addInitScript((bodyPx) => {
     const supports = CSS.supports.bind(CSS)
-    CSS.supports = ((a: string, b?: string) => (a === 'font' && b === '-apple-system-body' ? true : b === undefined ? supports(a) : supports(a, b))) as typeof CSS.supports
+    CSS.supports = ((a: string, b?: string) => (a === 'font' && b === '-apple-system-body' ? true : b === undefined ? supports(a) : supports(a, b)))
     const style = window.getComputedStyle.bind(window)
     window.getComputedStyle = ((el: Element, pseudo?: string | null) => {
       const real = style(el, pseudo)
       if (!(el instanceof HTMLElement) || el.dataset.textProbe === undefined) return real
       return new Proxy(real, { get: (target, key) => (key === 'fontSize' ? `${bodyPx}px` : Reflect.get(target, key)) })
-    }) as typeof window.getComputedStyle
+    })
   }, px)
 }
 
@@ -115,7 +115,7 @@ test.describe('at 200 % text, as Dynamic Type sets it (A11Y-07, A11Y-08)', () =>
       }),
     )
     expect(heads.map((h) => h.text)).toEqual(['Hoy', 'Hoyo', 'Puntos'])
-    for (let i = 1; i < heads.length; i++) expect(heads[i]!.left, `${heads[i - 1]!.text} runs into ${heads[i]!.text}`).toBeGreaterThan(heads[i - 1]!.right + 4)
+    for (let i = 1; i < heads.length; i++) expect(heads[i].left, `${heads[i - 1].text} runs into ${heads[i].text}`).toBeGreaterThan(heads[i - 1].right + 4)
   })
 
   test('the tab bar grows with its words and never covers the Tarjeta’s «Guardar hoyo»', async ({ page }) => {
@@ -158,7 +158,7 @@ test.describe('a 375×667 phone (VIS-20)', () => {
     const m = await page.evaluate(() => {
       const tab = document.querySelector('nav[aria-label="Secciones"]')!.getBoundingClientRect().top
       const rows = Array.from(document.querySelectorAll('[class*="leaderRow"]')).map((r) => r.getBoundingClientRect())
-      return { first: rows[0]!.top, shown: rows.filter((r) => r.top >= 0 && r.bottom <= tab + 0.5).length }
+      return { first: rows[0].top, shown: rows.filter((r) => r.top >= 0 && r.bottom <= tab + 0.5).length }
     })
     expect(m.first).toBeLessThanOrEqual(200)
     expect(m.shown).toBeGreaterThanOrEqual(8)
@@ -169,7 +169,7 @@ test.describe('a 375×667 phone (VIS-20)', () => {
   test('the Tarjeta: the save bar is a solid band down to the tab bar', async ({ page }) => {
     await open(page, `${LIVE}/tarjeta`)
     const m = await page.evaluate(() => {
-      const bar = document.querySelector('[class*="saveBar"]') as HTMLElement
+      const bar = document.querySelector('[class*="saveBar"]')!
       const save = bar.getBoundingClientRect()
       const tab = document.querySelector('nav[aria-label="Secciones"]')!.getBoundingClientRect()
       return { gap: tab.top - save.bottom, background: getComputedStyle(bar).backgroundColor, page: getComputedStyle(document.body).backgroundColor }

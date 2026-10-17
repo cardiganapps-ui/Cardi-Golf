@@ -37,7 +37,7 @@ describe('the plugin', () => {
       throw new Error(m)
     })
     try {
-      plugin.generateBundle.call({ error } as never, {}, bundle)
+      plugin.generateBundle.call({ error }, {}, bundle)
     } catch {
       // The build stops here.
     }

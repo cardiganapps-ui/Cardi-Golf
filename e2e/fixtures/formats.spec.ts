@@ -112,7 +112,7 @@ test('match play: a decided match reads the same for both sides, and says who wo
   const rows = page.locator('main button[aria-label]')
   // Each row's day, read off its third column from the end (day, thru, total).
   const days = await rows.evaluateAll((els) =>
-    els.map((e) => ({ label: e.getAttribute('aria-label') ?? '', color: e.children.length >= 3 ? getComputedStyle(e.children[e.children.length - 3]!).color : '' })),
+    els.map((e) => ({ label: e.getAttribute('aria-label') ?? '', color: e.children.length >= 3 ? getComputedStyle(e.children[e.children.length - 3]).color : '' })),
   )
   const won = days.filter((d) => /ganó \d+&\d+/.test(d.label)).map((d) => d.color)
   const lost = days.filter((d) => /perdió \d+&\d+/.test(d.label)).map((d) => d.color)

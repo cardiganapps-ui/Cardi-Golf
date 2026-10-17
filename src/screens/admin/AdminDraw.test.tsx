@@ -16,7 +16,7 @@ import { DRAW_STEP } from '../../design/motion'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 
-type DrawInput = { name: string | null; player1_id: string; player2_id: string; kind: string; picked_by_honoree: boolean }
+interface DrawInput { name: string | null; player1_id: string; player2_id: string; kind: string; picked_by_honoree: boolean }
 const api = vi.hoisted(() => ({
   saveDraw: vi.fn(async (_tid: string, _pairs: DrawInput[], _groups: unknown, _goLive: boolean) => ({ pairs: 0, groups: [] as Array<{ number: number; id: string }> })),
   renamePair: vi.fn(async (_id: string, _name: string) => undefined),
@@ -30,7 +30,7 @@ vi.mock('../../components/toast', async (orig) => ({ ...(await orig<typeof impor
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 const { AdminDraw } = await import('./AdminDraw')

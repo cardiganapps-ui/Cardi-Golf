@@ -74,12 +74,16 @@ describe('a player nobody has changed reads «Sin capturar» (COPY-10)', () => {
   it('a change scores him; back to the default, he is uncaptured again', () => {
     const h = holeOf('p1')
     const up = screen.getByRole('button', { name: `${S.strokesOf(nameOf('p1'))}: ${t.common.stepUp}` })
-    act(() => fireEvent.click(up))
+    act(() => {
+      fireEvent.click(up)
+    })
     const pts = stablefordPoints(h.par, h.strokesReceived, h.par + 1, false)
     expect(row('p1').getByText(S.ptsLine(pts, pts > 0 ? netScoreName(pts) : null), { exact: false })).toBeTruthy()
     expect(row('p1').queryByText(S.notCaptured, { exact: false })).toBeNull()
     const down = screen.getByRole('button', { name: `${S.strokesOf(nameOf('p1'))}: ${t.common.stepDown}` })
-    act(() => fireEvent.click(down))
+    act(() => {
+      fireEvent.click(down)
+    })
     expect(row('p1').getByText(S.notCaptured, { exact: false })).toBeTruthy()
   })
 })

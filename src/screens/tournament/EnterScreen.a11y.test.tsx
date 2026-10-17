@@ -84,7 +84,7 @@ describe('Entrar for a screen reader', () => {
     expect(names).toEqual(['Mauricio, categoría B', 'René, categoría C', 'Diego A., categoría A, homenajeado', 'Jugador 12', 'Iván, ¿eres tú?'])
     // The name a sighted person reads starts the spoken one (WCAG 2.5.3), so a voice command by name still works.
     for (const b of screen.getAllByRole('button').filter((x) => x.hasAttribute('data-player'))) {
-      const shown = b.querySelector('[class*="faceName"]')!.textContent!
+      const shown = b.querySelector('[class*="faceName"]')!.textContent
       expect(b.getAttribute('aria-label')!.startsWith(shown)).toBe(true)
     }
   })

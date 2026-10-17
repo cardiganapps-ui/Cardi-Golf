@@ -24,7 +24,7 @@ test('Share card: offline, then online, in the same session (PWA-04)', async ({ 
   for (const offline of [true, false]) {
     await context.setOffline(offline)
     const [download] = await Promise.all([page.waitForEvent('download'), share.click()])
-    const png = await readFile((await download.path())!)
+    const png = await readFile((await download.path()))
     expect(png.subarray(1, 4).toString(), `a PNG ${offline ? 'offline' : 'online'}`).toBe('PNG')
     expect(png.length).toBeGreaterThan(20_000)
     await expect(page.getByText(t.share.failed)).toHaveCount(0)

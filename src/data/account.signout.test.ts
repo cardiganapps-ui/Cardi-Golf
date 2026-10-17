@@ -18,7 +18,7 @@ const auth = vi.hoisted(() => ({
   signOut: async (): Promise<{ error: unknown }> => ({ error: null }),
   anonymous: true,
   /** `none`: getSession gives no session (none stored, or one auth-js could not refresh: lie-fi, its retry cooldown). */
-  session: 'anon' as 'anon' | 'none',
+  session: 'anon',
   oauth: 0,
   otp: 0,
   verifies: 0,

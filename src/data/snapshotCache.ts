@@ -47,7 +47,7 @@ function cleared(tournamentId: string | null) {
 }
 function getDb(): CacheDb | null {
   if (typeof indexedDB === 'undefined') return null
-  if (!db) db = new CacheDb()
+  db ??= new CacheDb()
   return db
 }
 
@@ -143,7 +143,7 @@ export async function hasCached(slugOrCode: string): Promise<boolean> {
   try {
     const d = getDb()
     const entry = d && (await findEntry(d, slugOrCode))
-    return !!entry && (await d!.snapshots.where('tournamentId').equals(entry.tournamentId).count()) > 0
+    return !!entry && (await d.snapshots.where('tournamentId').equals(entry.tournamentId).count()) > 0
   } catch {
     return false
   }

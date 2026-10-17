@@ -4,7 +4,7 @@
  * becomes the account in place, so nothing it holds is lost; Google appears
  * only when the project has it on and the OAuth return can land in this app.
  */
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -66,7 +66,7 @@ export function EntrarScreen() {
         sb.from('players').select('display_name').eq('id', claim.playerId).maybeSingle(),
         sb.from('tournaments').select('name').eq('id', claim.tournamentId).maybeSingle(),
       ])
-      if (live && p && tr) setClaimed({ name: p.display_name as string, tournament: tr.name as string })
+      if (live && p && tr) setClaimed({ name: p.display_name, tournament: tr.name })
     })()
     return () => {
       live = false
@@ -78,7 +78,7 @@ export function EntrarScreen() {
     return write.run(action)
   }
 
-  function send(e: FormEvent) {
+  function send(e: SubmitEvent) {
     e.preventDefault()
     // Every way in stays in reach (and in the keyboard's order); without the check it says what is missing.
     if (!adult) {
@@ -92,7 +92,7 @@ export function EntrarScreen() {
     })
   }
 
-  function confirm(e: FormEvent) {
+  function confirm(e: SubmitEvent) {
     e.preventDefault()
     if (!mode) return
     void attempt(async () => {

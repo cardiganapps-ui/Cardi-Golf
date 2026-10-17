@@ -26,7 +26,7 @@ import { MoneyScreen } from '../tournament/MoneyScreen'
 import { forgetBoards, SPECTATOR_ME, useNoIndex } from './spectatorView'
 import { TournamentCurrency } from '../../components/TournamentCurrency'
 
-const noop = async () => undefined
+const noop = () => Promise.resolve()
 
 type Phase = 'loading' | 'gone' | 'error' | 'in'
 
@@ -137,7 +137,10 @@ export function SpectatorGate() {
       lookup: { id, slug: '', name: name ?? '', tagline: tagline ?? null, logoUrl: logoUrl ?? null, accentColor: accentColor ?? null, status: status ?? 'setup', joinCode: '', players: [] },
       me: SPECTATOR_ME,
       spectator: { money, url: spectatorUrl(token) },
-      refresh: async () => askNow.current(),
+      refresh: () => {
+        askNow.current()
+        return Promise.resolve()
+      },
       leave: noop,
     }),
     [id, token, money, name, tagline, logoUrl, accentColor, status],

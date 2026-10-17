@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wordmark } from '../components/Wordmark'
@@ -42,7 +42,7 @@ export function HomeScreen() {
     if (to) navigate(`/t/${to}`, { replace: true })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on the launch
 
-  function onJoin(e: FormEvent) {
+  function onJoin(e: SubmitEvent) {
     e.preventDefault()
     if (target) navigate(`/t/${target}`)
   }

@@ -204,7 +204,7 @@ describe('the Comité decides each line (MONEY-05)', () => {
     // The other phone's $100 on the same line reaches this one on the fetch the sheet makes before sending.
     const other = structuredClone(data.snapshot)
     other.moneyAdjustments = [{ id: 'adj-o', callId: 'call-o', sourceKey: 'bestRound', kind: 'award', toPlayerId: other.players[0]!.id, amount: 100, reason: 'Otro teléfono', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org2', voidedAt: null, voidReason: null }]
-    act(() => useTournament.setState({ reload: vi.fn(async () => void useTournament.setState({ data: dataFromSnapshot(other) })) }))
+    act(() => useTournament.setState({ reload: vi.fn(async () => useTournament.setState({ data: dataFromSnapshot(other) })) }))
     fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
     await settle()
     expect(api.assigned).toEqual([])

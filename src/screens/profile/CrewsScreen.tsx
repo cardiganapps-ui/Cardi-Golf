@@ -2,7 +2,7 @@
  * `/crews`: my crews, create one, or enter one with its code. And
  * `/c/unirme/:code`: the link a crew shares; it shows the crew and joins.
  */
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Field, Spinner } from '../../components/ui'
@@ -28,14 +28,14 @@ export function CrewsScreen() {
   const [code, setCode] = useState('')
   const { run, busy } = useServerMutation({ invalidates: [['crews']] })
 
-  const onCreate = (e: FormEvent) => {
+  const onCreate = (e: SubmitEvent) => {
     e.preventDefault()
     void run(async () => {
       const c = await createCrew(name.trim())
       navigate(`/c/${c.slug}`)
     })
   }
-  const onJoin = (e: FormEvent) => {
+  const onJoin = (e: SubmitEvent) => {
     e.preventDefault()
     void run(async () => {
       // A crew that approves who enters takes a request instead (0071, TRUST-11).
@@ -140,7 +140,7 @@ export function CrewJoinScreen() {
           onClick={() =>
             void run(async () => {
               const r = await joinCrewRequest(code)
-              if (r.status === 'requested') return toast(C.requested(crew.name))
+              if (r.status === 'requested') { toast(C.requested(crew.name)); return; }
               if (r.status !== 'joined' || !r.slug) throw new UserError(C.badCode)
               toast(C.joined(crew.name))
               navigate(`/c/${r.slug}`, { replace: true })

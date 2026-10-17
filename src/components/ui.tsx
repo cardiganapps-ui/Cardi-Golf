@@ -526,7 +526,7 @@ export function Toaster() {
       onMouseLeave={resume}
       onFocus={pause}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) resume()
+        if (!e.currentTarget.contains(e.relatedTarget)) resume()
       }}
     >
       {/* A toast that goes leaves the stack at once and fades where it was; the rest glide to their places (MOT-09). */}
@@ -611,15 +611,17 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
     <Button
       size="sm"
      
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text)
-          setDone(true)
-          setTimeout(() => setDone(false), 1500)
-        } catch {
-          toast(text)
-        }
-      }}
+      onClick={() =>
+        void (async () => {
+          try {
+            await navigator.clipboard.writeText(text)
+            setDone(true)
+            setTimeout(() => setDone(false), 1500)
+          } catch {
+            toast(text)
+          }
+        })()
+      }
     >
       {done ? t.common.copied : (label ?? t.common.copy)}
     </Button>
@@ -629,7 +631,7 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
 export function ShareButton({ text, url, title }: { text: string; url?: string; title?: string }) {
   if (typeof navigator === 'undefined' || !navigator.share) return null
   return (
-    <Button variant="primary" size="sm" onClick={() => navigator.share({ text, url, title }).catch(() => undefined)}>
+    <Button variant="primary" size="sm" onClick={() => void navigator.share({ text, url, title }).catch(() => undefined)}>
       {t.common.share}
     </Button>
   )

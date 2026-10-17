@@ -88,16 +88,16 @@ function slowSockets(oneWayMs: number) {
     }
     addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions) {
       if (!listener) return
-      if (type !== 'message') return super.addEventListener(type, listener, options)
+      if (type !== 'message') { super.addEventListener(type, listener, options); return; }
       const call = typeof listener === 'function' ? listener : (e: Event) => listener.handleEvent(e)
-      return super.addEventListener(
+      super.addEventListener(
         type,
         (e) => {
           w.__e2eSlowFrames++
           setTimeout(() => call.call(this, e), oneWayMs)
         },
         options,
-      )
+      );
     }
     set onmessage(fn: ((this: WebSocket, e: MessageEvent) => unknown) | null) {
       super.onmessage = fn
@@ -111,7 +111,7 @@ function slowSockets(oneWayMs: number) {
       return super.onmessage
     }
   }
-  window.WebSocket = Slow as typeof WebSocket
+  window.WebSocket = Slow
 }
 
 /** Opens a page on the phone (the app again, after it was closed), watching it for uncaught errors. */
@@ -246,7 +246,7 @@ export async function expectKeptOnPhone(page: Page, hole: number) {
             const db = open.result
             if (!db.objectStoreNames.contains('items')) {
               db.close()
-              return resolve(0)
+              resolve(0); return;
             }
             const all = db.transaction('items').objectStore('items').getAll()
             all.onsuccess = () => {
@@ -338,13 +338,13 @@ export async function watchEach(page: Page, shown: Record<string, Shown>) {
       })
     }
     w.__e2eObserver?.disconnect()
-    const early = Object.keys(all).filter((k) => holds(all[k]!))
+    const early = Object.keys(all).filter((k) => holds(all[k]))
     if (early.length) return early
     const at: Record<string, number | null> = Object.fromEntries(Object.keys(all).map((k) => [k, null]))
     w.__e2eShownAt = at
     const observer = new MutationObserver(() => {
       const now = performance.timeOrigin + performance.now()
-      for (const k of Object.keys(all)) if (at[k] == null && holds(all[k]!)) at[k] = now
+      for (const k of Object.keys(all)) if (at[k] == null && holds(all[k])) at[k] = now
       if (Object.values(at).every((v) => v != null)) observer.disconnect()
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true })
@@ -371,7 +371,7 @@ export const watchFor = (page: Page, shown: Shown) => watchEach(page, { it: show
 
 /** When the watch armed by `watchFor` saw it all, on the page's clock; fails after `timeout` ms. */
 export async function shownAt(page: Page, timeout = 15_000): Promise<number> {
-  return (await shownEachAt(page, timeout)).it!
+  return (await shownEachAt(page, timeout)).it
 }
 
 /** The session this phone keeps (supabase-js's storage key in src/lib/supabase.ts). */
@@ -417,7 +417,7 @@ export function expectedScoresOf(cards: Array<{ card: Map<number, HoleEntry>; na
   const order = (name: string) => PLAYERS.findIndex((p) => p.name === name)
   return cards
     .flatMap(({ card, names, by }) =>
-      [...card.entries()].flatMap(([hole, entry]) => names.filter((name) => entry[name]).map((name) => ({ hole, name, strokes: entry[name]!.strokes, putts: entry[name]!.putts, by, disputed: false }))),
+      [...card.entries()].flatMap(([hole, entry]) => names.filter((name) => entry[name]).map((name) => ({ hole, name, strokes: entry[name].strokes, putts: entry[name].putts, by, disputed: false }))),
     )
     .sort((a, b) => a.hole - b.hole || order(a.name) - order(b.name))
 }
@@ -425,7 +425,7 @@ export function expectedScoresOf(cards: Array<{ card: Map<number, HoleEntry>; na
 /** Nearest-rank percentile. */
 export function percentile(values: number[], q: number): number {
   const sorted = [...values].sort((a, b) => a - b)
-  return sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)]!
+  return sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)]
 }
 
 /**

@@ -135,7 +135,7 @@ describe('the sheet and Estadísticas count alike (#91 round 3, P3-d)', () => {
     const gross = (s: Snapshot) => playAs(s, 'strokePlay', { scoring: 'gross' })
     const snap = structuredClone(getFixture('stroke8')!.snapshot)
     gross(snap)
-    const st = dataFromSnapshot(snap).state.stats.players['p2']!
+    const st = dataFromSnapshot(snap).state.stats.players.p2!
     const d = sheet('stroke8', 'p2', gross)
     const stat = (label: string) => Number(d.getByText(label, { exact: true }).previousElementSibling!.textContent)
     expect([stat('Pares'), stat('Bogeys'), stat('Doble o peor')]).toEqual([st.pars, st.bogeys, st.doubleOrWorse])
@@ -150,7 +150,7 @@ describe('the sheet and Estadísticas count alike (#91 round 3, P3-d)', () => {
     }
     const snap = structuredClone(getFixture('stroke8')!.snapshot)
     edit(snap)
-    const st = dataFromSnapshot(snap).state.stats.players['p2']!
+    const st = dataFromSnapshot(snap).state.stats.players.p2!
     const d = sheet('stroke8', 'p2', edit)
     const stat = (label: string) => Number(d.getByText(label, { exact: true }).previousElementSibling!.textContent)
     expect([stat('Birdies gross'), stat('Birdies netos'), stat('Doble o peor'), stat('Levantó')]).toEqual([st.grossBirdies, st.netBirdies, st.doubleOrWorse, st.pickUps])

@@ -55,7 +55,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
               { value: 'singles', label: W.matchSingles },
               { value: 'fourball', label: W.matchFourball },
             ]}
-            onChange={(v) => set((d) => (d.modules.individual.formatOptions.matchMode = v as 'singles' | 'fourball'))}
+            onChange={(v) => set((d) => (d.modules.individual.formatOptions.matchMode = v))}
           />
         </Group>
       )}
@@ -70,7 +70,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
                 { value: 'bestBall', label: W.teamBestBall },
                 { value: 'shamble', label: W.teamShamble },
               ]}
-              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamMode = v as 'scramble' | 'bestBall' | 'shamble'))}
+              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamMode = v))}
             />
           </Group>
           <Group label={W.teamScoring}>
@@ -80,7 +80,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
                 { value: 'strokes', label: W.teamStrokes },
                 { value: 'stableford', label: W.teamPoints },
               ]}
-              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamScoring = v as 'strokes' | 'stableford'))}
+              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamScoring = v))}
             />
           </Group>
         </>
@@ -95,7 +95,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
               { value: 'net', label: W.scoringNet },
               { value: 'gross', label: W.scoringGross },
             ]}
-            onChange={(v) => set((d) => (d.modules.individual.formatOptions.scoring = v as 'net' | 'gross'))}
+            onChange={(v) => set((d) => (d.modules.individual.formatOptions.scoring = v))}
           />
         </Group>
       )}

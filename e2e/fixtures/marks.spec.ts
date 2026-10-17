@@ -24,11 +24,11 @@ for (const width of [360, 375, 393]) {
           if (r.left < cell.left - 0.5 || r.right > cell.right + 0.5) out.outside.push(`${m.getAttribute('aria-label')}`)
         }
         for (let i = 1; i < boxes.length; i++) {
-          const a = boxes[i - 1]!.r
-          const b = boxes[i]!.r
+          const a = boxes[i - 1].r
+          const b = boxes[i].r
           if (Math.abs(a.top - b.top) > 2) continue
           out.pairs++
-          if (b.left - a.right < 0) out.touching.push(`${(b.left - a.right).toFixed(1)} px between ${boxes[i - 1]!.m.getAttribute('aria-label')} and ${boxes[i]!.m.getAttribute('aria-label')}`)
+          if (b.left - a.right < 0) out.touching.push(`${(b.left - a.right).toFixed(1)} px between ${boxes[i - 1].m.getAttribute('aria-label')} and ${boxes[i].m.getAttribute('aria-label')}`)
         }
       }
       return out

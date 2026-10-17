@@ -21,7 +21,7 @@ test('one group to a landscape page, with Ida, Vuelta and Total, rows of 12 mm, 
   const report = await cards.evaluateAll((els, mm) =>
     els.map((el) => {
       const r = el.getBoundingClientRect()
-      const heads = Array.from(el.querySelectorAll('thead tr:first-child th')).map((th) => th.textContent!.trim())
+      const heads = Array.from(el.querySelectorAll('thead tr:first-child th')).map((th) => th.textContent.trim())
       const scoreRows = Array.from(el.querySelectorAll('tr[class*="_player_"]')).map((tr) => tr.getBoundingClientRect().height / mm)
       const names = Array.from(el.querySelectorAll('tr[class*="_player_"] td:first-child')).map((td) => {
         const sub = td.querySelector('[class*="_playerSub_"]')!

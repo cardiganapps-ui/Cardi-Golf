@@ -238,7 +238,7 @@ export function CeremonyScreen() {
       if (rows.length) out.push({ id: `comite-${line}`, title: C.steps.byComite(label), icon, winners: [], list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })) })
     }
     // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
-    if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
+    if (m.individual?.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
       out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) }] })
     }
     if (m.fewestPutts) {
@@ -388,7 +388,7 @@ export function CeremonyScreen() {
    * mouse click that leaves it focused never turns Space into a skip. A held
    * key doesn't race through the reveals.
    */
-  const keys = useRef({ forward: () => {}, back: () => {} })
+  const keys = useRef<{ forward: () => void; back: () => void }>({ forward: () => undefined, back: () => undefined })
   keys.current = { forward, back: prev }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -444,7 +444,7 @@ export function CeremonyScreen() {
   const { snapshot, state } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   /** When the lists start, after the winners have landed. */
-  const listsAt = step && step.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
+  const listsAt = step?.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
 
   return (
     <div className={styles.stage} data-theme="light" data-accent={nearestAccent(snapshot.tournament.accentColor).id}>

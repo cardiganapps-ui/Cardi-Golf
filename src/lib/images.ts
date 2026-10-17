@@ -135,8 +135,8 @@ export function extensionFor(type: string): string {
 export function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
-    r.onload = () => resolve(String(r.result).split(',')[1] ?? '')
-    r.onerror = () => reject(r.error)
+    r.onload = () => resolve((typeof r.result === 'string' ? r.result : '').split(',')[1] ?? '')
+    r.onerror = () => reject(r.error ?? new Error('read'))
     r.readAsDataURL(blob)
   })
 }

@@ -42,7 +42,7 @@ export function CatalogCourses() {
           ))}
         </div>
         {error ? (
-          <ErrorBox error={error} onRetry={() => void reload()} />
+          <ErrorBox error={error} onRetry={() => reload()} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -56,7 +56,7 @@ export function CatalogCourses() {
               ))}
             </div>
             {rows.length < total && (
-              <Button disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => more()}>
                 {t.platform.more}
               </Button>
             )}
@@ -64,7 +64,7 @@ export function CatalogCourses() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => void reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{C.pickOne}</p>}
+        {outlet ? <Outlet context={{ onChanged: () => reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{C.pickOne}</p>}
       </div>
     </div>
   )

@@ -13,7 +13,7 @@ import { expect, open, test } from './base'
 function misaligned(page: Page) {
   return page.evaluate(() => {
     const textRight = (el: Element | undefined) => {
-      if (!el || !el.textContent?.trim()) return null
+      if (!el?.textContent?.trim()) return null
       const r = document.createRange()
       r.selectNodeContents(el.querySelector('[class*="_moved_"]') ? el.firstChild! : el)
       const rects = Array.from(r.getClientRects())

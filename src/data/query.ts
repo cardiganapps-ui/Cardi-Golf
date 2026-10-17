@@ -56,7 +56,7 @@ export function withDeadline<T>(job: (signal: AbortSignal) => Promise<T>, outer:
   else outer?.addEventListener('abort', onAbort, { once: true })
   const timer = setTimeout(() => ctrl.abort(new TimeoutError(label, ms)), ms)
   return new Promise<T>((resolve, reject) => {
-    if (ctrl.signal.aborted) return reject(ctrl.signal.reason)
+    if (ctrl.signal.aborted) { reject(ctrl.signal.reason); return; }
     ctrl.signal.addEventListener('abort', () => reject(ctrl.signal.reason), { once: true })
     job(ctrl.signal).then(resolve, reject)
   }).finally(() => {
@@ -91,7 +91,7 @@ function accountKey(uid: string | null, key: ServerKey): QueryKey {
 /** Every query under any of `keys`, whichever account it was read for, is read again (an inactive one when next shown). */
 export function invalidate(keys: readonly ServerKey[]): Promise<void> {
   if (!keys.length) return Promise.resolve()
-  return queryClient.invalidateQueries({ predicate: (q) => keys.some((k) => partialMatchKey(q.queryKey.slice(1), k as QueryKey)) })
+  return queryClient.invalidateQueries({ predicate: (q) => keys.some((k) => partialMatchKey(q.queryKey.slice(1), k)) })
 }
 
 registerServerCache({ clear: () => queryClient.clear(), invalidate })
@@ -111,7 +111,7 @@ export interface ServerQueryOptions {
 export function useServerQuery<T>(key: ServerKey, fn: (signal: AbortSignal) => Promise<T>, opts: ServerQueryOptions = {}) {
   const uid = useAuth((s) => s.user?.id ?? null)
   const ms = opts.timeoutMs ?? QUERY_TIMEOUT_MS
-  const label = String(key[0] ?? 'consulta')
+  const label = typeof key[0] === 'string' ? key[0] : 'consulta'
   return useQuery<T>(
     {
       queryKey: accountKey(uid, key),
@@ -127,7 +127,7 @@ export function useServerQuery<T>(key: ServerKey, fn: (signal: AbortSignal) => P
 /** A list read a page at a time (the panel's searches): `fetch(offset)` answers its rows and the total. */
 export function useServerPages<T>(key: ServerKey, fetch: (offset: number, signal: AbortSignal) => Promise<{ total: number; rows: T[] }>, opts: { enabled?: boolean } = {}) {
   const uid = useAuth((s) => s.user?.id ?? null)
-  const label = String(key[0] ?? 'consulta')
+  const label = typeof key[0] === 'string' ? key[0] : 'consulta'
   const q = useInfiniteQuery(
     {
       queryKey: accountKey(uid, key),

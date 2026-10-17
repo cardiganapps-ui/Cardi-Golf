@@ -86,11 +86,13 @@ export function AuditScreen() {
               
              
               disabled={loadingMore}
-              onClick={async () => {
-                setLoadingMore(true)
-                await load(rows[rows.length - 1]!.at)
-                setLoadingMore(false)
-              }}
+              onClick={() =>
+                void (async () => {
+                  setLoadingMore(true)
+                  await load(rows[rows.length - 1]!.at)
+                  setLoadingMore(false)
+                })()
+              }
             >
               {A.more}
             </Button>
@@ -114,7 +116,7 @@ function AuditEntry({ item }: { item: AuditItem }) {
     ? []
     : d.source === 'platform'
       ? Object.entries(d.payload ?? {}).map(([key, v]) => ({ key, value: showValue(v) }))
-      : changedFields({ action: d.action as 'INSERT' | 'UPDATE' | 'DELETE', before: d.before ?? null, after: d.after ?? null }).map((f) => ({
+      : changedFields({ action: d.action, before: d.before ?? null, after: d.after ?? null }).map((f) => ({
           key: f.key,
           value: d.action === 'UPDATE' ? t.admin.history.change(showValue(f.before), showValue(f.after)) : showValue(d.action === 'INSERT' ? f.after : f.before),
         }))

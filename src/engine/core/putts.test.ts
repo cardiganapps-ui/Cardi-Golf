@@ -55,7 +55,7 @@ describe('a hole played without putts (MONEY-18)', () => {
   it('the tournament does not close on a guess, and closes once the putts are captured', () => {
     const { snap } = played(noPutts)
     expect(close(snap).blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toContainEqual({ kind: 'missingPutts', text: 'Faltan los putts de 10 hoyos: captúralos en Comité, sección Tarjetas.' })
-    for (const s of snap.scores) if (s.putts == null) s.putts = 2
+    for (const s of snap.scores) s.putts ??= 2
     const st = computeTournament(snap, S)
     expect(st.flags.missingPutts).toEqual([])
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Faltan putts'))).toEqual([])

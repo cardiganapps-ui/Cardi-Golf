@@ -117,7 +117,7 @@ describe('feed under strokes', () => {
 
 describe('a hole explained in strokes', () => {
   const h = (over: Partial<HoleResult>): HoleResult =>
-    ({ hole: 3, par: 4, strokeIndex: 5, yards: null, strokesReceived: 1, gross: 5, net: 4, points: 2, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: { code: 'label', params: { text: '' } }, steps: [] }, ...over }) as HoleResult
+    ({ hole: 3, par: 4, strokeIndex: 5, yards: null, strokesReceived: 1, gross: 5, net: 4, points: 2, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: { code: 'label', params: { text: '' } }, steps: [] }, ...over })
 
   it('net: the strokes received off the gross, and the result against par', () => {
     expect(words(strokesWhy(h({}), true)).steps).toEqual(['5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): 4 netos, par', '5 − 1 = 4 neto'])

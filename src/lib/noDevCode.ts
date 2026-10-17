@@ -32,7 +32,7 @@ export function noDevCode(): Plugin {
     },
     generateBundle(_, bundle) {
       if (designRoutes) return
-      const found = devModulesIn(bundle as never)
+      const found = devModulesIn(bundle)
       if (found.length) this.error(`dev-only code in a production build (ARCH-07): ${found.join(', ')}`)
     },
   }

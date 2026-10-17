@@ -128,7 +128,7 @@ describe('a hole’s first save is one write, committed before the page takes it
     })
     vi.spyOn(IDBTransaction.prototype, 'commit').mockImplementation(function (this: IDBTransaction) {
       if (this.objectStoreNames.contains('items') && !of(this).seen.includes('commit')) of(this).seen.push('commit')
-      return commit.call(this)
+      commit.call(this);
     })
     return () => Object.fromEntries([...events.values()].filter((e) => e.kind).map((e) => [e.kind, e.seen]))
   }

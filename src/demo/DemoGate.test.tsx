@@ -50,7 +50,7 @@ afterEach(() => cleanup())
 describe('the example tournament (STRAT-17)', () => {
   it('shows the finished board, read-only, nobody’s phone, with money', () => {
     open()
-    const ctx = JSON.parse(screen.getByTestId('ctx').textContent!)
+    const ctx = JSON.parse(screen.getByTestId('ctx').textContent)
     expect(ctx.me).toEqual({ playerId: null, isOrganizer: false, isComite: false, via: null })
     expect(ctx.spectator).toMatchObject({ money: true, demo: true })
     expect(ctx.base).toBe('/demo')

@@ -258,7 +258,8 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
     const bucket = String(o.bucket_id)
     const name = String(o.name)
     const id = `${bucket}/${name}`
-    const stamp = String(o.updated_at ?? o.created_at ?? '')
+    const at = o.updated_at ?? o.created_at
+    const stamp = typeof at === 'string' ? at : ''
     if (manifest[id] === stamp) continue
     if (Date.now() > deadline) {
       out.pending++
@@ -291,7 +292,7 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
-  const env = process.env as Env
+  const env = process.env
   if (!bearerMatches(req.headers.authorization, env.CRON_SECRET)) {
     res.status(401).json({ error: 'unauthorized' })
     return

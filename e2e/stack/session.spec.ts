@@ -30,7 +30,7 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   await ana.context.setOffline(true)
   await typeHole(ana.page, 1, HOLE_1)
   await saveHole(ana.page, 1)
-  await typeHole(ana.page, 2, ROUND[1]!)
+  await typeHole(ana.page, 2, ROUND[1])
   await saveHole(ana.page, 2)
   // Both are in the phone's storage before the app is closed below. A person can't close it within
   // milliseconds of a tap; a test can, so it waits (the outbox's own tests hold how soon a save is stored).
@@ -59,7 +59,7 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   const page = await openPage(ana, `/t/${SLUGS.session}/tarjeta?hoyo=3`)
 
   // From the phone's own copy, hole 3 saves too.
-  await typeHole(page, 3, ROUND[2]!)
+  await typeHole(page, 3, ROUND[2])
   await saveHole(page, 3)
 
   // auth-js gives up after its 8th try and holds the failure: from here on the app gets no session.
@@ -70,8 +70,8 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   await ana.context.unroute(REFRESH)
   const card = new Map<number, HoleEntry>([
     [1, HOLE_1],
-    [2, ROUND[1]!],
-    [3, ROUND[2]!],
+    [2, ROUND[1]],
+    [3, ROUND[2]],
   ])
   await expect.poll(() => serverScores(SLUGS.session), { timeout: 180_000, intervals: [2000] }).toEqual(expectedScores(card, 'Ana'))
 

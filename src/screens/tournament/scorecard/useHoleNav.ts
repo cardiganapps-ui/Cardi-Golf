@@ -4,7 +4,7 @@
  * tapped while the card is open (PWA-10, PWA-12). The new hole comes in from the side the card moved (MOT-02).
  */
 import { animate, useMotionValue } from 'motion/react'
-import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type RefObject, type TouchEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type TouchEvent } from 'react'
 import { useLocation } from 'react-router'
 import { easeFast, still } from '../../../design/motion'
 import { useOutbox } from '../../../data/outbox'
@@ -45,7 +45,7 @@ export type HoleNav = ReturnType<typeof useHoleNav>
  * The new hole comes in from the side the card moved, as a page turns (MOT-02); under reduced motion it fades
  * in. The rows stay mounted, so a stepper keeps its focus and the snake's mark can slide between them.
  */
-export function useHoleSlide(hole: number, reduce: boolean | null, slide: MutableRefObject<number>, els: ReadonlyArray<RefObject<HTMLElement | null>>) {
+export function useHoleSlide(hole: number, reduce: boolean | null, slide: RefObject<number>, els: ReadonlyArray<RefObject<HTMLElement | null>>) {
   const shownFor = useRef(hole)
   useLayoutEffect(() => {
     if (shownFor.current === hole) return
@@ -68,7 +68,7 @@ export function useHoleSlide(hole: number, reduce: boolean | null, slide: Mutabl
  * snake's question, or the whole card, where «Firmar» is). What was typed here stays on the phone, as when
  * the card moves on (PWA-05). Never under an open question or a save on its way: its answer is this hole's.
  */
-export function useFollowHole(o: { nav: HoleNav; order: readonly number[]; firstOpen: number; queueRead: boolean; touched: MutableRefObject<Set<string>>; sheetOpen: boolean; busy: boolean }) {
+export function useFollowHole(o: { nav: HoleNav; order: readonly number[]; firstOpen: number; queueRead: boolean; touched: RefObject<Set<string>>; sheetOpen: boolean; busy: boolean }) {
   const { nav, order, firstOpen, queueRead, touched, sheetOpen, busy } = o
   const followQueue = useRef(!useOutbox.getState().queueRead)
   useEffect(() => {

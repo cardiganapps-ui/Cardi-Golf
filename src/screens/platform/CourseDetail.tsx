@@ -312,11 +312,11 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
   useEffect(() => {
     Promise.all([api.course(a), api.course(b)]).then(
       ([x, y]) => {
-        if (!x || !y) return setError(t.platform.notFound)
+        if (!x || !y) { setError(t.platform.notFound); return; }
         setPair([x, y])
         setKeepFirst(keepsFirst(x, y))
       },
-      (e) => setError(humanError(e)),
+      (e: unknown) => setError(humanError(e)),
     )
   }, [api, a, b])
 

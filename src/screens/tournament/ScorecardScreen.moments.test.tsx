@@ -46,7 +46,7 @@ let snap: Snapshot
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 function load(s: Snapshot) {
@@ -89,7 +89,7 @@ const painted = () =>
 /** Whose row carries the snake's mark. */
 const markedRow = () => {
   const marks = screen.queryAllByRole('img', { name: S.snakeHolder('La Víbora') })
-  return marks.map((m) => document.getElementById(m.closest('[role="group"]')!.getAttribute('aria-labelledby')!)!.textContent!.trim())
+  return marks.map((m) => document.getElementById(m.closest('[role="group"]')!.getAttribute('aria-labelledby')!)!.textContent.trim())
 }
 const screenEl = () => document.querySelector('[class*="_screen_"]')!
 function drag(dx: number, dy: number, ms: number) {

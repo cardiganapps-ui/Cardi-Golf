@@ -66,7 +66,7 @@ function columnsThrough(table: string, last: string): Set<string> {
     const sql = text(f)
     for (const m of sql.matchAll(new RegExp(`create table\\s+(?:if not exists\\s+)?(?:public\\.)?${table}\\s*\\(`, 'gi'))) {
       let depth = 1
-      let start = m.index! + m[0].length
+      let start = m.index + m[0].length
       for (let i = start; i < sql.length && depth > 0; i++) {
         const ch = sql[i]
         if (ch === '(') depth++

@@ -20,7 +20,7 @@ const CORS = { 'access-control-allow-origin': '*' }
 
 /** The file and the fields of a Storage upload (supabase-js sends a Blob as multipart). */
 function upload(req: Request): { path: string; type: string; bytes: Buffer; cacheControl: string } {
-  const boundary = /boundary=(.+)$/.exec(req.headers()['content-type'] ?? '')![1]!
+  const boundary = /boundary=(.+)$/.exec(req.headers()['content-type'] ?? '')![1]
   const body = req.postDataBuffer()!
   const sep = Buffer.from(`--${boundary}`)
   const parts: Buffer[] = []
@@ -101,7 +101,7 @@ for (const width of [375, 393]) {
     // 1. A file this browser can't draw goes up as it came, with no size: the logo «stored whole».
     await input.setInputFiles({ name: 'logo.heic', mimeType: 'image/heic', buffer: Buffer.from('not an image the browser can draw') })
     await expect.poll(() => uploads.length).toBe(1)
-    expect(uploads[0]!.path).toMatch(/\/logo-\d+\.jpg$/)
+    expect(uploads[0].path).toMatch(/\/logo-\d+\.jpg$/)
     const optimize = page.getByRole('button', { name: t.admin.tournament.optimizeLogo })
     await expect(optimize).toBeVisible()
     await expect(page.getByText(t.admin.tournament.logoHeavy)).toBeVisible()
@@ -110,7 +110,7 @@ for (const width of [375, 393]) {
     // 2. «Optimizar logo» reads it back (here: the 889 KB patch) and stores its rendition.
     await optimize.click()
     await expect.poll(() => uploads.length).toBe(2)
-    const r = uploads[1]!
+    const r = uploads[1]
     expect(r.type, 'Chromium encodes WebP').toBe('image/webp')
     expect(r.bytes.length, 'bytes').toBeLessThanOrEqual(40_000)
     expect(r.path).toMatch(/\/logo-222x240-\d+\.webp$/)
@@ -156,14 +156,14 @@ test('where the browser cannot encode WebP (Safari gives a PNG), the logo is a P
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.toBlob
     HTMLCanvasElement.prototype.toBlob = function (cb, type, quality) {
-      return original.call(this, cb, type === 'image/webp' ? 'image/png' : type, quality)
+      original.call(this, cb, type === 'image/webp' ? 'image/png' : type, quality);
     }
   })
   const uploads = await storage(page)
   await open(page, '/t/_/full12-live/admin/torneo')
   await page.locator('input[type="file"]').setInputFiles(PATCH.pathname)
   await expect.poll(() => uploads.length).toBe(1)
-  const r = uploads[0]!
+  const r = uploads[0]
   expect(r.type).toBe('image/png')
   const out = await decode(page, r.bytes, r.type)
   const longer = Math.max(out.width, out.height)

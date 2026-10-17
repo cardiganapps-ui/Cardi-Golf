@@ -122,7 +122,7 @@ for (const [path, button] of [
   test(`the share card from ${path} is no taller than 1.8 times its width (PWA-06)`, async ({ page }) => {
     await open(page, path)
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: button, exact: true }).first().click()])
-    const { w, h } = await pngSize((await download.path())!)
+    const { w, h } = await pngSize((await download.path()))
     expect(w).toBeGreaterThan(1000)
     expect(h / w, `${w}×${h}`).toBeLessThanOrEqual(1.8)
   })

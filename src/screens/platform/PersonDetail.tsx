@@ -287,11 +287,13 @@ export function PersonDetail() {
         confirmLabel={H.unlink}
         busy={busy}
         onClose={() => setPending(null)}
-        onConfirm={async () => {
-          if (pending?.kind !== 'unlink') return
-          const playerId = pending.playerId
-          if (await run(() => api.unlinkPlayer(playerId), { done: H.unlinked })) setPending(null)
-        }}
+        onConfirm={() =>
+          void (async () => {
+            if (pending?.kind !== 'unlink') return
+            const playerId = pending.playerId
+            if (await run(() => api.unlinkPlayer(playerId), { done: H.unlinked })) setPending(null)
+          })()
+        }
       />
       <DeleteAccountSheet
         open={pending?.kind === 'delete'}
@@ -326,7 +328,7 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
     setReason('')
     setError(null)
     setPreview(null)
-    api.deletePreview(person.id).then(setPreview, (e) => setError(humanError(e)))
+    api.deletePreview(person.id).then(setPreview, (e: unknown) => setError(humanError(e)))
   }, [open, api, person.id])
 
   const word = person.email ?? 'BORRAR'

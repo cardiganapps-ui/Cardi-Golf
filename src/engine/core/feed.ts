@@ -106,7 +106,7 @@ const inOrder = (a: Placed, b: Placed) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 
 /** The hole a score is on, in its player's round: the holes are numbered from 1 in order, so it is at its number's place. */
 function holeOf(holes: HoleResult[] | undefined, hole: number): HoleResult | undefined {
   const h = holes?.[hole - 1]
-  return h && h.hole === hole ? h : holes?.find((x) => x.hole === hole)
+  return h?.hole === hole ? h : holes?.find((x) => x.hole === hole)
 }
 
 /**
@@ -142,7 +142,7 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
   const birdieDays = new Set<Id>()
   for (const { s, rn, at } of scores) {
     const h = holeOf(core.rounds[s.roundId]?.[s.playerId]?.holes, s.hole)
-    if (!h || !h.played) continue
+    if (!h?.played) continue
     const toPar = holeToPar(h, scoring)
     const isBirdie = points ? h.points >= 3 : toPar != null && toPar <= -1
     if (isBirdie) {
@@ -200,7 +200,7 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
       for (const pass of g.passes) {
         if (!pass.holderId) continue
         let byPlayer = cards.get(g.roundId)
-        if (!byPlayer) cards.set(g.roundId, (byPlayer = new Map()))
+        if (!byPlayer) cards.set(g.roundId, (byPlayer = new Map<Id, Map<number, Score>>()))
         if (!byPlayer.has(pass.holderId)) byPlayer.set(pass.holderId, new Map())
       }
     }

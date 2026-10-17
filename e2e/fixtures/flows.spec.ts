@@ -54,7 +54,7 @@ test('Más names the build the phone runs (PWA-03)', async ({ page }) => {
 test('Tarjeta: every control names its player, and the hole is a heading (A11Y-01)', async ({ page }) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const tree = await page.locator('body').ariaSnapshot()
-  const buttons = [...tree.matchAll(/- button "([^"]+)"/g)].map((m) => m[1]!)
+  const buttons = [...tree.matchAll(/- button "([^"]+)"/g)].map((m) => m[1])
   const dupes = buttons.filter((b, i) => buttons.indexOf(b) !== i)
   expect(dupes, 'buttons sharing a name').toEqual([])
   // Each of the four rows is a group named after its player, holding his five controls.

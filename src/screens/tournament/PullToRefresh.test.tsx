@@ -35,7 +35,7 @@ const { PULL_RATE, PULL_SLOP_PX, PULL_THRESHOLD_PX } = await import('./pull')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 /** The finger's travel that brings the mark just to its threshold. */
@@ -154,7 +154,7 @@ describe('a pull on the boards brings them again (PWA-15)', () => {
       fireEvent.click(screen.getAllByRole('button', { name: new RegExp(fx.snapshot.players[0]!.displayName) })[0]!)
     })
     const sheet = screen.getByRole('dialog')
-    await drag(FAR, 0, within(sheet).getAllByRole('button')[0]!)
+    await drag(FAR, 0, within(sheet).getAllByRole('button')[0])
     await drag(FAR)
     expect(refreshNow).not.toHaveBeenCalled()
   })

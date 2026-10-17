@@ -142,10 +142,10 @@ test('the build links a launch image per iPhone screen, and serves each', async 
   const links = [...html.matchAll(/<link rel="apple-touch-startup-image" media="([^"]+)" href="([^"]+)">/g)]
   expect(links).toHaveLength(LAUNCH_SCREENS.length)
   for (const [, media, href] of links) {
-    const res = await page.request.get(href!)
+    const res = await page.request.get(href)
     expect(res.status(), href).toBe(200)
     expect(res.headers()['content-type'], href).toBe('image/png')
-    const screen = LAUNCH_SCREENS.find((s) => media!.includes(`device-width: ${s.width}px`) && media!.includes(`device-height: ${s.height}px`) && media!.includes(`ratio: ${s.ratio}`))!
+    const screen = LAUNCH_SCREENS.find((s) => media.includes(`device-width: ${s.width}px`) && media.includes(`device-height: ${s.height}px`) && media.includes(`ratio: ${s.ratio}`))!
     expect(href).toContain(`iphone-${launchPixels(screen).width}x${launchPixels(screen).height}.png?v=`)
   }
 })

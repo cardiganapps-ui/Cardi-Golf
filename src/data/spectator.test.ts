@@ -193,7 +193,7 @@ function withJunk(v: unknown, spec: Spec, n = { i: 0 }): unknown {
   const obj = v as Record<string, unknown>
   const shape = 'o' in spec ? spec.o : (spec.by[obj[spec.d] as string] as { o: Record<string, Spec> }).o
   const out: Record<string, unknown> = { junk: `secreto${n.i++}` }
-  for (const [k, x] of Object.entries(obj)) out[k] = shape[k] ? withJunk(x, shape[k]!, n) : x
+  for (const [k, x] of Object.entries(obj)) out[k] = shape[k] ? withJunk(x, shape[k], n) : x
   return out
 }
 

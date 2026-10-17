@@ -597,16 +597,18 @@ export function AdminPlayers() {
                 className="btn btn--secondary btn--sm"
                 type="button"
                 disabled={busy}
-                onClick={async () => {
-                  const id = pinFor.id
-                  try {
-                    await unlockPin(id)
-                    setLocks((cur) => (cur ? cur.filter((l) => l.playerId !== id) : cur))
-                    toast(P.pinUnlocked)
-                  } catch (e) {
-                    toast(humanError(e))
-                  }
-                }}
+                onClick={() =>
+                  void (async () => {
+                    const id = pinFor.id
+                    try {
+                      await unlockPin(id)
+                      setLocks((cur) => (cur ? cur.filter((l) => l.playerId !== id) : cur))
+                      toast(P.pinUnlocked)
+                    } catch (e) {
+                      toast(humanError(e))
+                    }
+                  })()
+                }
               >
                 {P.unlockPin}
               </button>

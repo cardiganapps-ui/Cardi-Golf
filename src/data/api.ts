@@ -286,7 +286,7 @@ export async function upsertPlayer(tournamentId: string, p: PlayerInput) {
   // The three rounds are the column's jsonb as the engine reads them (`estimate_inputs`).
   const row = { ...p, estimate_inputs: p.estimate_inputs as Json | null, tournament_id: tournamentId }
   if (!row.id) delete (row as Partial<typeof row>).id
-  return unwrap(await supabase().from('players').upsert(row).select('id').single()) as { id: string }
+  return unwrap(await supabase().from('players').upsert(row).select('id').single())
 }
 
 /**
@@ -421,6 +421,9 @@ export async function verifyCourse(courseId: string, tournamentId: string, reaso
   await rpc('verify_course', { p_course_id: courseId, p_tournament_id: tournamentId, p_reason: reason })
 }
 
+/** A numeric column as a number, whatever spelling it arrives in (a numeric may come as its text), or null. */
+const numeric = (v: unknown): number | null => (v == null ? null : Number(v))
+
 export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
   const sb = supabase()
   const course = unwrap(await sb.from('courses').select('*').eq('id', courseId).single())
@@ -435,14 +438,14 @@ export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
     externalId: course.external_id,
     attribution: course.attribution ?? null,
     website: course.website ?? null,
-    latitude: course.latitude == null ? null : Number(course.latitude),
-    longitude: course.longitude == null ? null : Number(course.longitude),
+    latitude: numeric(course.latitude),
+    longitude: numeric(course.longitude),
     verifiedAt: course.verified_at ?? null,
     tees: tees.map((t) => ({
       id: t.id,
       name: t.name,
       color: t.color,
-      rating: t.rating == null ? null : Number(t.rating),
+      rating: numeric(t.rating),
       slope: t.slope,
       holes: holes
         .filter((h) => h.tee_id === t.id)
@@ -464,8 +467,8 @@ export async function deleteCourse(id: string) {
 export async function upsertRound(tournamentId: string, r: { id?: string; number: number; date: string | null; course_id: string | null; holes: 9 | 18; status?: string }) {
   const sb = supabase()
   const { id, ...rest } = r
-  if (id) return unwrap(await sb.from('rounds').update(rest).eq('id', id).select('id').single()) as { id: string }
-  return unwrap(await sb.from('rounds').insert({ ...rest, tournament_id: tournamentId }).select('id').single()) as { id: string }
+  if (id) return unwrap(await sb.from('rounds').update(rest).eq('id', id).select('id').single())
+  return unwrap(await sb.from('rounds').insert({ ...rest, tournament_id: tournamentId }).select('id').single())
 }
 
 export async function setRoundStatus(roundId: string, status: 'scheduled' | 'live' | 'finished' | 'cancelled') {

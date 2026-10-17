@@ -64,7 +64,7 @@ let clock = 0
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 let snap: Snapshot
 
@@ -117,7 +117,7 @@ async function answer(button: HTMLElement) {
   })
   await painted()
 }
-const written = () => outbox.scores.map((r) => `${r.player_id}@${r.hole}=${r.strokes}/${r.putts}`)
+const written = () => outbox.scores.map((r) => `${String(r.player_id)}@${String(r.hole)}=${String(r.strokes)}/${String(r.putts)}`)
 
 beforeEach(() => {
   localStorage.clear()
@@ -380,7 +380,7 @@ describe('Tarjeta: the confirmation lives in the save bar (PWA-01)', () => {
     mount()
     await tapSave(11_000)
     expect(toast).not.toHaveBeenCalled()
-    const bar = saveButton().parentElement as HTMLElement
+    const bar = saveButton().parentElement!
     expect(within(bar).getByText(S.savedHole(10))).toBeTruthy()
     await act(async () => {
       fireEvent.click(within(bar).getByRole('button', { name: S.correct }))
@@ -895,10 +895,10 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
       await act(async () => undefined)
     }
     expect(holeOnScreen()).toBe(target.hole)
-    expect(strokesOf('p1')).toBe((target.strokes as number) + 1)
+    expect(strokesOf('p1')).toBe((target.strokes!) + 1)
     await tapSave(20_000)
     const p1 = written().filter((r) => r.startsWith(`p1@${target.hole}=`))
-    expect(p1).toEqual([`p1@${target.hole}=${(target.strokes as number) + 1}/${Math.min(target.putts as number, (target.strokes as number) + 1)}`])
+    expect(p1).toEqual([`p1@${target.hole}=${(target.strokes!) + 1}/${Math.min(target.putts!, (target.strokes!) + 1)}`])
   })
 })
 

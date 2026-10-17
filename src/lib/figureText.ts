@@ -125,6 +125,7 @@ export function feedPicks(feed: readonly FeedEvent[], nameOf: (id: string) => st
     const e = feed[i]!
     const { set, lines } = feedChoices(e, nameOf, words)
     let pick = hash(feedKey(e)) % lines.length
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- through `?.` TypeScript reads `prev` as only its first value (null) in this loop
     if (prev && prev.set === set && prev.pick === pick && lines.length > 1) pick = (pick + 1) % lines.length
     out[i] = { set, pick, line: lines[pick]! }
     prev = { set, pick }

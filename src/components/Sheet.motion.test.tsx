@@ -127,9 +127,13 @@ describe('closing plays out (MOT-09)', () => {
     vi.useFakeTimers()
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: t.common.close }))
     expect(frame()).toBeTruthy()
-    act(() => vi.advanceTimersByTime(100))
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
     expect(frame()).toBeTruthy()
-    act(() => vi.advanceTimersByTime(200))
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
     expect(frame()).toBeNull()
     expect(onExited).toHaveBeenCalledTimes(1)
   })
@@ -190,7 +194,7 @@ async function openTall(props: { dirty?: boolean } = {}) {
   await user.click(screen.getByRole('button', { name: 'Abrir jugador' }))
   await settle()
   const dialog = screen.getByRole('dialog')
-  vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ height: 400, width: 393, top: 400, bottom: 800, left: 0, right: 393, x: 0, y: 400, toJSON: () => ({}) } as DOMRect)
+  vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ height: 400, width: 393, top: 400, bottom: 800, left: 0, right: 393, x: 0, y: 400, toJSON: () => ({}) })
   return dialog
 }
 const grabber = (dialog: HTMLElement) => dialog.querySelector('[data-sheet-grab]')!
@@ -303,7 +307,9 @@ describe('the toasts go the way they came (MOT-09)', () => {
     const undo = vi.fn()
     render(<Toaster />)
     act(() => toast('Hoyo 7 guardado', { label: t.common.undo, onClick: undo }))
-    act(() => vi.advanceTimersByTime(6000))
+    act(() => {
+      vi.advanceTimersByTime(6000)
+    })
     const region = document.querySelector('[aria-live="polite"]')!
     const going = region.firstElementChild as HTMLElement
     expect(going).toBeTruthy()
@@ -321,7 +327,9 @@ describe('the toasts go the way they came (MOT-09)', () => {
     vi.useFakeTimers()
     render(<Toaster />)
     act(() => toast('Hoyo 7 guardado'))
-    act(() => vi.advanceTimersByTime(2800))
+    act(() => {
+      vi.advanceTimersByTime(2800)
+    })
     expect(document.querySelector('[aria-live="polite"] [aria-hidden="true"]')).toBeTruthy()
     vi.useRealTimers()
     await waitFor(() => expect(document.querySelector('[aria-live="polite"]')!.textContent).toBe(''))

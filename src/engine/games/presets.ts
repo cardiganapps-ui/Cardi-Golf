@@ -45,7 +45,7 @@ export const PRESETS: Preset[] = [
         fewestPutts: { enabled: true, label: 'Menos putts' },
       },
       prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [50, 25, 15, 10], stablefordMode: 'percent', bestRoundPerDay: 1000, fewestPutts: 1000 },
-      games: [game('lowNet', { id: 'low-gross', label: 'Low gross', options: { basis: 'gross', scope: 'overall' }, money: { source: 'side', buyIn: 300, amount: 0, stake: 0, split: [60, 40] } } as Partial<GameConfig>)],
+      games: [game('lowNet', { id: 'low-gross', label: 'Low gross', options: { basis: 'gross', scope: 'overall' }, money: { source: 'side', buyIn: 300, amount: 0, stake: 0, split: [60, 40] } })],
     }),
   },
   {

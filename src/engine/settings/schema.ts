@@ -245,24 +245,24 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
   if (v.modules.auction.enabled) {
     v.auction.payout.forEach((slot, i) => {
       if (slot.slot === 'bestOfTier' && !tiers.has(slot.tier)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], ...refusal(msg('settings.payoutTier', { tier: slot.tier })) })
+        ctx.addIssue({ code: 'custom', path: ['auction', 'payout', i, 'tier'], ...refusal(msg('settings.payoutTier', { tier: slot.tier })) })
       }
     })
   }
   const gameIds = new Set<string>()
   v.games.forEach((g, i) => {
-    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], ...refusal(msg('settings.gameId', { id: g.id })) })
+    if (gameIds.has(g.id)) ctx.addIssue({ code: 'custom', path: ['games', i, 'id'], ...refusal(msg('settings.gameId', { id: g.id })) })
     gameIds.add(g.id)
-    for (const issue of gameIssues(g)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, ...issue.path], ...refusal(issue.says) })
+    for (const issue of gameIssues(g)) ctx.addIssue({ code: 'custom', path: ['games', i, ...issue.path], ...refusal(issue.says) })
   })
   if (v.prizes.stablefordMode === 'percent' && v.modules.individual.enabled) {
     const sum = v.prizes.stableford.reduce((s, x) => s + x, 0)
-    if (sum !== 100) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['prizes', 'stableford'], ...refusal(msg('settings.individualSplit', { sum })) })
+    if (sum !== 100) ctx.addIssue({ code: 'custom', path: ['prizes', 'stableford'], ...refusal(msg('settings.individualSplit', { sum })) })
   }
   if (v.modules.pairs.enabled) {
     v.modules.pairs.pairing.forEach((rule, i) => {
       for (const tier of rule) {
-        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], ...refusal(msg('settings.pairingTier', { tier })) })
+        if (!tiers.has(tier)) ctx.addIssue({ code: 'custom', path: ['modules', 'pairs', 'pairing', i], ...refusal(msg('settings.pairingTier', { tier })) })
       }
     })
   }

@@ -122,7 +122,7 @@ try {
     console.error('usage: db.mjs migrate | check | sql "<sql>" | file <path>')
     process.exit(1)
   }
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error(String(e.message ?? e))
   process.exit(1)
 }

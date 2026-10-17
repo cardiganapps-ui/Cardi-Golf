@@ -32,7 +32,7 @@ export function quickSettings(o: QuickOptions): TournamentSettings {
   const fee = o.money ? Math.max(0, Math.round(o.entryFee)) : 0
   const games: GameConfig[] = o.games.map((key) => {
     const g = GAME_ENTRIES.find((e) => e.key === key)!.create(key.toLowerCase())
-    return o.money ? g : ({ ...g, money: { ...g.money, source: 'none' } } as GameConfig)
+    return o.money ? g : ({ ...g, money: { ...g.money, source: 'none' } })
   })
   return {
     ...base,

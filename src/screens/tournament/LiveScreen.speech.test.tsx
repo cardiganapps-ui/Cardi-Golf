@@ -44,7 +44,7 @@ describe('En vivo rows say what they show (A11Y-11)', () => {
     expect(mine).toMatch(new RegExp(`dueños?: [^,]*${owner}`))
     expect(labels.filter((l) => /dueños?: /.test(l))).toEqual([mine])
     expect(labels.filter((l) => /categoría/.test(l))).toEqual([])
-    const shown = screen.getAllByRole('button').filter((b) => b.getAttribute('aria-label') === mine)[0]!
+    const shown = screen.getAllByRole('button').find((b) => b.getAttribute('aria-label') === mine)!
     expect(shown.textContent).toMatch(/dueños?: /)
     expect(document.querySelectorAll('.tierBadge')).toHaveLength(0)
     // Points are said as points.

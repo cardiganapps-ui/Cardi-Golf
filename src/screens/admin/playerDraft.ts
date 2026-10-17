@@ -13,7 +13,7 @@ export type PlayerDraft = Omit<PlayerInput, 'base_hcp' | 'estimate_inputs'> & { 
 /** The player to save, once the chosen method has its number; null until then. */
 export function completePlayer(d: PlayerDraft): PlayerInput | null {
   const est = d.estimate_inputs
-  const scores = est && est.every((r) => r.gross != null) ? (est as [EstimateInput, EstimateInput, EstimateInput]) : null
+  const scores = est?.every((r) => r.gross != null) ? (est as [EstimateInput, EstimateInput, EstimateInput]) : null
   if (d.handicap_source === 'manual' && d.base_hcp == null) return null
   if (d.handicap_source === 'index' && d.handicap_index == null) return null
   if (d.handicap_source === 'estimate' && !scores) return null

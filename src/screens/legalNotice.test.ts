@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { t } from '../i18n/es-MX'
 import { BACKUP_TABLES, NOT_BACKED_UP } from '../lib/backupTables'
 
-type Doc = { title: string; version: string; updated: string; sections: Array<[string, string]> }
+interface Doc { title: string; version: string; updated: string; sections: Array<[string, string]> }
 
 /** A file of the repo, read as text: what a sentence about the product rests on. */
 const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
@@ -131,7 +131,7 @@ describe('the integral notice (TRUST-04)', () => {
     expect(source('src/data/legal.ts')).toContain("rpc('confirm_adult'")
     expect(source('src/screens/organizer/NewTournamentScreen.tsx')).toContain('(!withMoney || adults)')
     expect(source('supabase/migrations/0070_self_service.sql')).toContain("check (document in ('privacy', 'terms', 'adult'))")
-    expect(Object.fromEntries(t.legal.terms.sections)['Edad']).toContain('Para crear una cuenta en Polo necesitas tener 18 años o más')
+    expect(Object.fromEntries(t.legal.terms.sections).Edad).toContain('Para crear una cuenta en Polo necesitas tener 18 años o más')
   })
 
   it('changes show in the date and version', () => {
@@ -192,9 +192,9 @@ describe('the sections, in order', () => {
     const terms = Object.fromEntries(t.legal.terms.sections)
     expect(terms['Ley y tribunales']).toContain('Estos términos se rigen por las leyes de México')
     expect(terms['Ley y tribunales']).toContain('sin que un abogado los haya revisado todavía')
-    expect(terms['Responsabilidad']).toContain('En lo que la ley lo permita, quien opera Polo no responde por pérdidas')
+    expect(terms.Responsabilidad).toContain('En lo que la ley lo permita, quien opera Polo no responde por pérdidas')
     expect(terms['Si se suspende una cuenta']).toContain('siempre anota el motivo')
-    expect(terms['Cambios']).toContain('la app te lo dice al abrirla')
+    expect(terms.Cambios).toContain('la app te lo dice al abrirla')
     // The money disclaimer, word for word where Dinero shows it (TRUST-12).
     expect(terms['El dinero']).toContain(t.money.disclaimer)
   })
@@ -492,7 +492,7 @@ describe('what the notice left out (P3-6)', () => {
   })
 
   it('a Google photo stays on Google: whoever sees it fetches it from there', () => {
-    expect(sections['Google']).toContain('Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP.')
+    expect(sections.Google).toContain('Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP.')
     // The profile keeps Google's address for it, not a copy, and every face shows it straight from that address.
     expect(source('supabase/migrations/0014_profile_name_hint.sql')).toContain("coalesce(meta ->> 'avatar_url', meta ->> 'picture', '')")
     expect(source('src/components/ui.tsx')).toContain('<img src={url} alt="" loading="lazy" />')

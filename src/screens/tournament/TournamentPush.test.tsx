@@ -9,7 +9,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const browser = vi.hoisted(() => ({ state: 'off' as string, standalone: true, platform: 'android' as 'ios' | 'android' | 'other' }))
+const browser = vi.hoisted(() => ({ state: 'off', standalone: true, platform: 'android' }))
 vi.mock('../../lib/install', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/install')>()),
   isStandalone: () => browser.standalone,

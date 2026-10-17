@@ -119,7 +119,7 @@ function newWindow() {
   return Object.assign(new EventTarget(), { location: new URL('https://golf.test/t/ensayo/tarjeta') })
 }
 function newDocument() {
-  return Object.assign(new EventTarget(), { visibilityState: 'visible' as 'visible' | 'hidden' })
+  return Object.assign(new EventTarget(), { visibilityState: 'visible' })
 }
 
 export class FakeBrowser {

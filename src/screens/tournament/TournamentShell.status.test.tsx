@@ -34,10 +34,10 @@ const { MoreScreen } = await import('./MoreScreen')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
-type Facts = { online: boolean; source: 'cache' | 'server'; realtime: 'off' | 'connecting' | 'live' | 'error'; error?: string }
+interface Facts { online: boolean; source: 'cache' | 'server'; realtime: 'off' | 'connecting' | 'live' | 'error'; error?: string }
 const STATES: Array<{ name: string; facts: Facts; says: string; old: boolean }> = [
   { name: 'no signal, the phone’s copy', facts: { online: false, source: 'cache', realtime: 'off' }, says: t.sync.offlineShort, old: true },
   { name: 'no signal, the server’s boards', facts: { online: false, source: 'server', realtime: 'error' }, says: t.sync.offlineShort, old: true },

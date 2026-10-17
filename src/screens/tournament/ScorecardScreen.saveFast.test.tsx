@@ -15,7 +15,7 @@ import { Profiler } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-type HoleWrite = { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }
+interface HoleWrite { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }
 const outbox = vi.hoisted(() => ({
   /** Hold each hole's storage write until the test lets it land (or fail). */
   hold: false,
@@ -65,7 +65,7 @@ import { TournamentContext } from './tournamentContext'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this);
 }
 
 const S = t.card

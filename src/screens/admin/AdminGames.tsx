@@ -170,7 +170,7 @@ export function AdminGames() {
         target={awardFor}
         onClose={() => setAwardFor(null)}
         onSave={(ids) =>
-          run(async () => {
+          void run(async () => {
             await adminSetAwards(awardFor!.hole.roundId, awardFor!.gameId, awardFor!.hole.hole, ids, me.playerId)
             setAwardFor(null)
           })
@@ -180,7 +180,7 @@ export function AdminGames() {
         game={games.find((g) => g.id === matchFor) ?? null}
         onClose={() => setMatchFor(null)}
         onSave={(m) =>
-          run(async () => {
+          void run(async () => {
             await updateGame(matchFor!, (x) => x.type === 'match' && x.options.matches.push(m))
             setMatchFor(null)
           })

@@ -39,7 +39,12 @@ const check = (ok, label, detail) => {
     if (detail !== undefined) console.log('    ', JSON.stringify(detail))
   }
 }
-/** The endpoints left in `table` for `col = id` once the route has had its time (a pruned one goes). */
+/**
+ * The endpoints left in `table` for `col = id` once the route has had its time (a pruned one goes).
+ * @param {string} table
+ * @param {string} col
+ * @param {string} id
+ */
 async function settle(table, col, id) {
   let left = null
   for (let i = 0; i < 20; i++) {

@@ -285,7 +285,7 @@ try {
   await B.page.waitForSelector('text=22.5', { timeout: T })
   check((await B.page.textContent('main')).includes('Jugadas'), 'the outing counts for the crew season (22.5 pts for a shared win)')
   await B.page.screenshot({ path: `${out}/crew.png`, fullPage: true })
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failed++
 } finally {

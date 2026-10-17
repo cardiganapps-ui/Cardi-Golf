@@ -51,7 +51,7 @@ describe('hand calculation, group 1 of the first tournament', () => {
     // Group 1 Day 1 from the tables; everyone else gets seeded scores so the tournament is complete.
     for (const pid of Object.keys(DAY1)) {
       DAY1[pid]!.forEach((g, i) => {
-        snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i]!, g === 0))
+        snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i], g === 0))
       })
     }
     fillRound(snap, 'r1', 21, { playerIds: snap.players.map((p) => p.id).filter((id) => !(id in DAY1)) })
@@ -106,7 +106,7 @@ describe('hand calculation, group 1 of the first tournament', () => {
   it('Day 2 with the cut handicaps: p1 plays a 41 again and the totals follow', () => {
     const snap = makeFirstTournament()
     for (const pid of Object.keys(DAY1)) {
-      DAY1[pid]!.forEach((g, i) => snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i]!, g === 0)))
+      DAY1[pid]!.forEach((g, i) => snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i], g === 0)))
     }
     fillRound(snap, 'r1', 21, { playerIds: snap.players.map((p) => p.id).filter((id) => !(id in DAY1)) })
     snap.snakeTiebreaks.push({ roundId: 'r1', groupId: 'r1g1', hole: 9, lastHoledPlayerId: 'p4' })

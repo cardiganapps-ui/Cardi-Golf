@@ -65,7 +65,9 @@ describe('the update bar', () => {
     const apply = vi.fn(async () => undefined)
     act(() => offerUpdate(apply))
     expect(screen.getByRole('status').textContent).toContain(t.sync.newVersion)
-    act(() => vi.advanceTimersByTime(10 * 60 * 1000))
+    act(() => {
+      vi.advanceTimersByTime(10 * 60 * 1000)
+    })
     expect(screen.getByRole('status')).toBeTruthy()
     act(() => useOutbox.setState({ editing: true }))
     expect(screen.queryByRole('status')).toBeNull()

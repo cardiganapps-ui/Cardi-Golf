@@ -1,0 +1,27 @@
+{
+  // ARCH-17: the repo's scripts are plain ES modules that node runs, type-checked as JavaScript (checkJs).
+  // A script whose tests import it keeps its types in a sibling .d.mts. Two strict checks are off here:
+  // implicit any (a JavaScript parameter is untyped until a JSDoc says otherwise) and null checks (a
+  // Supabase answer's `data` is typed nullable, and a script that reads it fails loudly on a null anyway);
+  // the rest of strict holds, so a renamed function, a wrong argument or a missing import fails the typecheck.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force"
+  },
+  "include": ["scripts/**/*.mjs", "e2e/*.mjs", "eslint.config.js"]
+}

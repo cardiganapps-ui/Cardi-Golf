@@ -14,4 +14,4 @@ const ENDS = new RegExp(`^${SPACE}+|${SPACE}+$`, 'g')
 
 export const trimReason = (s: string): string => s.replace(ENDS, '')
 /** Characters (code points), as Postgres's char_length counts them. */
-export const reasonLength = (s: string): number => [...s].length
+export const reasonLength = (s: string): number => Array.from(s).length

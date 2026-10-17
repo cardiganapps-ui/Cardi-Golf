@@ -483,6 +483,8 @@ function AuctionBoard() {
    */
   const [justSold, setJustSold] = useState<string | null>(null)
   const lastOpen = useRef<string | null>(null)
+  // The effect below reads it when a lot sells, so it is declared first.
+  const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
   const soldKey = auction.lots
     .filter((l) => l.status === 'sold')
     .map((l) => l.lotId)
@@ -509,7 +511,6 @@ function AuctionBoard() {
   const bidder = open?.currentBid?.bidderId ?? open?.playerId
   const ph = lot ? state.core.rounds[state.core.roundIds[0] ?? '']?.[lot.playerId]?.playingHcp : undefined
   const pair = lot ? snapshot.pairs.find((p) => p.player1Id === lot.playerId || p.player2Id === lot.playerId) : undefined
-  const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
   /*
    * The night's other two moments, on the TV for the room (MOT-05, UX-17): the
    * order out of the hat until the first lot opens, and the pairs draw once the

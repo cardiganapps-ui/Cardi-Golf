@@ -71,7 +71,7 @@ describe('Para empezar', () => {
 
   it('a set-up tournament is all done', () => {
     const r = check('minimal4-setup')
-    expect(Object.values(r).every((i) => i!.done)).toBe(true)
+    expect(Object.values(r).every((i) => i.done)).toBe(true)
     // One tee on the course: nothing to choose, so no tee line.
     expect(Object.keys(r).sort()).toEqual(['card', 'groups', 'handicaps', 'pins', 'players', 'roundSetup', 'rounds'])
   })
@@ -127,7 +127,7 @@ describe('Para empezar: what the first list got wrong', () => {
       for (const p of s.players) p.defaultTeeId = null
     })
     expect(r.tees).toBeUndefined()
-    expect(Object.values(r).every((i) => i!.done)).toBe(true)
+    expect(Object.values(r).every((i) => i.done)).toBe(true)
   })
 
   it('match play: the seeds with a bye need no group on day 1 while the bracket goes on to day 2 (P2)', () => {

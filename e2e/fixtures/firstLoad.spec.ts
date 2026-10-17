@@ -15,7 +15,7 @@ function scripts(page: Page): string[] {
   const names: string[] = []
   page.on('request', (r: Request) => {
     const m = /\/assets\/([\w.-]+?)-[\w-]{8}\.js$/.exec(new URL(r.url()).pathname)
-    if (m) names.push(m[1]!)
+    if (m) names.push(m[1])
   })
   return names
 }

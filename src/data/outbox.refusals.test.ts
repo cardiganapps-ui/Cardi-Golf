@@ -233,6 +233,6 @@ describe('a hole’s winners, and «nadie»', () => {
       { groupId: 'g1', hole: 5, gameId: 'closest', playerId: 'p3' },
     ])
     overlayPending(shown)
-    expect(shown.holeAwards!.map((a) => `${a.gameId}:${a.hole}:${a.playerId}`).sort()).toEqual(['closest:5:p2', 'closest:6:p3', 'longest:5:p4'])
+    expect(shown.holeAwards.map((a) => `${a.gameId}:${a.hole}:${a.playerId}`).sort()).toEqual(['closest:5:p2', 'closest:6:p3', 'longest:5:p4'])
   })
 })

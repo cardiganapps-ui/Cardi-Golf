@@ -114,7 +114,7 @@ export interface FakeRequest {
   single: boolean
 }
 
-type Result = { data: unknown; error: FakeError | null }
+interface Result { data: unknown; error: FakeError | null }
 
 export interface Hold {
   /** Resolves once the server has read the tables for the held request. */
@@ -1375,9 +1375,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (!organizer) return fail('42501', 'Solo el Comité decide un concurso')
     if (!shape || (winners != null && !Array.isArray(winners))) return fail('22023', 'Ese concurso no se puede guardar así')
     const list = winners as unknown[] | null | undefined
-    if (list && list.some((x) => !ofTournament(x))) return fail('22023', 'Ese jugador no es de este torneo')
+    if (list?.some((x) => !ofTournament(x))) return fail('22023', 'Ese jugador no es de este torneo')
     if (list && twice(list)) return fail('22023', 'Cada ganador va una sola vez')
-    const gone = rows.filter((r) => onHole(r) && (r.group_id == null || (list != null && list.length === 0)))
+    const gone = rows.filter((r) => onHole(r) && (r.group_id == null || (list?.length === 0)))
     const made = list?.length ? list.map((x) => withDefaults('hole_awards', { round_id: rid, group_id: null, hole, game_id: game, player_id: x, decided_by: args.p_decided_by ?? null })) : []
     server.tables.hole_awards = [...rows.filter((r) => !gone.includes(r)), ...made]
     return json(200, { deleted: gone.map(key), rows: made })

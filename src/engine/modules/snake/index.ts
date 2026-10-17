@@ -70,8 +70,9 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
       for (const g of snapshot.groups.filter((x) => x.roundId === rid).sort((a, b) => a.number - b.number)) {
         const order = playOrder(g.startHole, round.holes)
         const passes: SnakePass[] = []
-        let holderId: Id | null = null
-        let pendingHole: number | null = null
+        // Written inside the forEach below, so declared wide: TypeScript would read them as always null.
+        let holderId = null as Id | null
+        let pendingHole = null as number | null
         let stuck = false
         // A player who picked up counts only if he actually entered ≥ threshold putts (§18.1).
         order.forEach((hole, idx) => {

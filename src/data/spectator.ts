@@ -35,7 +35,7 @@ function asLink(v: unknown): SpectatorLink | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null
   const x = v as Record<string, unknown>
   if (typeof x.token !== 'string' || !TOKEN_SHAPE.test(x.token)) return null
-  return { token: x.token, money: x.money === true, createdAt: String(x.createdAt ?? ''), rotatedAt: typeof x.rotatedAt === 'string' ? x.rotatedAt : null }
+  return { token: x.token, money: x.money === true, createdAt: typeof x.createdAt === 'string' ? x.createdAt : '', rotatedAt: typeof x.rotatedAt === 'string' ? x.rotatedAt : null }
 }
 
 /** The tournament's link, for its Comité; null when there is none. */
@@ -91,7 +91,7 @@ export async function spectatorBoard(token: string, seen: string | null): Promis
   if (!raw || typeof raw !== 'object') return null
   const answer = parseAnswer('spectator_board', BoardSchema, raw)
   if (answer.same === true) return { same: true, version: String(answer.version) }
-  return { same: false, version: String(answer.version ?? ''), money: answer.money === true, snapshot: snapshotFromBoard(answer, spectatorStoreId(token)) }
+  return { same: false, version: typeof answer.version === 'string' ? answer.version : '', money: answer.money === true, snapshot: snapshotFromBoard(answer, spectatorStoreId(token)) }
 }
 
 /** The tables the answer carries, by name: the snapshot's own. */
@@ -118,7 +118,7 @@ const BoardSchema = z.looseObject({
 
 /** spectator_board's answer as the snapshot the engine reads, under the id the store keeps it by. */
 export function snapshotFromBoard(answer: Row, id: string): Snapshot {
-  const rows: SnapshotRows = { tournament: { ...(answer.tournament ?? {}), id, slug: '', join_code: '' } }
+  const rows: SnapshotRows = { tournament: { ...((answer.tournament as Row | undefined) ?? {}), id, slug: '', join_code: '' } }
   for (const table of TABLES) if (Array.isArray(answer[table])) rows[table] = answer[table] as Row[]
   return forSpectators(snapshotFromRows(rows), answer.money === true, id)
 }

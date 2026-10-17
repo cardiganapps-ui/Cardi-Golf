@@ -28,5 +28,6 @@ export function showValue(v: unknown): string {
     const s = JSON.stringify(v)
     return s.length > 60 ? `${s.slice(0, 57)}…` : s
   }
-  return String(v)
+  if (typeof v === 'string') return v
+  return typeof v === 'number' || typeof v === 'bigint' ? String(v) : '—'
 }

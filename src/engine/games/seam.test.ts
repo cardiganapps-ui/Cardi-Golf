@@ -137,7 +137,7 @@ describe('the registries are typed by id and type', () => {
     if (isGameOf(s, 'skins')) {
       expect(s.state.holes.length).toBeGreaterThan(0)
       // @ts-expect-error: a skins game has no contest's units by hole
-      void s.state.claims
+      expect(s.state.claims).toBeUndefined()
     }
     expect(isGameOf(s, 'contest')).toBe(false)
   })

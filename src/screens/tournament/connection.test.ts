@@ -63,7 +63,7 @@ describe('the connection, from facts (REL-21)', () => {
     expect(connectionOf(factsOf(store('fixture:spectator:full12-live'), true))).toEqual({ kind: 'live', mayBeOld: false })
     expect(connectionOf(factsOf(store('fixture:spectator:dinero:full12-live'), true))).toEqual({ kind: 'live', mayBeOld: false })
     expect(connectionOf(factsOf(store('spectator:abc'), true))).toEqual({ kind: 'live', mayBeOld: false })
-    expect(connectionOf(factsOf({ ...store('fixture:full12-live'), source: null as never }, true))).toBeNull()
+    expect(connectionOf(factsOf({ ...store('fixture:full12-live'), source: null }, true))).toBeNull()
     expect(connectionOf(factsOf(store('fixture:spectator:full12-live'), false))).toEqual({ kind: 'offline', mayBeOld: true })
   })
 })

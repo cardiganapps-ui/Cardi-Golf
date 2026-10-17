@@ -74,7 +74,7 @@ export function PullToRefresh({ enabled, refreshing, onRefresh, children }: { en
     if (f.intent === 'other') return void (finger.current = null)
     if (f.intent !== 'pull') return
     // The page moved under the finger (back up after the pull, then on down): it is scrolling now, not pulling.
-    if (pageTop() > 0) return settle()
+    if (pageTop() > 0) { settle(); return; }
     f.offset = pullOffset(dy)
     place(f.offset)
     setPhase(pullArmed(f.offset) ? 'armed' : 'pulling')
@@ -82,9 +82,9 @@ export function PullToRefresh({ enabled, refreshing, onRefresh, children }: { en
 
   function end() {
     const f = finger.current
-    if (!f || f.intent !== 'pull') return void (finger.current = null)
+    if (f?.intent !== 'pull') return void (finger.current = null)
     finger.current = null
-    if (!pullArmed(f.offset) || refreshing) return settle()
+    if (!pullArmed(f.offset) || refreshing) { settle(); return; }
     place(PULL_REST_PX)
     setPhase('waiting')
     void onRefresh().finally(settle)

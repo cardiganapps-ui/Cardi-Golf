@@ -94,7 +94,7 @@ export function AdminHistory() {
     if (e.table === 'scores') {
       const player = name(row.player_id) ?? '?'
       const r = roundNo(row.round_id)
-      const hole = `${row.hole ?? '?'}${r && (rounds?.length ?? 0) > 1 ? ` (día ${r})` : ''}`
+      const hole = `${(row.hole as number | null | undefined) ?? '?'}${r && (rounds?.length ?? 0) > 1 ? ` (día ${r})` : ''}`
       const before = e.action === 'INSERT' ? null : e.before?.picked_up ? 'levantó' : (e.before?.strokes as number | null) != null ? String(e.before?.strokes) : null
       const after = e.action === 'DELETE' ? null : e.after?.picked_up ? 'levantó' : (e.after?.strokes as number | null) != null ? String(e.after?.strokes) : null
       return H.scoreLine(player, hole, before, after)
@@ -120,7 +120,7 @@ export function AdminHistory() {
       if (e.before?.money !== e.after?.money) return L.money(e.after?.money === true)
     }
     const what = t.platform.tables[e.table] ?? e.table
-    const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${row.number ?? ''}` : name(row.player_id)
+    const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${(row.number as number | null | undefined) ?? ''}` : name(row.player_id)
     return `${what}${who ? ` ${who}` : ''}, ${verb}`
   }
   /** Who made it: once the player has entered on more than one phone, from which (TRUST-24). */
@@ -227,11 +227,13 @@ export function AdminHistory() {
           className="btn btn--secondary"
           type="button"
           disabled={loadingMore}
-          onClick={async () => {
-            setLoadingMore(true)
-            await load(historyRows(entries).at(-1)?.id)
-            setLoadingMore(false)
-          }}
+          onClick={() =>
+            void (async () => {
+              setLoadingMore(true)
+              await load(historyRows(entries).at(-1)?.id)
+              setLoadingMore(false)
+            })()
+          }
         >
           {H.more}
         </button>

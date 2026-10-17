@@ -183,10 +183,10 @@ describe('a structural delete the boards do not hold yet', () => {
     server.tables.players = server.tables.players!.filter((x) => x.id !== p.id)
     emit('players', { eventType: 'DELETE', new: {}, old: { id: p.id } })
     // The reload read him before the delete.
-    server.tables.players!.push(p)
+    server.tables.players.push(p)
     slow.release()
     await reloading
-    server.tables.players = server.tables.players!.filter((x) => x.id !== p.id)
+    server.tables.players = server.tables.players.filter((x) => x.id !== p.id)
     await sleep(600)
     expect(store().data!.snapshot.players.some((x) => x.id === p.id)).toBe(false)
   })
@@ -349,10 +349,10 @@ describe('a fetch on its way when a change lands', () => {
     emit('card_signatures', { eventType: 'DELETE', new: {}, old: { round_id: r3.id, pair_id: pair.id } })
     await sleep(100)
     // What the reload read was from before the delete.
-    server.tables.card_signatures!.push(sig)
+    server.tables.card_signatures.push(sig)
     slow.release()
     await reloading
-    server.tables.card_signatures = server.tables.card_signatures!.filter((x) => x !== sig)
+    server.tables.card_signatures = server.tables.card_signatures.filter((x) => x !== sig)
     expect(store().data!.snapshot.rounds.some((r) => r.id === r3.id)).toBe(true)
     expect(store().data!.snapshot.cardSignatures.some((x) => x.roundId === r3.id && x.pairId === pair.id)).toBe(false)
   })
@@ -493,9 +493,9 @@ describe('the same boards on every phone', () => {
       const q = orig(t)
       if (t !== 'payments') return q
       const then = q.then.bind(q)
-      ;(q as unknown as { then: typeof then }).then = ((ok, err) => then((res) => ok!(Array.isArray(res.data) ? { ...res, data: [...res.data].reverse() } : res), err)) as typeof then
+      ;(q as unknown as { then: typeof then }).then = ((ok, err) => then((res) => ok!(Array.isArray(res.data) ? { ...res, data: [...res.data].reverse() } : res), err))
       return q
-    }) as typeof server.client.from
+    })
     await store().load(TID)
     const ids = store().data!.base.payments.map((p) => p.id)
     expect(ids.length).toBeGreaterThan(1)

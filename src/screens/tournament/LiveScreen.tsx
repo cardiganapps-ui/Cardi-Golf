@@ -275,7 +275,7 @@ export function LiveScreen() {
     }
     return best
   })()
-  const lastHole = (pid: string) => (roundState?.[pid] && round ? lastPlayedHole(roundState[pid]!.holes, groupOf(pid)?.startHole ?? 1, round.holes) : null)
+  const lastHole = (pid: string) => (roundState?.[pid] && round ? lastPlayedHole(roundState[pid].holes, groupOf(pid)?.startHole ?? 1, round.holes) : null)
   /** Re-sort animation only on boards small enough for it to read; big fields just re-render. */
   const animate = rows.length <= 20
   const hasHandicaps = Object.values(state.core.handicaps).some((h) => h.base > 0)
@@ -288,14 +288,14 @@ export function LiveScreen() {
    * lands on the right hole.
    */
   const myHole = (() => {
-    if (!round || round.status !== 'live' || !me.playerId) return null
+    if (round?.status !== 'live' || !me.playerId) return null
     const group = groupOf(me.playerId)
     const pr = roundState?.[me.playerId]
     if (!group || !pr) return null
     return { hole: currentHole(pr.holes, group.startHole, round.holes), thru: pr.thru }
   })()
 
-  const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
+  const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status] ?? snapshot.tournament.status
   const lead = round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null
 
   /*

@@ -90,7 +90,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
    */
   const writable = (r: RejectedItem): boolean => {
     const round = roundOf(r)
-    if (!playerId || !round || round.status !== 'live' || signedFor(snapshot, r)) return false
+    if (!playerId || round?.status !== 'live' || signedFor(snapshot, r)) return false
     const groups = snapshot.groups.filter((g) => g.roundId === round.id && g.playerIds.includes(playerId))
     const together = (...ids: string[]) => groups.some((g) => ids.every((id) => g.playerIds.includes(id)))
     if (r.kind === 'score') return together((r.payload as ScorePayload).player_id)

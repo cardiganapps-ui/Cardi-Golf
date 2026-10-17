@@ -142,7 +142,7 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
   if (modules.snake.enabled) {
     const perGroup = snakePotPerGroup(settings)
     const real = field.groupSizes?.filter((r) => r.length > 0)
-    if (real && real.length) {
+    if (real?.length) {
       // Real groups: each group pays (size − 1) survivors; rounds without groups yet count as planned.
       const known = real.reduce((s, r) => s + r.reduce((x, n) => x + prizes.snakePerSurvivor * Math.max(0, n - 1), 0), 0)
       const missing = Math.max(0, rounds - real.length)
@@ -287,6 +287,7 @@ export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): Fi
   const ids = new Set(snapshot.players.map((p) => p.id))
   const entrants: Record<string, number> = {}
   for (const g of settings.games) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a snapshot an older build kept on the phone has no gameEntries
     if (g.entrants === 'list') entrants[g.id] = (snapshot.gameEntries ?? []).filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
   }
   // Drawn teams and pairs, once there are any (a team format falls back to the pairs, as its standings do).

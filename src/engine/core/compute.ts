@@ -136,9 +136,9 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
   const scoresIdx = new Map<Id, Map<Id, Map<number, Score>>>()
   for (const s of snapshot.scores) {
     let byPlayer = scoresIdx.get(s.roundId)
-    if (!byPlayer) scoresIdx.set(s.roundId, (byPlayer = new Map()))
+    if (!byPlayer) scoresIdx.set(s.roundId, (byPlayer = new Map<Id, Map<number, Score>>()))
     let byHole = byPlayer.get(s.playerId)
-    if (!byHole) byPlayer.set(s.playerId, (byHole = new Map()))
+    if (!byHole) byPlayer.set(s.playerId, (byHole = new Map<number, Score>()))
     byHole.set(s.hole, s)
   }
 

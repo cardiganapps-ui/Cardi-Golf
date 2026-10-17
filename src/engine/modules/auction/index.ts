@@ -241,19 +241,18 @@ export function assignSlots(
       for (const m of members) cashed.add(m)
       continue
     }
-    if (slot.slot === 'lastPlace') {
-      const label = slotLabel(slot, ctx)
-      const g = groups.at(-1)
-      const members = g ? g.members.filter((m) => !cashed.has(m)) : []
-      if (!members.length) {
-        results.push(unfilledSlot(slot, label, slot.share, pot, say('auction.lastCashes')))
-        continue
-      }
-      const steps = [msg('auction.last', { names: members.map(nameOf) })]
-      if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
-      for (const m of members) cashed.add(m)
+    // What is left is the last place's slot.
+    const label = slotLabel(slot, ctx)
+    const g = groups.at(-1)
+    const members = g ? g.members.filter((m) => !cashed.has(m)) : []
+    if (!members.length) {
+      results.push(unfilledSlot(slot, label, slot.share, pot, say('auction.lastCashes')))
+      continue
     }
+    const steps = [msg('auction.last', { names: members.map(nameOf) })]
+    if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
+    results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
+    for (const m of members) cashed.add(m)
   }
   return results
 }
@@ -300,7 +299,8 @@ export function payoutsToOwners(lots: LotState[], slots: AssignedSlot[], pot: nu
     o.lines.push(line)
   }
   let distributed = 0
-  let target: { ownerId: Id; playerId: Id; slot: number; champion: boolean } | null = null
+  // Written inside the forEach below, so declared wide: TypeScript would read it as always null.
+  let target = null as { ownerId: Id; playerId: Id; slot: number; champion: boolean } | null
   const unfilledTotal = slots.filter((s) => s.unfilled).reduce((sum, s) => sum + s.amount, 0)
   slots.forEach((s, i) => {
     if (s.unfilled) return
@@ -347,7 +347,7 @@ function withPesos(slots: AssignedSlot[], payouts: Record<Id, OwnerPayout>, pot:
     const paid = floored[i]! + rounding[i]!
     steps.push(msg('auction.shareOf', { share: s.share, pot, raw }))
     if (floored[i] !== raw) steps.push(msg('auction.whole', { amount: floored[i]! }))
-    if (rounding[i]) steps.push(msg('auction.plusRounding', { rounding: rounding[i]!, paid }))
+    if (rounding[i]) steps.push(msg('auction.plusRounding', { rounding: rounding[i], paid }))
     return { ...s, pesos: paid, why: { ...s.why, steps } }
   })
 }
