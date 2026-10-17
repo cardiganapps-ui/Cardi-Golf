@@ -22,6 +22,17 @@ export declare const PRODUCTION_URL: string
 export declare function targetOf(url: string | undefined): { url: string; kind: 'production' | 'local' }
 export declare function dupeKey(name: string | null | undefined): string
 export declare function keysMatch(a: string, b: string): boolean
+export interface CatalogCourse {
+  name: string
+  source: string
+  external_id: string | null
+  location?: string | null
+}
+export declare function samePlace(a: string | null | undefined, b: string | null | undefined): boolean
+export declare function findInCatalog<C extends CatalogCourse>(
+  catalog: C[] | null,
+  q: { name: string; place?: string | null; source?: string | null; ext?: string | null },
+): C | null
 export declare function completeTees(tees: ProviderTee[]): { complete: ProviderTee[]; dropped: Array<{ tee: string; why: string }> }
 export declare function candidates(entry: ListedCourse, hits: ProviderSearchHit[]): ProviderSearchHit[]
 export declare function importPayload(c: ProviderCourse, tees: ProviderTee[], entry: ListedCourse): Record<string, unknown>
