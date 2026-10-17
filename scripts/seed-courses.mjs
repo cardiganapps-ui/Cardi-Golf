@@ -14,9 +14,10 @@
  * holes as the provider gave them (never a value the adapter filled in) and a rating and a slope. A tee short of that
  * is left out and named in the report; a course with no complete tee is reported missing, for a photo of its card.
  * The import is one call per course (catalog_import_course, 0075: the service role only), which refuses an
- * incomplete card again and never touches a course the catalog has: one whose name matches by course_dupe_key (as
- * the Admin de Polo's duplicates are found) or from the same provider id. A dry run with the key reads the catalog to
- * say which it would leave alone; it writes nothing.
+ * incomplete card again and never touches a course the catalog has: one from the same provider id, or one whose name
+ * matches by course_dupe_key (as the Admin de Polo's duplicates are found) in a place that doesn't contradict it (0077:
+ * when both the list's city and the catalog's location are known, one holds the other, folded). A dry run with the key
+ * reads the catalog to say which it would leave alone; it writes nothing.
  *
  * The only targets are production and a local Supabase named with --url (localhost, 127.0.0.1, ::1); anything else
  * is refused before a request goes out. A local target never gets the production key from .env.local: its key has to
@@ -79,6 +80,36 @@ export function keysMatch(a, b) {
 const fold = (/** @type {string} */ s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 /**
+ * Whether two places can be the same: either unknown (blank), or one holds the other, folded. catalog_import_course's
+ * rule since 0077, so «Hacienda San Gaspar» in Cuernavaca is not «La Hacienda» in Atizapán.
+ * @param {string | null | undefined} a
+ * @param {string | null | undefined} b
+ */
+export function samePlace(a, b) {
+  const x = a?.trim() ? fold(a.trim()) : null
+  const y = b?.trim() ? fold(b.trim()) : null
+  return !x || !y || x.includes(y) || y.includes(x)
+}
+
+/**
+ * The catalog course the import would leave alone, if any: the same provider id, else a name that matches by
+ * course_dupe_key in a place that doesn't contradict it. What catalog_import_course decides (0077).
+ * @template {{ name: string; source: string; external_id: string | null; location?: string | null }} C
+ * @param {C[] | null} catalog
+ * @param {{ name: string; place?: string | null; source?: string | null; ext?: string | null }} q
+ * @returns {C | null}
+ */
+export function findInCatalog(catalog, q) {
+  if (!catalog) return null
+  const key = dupeKey(q.name)
+  return (
+    (q.source && q.ext ? catalog.find((c) => c.source === q.source && c.external_id === q.ext) : undefined) ??
+    catalog.find((c) => keysMatch(dupeKey(c.name), key) && samePlace(q.place, c.location)) ??
+    null
+  )
+}
+
+/**
  * A provider's tees split into the complete ones (what is imported) and the rest, each with why.
  * @param {import('../src/lib/courseProviders/types.ts').ProviderTee[]} tees
  */
@@ -132,6 +163,8 @@ export function importPayload(c, tees, entry) {
   return {
     name: c.name,
     location: c.location ?? entry.city ?? null,
+    // The place the server compares with the catalog's (0077): the list's city, else the provider's location.
+    city: entry.city ?? null,
     source: c.provider,
     external_id: c.externalId,
     attribution: c.attribution,
@@ -204,12 +237,12 @@ export async function seed(o) {
   }
 
   // The catalog as it is, to leave alone what it has (the server checks again on every import).
-  /** @type {Array<{ id: string; name: string; source: string; external_id: string | null }> | null} */
+  /** @type {Array<{ id: string; name: string; source: string; external_id: string | null; location?: string | null }> | null} */
   let catalog = null
   if (dbKey) {
     catalog = []
     for (let from = 0; ; from += 1000) {
-      const r = await o.fetch(`${o.target.url}/rest/v1/courses?select=id,name,source,external_id&order=id`, {
+      const r = await o.fetch(`${o.target.url}/rest/v1/courses?select=id,name,source,external_id,location&order=id`, {
         headers: { ...db, Range: `${from}-${from + 999}`, Prefer: 'count=exact' },
       })
       if (!r.ok) throw new Error(`reading the catalog failed: HTTP ${r.status}`)
@@ -219,14 +252,14 @@ export async function seed(o) {
       if (!rows.length || (Number.isFinite(total) && catalog.length >= total)) break
     }
   }
-  const inCatalog = (/** @type {string} */ name, /** @type {string | null} */ source = null, /** @type {string | null} */ ext = null) =>
-    catalog?.find((c) => (source && ext && c.source === source && c.external_id === ext) || keysMatch(dupeKey(c.name), dupeKey(name))) ?? null
+  const inCatalog = (/** @type {string} */ name, /** @type {string | null | undefined} */ place, /** @type {string | null} */ source = null, /** @type {string | null} */ ext = null) =>
+    findInCatalog(catalog, { name, place, source, ext })
 
   const report = { at: new Date().toISOString(), target: o.target.kind, apply: o.apply, catalogRead: catalog != null, providers: { golfcourseapi: !!gcaKey, opengolfapi: true }, courses: /** @type {any[]} */ ([]) }
   for (const [i, entry] of o.list.entries()) {
     if (i > 0) await sleep(o.pauseMs ?? 400)
     const line = { region: entry.region ?? null, name: entry.name, city: entry.city ?? null }
-    const known = inCatalog(entry.name)
+    const known = inCatalog(entry.name, entry.city)
     if (known) {
       report.courses.push({ ...line, status: 'exists', existing: known.name })
       log(`= ${entry.name}: already in the catalog as «${known.name}»`)
@@ -284,7 +317,7 @@ export async function seed(o) {
       continue
     }
     const { course, complete, dropped } = best
-    const same = inCatalog(course.name, course.provider, course.externalId)
+    const same = inCatalog(course.name, entry.city ?? course.location, course.provider, course.externalId)
     if (same) {
       report.courses.push({ ...line, status: 'exists', existing: same.name, provider: course.provider, externalId: course.externalId })
       log(`= ${entry.name}: already in the catalog as «${same.name}»`)
@@ -312,7 +345,7 @@ export async function seed(o) {
       log(`= ${entry.name}: already in the catalog as «${answer.name}»`)
       continue
     }
-    catalog?.push({ id: answer.id, name: course.name, source: course.provider, external_id: course.externalId })
+    catalog?.push({ id: answer.id, name: course.name, source: course.provider, external_id: course.externalId, location: course.location ?? entry.city ?? null })
     report.courses.push({ ...found, status: 'imported', id: answer.id })
     log(`+ ${entry.name}: imported «${course.name}» from ${course.provider}, ${complete.length} tee(s)`)
   }
