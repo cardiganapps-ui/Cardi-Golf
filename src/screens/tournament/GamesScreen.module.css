@@ -67,18 +67,21 @@
   justify-content: space-between;
   gap: var(--s3);
 }
+/*
+ * A board row's sub line carries figures (each day's points, «1.69 por hoyo, 11 a uno»): it wraps, and never cuts
+ * one off with an ellipsis (it did on the pairs and fewest-putts boards at 375 and 393 px). The money beside it
+ * keeps its line.
+ */
 .sub {
   display: flex;
-  align-items: center;
-  gap: var(--s2);
+  align-items: baseline;
+  gap: 0 var(--s2);
   min-width: 0;
   max-width: 100%;
 }
 .sub > span:first-child {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .subMoney {
   color: var(--ink-2);
