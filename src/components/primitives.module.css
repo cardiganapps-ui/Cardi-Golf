@@ -240,6 +240,25 @@
   background: var(--ink);
   color: var(--bg);
 }
+/*
+ * A11Y-07: a choice of values wraps onto more lines when its options don't fit, instead of scrolling them out of
+ * sight («Puntos | G», «Si terminara ahora | Por jueg» at 200 %); one that fits looks as it did. Each option draws
+ * its rule on its right and below, and the last ones' rules fall under the control's own edge. A tab list (Juegos'
+ * games) still scrolls.
+ */
+.segmented[role='radiogroup'] {
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+.segmented[role='radiogroup'] > .segBtn {
+  flex: 1 1 auto;
+  white-space: normal;
+  border-bottom: var(--control-border);
+  margin: 0 -2px -2px 0;
+}
+.segmented[role='radiogroup'] > .segBtn:last-child {
+  border-right: var(--control-border);
+}
 /* MOT-12: pressed, from the first touch (`data-pressed`, PRESS in primitives.tsx) as well as `:active`. */
 .segBtn:active,
 .segBtn[data-pressed] {
@@ -285,6 +304,8 @@
   display: flex;
   flex-direction: column;
   border-top: var(--rule-heavy);
+  /* Its rows lay out by how many letters fit across it (A11Y-07): a query container, below. */
+  container: board / inline-size;
 }
 .boardHead,
 .leaderRow {
@@ -296,10 +317,13 @@
    * widen the column for every row and squeeze the name in all of them; it is
    * capped now. The rest are trimmed to the widest value they actually hold
    * (a position label, a day's points, a "thru" count).
+   * In rem (A11Y-07): the figures grow with the text, so at 200 % «HOY HOYO PUNTOS» no longer run into each other.
+   * The same widths as before at 16 px: 28, 36, 32, 56 to 72.
    */
-  grid-template-columns: 28px minmax(0, 1fr) 36px 32px minmax(56px, 72px);
+  grid-template-columns: 1.75rem minmax(0, 1fr) 2.25rem 2rem minmax(3.5rem, 4.5rem);
   align-items: center;
-  column-gap: var(--s2);
+  /* 8 px at 16 px: in rem with the tracks, so a header wider than its column («HOYO») still has a gap to hang into. */
+  column-gap: 0.5rem;
   padding: 0 var(--s1);
 }
 .boardHead {
@@ -439,6 +463,47 @@
 }
 .leaderRowDense .figure {
   font-size: var(--fs-lg);
+}
+/*
+ * A11Y-07: when the board is under 18 rem across (large text: 125 % on a 393 px phone, 120 % on a 375 one; never
+ * at 100 %, even at 320 px), the name takes the row's first line and the figures the second, under their headers;
+ * its sub line wraps instead of cutting the money off. A row on one line left the name 17 px at 200 %.
+ */
+@container board (width < 18rem) {
+  /* Four columns: the position, then the day's figure, the holes and the total, the name over the last three. The
+     total takes what is left, so a «$8,800» fits; the others are as wide on every row, so they still read down. */
+  .boardHead,
+  .leaderRow {
+    grid-template-columns: 1.75rem 2rem 2.25rem minmax(3.5rem, 1fr);
+    column-gap: 0.25rem;
+  }
+  .boardHead > span:nth-child(2) {
+    display: none;
+  }
+  .leaderRow {
+    padding-block: var(--s1);
+    row-gap: var(--s1);
+  }
+  .leaderRow > .name {
+    grid-column: 2 / -1;
+  }
+  .leaderRow > .today {
+    grid-row: 2;
+    grid-column: 2;
+  }
+  .leaderRow > .thru {
+    grid-row: 2;
+    grid-column: 3;
+  }
+  .leaderRow > .figure {
+    grid-row: 2;
+    grid-column: 4;
+  }
+  .nameMain,
+  .nameSub {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 /*
  * The figures hug their text at the end of their column, so a wash (below) is the figure's and not the whole
@@ -904,6 +969,33 @@
 }
 .rowAction > * {
   flex: 1 1 auto;
+}
+
+/*
+ * A11Y-07: with large text (125 % and up, `data-text-large`, src/lib/textSize.ts) a row's lines wrap instead of
+ * cutting their figures off («Pone $6,0…», «Día 2: Camilo, 25 …»), and the row itself wraps: the figure and the
+ * action go under the text, on the right edge, when they no longer fit beside it.
+ */
+:global(:root[data-text-large]) .rowLine {
+  flex-wrap: wrap;
+}
+:global(:root[data-text-large]) .rowTextBlock {
+  flex-basis: 6rem;
+}
+:global(:root[data-text-large]) .rowTitleText,
+:global(:root[data-text-large]) .rowSubText {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+:global(:root[data-text-large]) .rowSubWrap {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+:global(:root[data-text-large]) .rowFig,
+:global(:root[data-text-large]) .rowAction,
+:global(:root[data-text-large]) .rowEndBlock {
+  margin-left: auto;
 }
 
 /* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed

@@ -132,9 +132,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 229,
+      "tests": [
+        "e2e/fixtures/largeText.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -146,11 +148,14 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 229,
+      "tests": [
+        "src/lib/textSize.test.ts",
+        "e2e/fixtures/largeText.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Real-iPhone Dynamic Type check is Diego's (handoff item 7, step 8)."
     },
     {
       "id": "A11Y-09",
@@ -4748,11 +4753,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 229,
+      "tests": [
+        "e2e/fixtures/largeText.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "At 375×667 the Tarjeta fits 3 of 4 players above the save bar."
     },
     {
       "id": "VIS-21",
