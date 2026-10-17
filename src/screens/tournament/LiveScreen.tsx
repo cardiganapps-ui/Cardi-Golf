@@ -499,8 +499,13 @@ export function LiveScreen() {
         </button>
       )}
 
-      <h2 className={styles.feedHead}>{t.feed.title}</h2>
-      <FeedTicker limit={10} />
+      {/* On a laptop or an iPad the feed stands beside the board (VIS-19); on a phone it follows it. */}
+      <aside className={styles.side} data-live-side aria-labelledby="live-feed-title">
+        <h2 id="live-feed-title" className={styles.feedHead}>
+          {t.feed.title}
+        </h2>
+        <FeedTicker limit={10} />
+      </aside>
 
       <SpectatorNote />
 

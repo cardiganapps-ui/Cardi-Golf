@@ -292,6 +292,15 @@
   display: inline-flex;
   line-height: 0;
 }
+/* VIS-19: on a laptop or an iPad the tabs stay together in the middle, not spread across the screen. */
+@media (min-width: 900px) {
+  .tabbar {
+    justify-content: center;
+  }
+  .tab {
+    flex: 0 1 128px;
+  }
+}
 /* Holes waiting on this phone (caution), or refused by the server (under). */
 .tabBadge {
   position: absolute;

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
-import { Input } from '../../components/primitives'
+import { Button, Input } from '../../components/primitives'
 import { usePlatformApi, type PlatformTournamentRow, type TournamentKind } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
@@ -89,9 +89,9 @@ export function TournamentsScreen() {
               ))}
             </div>
             {rows.length < total && (
-              <button className="btn btn--secondary" type="button" disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => void more()}>
                 {P.more}
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -122,10 +122,10 @@ function TournamentRow({ r, active }: { r: PlatformTournamentRow; active: boolea
 export function TournamentChips({ r }: { r: Pick<PlatformTournamentRow, 'status' | 'protected' | 'practice' | 'quick'> & { organizers?: number } }) {
   return (
     <span className={s.chips}>
-      {r.protected && <span className="chip chip--coral">{P.chips.protected}</span>}
-      {r.organizers === 0 && <span className="chip chip--sun">{P.chips.orphan}</span>}
-      {r.practice && <span className="chip chip--outline">{P.chips.practice}</span>}
-      {r.status === 'live' && <span className="chip chip--teal">{P.status.live}</span>}
+      {r.protected && <span className={s.flagDanger}>{P.chips.protected}</span>}
+      {r.organizers === 0 && <span className={s.flagCaution}>{P.chips.orphan}</span>}
+      {r.practice && <span className={s.flag}>{P.chips.practice}</span>}
+      {r.status === 'live' && <span className={s.flagOn}>{P.status.live}</span>}
     </span>
   )
 }

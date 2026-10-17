@@ -22,6 +22,7 @@ import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 const C = t.platform.courses
 
@@ -53,7 +54,7 @@ export function CourseDetail() {
   }, [load])
 
   const back = (
-    <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
+    <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {C.back}
     </Link>
@@ -117,8 +118,8 @@ export function CourseDetail() {
         <h2>{course.name}</h2>
         <span className={s.chips}>
           {course.verifiedAt && <VerifiedBadge />}
-          {course.dupes.length > 0 && <span className="chip chip--sun">{C.chips.dupe}</span>}
-          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className="chip chip--coral">{C.chips.broken}</span>}
+          {course.dupes.length > 0 && <span className={s.flagCaution}>{C.chips.dupe}</span>}
+          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className={s.flagDanger}>{C.chips.broken}</span>}
         </span>
         <span className={s.help}>
           {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(', ')}
@@ -142,7 +143,7 @@ export function CourseDetail() {
             </Button>
           )}
           {rounds === 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
+            <Button variant="danger" size="sm" onClick={() => setAsking(true)}>
               {C.delete}
             </Button>
           )}
@@ -174,7 +175,7 @@ export function CourseDetail() {
                   <span className={s.rowTitle}>{u.name}</span>
                   <span className={s.rowSub}>{C.usedLine(u.rounds)}</span>
                 </span>
-                <span className={s.rowEnd}>{u.protected && <span className="chip chip--coral">{t.platform.chips.protected}</span>}</span>
+                <span className={s.rowEnd}>{u.protected && <span className={s.flagDanger}>{t.platform.chips.protected}</span>}</span>
               </Link>
             ))}
           </div>

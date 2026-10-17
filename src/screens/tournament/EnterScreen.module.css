@@ -3,6 +3,10 @@
   flex-direction: column;
   gap: var(--s5);
   padding-top: var(--s5);
+  /* A tournament's home is a wide column on a laptop (VIS-19); Entrar keeps a reading width in it. */
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
 }
 .top {
   display: flex;

@@ -7,6 +7,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import a from '../admin/AdminLayout.module.css'
 import s from './Platform.module.css'
+import { buttonClass } from '../../components/buttonClass'
 
 const P = t.platform
 
@@ -45,7 +46,7 @@ export function PlatformLayout() {
           <span className="label">Polo</span>
           <h1>{P.title}</h1>
         </div>
-        <Link className="btn btn--secondary btn--sm" to="/">
+        <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to="/">
           {P.backHome}
         </Link>
       </div>

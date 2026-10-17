@@ -23,6 +23,7 @@ import { strokeMarks } from '../../lib/strokeMarks'
 import type { TournamentData } from '../../data/tournamentStore'
 import { useCurrency } from '../../components/currency'
 import { buttonClass } from '../../components/buttonClass'
+import { printColumns } from './printColumns'
 
 const P = t.print
 
@@ -77,6 +78,8 @@ export function PrintScreen() {
           const order = playOrder(g.startHole, current.holes)
           const members = g.playerIds.map((pid) => ({ p: byId.get(pid)!, pr: state.core.rounds[current.id]?.[pid] })).filter((m) => m.p)
           const ref = members[0]?.pr
+          const parOf = (h: number) => ref?.holes.find((x) => x.hole === h)?.par
+          const cols = printColumns(order)
           return (
             <section key={g.id} className={styles.card}>
               <header className={styles.head}>
@@ -91,37 +94,46 @@ export function PrintScreen() {
                 </div>
               </header>
               <table className={styles.table}>
+                <colgroup>
+                  <col className={styles.nameCol} />
+                  {cols.map((c) => (
+                    <col key={c.key} className={c.hole ? undefined : styles.sumCol} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
                     <th className={styles.left}>{P.hole}</th>
-                    {order.map((h) => (
-                      <th key={h}>{h}</th>
+                    {cols.map((c) => (
+                      <th key={c.key} className={c.hole ? undefined : styles.sum}>
+                        {c.label}
+                      </th>
                     ))}
-                    <th>{t.common.total}</th>
                   </tr>
                   {/* A11Y-25: each row says what it is; its values are data, and the SI row has no total to head. */}
                   <tr className={styles.meta}>
                     <th scope="row" className={styles.left}>
                       {P.par}
                     </th>
-                    {order.map((h) => (
-                      <td key={h}>{ref?.holes.find((x) => x.hole === h)?.par ?? ''}</td>
+                    {cols.map((c) => (
+                      <td key={c.key} className={c.hole ? undefined : styles.sum}>
+                        {c.hole ? (parOf(c.hole) ?? '') : ref ? c.holes.reduce((a, h) => a + (parOf(h) ?? 0), 0) : ''}
+                      </td>
                     ))}
-                    <td>{ref ? ref.holes.reduce((a, h) => a + h.par, 0) : ''}</td>
                   </tr>
                   <tr className={styles.meta}>
                     <th scope="row" className={styles.left}>
                       <SiAbbr />
                     </th>
-                    {order.map((h) => (
-                      <td key={h}>{ref?.holes.find((x) => x.hole === h)?.strokeIndex ?? ''}</td>
+                    {cols.map((c) => (
+                      <td key={c.key} className={c.hole ? undefined : styles.sum}>
+                        {c.hole ? (ref?.holes.find((x) => x.hole === c.hole)?.strokeIndex ?? '') : ''}
+                      </td>
                     ))}
-                    <td />
                   </tr>
                 </thead>
                 <tbody>
                   {members.map(({ p, pr }) => (
-                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr ? handicapText(pr.playingHcp) : '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} dots={order.map((h) => pr?.holes.find((x) => x.hole === h)?.strokesReceived ?? 0)} />
+                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr ? handicapText(pr.playingHcp) : '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} cols={cols.map((c) => (c.hole ? (pr?.holes.find((x) => x.hole === c.hole)?.strokesReceived ?? 0) : null))} />
                   ))}
                 </tbody>
               </table>
@@ -199,7 +211,8 @@ function AuctionSheet({ data }: { data: TournamentData }) {
   )
 }
 
-function PlayerRows({ name, sub, dots }: { name: string; sub: string; dots: number[] }) {
+/** A player's two rows: his strokes (with his dots on the holes he gets them), then his putts. `cols`: his strokes on each hole, null for a subtotal. */
+function PlayerRows({ name, sub, cols }: { name: string; sub: string; cols: Array<number | null> }) {
   return (
     <>
       <tr className={styles.player}>
@@ -207,23 +220,25 @@ function PlayerRows({ name, sub, dots }: { name: string; sub: string; dots: numb
           <strong>{name}</strong>
           <span className={styles.playerSub}>{sub}</span>
         </td>
-        {dots.map((d, i) => (
-          <td key={i} className={styles.strokes}>
-            {/* A11Y-22: said as the strokes they are, not «viñeta, viñeta». */}
-            {d !== 0 && (
-              <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(d)}>
-                {strokeMarks(d)}
-              </span>
-            )}
-          </td>
-        ))}
-        <td />
+        {cols.map((d, i) =>
+          d === null ? (
+            <td key={i} className={styles.sum} />
+          ) : (
+            <td key={i} className={styles.strokes}>
+              {/* A11Y-22: said as the strokes they are, not «viñeta, viñeta». */}
+              {d !== 0 && (
+                <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(d)}>
+                  {strokeMarks(d)}
+                </span>
+              )}
+            </td>
+          ),
+        )}
       </tr>
       <tr className={styles.putts}>
-        {dots.map((_, i) => (
-          <td key={i} />
+        {cols.map((d, i) => (
+          <td key={i} className={d === null ? styles.sum : undefined} />
         ))}
-        <td />
       </tr>
     </>
   )

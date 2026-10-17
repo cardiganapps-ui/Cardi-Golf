@@ -4747,11 +4747,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/layouts.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Mis torneos' two-column layout has no fixture and no browser test."
     },
     {
       "id": "VIS-20",
@@ -4842,9 +4844,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/print.spec.ts",
+        "src/screens/tournament/printColumns.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4872,11 +4877,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/platformlook.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "VerifiedBadge (PR 228) is still a coloured chip."
     },
     {
       "id": "VIS-28",

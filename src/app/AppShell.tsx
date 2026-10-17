@@ -23,6 +23,11 @@ export function AppShell() {
   const wide = /\/(admin|tv|ceremonia|imprimir)(\/|$)/.test(path)
   // The Admin de Polo panel puts a list and its detail side by side on a laptop.
   const platform = /^\/admin(\/|$)/.test(path)
+  // VIS-19: from 900 px the organizer's screens and the wizard take two columns, and En vivo the board with the feed
+  // beside it (a tournament's or a link's home, fixtures included); a phone keeps its one column.
+  const roomy = /^\/organizer(\/(new|nuevo\/_))?\/?$/.test(path) || /^\/(t|v)\/(_[a-z]*\/)?[^/]+\/?$/.test(path)
+  // The boards drawn for a room or for paper set their own measure; everywhere else a line stops at about 70 characters.
+  const board = /\/(tv|ceremonia|imprimir)(\/|$)/.test(path)
   // A link to watch is nobody's phone (STRAT-05): no session read (so no profile, inbox or badge either) and no outbox,
   // whose IndexedDB is never opened there. The app's switches still load: a public read, which writes and records
   // nothing, and carries the maintenance banner and the build every page must update to, a TV left on all day too.
@@ -60,7 +65,7 @@ export function AppShell() {
       <MaintenanceBanner />
       <UpdateBar />
       <LateSignOutHome />
-      <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${tabbed ? styles.mainTabbed : ''}`}>
+      <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${roomy ? styles.mainRoomy : ''} ${board ? '' : styles.mainProse} ${tabbed ? styles.mainTabbed : ''}`}>
         <Outlet />
       </main>
       <LegalUpdate />
