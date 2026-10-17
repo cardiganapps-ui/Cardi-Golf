@@ -1,0 +1,3 @@
+# Commits `git blame` (and GitHub's blame view) skips: formatting only, no change to what runs.
+# ARCH-17, 2026-10-17: the one-time Prettier reformat.
+8ac06d0d34f9d3e6718a472258df7a1a5213dea0

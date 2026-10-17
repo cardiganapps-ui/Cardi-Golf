@@ -11,6 +11,9 @@
  *   2026-10-16 production's deploy of main was refused («rate limited, retry
  *   in 24 hours»). Working branches (claude/**, dependabot/**) build no
  *   preview; main deploys, and a preview is made on demand (CLAUDE.md §0.4).
+ * - ARCH-17: lint read no types, nothing formatted the code and the scripts
+ *   were never type-checked. The preflight now runs typed lint, a format check
+ *   and a typecheck that covers the scripts.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -19,6 +22,31 @@ import { describe, expect, it } from 'vitest'
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
 
 describe('ops', () => {
+  it('the preflight lints with the types, checks the format and type-checks the scripts (ARCH-17)', () => {
+    expect(read('scripts/preflight.sh')).toContain('steps=("typecheck" "lint" "format:check" "test" "build")')
+    const pkg = JSON.parse(read('package.json')) as {
+      scripts: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+    expect(pkg.scripts.lint).toContain('--max-warnings 0')
+    expect(pkg.scripts['format:check']).toMatch(/^prettier --check /)
+    // Pinned: a release that lays the code out differently comes as its own update.
+    expect(pkg.devDependencies.prettier).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(pkg.devDependencies['eslint-plugin-react-hooks']).toMatch(/^\^7\./)
+    const eslint = read('eslint.config.js')
+    for (const rule of ['strictTypeChecked', 'stylisticTypeChecked', 'projectService', 'no-floating-promises'])
+      expect(eslint).toContain(rule)
+    expect(eslint).not.toMatch(/'@typescript-eslint\/no-(floating|misused)-promises': 'off'/)
+    expect(read('.prettierignore')).toContain('src/data/database.types.ts')
+    const refs = (JSON.parse(read('tsconfig.json')) as { references: Array<{ path: string }> }).references.map(
+      (r) => r.path,
+    )
+    expect(refs).toContain('./tsconfig.scripts.json')
+    const scripts = read('tsconfig.scripts.json')
+    expect(scripts).toContain('"checkJs": true')
+    expect(scripts).toContain('"scripts/**/*.mjs"')
+  })
+
   it('the keep-alive posts to the app_flags RPC and checks the answer', () => {
     expect(read('.github/workflows/keepalive.yml')).toContain('bash scripts/keepalive.sh')
     const script = read('scripts/keepalive.sh')
