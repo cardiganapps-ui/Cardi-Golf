@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { completeTees, dupeKey, keysMatch, PRODUCTION_URL, seed, targetOf } from '../../scripts/seed-courses.mjs'
+import { completeTees, dupeKey, findInCatalog, keysMatch, PRODUCTION_URL, samePlace, seed, targetOf } from '../../scripts/seed-courses.mjs'
 import { mapCourse } from './courseProviders/golfcourseapi'
 
 const KEYS = { GOLFCOURSE_API_KEY: 'gca-secret-key-111', OPENGOLF_API_KEY: 'oga-secret-key-222', SUPABASE_SECRET_KEY: 'sb_secret_333' }
@@ -31,12 +31,21 @@ const QUIVIRA = {
   tees: { male: [gcaTee('Black'), gcaTee('Gold', { slope: null })], female: [gcaTee('Red', { noSi: true })] },
 }
 const QUIVIRA_HIT = { ...QUIVIRA, tees: { male: 2, female: 1 } }
+/** Hacienda San Gaspar at GolfCourseAPI, in Cuernavaca: its key (`haciendasangaspar`) extends La Hacienda's (`hacienda`). */
+const SAN_GASPAR = {
+  id: 'gca-sangaspar',
+  club_name: 'Club de Golf Hacienda San Gaspar',
+  course_name: 'Club de Golf Hacienda San Gaspar',
+  location: { city: 'Cuernavaca', state: 'Morelos', country: 'Mexico' },
+  tees: { male: [gcaTee('Azul')] },
+}
 /** Solmar at OpenGolfAPI: listed, with no card. */
 const SOLMAR_HIT = { id: '79fb43c9', name: 'Solmar Golf Links', course_name: 'Solmar Golf Links', city: 'Cabo San Lucas', latitude: 22.88, longitude: -109.92 }
 
 const json = (b: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json', ...headers } })
 
-function world(catalog: Array<{ id: string; name: string; source: string; external_id: string | null }> = []) {
+type CatalogRow = { id: string; name: string; source: string; external_id: string | null; location?: string | null }
+function world(catalog: CatalogRow[] = []) {
   const asked: Array<{ url: string; method: string; headers: Record<string, string>; body: unknown }> = []
   const fetch = (async (input: string | URL, init: RequestInit = {}) => {
     const url = String(input)
@@ -44,8 +53,10 @@ function world(catalog: Array<{ id: string; name: string; source: string; extern
     asked.push({ url, method: init.method ?? 'GET', headers, body: init.body ? JSON.parse(String(init.body)) : null })
     const u = new URL(url)
     if (u.host === 'api.golfcourseapi.com') {
-      if (u.pathname === '/v1/search') return json({ courses: u.searchParams.get('search_query')!.includes('Quivira') ? [QUIVIRA_HIT] : [] })
+      const q = u.searchParams.get('search_query') ?? ''
+      if (u.pathname === '/v1/search') return json({ courses: q.includes('Quivira') ? [QUIVIRA_HIT] : q.includes('San Gaspar') ? [{ ...SAN_GASPAR, tees: { male: 1 } }] : [] })
       if (u.pathname === '/v1/courses/mz9gqcpj') return json({ course: QUIVIRA })
+      if (u.pathname === '/v1/courses/gca-sangaspar') return json({ course: SAN_GASPAR })
       return json({}, 404)
     }
     if (u.host === 'api.opengolfapi.org') {
@@ -53,7 +64,11 @@ function world(catalog: Array<{ id: string; name: string; source: string; extern
       if (u.pathname === '/api/v1/courses/79fb43c9') return json({ ...SOLMAR_HIT, tees: [], holes_data: [] })
       return json({}, 404)
     }
-    if (u.pathname === '/rest/v1/courses') return json(catalog, 200, { 'content-range': `0-${catalog.length - 1}/${catalog.length}` })
+    if (u.pathname === '/rest/v1/courses') {
+      // The script asks for each course's location with the rest (0077 compares it).
+      expect(u.searchParams.get('select')).toBe('id,name,source,external_id,location')
+      return json(catalog, 200, { 'content-range': `0-${catalog.length - 1}/${catalog.length}` })
+    }
     if (u.pathname === '/rest/v1/rpc/catalog_import_course') return json({ status: 'created', id: 'new-course', tees: 1 })
     throw new Error(`unexpected request ${url}`)
   }) as typeof globalThis.fetch
@@ -135,6 +150,39 @@ describe('scripts/seed-courses.mjs (STRAT-14)', () => {
     expect(p.tees.map((t) => [t.name, t.rating, t.slope, t.holes.length])).toEqual([['Black', 74.1, 142, 18]])
     expect(p.tees[0]!.holes.map((h) => [h.par, h.stroke_index])).toEqual(PARS.map((par, i) => [par, SIS[i]]))
     expect(r.totals).toMatchObject({ imported: 1, missing: 1 })
+  })
+
+  it('tells two clubs of the same name apart by their place, as catalog_import_course does (0077)', async () => {
+    // The same cases as supabase/tests/catalog_import_places.sql. Production's run skipped Hacienda San Gaspar
+    // (Cuernavaca) as La Hacienda (Atizapán): its key extends the other's, which course_keys_match takes.
+    expect(keysMatch(dupeKey('Club de Golf Hacienda San Gaspar'), dupeKey('Club de Golf La Hacienda'))).toBe(true)
+    const hacienda = { id: 'c1', name: 'Club de Golf La Hacienda', source: 'golfcourseapi', external_id: 'gca-hacienda', location: 'Atizapán de Zaragoza, Estado de México, Mexico' }
+    const { fetch, asked } = world([hacienda])
+    const r = await seed({ list: [{ name: 'Club de Golf Hacienda San Gaspar', city: 'Cuernavaca' }], fetch, env: KEYS, apply: true, target: local, sleep: noSleep })
+    expect(r.courses[0]).toMatchObject({ status: 'imported', externalId: 'gca-sangaspar' })
+    const post = asked.find((a) => a.method === 'POST')!
+    expect((post.body as { p: { city: string; location: string } }).p).toMatchObject({ city: 'Cuernavaca', location: 'Cuernavaca, Morelos, Mexico' })
+
+    // The same club in the same city, however each says it: the catalog's, and nothing is asked of a provider.
+    const quivira = { id: 'c2', name: 'Quivira Golf Club', source: 'golfcourseapi', external_id: 'mz9gqcpj', location: 'Cabo San Lucas, BCS, Mexico' }
+    const same = world([quivira])
+    const r2 = await seed({ list: [{ name: 'Quivira', city: 'Cabo San Lucas' }], fetch: same.fetch, env: KEYS, apply: true, target: local, sleep: noSleep })
+    expect(r2.courses[0]).toMatchObject({ status: 'exists', existing: 'Quivira Golf Club' })
+    expect(same.asked.some((a) => !a.url.startsWith(local.url))).toBe(false)
+
+    // No place on either side contradicts nothing.
+    const bare = world([{ ...quivira, location: null }])
+    const r3 = await seed({ list: [{ name: 'Quivira' }], fetch: bare.fetch, env: KEYS, apply: true, target: local, sleep: noSleep })
+    expect(r3.courses[0]).toMatchObject({ status: 'exists', existing: 'Quivira Golf Club' })
+
+    // The rule itself: folded, one place holding the other; blank is unknown; a provider id wins over any place.
+    expect(samePlace('ATIZAPAN DE ZARAGOZA', hacienda.location)).toBe(true)
+    expect(samePlace('Cuernavaca', hacienda.location)).toBe(false)
+    expect(samePlace('  ', hacienda.location)).toBe(true)
+    expect(samePlace('Mérida', null)).toBe(true)
+    expect(findInCatalog([hacienda, quivira], { name: 'Otro Nombre', place: 'Cuernavaca', source: 'golfcourseapi', ext: 'gca-hacienda' })).toBe(hacienda)
+    expect(findInCatalog([hacienda, quivira], { name: 'Hacienda Norte', place: 'Monterrey' })).toBeNull()
+    expect(findInCatalog(null, { name: 'Quivira' })).toBeNull()
   })
 
   it('takes the server’s word that a course exists, and refuses to apply without a key', async () => {
