@@ -79,7 +79,12 @@ function resultText(up: number, toPlay: number, done: boolean): string {
 }
 
 /** Play every match in every round, from both sides. */
-export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: boolean, net: boolean): { results: MatchResult[]; warnings: Msg[] } {
+export function playMatches(
+  ctx: FormatContext,
+  entrants: Entrant[],
+  fourball: boolean,
+  net: boolean,
+): { results: MatchResult[]; warnings: Msg[] } {
   const results: MatchResult[] = []
   const warnings: Msg[] = []
   for (const roundId of ctx.core.roundIds) {
@@ -88,7 +93,9 @@ export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: b
     for (const group of ctx.snapshot.groups.filter((g) => g.roundId === roundId)) {
       const sides = sidesOf(group.playerIds, entrants, fourball)
       if (!sides) {
-        warnings.push(msg(fourball ? 'match.needsPairs' : 'match.needsTwo', { day: round?.number ?? null, group: group.number }))
+        warnings.push(
+          msg(fourball ? 'match.needsPairs' : 'match.needsTwo', { day: round?.number ?? null, group: group.number }),
+        )
         continue
       }
       const [a, b] = sides
@@ -116,8 +123,30 @@ export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: b
       const complete = played === holes
       const done = decidedAt != null || complete
       const points = !done ? null : up > 0 ? 1 : up < 0 ? 0 : 0.5
-      results.push({ roundId, groupId: group.id, sideId: a.id, opponentId: b.id, up, toPlay, played, done, points, text: resultText(up, toPlay, done) })
-      results.push({ roundId, groupId: group.id, sideId: b.id, opponentId: a.id, up: -up, toPlay, played, done, points: points == null ? null : 1 - points, text: resultText(-up, toPlay, done) })
+      results.push({
+        roundId,
+        groupId: group.id,
+        sideId: a.id,
+        opponentId: b.id,
+        up,
+        toPlay,
+        played,
+        done,
+        points,
+        text: resultText(up, toPlay, done),
+      })
+      results.push({
+        roundId,
+        groupId: group.id,
+        sideId: b.id,
+        opponentId: a.id,
+        up: -up,
+        toPlay,
+        played,
+        done,
+        points: points == null ? null : 1 - points,
+        text: resultText(-up, toPlay, done),
+      })
     }
   }
   return { results, warnings }
@@ -142,7 +171,13 @@ export const matchPlayFormat: MainFormat = {
     const fourball = o.matchMode === 'fourball'
     return {
       title: msg('format.matchPlay', { fourball }),
-      steps: [msg('format.matchSides', { fourball }), say('format.matchHoles'), msg('format.matchStrokes', { net: o.scoring !== 'gross' }), say('format.matchPoints'), say('format.matchOver')],
+      steps: [
+        msg('format.matchSides', { fourball }),
+        say('format.matchHoles'),
+        msg('format.matchStrokes', { net: o.scoring !== 'gross' }),
+        say('format.matchPoints'),
+        say('format.matchOver'),
+      ],
     }
   },
 
@@ -163,7 +198,10 @@ export const matchPlayFormat: MainFormat = {
       const decided = mine.filter((r) => r.points != null)
       const points = decided.reduce((s, r) => s + (r.points ?? 0), 0)
       const played = mine.reduce((s, r) => s + r.played, 0)
-      totals[e.id] = mine.length === 0 || played === 0 ? { value: 0, text: '—', empty: true } : { value: points, text: matchPointsText(points) }
+      totals[e.id] =
+        mine.length === 0 || played === 0
+          ? { value: 0, text: '—', empty: true }
+          : { value: points, text: matchPointsText(points) }
       thru[e.id] = played
 
       const byRound: Record<string, Figure> = {}
@@ -171,7 +209,14 @@ export const matchPlayFormat: MainFormat = {
         const r = mine.find((x) => x.roundId === rid)
         byRound[rid] =
           r && r.played > 0
-            ? { value: r.points ?? 0, text: r.text, tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined, ...(r.done ? { result: r.up > 0 ? ('won' as const) : r.up < 0 ? ('lost' as const) : ('halved' as const) } : {}) }
+            ? {
+                value: r.points ?? 0,
+                text: r.text,
+                tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined,
+                ...(r.done
+                  ? { result: r.up > 0 ? ('won' as const) : r.up < 0 ? ('lost' as const) : ('halved' as const) }
+                  : {}),
+              }
             : { value: 0, text: '—', empty: true }
       }
       perRound[e.id] = byRound

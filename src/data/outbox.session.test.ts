@@ -45,9 +45,11 @@ const srv = vi.hoisted(() => {
       select: () => req,
       then<A, B>(ok?: (v: { data: null; error: { message: string } | null }) => A, bad?: (e: unknown) => B) {
         return (async () => {
-          const auth = headers.get('authorization') ?? `Bearer ${(await getSession()).data.session?.access_token ?? 'anon-key'}`
+          const auth =
+            headers.get('authorization') ?? `Bearer ${(await getSession()).data.session?.access_token ?? 'anon-key'}`
           state.sent.push({ table, method, auth })
-          if (auth === 'Bearer anon-key' || state.refuseForPlayer) return { data: null, error: { message: `new row violates row-level security policy for table "${table}"` } }
+          if (auth === 'Bearer anon-key' || state.refuseForPlayer)
+            return { data: null, error: { message: `new row violates row-level security policy for table "${table}"` } }
           return { data: null, error: null }
         })().then(ok, bad)
       },
@@ -71,7 +73,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, describeSyncError, flush, useOutbox } = await import('./outbox')
@@ -81,7 +92,10 @@ const { fetchWithTimeout } = await import('../lib/fetchWithTimeout')
 
 /** The server answers one of the app's other requests (the signal is back): any answer through the app's fetch. */
 async function serverAnswers() {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('[]', { status: 200 })),
+  )
   try {
     await fetchWithTimeout('https://example.supabase.co/rest/v1/tournaments')
   } finally {
@@ -90,7 +104,10 @@ async function serverAnswers() {
 }
 /** The app's latest request is lost (lie-fi, no route): nothing gets through. */
 async function requestsLost() {
-  vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))),
+  )
   try {
     await fetchWithTimeout('https://example.supabase.co/rest/v1/tournaments').catch(() => undefined)
   } finally {
@@ -102,7 +119,16 @@ const score = (hole: number) => ({
   key: `score:r1:p1:${hole}`,
   kind: 'score' as const,
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: 'p1', hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  payload: {
+    round_id: 'r1',
+    player_id: 'p1',
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'x',
+  },
   attempts: 0,
   createdAt: hole,
 })

@@ -33,12 +33,37 @@ function parCards(snap: Snapshot, ids: Id[], roundId = 'r1') {
 describe('settlement legs the fixtures never reach (QA-04)', () => {
   it('a side pot’s buy-ins are asked for in vía banco, and netted against what each one won (M13)', () => {
     // Four players, no entry fee; closest to the pin on the four par 3s, $100 buy-in each: a $400 pot.
-    const ctp: GameConfig = { id: 'ctp', type: 'contest', label: 'Más cerca', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'closest', holes: 'par3' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } }
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: 1, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] }, games: [ctp] }
-    const snap = makeSnapshot({ settings, players: Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })), rounds: [makeRound(1, { status: 'finished' })] })
+    const ctp: GameConfig = {
+      id: 'ctp',
+      type: 'contest',
+      label: 'Más cerca',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { kind: 'closest', holes: 'par3' },
+      money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] },
+    }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      rounds: 1,
+      entryFee: 0,
+      prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] },
+      games: [ctp],
+    }
+    const snap = makeSnapshot({
+      settings,
+      players: Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })),
+      rounds: [makeRound(1, { status: 'finished' })],
+    })
     parCards(snap, ['p1', 'p2', 'p3', 'p4'])
     // p1 wins holes 3 and 7, p2 holes 11 and 16: $100 a hole.
-    snap.holeAwards = [3, 7, 11, 16].map((hole, i) => ({ roundId: 'r1', groupId: null, hole, gameId: 'ctp', playerId: i < 2 ? 'p1' : 'p2' }))
+    snap.holeAwards = [3, 7, 11, 16].map((hole, i) => ({
+      roundId: 'r1',
+      groupId: null,
+      hole,
+      gameId: 'ctp',
+      playerId: i < 2 ? 'p1' : 'p2',
+    }))
     const st = run(snap)
     expect(st.prizes.filter((p) => p.moduleId === 'contest').reduce((s, p) => s + p.amount, 0)).toBe(400)
     // Nothing paid yet: p3 and p4 owe their $100; p1 and p2 won $200 and owe $100 each, so the bank pays them $100.
@@ -48,14 +73,40 @@ describe('settlement legs the fixtures never reach (QA-04)', () => {
   })
 
   it('a payout paid in part is not «Pagado»: vía banco pays what is left (M14)', () => {
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: 1, entryFee: 1000, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [4000] } }
-    const snap = makeSnapshot({ settings, players: Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })), rounds: [makeRound(1, { status: 'finished' })] })
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      rounds: 1,
+      entryFee: 1000,
+      prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [4000] },
+    }
+    const snap = makeSnapshot({
+      settings,
+      players: Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })),
+      rounds: [makeRound(1, { status: 'finished' })],
+    })
     parCards(snap, ['p2', 'p3', 'p4'])
     // p1 one under par on the first hole: he wins the $4,000 alone.
     parCards(snap, ['p1'])
     snap.scores.find((x) => x.playerId === 'p1' && x.hole === 1)!.strokes = PARS[0]! - 1
-    for (const id of ['p1', 'p2', 'p3', 'p4']) snap.payments.push({ id: `e-${id}`, kind: 'entry', fromPlayerId: id, toPlayerId: null, amount: 1000, paid: true, note: null })
-    snap.payments.push({ id: 'po-1', kind: 'payout', fromPlayerId: null, toPlayerId: 'p1', amount: 1500, paid: true, note: null })
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      snap.payments.push({
+        id: `e-${id}`,
+        kind: 'entry',
+        fromPlayerId: id,
+        toPlayerId: null,
+        amount: 1000,
+        paid: true,
+        note: null,
+      })
+    snap.payments.push({
+      id: 'po-1',
+      kind: 'payout',
+      fromPlayerId: null,
+      toPlayerId: 'p1',
+      amount: 1500,
+      paid: true,
+      note: null,
+    })
     const st = run(snap)
     expect(st.prizes.find((p) => p.moduleId === 'individual')).toMatchObject({ playerId: 'p1', amount: 4000 })
     expect(st.money.viaBank.map((l) => [l.from, l.to, l.amount])).toEqual([[null, 'p1', 2500]])
@@ -65,7 +116,12 @@ describe('settlement legs the fixtures never reach (QA-04)', () => {
     expect(percentPlaces(1001, [50, 30, 20])).toEqual([501, 300, 200])
     expect(percentPlaces(999, [60, 40])).toEqual([600, 399])
     // Seven players at $143 bring $1,001: the percent split pays all of it, so the pool balances.
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: 1, entryFee: 143, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [50, 30, 20], stablefordMode: 'percent' } }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      rounds: 1,
+      entryFee: 143,
+      prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [50, 30, 20], stablefordMode: 'percent' },
+    }
     const check = checkPrizePool(settings, { players: 7 })
     expect(check.entryPot).toBe(1001)
     expect(check.balanced).toBe(true)
@@ -76,14 +132,38 @@ describe('settlement legs the fixtures never reach (QA-04)', () => {
       ...FIRST_TOURNAMENT_SETTINGS,
       rounds: 1,
       entryFee: 0,
-      modules: { ...FIRST_TOURNAMENT_SETTINGS.modules, bestRound: { ...FIRST_TOURNAMENT_SETTINGS.modules.bestRound, enabled: false }, snake: { ...FIRST_TOURNAMENT_SETTINGS.modules.snake, enabled: false }, fewestPutts: { ...FIRST_TOURNAMENT_SETTINGS.modules.fewestPutts, enabled: false }, auction: { ...FIRST_TOURNAMENT_SETTINGS.modules.auction, enabled: false } },
+      modules: {
+        ...FIRST_TOURNAMENT_SETTINGS.modules,
+        bestRound: { ...FIRST_TOURNAMENT_SETTINGS.modules.bestRound, enabled: false },
+        snake: { ...FIRST_TOURNAMENT_SETTINGS.modules.snake, enabled: false },
+        fewestPutts: { ...FIRST_TOURNAMENT_SETTINGS.modules.fewestPutts, enabled: false },
+        auction: { ...FIRST_TOURNAMENT_SETTINGS.modules.auction, enabled: false },
+      },
       prizes: { ...FIRST_TOURNAMENT_SETTINGS.prizes, stableford: [], pairs: [1001] },
     }
-    const players = ['A1', 'D1', 'A2', 'D2'].map((id, i) => makePlayer(i + 1, { id, displayName: id, tier: id[0]!, baseHcp: 0 }))
+    const players = ['A1', 'D1', 'A2', 'D2'].map((id, i) =>
+      makePlayer(i + 1, { id, displayName: id, tier: id[0]!, baseHcp: 0 }),
+    )
     const snap = makeSnapshot({ settings, players, rounds: [makeRound(1, { status: 'finished' })] })
     snap.pairs = [
-      { id: 'pa', name: 'Pareja A', player1Id: 'A1', player2Id: 'D1', kind: 'AD', pickedByHonoree: false, drawnAt: null },
-      { id: 'pb', name: 'Pareja B', player1Id: 'A2', player2Id: 'D2', kind: 'AD', pickedByHonoree: false, drawnAt: null },
+      {
+        id: 'pa',
+        name: 'Pareja A',
+        player1Id: 'A1',
+        player2Id: 'D1',
+        kind: 'AD',
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+      {
+        id: 'pb',
+        name: 'Pareja B',
+        player1Id: 'A2',
+        player2Id: 'D2',
+        kind: 'AD',
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
     ]
     parCards(snap, ['A1', 'D1', 'A2', 'D2'])
     snap.scores.find((x) => x.playerId === 'A1' && x.hole === 1)!.strokes = PARS[0]! - 1
@@ -96,13 +176,20 @@ describe('tie rules the fixtures never reach (QA-05)', () => {
   /** Four players, one round, one group; each player's points per hole decided by their strokes. */
   function oneDay(settings: TournamentSettings, edit: (snap: Snapshot) => void) {
     const players = ['A', 'B', 'C', 'D'].map((id, i) => makePlayer(i + 1, { id, displayName: id, baseHcp: 0 }))
-    const snap = makeSnapshot({ settings, players, rounds: [makeRound(1, { status: 'finished' })], groups: [makeGroup('r1', 1, ['A', 'B', 'C', 'D'])] })
+    const snap = makeSnapshot({
+      settings,
+      players,
+      rounds: [makeRound(1, { status: 'finished' })],
+      groups: [makeGroup('r1', 1, ['A', 'B', 'C', 'D'])],
+    })
     parCards(snap, ['A', 'B', 'C', 'D'])
     edit(snap)
     return run(snap)
   }
-  const strokes = (snap: Snapshot, id: Id, hole: number, toPar: number) => (snap.scores.find((x) => x.playerId === id && x.hole === hole)!.strokes = PARS[hole - 1]! + toPar)
-  const putts = (snap: Snapshot, id: Id, hole: number, n: number) => (snap.scores.find((x) => x.playerId === id && x.hole === hole)!.putts = n)
+  const strokes = (snap: Snapshot, id: Id, hole: number, toPar: number) =>
+    (snap.scores.find((x) => x.playerId === id && x.hole === hole)!.strokes = PARS[hole - 1]! + toPar)
+  const putts = (snap: Snapshot, id: Id, hole: number, n: number) =>
+    (snap.scores.find((x) => x.playerId === id && x.hole === hole)!.putts = n)
 
   it('best round: a tie on the day’s points goes to countback within the day, not to a split (M17)', () => {
     const s: TournamentSettings = { ...FIRST_TOURNAMENT_SETTINGS, rounds: 1 }
@@ -128,7 +215,9 @@ describe('tie rules the fixtures never reach (QA-05)', () => {
       snap.snakeTiebreaks.push({ roundId: 'r1', groupId: 'r1g1', hole: 7, lastHoledPlayerId: 'B' })
     })
     const g = st.modules.snake!.groups[0]!
-    expect(st.flags.pendingSnakeTiebreaks).toEqual([{ roundId: 'r1', groupId: 'r1g1', hole: 7, candidates: ['C', 'D'] }])
+    expect(st.flags.pendingSnakeTiebreaks).toEqual([
+      { roundId: 'r1', groupId: 'r1g1', hole: 7, candidates: ['C', 'D'] },
+    ])
     expect(g.payouts).toEqual({})
   })
 
@@ -139,21 +228,58 @@ describe('tie rules the fixtures never reach (QA-05)', () => {
       snap.scores = snap.scores.filter((x) => !(x.playerId === 'D' && x.hole > 12))
     })
     const g = st.modules.snake!.groups[0]!
-    expect(Object.fromEntries(Object.entries(g.payouts).map(([k, v]) => [k, v.amount]))).toEqual({ A: 200, B: 0, C: 200, D: 200 })
+    expect(Object.fromEntries(Object.entries(g.payouts).map(([k, v]) => [k, v.amount]))).toEqual({
+      A: 200,
+      B: 0,
+      C: 200,
+      D: 200,
+    })
   })
 
   it('last place is named once the tournament is final, and its Calcutta slot paid (M24)', () => {
-    const s: TournamentSettings = { ...FIRST_TOURNAMENT_SETTINGS, rounds: 1, tiers: [], modules: { ...FIRST_TOURNAMENT_SETTINGS.modules, pairs: { ...FIRST_TOURNAMENT_SETTINGS.modules.pairs, enabled: false } }, auction: { ...FIRST_TOURNAMENT_SETTINGS.auction, payout: [{ slot: 'place', place: 1, share: 0.9 }, { slot: 'lastPlace', share: 0.1 }] } }
-    const st = oneDay({ ...s, entryFee: 0, prizes: { ...s.prizes, stableford: [], bestRoundPerDay: 0, snakePerSurvivor: 0, fewestPutts: 0 } }, (snap) => {
-      snap.tournament.status = 'finished'
-      strokes(snap, 'A', 1, -1)
-      strokes(snap, 'D', 1, 2)
-      // Every player sold to himself at $1,000: a $4,000 pot.
-      snap.calcuttaLots = ['A', 'B', 'C', 'D'].map((id, i) => ({ id: `lot${i + 1}`, playerId: id, lotNumber: i + 1, status: 'sold', price: 1000, ownerId: id, soldAt: '' }))
-    })
+    const s: TournamentSettings = {
+      ...FIRST_TOURNAMENT_SETTINGS,
+      rounds: 1,
+      tiers: [],
+      modules: {
+        ...FIRST_TOURNAMENT_SETTINGS.modules,
+        pairs: { ...FIRST_TOURNAMENT_SETTINGS.modules.pairs, enabled: false },
+      },
+      auction: {
+        ...FIRST_TOURNAMENT_SETTINGS.auction,
+        payout: [
+          { slot: 'place', place: 1, share: 0.9 },
+          { slot: 'lastPlace', share: 0.1 },
+        ],
+      },
+    }
+    const st = oneDay(
+      {
+        ...s,
+        entryFee: 0,
+        prizes: { ...s.prizes, stableford: [], bestRoundPerDay: 0, snakePerSurvivor: 0, fewestPutts: 0 },
+      },
+      (snap) => {
+        snap.tournament.status = 'finished'
+        strokes(snap, 'A', 1, -1)
+        strokes(snap, 'D', 1, 2)
+        // Every player sold to himself at $1,000: a $4,000 pot.
+        snap.calcuttaLots = ['A', 'B', 'C', 'D'].map((id, i) => ({
+          id: `lot${i + 1}`,
+          playerId: id,
+          lotNumber: i + 1,
+          status: 'sold',
+          price: 1000,
+          ownerId: id,
+          soldAt: '',
+        }))
+      },
+    )
     expect(st.tournamentFinal).toBe(true)
     expect(st.modules.individual!.lastPlace).toEqual(['D'])
-    const calcutta = Object.fromEntries(st.prizes.filter((p) => p.potId === 'calcutta').map((p) => [p.playerId, p.amount]))
+    const calcutta = Object.fromEntries(
+      st.prizes.filter((p) => p.potId === 'calcutta').map((p) => [p.playerId, p.amount]),
+    )
     expect(calcutta).toEqual({ A: 3600, D: 400 })
   })
 })

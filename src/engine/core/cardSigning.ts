@@ -31,7 +31,10 @@ export function cardSigningMode(settings: Pick<TournamentSettings, 'modules' | '
  * server's copy of it. A stored value this build doesn't know reads as the default rule, as the schema does.
  */
 export function cardSigningModeOf(raw: unknown): CardSigningMode {
-  const s = raw && typeof raw === 'object' ? (raw as { cardSigning?: unknown; modules?: { pairs?: { enabled?: unknown } } }) : {}
+  const s =
+    raw && typeof raw === 'object'
+      ? (raw as { cardSigning?: unknown; modules?: { pairs?: { enabled?: unknown } } })
+      : {}
   if (s.cardSigning === 'marker' || s.cardSigning === 'none') return s.cardSigning
   return s.modules?.pairs?.enabled === true ? 'pairs' : 'none'
 }
@@ -50,12 +53,20 @@ export function signatureCovers(sig: CardSignature, roundId: Id, playerId: Id, p
 }
 
 /** Whether this player's card is signed that day, by any signature (as the server's `card_is_signed`). */
-export function cardSignedFor(snapshot: { cardSignatures: readonly CardSignature[]; pairs: readonly Pair[] }, roundId: Id, playerId: Id): boolean {
+export function cardSignedFor(
+  snapshot: { cardSignatures: readonly CardSignature[]; pairs: readonly Pair[] },
+  roundId: Id,
+  playerId: Id,
+): boolean {
   return snapshot.cardSignatures.some((s) => signatureCovers(s, roundId, playerId, snapshot.pairs))
 }
 
 /** The player's own signature that day (a marker's), if any. */
-export function playerSignature(signatures: readonly CardSignature[], roundId: Id, playerId: Id): CardSignature | undefined {
+export function playerSignature(
+  signatures: readonly CardSignature[],
+  roundId: Id,
+  playerId: Id,
+): CardSignature | undefined {
   return signatures.find((s) => s.roundId === roundId && !!s.playerId && s.playerId === playerId)
 }
 

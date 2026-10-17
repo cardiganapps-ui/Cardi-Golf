@@ -35,7 +35,8 @@ export function AppShell() {
   // Inside the tournament shell the tab bar already pads the safe area; the main column must not add its own.
   // A link to watch (`/v/<token>`, its fixtures `/v/_/<name>`) has the same tab bar, the TV aside (STRAT-05).
   const tabbed =
-    (/^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)) ||
+    (/^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) &&
+      !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)) ||
     (linkPage && !/\/tv\/?$/.test(path))
   useEffect(() => {
     void useAppFlags.getState().load()
@@ -65,7 +66,9 @@ export function AppShell() {
       <MaintenanceBanner />
       <UpdateBar />
       <LateSignOutHome />
-      <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${roomy ? styles.mainRoomy : ''} ${board ? '' : styles.mainProse} ${tabbed ? styles.mainTabbed : ''}`}>
+      <main
+        className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${roomy ? styles.mainRoomy : ''} ${board ? '' : styles.mainProse} ${tabbed ? styles.mainTabbed : ''}`}
+      >
         <Outlet />
       </main>
       <LegalUpdate />

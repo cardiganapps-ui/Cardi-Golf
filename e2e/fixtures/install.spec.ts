@@ -10,13 +10,17 @@ import type { Page } from '@playwright/test'
 import { t } from '../../src/i18n/es-MX'
 import { expect, open, test } from './base'
 
-const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
-const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const ANDROID =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'
 const PHONES = [375, 393]
 
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 /** Every animation that ends (a sheet sliding up, a fade) has ended: axe reads text caught mid-fade as low contrast. */
 async function settled(page: Page) {
@@ -32,7 +36,10 @@ async function settled(page: Page) {
 async function expectSound(page: Page, pageErrors: string[]) {
   await settled(page)
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   expect(await seriousViolations(page)).toEqual([])
 }
 const card = (page: Page) => page.getByRole('region', { name: t.install.title })
@@ -52,7 +59,10 @@ test.describe('on an iPhone', () => {
       }
     })
 
-    test(`Entrar says to install first, and the Tarjeta to capture from the icon, at ${width}px`, async ({ page, pageErrors }) => {
+    test(`Entrar says to install first, and the Tarjeta to capture from the icon, at ${width}px`, async ({
+      page,
+      pageErrors,
+    }) => {
       await page.setViewportSize({ width, height: 852 })
       await open(page, '/t/_/full12-live?as=new-phone')
       await expect(page.getByText(t.install.iosFirst, { exact: false })).toBeVisible()
@@ -86,7 +96,9 @@ test.describe('on an Android phone', () => {
     await open(page, '/t/_/full12-live')
     await page.evaluate(() => {
       const offer = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
-        prompt: async () => void ((window as unknown as { prompted: number }).prompted = ((window as unknown as { prompted?: number }).prompted ?? 0) + 1),
+        prompt: async () =>
+          void ((window as unknown as { prompted: number }).prompted =
+            ((window as unknown as { prompted?: number }).prompted ?? 0) + 1),
         userChoice: Promise.resolve({ outcome: 'dismissed' }),
       })
       window.dispatchEvent(offer)

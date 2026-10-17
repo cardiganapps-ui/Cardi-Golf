@@ -20,9 +20,17 @@ vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
   listCourses: vi.fn(async () => server.courses),
   verifyCourse: server.verify,
-  loadCourseDraft: vi.fn(async (id: string) => ({ id, name: server.courses.find((c) => c.id === id)!.name, verifiedAt: server.courses.find((c) => c.id === id)!.verifiedAt, tees: [] })),
+  loadCourseDraft: vi.fn(async (id: string) => ({
+    id,
+    name: server.courses.find((c) => c.id === id)!.name,
+    verifiedAt: server.courses.find((c) => c.id === id)!.verifiedAt,
+    tees: [],
+  })),
 }))
-vi.mock('../../lib/courseApi', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/courseApi')>()), searchCourses: server.search }))
+vi.mock('../../lib/courseApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/courseApi')>()),
+  searchCourses: server.search,
+}))
 
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { getFixture } from '../../dev/fixtures'
@@ -32,12 +40,28 @@ import { AdminCourses } from './AdminCourses'
 import { CourseEditor } from './CourseEditor'
 
 const C = t.admin.courses
-const course = (id: string, name: string, verifiedAt: string | null, location: string | null = 'Cabo San Lucas'): CatalogCourse => ({
-  id, name, location, source: 'golfcourseapi', tees: 2, attribution: null, createdBy: null, verifiedAt,
+const course = (
+  id: string,
+  name: string,
+  verifiedAt: string | null,
+  location: string | null = 'Cabo San Lucas',
+): CatalogCourse => ({
+  id,
+  name,
+  location,
+  source: 'golfcourseapi',
+  tees: 2,
+  attribution: null,
+  createdBy: null,
+  verifiedAt,
 })
 
 beforeEach(() => {
-  server.courses = [course('course1', 'Solmar Golf Links', null), course('c-quivira', 'Quivira Golf Club', '2026-10-01T12:00:00Z'), course('c-otro', 'Club de Golf México', null, 'CDMX')]
+  server.courses = [
+    course('course1', 'Solmar Golf Links', null),
+    course('c-quivira', 'Quivira Golf Club', '2026-10-01T12:00:00Z'),
+    course('c-otro', 'Club de Golf México', null, 'CDMX'),
+  ]
   server.verify.mockClear()
   server.search.mockClear()
 })
@@ -48,11 +72,25 @@ async function inTournament(status: 'live' | 'finished', opts: { quick?: boolean
   const fx = getFixture('full12-live')!
   const snap = structuredClone(fx.snapshot)
   snap.tournament = { ...snap.tournament, status, quick: !!opts.quick, countsForStats: !opts.practice }
-  useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), loading: false, error: null })
+  useTournament.setState({
+    tournamentId: snap.tournament.id,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+  })
   await act(async () => {
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: '_/full12-live',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <AdminCourses />
         </TournamentContext.Provider>
       </MemoryRouter>,
@@ -77,7 +115,18 @@ describe('«Tarjeta verificada» (STRAT-14)', () => {
   })
 
   it('lists the catalog’s own matches first in a search, with their badge, before the providers’', async () => {
-    server.search.mockResolvedValueOnce([{ provider: 'opengolfapi', externalId: 'q', name: 'Quivira Los Cabos', clubName: null, location: null, latitude: null, longitude: null, hasCard: null }])
+    server.search.mockResolvedValueOnce([
+      {
+        provider: 'opengolfapi',
+        externalId: 'q',
+        name: 'Quivira Los Cabos',
+        clubName: null,
+        location: null,
+        latitude: null,
+        longitude: null,
+        hasCard: null,
+      },
+    ])
     await act(async () => {
       render(
         <MemoryRouter>
@@ -87,7 +136,9 @@ describe('«Tarjeta verificada» (STRAT-14)', () => {
     })
     await act(async () => fireEvent.click(screen.getByRole('button', { name: C.search })))
     const dialog = screen.getByRole('dialog')
-    await act(async () => fireEvent.change(within(dialog).getByPlaceholderText(C.searchPlaceholder), { target: { value: 'quivira cabo' } }))
+    await act(async () =>
+      fireEvent.change(within(dialog).getByPlaceholderText(C.searchPlaceholder), { target: { value: 'quivira cabo' } }),
+    )
     await act(async () => fireEvent.click(within(dialog).getByRole('button', { name: t.common.search })))
     const known = within(dialog).getByRole('region', { name: C.inPolo })
     const match = within(known).getByRole('button', { name: /Quivira Golf Club/ })
@@ -99,11 +150,31 @@ describe('«Tarjeta verificada» (STRAT-14)', () => {
   })
 
   it('says in the editor that the card is verified and that a change takes the mark off', () => {
-    render(<CourseEditor draft={{ name: 'Quivira', verifiedAt: '2026-10-01T12:00:00Z', tees: [{ name: 'Negras', color: null, rating: 74.1, slope: 142, holes: [] }] }} notes={[]} busy={false} onSave={() => undefined} onCancel={() => undefined} />)
+    render(
+      <CourseEditor
+        draft={{
+          name: 'Quivira',
+          verifiedAt: '2026-10-01T12:00:00Z',
+          tees: [{ name: 'Negras', color: null, rating: 74.1, slope: 142, holes: [] }],
+        }}
+        notes={[]}
+        busy={false}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+      />,
+    )
     expect(screen.getByText('Tarjeta verificada')).toBeTruthy()
     expect(screen.getByText(C.verifiedHint)).toBeTruthy()
     cleanup()
-    render(<CourseEditor draft={{ name: 'Solmar', tees: [{ name: 'Azules', color: null, rating: 72, slope: 130, holes: [] }] }} notes={[]} busy={false} onSave={() => undefined} onCancel={() => undefined} />)
+    render(
+      <CourseEditor
+        draft={{ name: 'Solmar', tees: [{ name: 'Azules', color: null, rating: 72, slope: 130, holes: [] }] }}
+        notes={[]}
+        busy={false}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+      />,
+    )
     expect(screen.queryByText('Tarjeta verificada')).toBeNull()
   })
 })
@@ -116,13 +187,19 @@ describe('the Comité verifies a card its tournament played (STRAT-14)', () => {
     await act(async () => fireEvent.click(within(rowOf('Solmar Golf Links')).getByRole('button', { name: C.verify })))
     const sheet = screen.getByRole('dialog', { name: C.verifyTitle })
     expect(within(sheet).getByText(C.verifyBody('Solmar Golf Links'))).toBeTruthy()
-    await act(async () => fireEvent.change(within(sheet).getByRole('textbox'), { target: { value: 'Comparada con la impresa del club' } }))
+    await act(async () =>
+      fireEvent.change(within(sheet).getByRole('textbox'), { target: { value: 'Comparada con la impresa del club' } }),
+    )
     await act(async () => fireEvent.click(within(sheet).getByRole('button', { name: C.verify })))
     expect(server.verify).toHaveBeenCalledWith('course1', tid, 'Comparada con la impresa del club')
   })
 
   it('offers nothing while the tournament is under way, in an Ensayo or a Ronda rápida, or outside a tournament', async () => {
-    for (const run of [() => inTournament('live'), () => inTournament('finished', { practice: true }), () => inTournament('finished', { quick: true })]) {
+    for (const run of [
+      () => inTournament('live'),
+      () => inTournament('finished', { practice: true }),
+      () => inTournament('finished', { quick: true }),
+    ]) {
       await run()
       expect(screen.queryByRole('button', { name: C.verify })).toBeNull()
       cleanup()

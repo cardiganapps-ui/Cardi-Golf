@@ -22,18 +22,41 @@ const pins = vi.hoisted(() => ({
   playerPhones: vi.fn(async () => server.phones),
   releasePhone: vi.fn(async (id: number) => void (server.phones = server.phones.filter((p) => p.id !== id))),
 }))
-vi.mock('../../data/pinPhones', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/pinPhones')>()), playerPhones: pins.playerPhones, releasePhone: pins.releasePhone }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), playersWithPin: vi.fn(async () => new Set<string>()) }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+vi.mock('../../data/pinPhones', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/pinPhones')>()),
+  playerPhones: pins.playerPhones,
+  releasePhone: pins.releasePhone,
+}))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  playersWithPin: vi.fn(async () => new Set<string>()),
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 const { AdminPlayers } = await import('./AdminPlayers')
 
 const P = t.admin.players
 
 function mount() {
-  useTournament.setState({ tournamentId: 't-phones', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-phones',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-phones', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-phones',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -75,10 +98,14 @@ describe('the phones holding a player’s PIN (TRUST-24)', () => {
     expect(within(list).getByRole('button', { name: P.removePhoneOf(1) })).toBeTruthy()
     await act(async () => fireEvent.click(within(list).getByRole('button', { name: P.removePhoneOf(2) })))
     const confirm = screen.getByRole('dialog', { name: P.removePhoneTitle })
-    await act(async () => fireEvent.change(within(confirm).getByRole('textbox'), { target: { value: 'No es su teléfono' } }))
+    await act(async () =>
+      fireEvent.change(within(confirm).getByRole('textbox'), { target: { value: 'No es su teléfono' } }),
+    )
     await act(async () => fireEvent.click(within(confirm).getByRole('button', { name: P.removePhone })))
     expect(pins.releasePhone).toHaveBeenCalledWith(2, 'No es su teléfono')
-    await vi.waitFor(() => expect(within(screen.getByRole('region', { name: P.phones })).queryByText(/^Teléfono 2/)).toBeNull())
+    await vi.waitFor(() =>
+      expect(within(screen.getByRole('region', { name: P.phones })).queryByText(/^Teléfono 2/)).toBeNull(),
+    )
     expect(within(screen.getByRole('region', { name: P.phones })).getByText(/^Teléfono 1, desde /)).toBeTruthy()
   })
 })

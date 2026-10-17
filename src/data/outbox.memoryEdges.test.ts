@@ -23,7 +23,19 @@ vi.mock('./tournamentStore', () => ({
   },
 }))
 
-const { _outboxTest, adoptQueuedWrites, describeSyncError, enqueueAward, enqueueHole, enqueueSignature, flush, overlayPending, queuedFor, setOutboxBlocked, useOutbox } = await import('./outbox')
+const {
+  _outboxTest,
+  adoptQueuedWrites,
+  describeSyncError,
+  enqueueAward,
+  enqueueHole,
+  enqueueSignature,
+  flush,
+  overlayPending,
+  queuedFor,
+  setOutboxBlocked,
+  useOutbox,
+} = await import('./outbox')
 type HoleAnswer = import('./outbox').HoleAnswer
 type OutboxItem = import('./outbox').OutboxItem
 type HoleItem = Extract<OutboxItem, { kind: 'hole' }>
@@ -31,9 +43,17 @@ const { useAuth } = await import('./auth')
 const { t } = await import('../i18n/es-MX')
 useAuth.setState({ user: { id: 'uid-phone' } as never })
 
-const hole = (n: number, entries: Array<{ player_id: string; fields: Record<string, unknown>; base?: Record<string, unknown> }>) =>
-  enqueueHole('t1', { round_id: 'r1', hole: n, entered_by: 'p1', entries: entries.map((e) => ({ base: {}, ...e })) })
-const conflictOn = (player_id: string): HoleAnswer => ({ status: 'conflict', rows: [], conflicts: [{ player_id, fields: ['strokes'], server: null }], rejected: [], unchanged: [] })
+const hole = (
+  n: number,
+  entries: Array<{ player_id: string; fields: Record<string, unknown>; base?: Record<string, unknown> }>,
+) => enqueueHole('t1', { round_id: 'r1', hole: n, entered_by: 'p1', entries: entries.map((e) => ({ base: {}, ...e })) })
+const conflictOn = (player_id: string): HoleAnswer => ({
+  status: 'conflict',
+  rows: [],
+  conflicts: [{ player_id, fields: ['strokes'], server: null }],
+  rejected: [],
+  unchanged: [],
+})
 const ok: HoleAnswer = { status: 'ok', rows: [], conflicts: [], rejected: [], unchanged: [] }
 
 beforeEach(() => {
@@ -53,7 +73,11 @@ describe('conflicts in memory', () => {
     await hole(4, [{ player_id: 'p2', fields: { strokes: 7 } }])
     await flush()
     // Hole 4's question is the newest one, once: not two for one player and hole.
-    expect(useOutbox.getState().conflicts.map((c) => `${c.player_id}:${c.hole}:${(c.fields as { strokes: number }).strokes}`)).toEqual(['p3:5:6', 'p2:4:7'])
+    expect(
+      useOutbox
+        .getState()
+        .conflicts.map((c) => `${c.player_id}:${c.hole}:${(c.fields as { strokes: number }).strokes}`),
+    ).toEqual(['p3:5:6', 'p2:4:7'])
   })
 
   it('a conflict goes into the correction still waiting behind its call, and nobody is asked', async () => {
@@ -91,7 +115,7 @@ describe('a flush that cannot start', () => {
       sent.push(item)
       return ok
     })
-    _outboxTest.setLocks({ request: () => Promise.reject(new Error('locks unavailable')) } as never)
+    _outboxTest.setLocks({ request: () => Promise.reject(new Error('locks unavailable')) })
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 } }])
     await expect(flush()).resolves.toBeUndefined()
     expect(sent).toEqual([])
@@ -121,7 +145,14 @@ describe('a push that throws something that is no Error', () => {
     })
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 } }])
     await flush()
-    await enqueueAward('t1', { round_id: 'r1', group_id: 'g1', hole: 3, game_id: 'closest', player_ids: ['p2'], decided_by: 'p1' })
+    await enqueueAward('t1', {
+      round_id: 'r1',
+      group_id: 'g1',
+      hole: 3,
+      game_id: 'closest',
+      player_ids: ['p2'],
+      decided_by: 'p1',
+    })
     await flush()
     // A hole's refusal is kept per player, as the write the Comité can enter again.
     expect(useOutbox.getState().rejected).toMatchObject([
@@ -137,7 +168,7 @@ describe('held for the PIN, in memory', () => {
     const sent: OutboxItem[] = []
     _outboxTest.setPush(async (item) => {
       sent.push(item)
-      return { status: 'not_member' } as HoleAnswer
+      return { status: 'not_member' }
     })
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 } }])
     await hole(5, [{ player_id: 'p2', fields: { strokes: 4 } }])
@@ -173,8 +204,17 @@ describe('the boards with writes still queued', () => {
     setOutboxBlocked(true)
     await enqueueSignature('t1', { round_id: 'r1', pair_id: 'pa', signed_by: null })
     await enqueueSignature('t1', { round_id: 'r1', player_id: 'p3', signed_by: null })
-    await _outboxTest.enqueue({ key: 'future:1', kind: 'future', tournamentId: 't1', payload: {}, attempts: 0, createdAt: Date.now() } as never)
-    const boards = { tournament: { id: 't1' }, scores: [], cardSignatures: [] } as unknown as Parameters<typeof overlayPending>[0]
+    await _outboxTest.enqueue({
+      key: 'future:1',
+      kind: 'future',
+      tournamentId: 't1',
+      payload: {},
+      attempts: 0,
+      createdAt: Date.now(),
+    } as never)
+    const boards = { tournament: { id: 't1' }, scores: [], cardSignatures: [] } as unknown as Parameters<
+      typeof overlayPending
+    >[0]
     overlayPending(boards)
     expect(boards.cardSignatures).toMatchObject([
       { roundId: 'r1', pairId: 'pa', signedBy: '' },

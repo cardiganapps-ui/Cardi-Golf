@@ -13,12 +13,18 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const outbox = vi.hoisted(() => ({ apply: null as null | ((h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => void) }))
+const outbox = vi.hoisted(() => ({
+  apply: null as
+    null | ((h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => void),
+}))
 vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
   return {
     ...real,
-    enqueueHole: vi.fn(async (_tid: string, h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => outbox.apply?.(h)),
+    enqueueHole: vi.fn(
+      async (_tid: string, h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) =>
+        outbox.apply?.(h),
+    ),
     enqueueScore: vi.fn(async () => undefined),
     enqueueAward: vi.fn(async () => undefined),
     enqueueTiebreak: vi.fn(async () => undefined),
@@ -27,7 +33,10 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { applyFields, baseRow, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -46,11 +55,17 @@ let snap: Snapshot
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 function load(s: Snapshot) {
-  useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:minimal4-live',
+    data: dataFromSnapshot(structuredClone(s)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
 }
 
 /** The fixture with the snake on and nobody holding it yet: two putts on every hole played. */
@@ -63,7 +78,16 @@ function mount() {
   load(snap)
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -72,7 +96,8 @@ function mount() {
 
 const holeOnScreen = () => Number(document.querySelector('[class*="holeNum"]')?.textContent)
 const nameOf = (playerId: string) => snap.players.find((p) => p.id === playerId)!.displayName
-const puttsUp = (playerId: string) => screen.getByRole('button', { name: `${S.puttsOf(nameOf(playerId))}: ${t.common.stepUp}` })
+const puttsUp = (playerId: string) =>
+  screen.getByRole('button', { name: `${S.puttsOf(nameOf(playerId))}: ${t.common.stepUp}` })
 const saveButton = () => screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) })
 async function tapSave(at: number) {
   clock = at
@@ -89,7 +114,9 @@ const painted = () =>
 /** Whose row carries the snake's mark. */
 const markedRow = () => {
   const marks = screen.queryAllByRole('img', { name: S.snakeHolder('La Víbora') })
-  return marks.map((m) => document.getElementById(m.closest('[role="group"]')!.getAttribute('aria-labelledby')!)!.textContent!.trim())
+  return marks.map((m) =>
+    document.getElementById(m.closest('[role="group"]')!.getAttribute('aria-labelledby')!)!.textContent.trim(),
+  )
 }
 const screenEl = () => document.querySelector('[class*="_screen_"]')!
 function drag(dx: number, dy: number, ms: number) {
@@ -114,8 +141,19 @@ beforeEach(() => {
   outbox.apply = (h) => {
     for (const e of h.entries) {
       const row = applyFields(baseRow(e.base), e.fields)
-      snap.scores = snap.scores.filter((x) => !(x.roundId === h.round_id && x.playerId === e.player_id && x.hole === h.hole))
-      snap.scores.push({ roundId: h.round_id, playerId: e.player_id, hole: h.hole, strokes: row.strokes ?? null, putts: row.putts ?? null, pickedUp: !!row.picked_up, enteredBy: 'p1', updatedAt: '2027-05-15T16:00:00Z' })
+      snap.scores = snap.scores.filter(
+        (x) => !(x.roundId === h.round_id && x.playerId === e.player_id && x.hole === h.hole),
+      )
+      snap.scores.push({
+        roundId: h.round_id,
+        playerId: e.player_id,
+        hole: h.hole,
+        strokes: row.strokes ?? null,
+        putts: row.putts ?? null,
+        pickedUp: !!row.picked_up,
+        enteredBy: 'p1',
+        updatedAt: '2027-05-15T16:00:00Z',
+      })
     }
     load(snap)
   }
@@ -136,7 +174,9 @@ describe('the snake on the Tarjeta (MOT-07)', () => {
     expect(holeOnScreen()).toBe(11)
     expect(markedRow()).toEqual([nameOf('p3')])
     expect(screen.getByText(S.snakePasses(nameOf('p3'), 'La Víbora'))).toBeTruthy()
-    expect(document.querySelector('[aria-live="polite"]')?.textContent).toContain(`${S.savedHole(10)}. ${S.snakePasses(nameOf('p3'), 'La Víbora')}`)
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toContain(
+      `${S.savedHole(10)}. ${S.snakePasses(nameOf('p3'), 'La Víbora')}`,
+    )
     // The line goes after a few seconds; the mark stays on his row for the rest of the round.
     act(() => void vi.advanceTimersByTime(5000))
     expect(screen.queryByText(S.snakePasses(nameOf('p3'), 'La Víbora'))).toBeNull()

@@ -13,7 +13,10 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../data/quick', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/quick')>()), roundRivalries: vi.fn(async () => []) }))
+vi.mock('../../data/quick', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/quick')>()),
+  roundRivalries: vi.fn(async () => []),
+}))
 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -35,7 +38,7 @@ import { TvScreen } from './TvScreen'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 afterEach(() => {
@@ -68,7 +71,12 @@ function renamed(name: 'full12-live' | 'full12-finished') {
   snap.tournament.name = 'Copa del Valle'
   snap.tournament.settings = {
     ...st,
-    modules: { ...st.modules, pairs: { ...st.modules.pairs, label: 'Las Duplas' }, snake: { ...st.modules.snake, label: 'El Tres Putts' }, auction: { ...st.modules.auction, label: 'La Subasta' } },
+    modules: {
+      ...st.modules,
+      pairs: { ...st.modules.pairs, label: 'Las Duplas' },
+      snake: { ...st.modules.snake, label: 'El Tres Putts' },
+      auction: { ...st.modules.auction, label: 'La Subasta' },
+    },
     labels: { lastPlace: 'El Farolito', honoree: 'El festejado', trophy: '' },
   }
   for (const p of snap.pairs) p.name = null
@@ -77,15 +85,30 @@ function renamed(name: 'full12-live' | 'full12-finished') {
 
 async function show(name: 'full12-live' | 'full12-finished', path: string) {
   const { fx, snap } = renamed(name)
-  useTournament.setState({ tournamentId: `fixture:${name}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
-  const ctx = { tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: { ...fx.lookup, name: snap.tournament.name }, me: fx.me, refresh: async () => undefined, leave: async () => undefined }
+  useTournament.setState({
+    tournamentId: `fixture:${name}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
+  const ctx = {
+    tournamentId: snap.tournament.id,
+    slug: `_/${name}`,
+    lookup: { ...fx.lookup, name: snap.tournament.name },
+    me: fx.me,
+    refresh: async () => undefined,
+    leave: async () => undefined,
+  }
   await act(async () => {
     render(
       <MemoryRouter initialEntries={[`/t/_/${name}/${path}`]}>
         <TournamentContext.Provider value={ctx}>
           <Routes>
             <Route path="/t/_/:name" element={<TournamentShell />}>
-              {TABS.map(([p, el]) => (p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />))}
+              {TABS.map(([p, el]) =>
+                p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />,
+              )}
             </Route>
             {ROOMS.map(([p, el]) => (
               <Route key={p} path={`/t/_/:name/${p}`} element={el} />
@@ -99,7 +122,11 @@ async function show(name: 'full12-live' | 'full12-finished', path: string) {
   return text()
 }
 /** What the page says: its text and its accessible names. */
-const text = () => [document.body.textContent ?? '', ...[...document.querySelectorAll('[aria-label]')].map((el) => el.getAttribute('aria-label') ?? '')].join(' ')
+const text = () =>
+  [
+    document.body.textContent ?? '',
+    ...[...document.querySelectorAll('[aria-label]')].map((el) => el.getAttribute('aria-label') ?? ''),
+  ].join(' ')
 
 describe('another tournament never reads the first one’s names (STRAT-11)', () => {
   for (const name of ['full12-live', 'full12-finished'] as const) {
@@ -117,7 +144,8 @@ describe('another tournament never reads the first one’s names (STRAT-11)', ()
     await act(async () => fireEvent.click(screen.getByRole('button', { name: t.ceremony.start })))
     const said: string[] = []
     for (let i = 0; i < 20; i++) {
-      for (const b of screen.queryAllByRole('button', { name: t.ceremony.reveal })) await act(async () => fireEvent.click(b))
+      for (const b of screen.queryAllByRole('button', { name: t.ceremony.reveal }))
+        await act(async () => fireEvent.click(b))
       said.push(text())
       const next = screen.getByRole('button', { name: t.ceremony.next }) as HTMLButtonElement
       if (next.disabled) break

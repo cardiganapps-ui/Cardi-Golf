@@ -14,10 +14,14 @@ describe('changedFields', () => {
     ])
   })
   it('an insert shows the row it added, without empty fields', () => {
-    expect(changedFields({ action: 'INSERT', before: null, after: { id: 'x', hole: 3, strokes: null } })).toEqual([{ key: 'hole', before: undefined, after: 3 }])
+    expect(changedFields({ action: 'INSERT', before: null, after: { id: 'x', hole: 3, strokes: null } })).toEqual([
+      { key: 'hole', before: undefined, after: 3 },
+    ])
   })
   it('a delete shows the row it removed', () => {
-    expect(changedFields({ action: 'DELETE', before: { name: 'Grupo 1' }, after: null }).map((x) => x.key)).toEqual(['name'])
+    expect(changedFields({ action: 'DELETE', before: { name: 'Grupo 1' }, after: null }).map((x) => x.key)).toEqual([
+      'name',
+    ])
   })
 })
 

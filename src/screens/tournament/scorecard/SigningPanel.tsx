@@ -31,7 +31,13 @@ function useArrivals(signed: readonly string[]): (id: string) => boolean {
  */
 function SignedStamp({ landing }: { landing: boolean }) {
   return (
-    <motion.span className={styles.stamp} aria-hidden="true" initial={landing ? { scale: 1.25, opacity: 0, rotate: -14 } : false} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={easeSlow}>
+    <motion.span
+      className={styles.stamp}
+      aria-hidden="true"
+      initial={landing ? { scale: 1.25, opacity: 0, rotate: -14 } : false}
+      animate={{ scale: 1, opacity: 1, rotate: -8 }}
+      transition={easeSlow}
+    >
       {S.stamp}
     </motion.span>
   )
@@ -52,7 +58,11 @@ export const SigningPanel = memo(function SigningPanel(p: {
   onSign: (pairId: string) => void
 }) {
   const pairName = pairNameIn(p.players)
-  const arrived = useArrivals(p.pairs.filter((pair) => p.signatures.some((s) => s.roundId === p.roundId && s.pairId === pair.id)).map((pair) => pair.id))
+  const arrived = useArrivals(
+    p.pairs
+      .filter((pair) => p.signatures.some((s) => s.roundId === p.roundId && s.pairId === pair.id))
+      .map((pair) => pair.id),
+  )
   return (
     <div>
       {p.pairs
@@ -100,7 +110,11 @@ export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
   isComite: boolean
   onSign: (playerId: string) => void
 }) {
-  const arrived = useArrivals(p.players.filter(({ id }) => cardSignedFor({ cardSignatures: p.signatures, pairs: p.pairs }, p.roundId, id)).map(({ id }) => id))
+  const arrived = useArrivals(
+    p.players
+      .filter(({ id }) => cardSignedFor({ cardSignatures: p.signatures, pairs: p.pairs }, p.roundId, id))
+      .map(({ id }) => id),
+  )
   if (!p.players.length) return null
   return (
     <div>
@@ -131,15 +145,19 @@ export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
 })
 
 /** The question before a card is signed: it locks the card (a pair's, or one player's under a marker's rule). */
-export const SignSheet = memo(function SignSheet(p: { open: boolean; title: string | undefined; confirm?: string; onClose: () => void; onSign: () => void }) {
+export const SignSheet = memo(function SignSheet(p: {
+  open: boolean
+  title: string | undefined
+  confirm?: string
+  onClose: () => void
+  onSign: () => void
+}) {
   return (
     <Sheet open={p.open} onClose={p.onClose} title={p.title}>
       <div className="stack">
         <p className="help">{p.confirm ?? S.signConfirm}</p>
         <div className="row">
-          <Button onClick={p.onClose}>
-            {t.common.cancel}
-          </Button>
+          <Button onClick={p.onClose}>{t.common.cancel}</Button>
           <Button variant="primary" className="grow" onClick={p.onSign}>
             {S.sign}
           </Button>

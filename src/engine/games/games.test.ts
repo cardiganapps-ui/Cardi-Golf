@@ -19,7 +19,10 @@ function money(over: Partial<GameMoney>): GameMoney {
   return { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100], ...over }
 }
 
-function setup(games: GameConfig[], opts: { players?: number; rounds?: number; hcp?: number; holes?: 9 | 18 } = {}): Snapshot {
+function setup(
+  games: GameConfig[],
+  opts: { players?: number; rounds?: number; hcp?: number; holes?: 9 | 18 } = {},
+): Snapshot {
   const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: opts.rounds ?? 1, games }
   const players = Array.from({ length: opts.players ?? 3 }, (_, i) => makePlayer(i + 1, { baseHcp: opts.hcp ?? 0 }))
   const rounds = Array.from({ length: opts.rounds ?? 1 }, (_, i) => makeRound(i + 1, { holes: opts.holes ?? 18 }))
@@ -27,8 +30,15 @@ function setup(games: GameConfig[], opts: { players?: number; rounds?: number; h
 }
 
 /** Strokes for one player: par everywhere except the given holes. */
-function card(snap: Snapshot, roundId: string, pid: string, diffs: Record<number, number> = {}, opts: { holes?: number; putts?: Record<number, number> } = {}) {
-  for (let h = 1; h <= (opts.holes ?? 18); h++) snap.scores.push(score(roundId, pid, h, PARS[h - 1]! + (diffs[h] ?? 0), opts.putts?.[h] ?? 2))
+function card(
+  snap: Snapshot,
+  roundId: string,
+  pid: string,
+  diffs: Record<number, number> = {},
+  opts: { holes?: number; putts?: Record<number, number> } = {},
+) {
+  for (let h = 1; h <= (opts.holes ?? 18); h++)
+    snap.scores.push(score(roundId, pid, h, PARS[h - 1]! + (diffs[h] ?? 0), opts.putts?.[h] ?? 2))
 }
 
 function run(snap: Snapshot): TournamentState {
@@ -40,7 +50,16 @@ function finish(snap: Snapshot) {
   snap.tournament.status = 'finished'
 }
 
-const skins = (m: GameMoney, carryOver = true, basis: 'gross' | 'net' = 'gross'): GameConfig => ({ id: 'skins', type: 'skins', label: 'Skins', enabled: true, rounds: 'all', entrants: 'all', options: { basis, carryOver }, money: m })
+const skins = (m: GameMoney, carryOver = true, basis: 'gross' | 'net' = 'gross'): GameConfig => ({
+  id: 'skins',
+  type: 'skins',
+  label: 'Skins',
+  enabled: true,
+  rounds: 'all',
+  entrants: 'all',
+  options: { basis, carryOver },
+  money: m,
+})
 
 describe('skins', () => {
   // Hole 1: J1 birdie, alone → 1 skin. Hole 2: all par → carries. Hole 3: J2 birdie → 2 skins.
@@ -75,7 +94,10 @@ describe('skins', () => {
   it('direct: $10 per skin from each player, netted: J1 pays J2 $10, J3 pays J1 $10 and J2 $20', () => {
     const snap = setup([skins(money({ source: 'direct', stake: 10 }))])
     play(snap)
-    const bets = run(snap).money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}:${f.amount}`).sort()
+    const bets = run(snap)
+      .money.flows.filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}:${f.amount}`)
+      .sort()
     // J1 won 1 skin: +$10 from J2, +$10 from J3. J2 won 2: +$20 from J1, +$20 from J3.
     expect(bets).toEqual(['p1>p2:10', 'p3>p1:10', 'p3>p2:20'])
   })
@@ -114,7 +136,9 @@ describe('skins', () => {
     expect(run(snap).prizes).toEqual([])
     finish(snap)
     const st = run(snap)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(
+      ['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']),
+    )
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual([])
   })
@@ -127,7 +151,9 @@ describe('skins', () => {
     finish(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual(['Skins: nadie ganó un skin; $300 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual([
+      'Skins: nadie ganó un skin; $300 quedan sin asignar. El Comité decide.',
+    ])
   })
 
   it('9-hole round: nine skins at most, all resolved', () => {
@@ -144,7 +170,16 @@ describe('skins', () => {
 
 describe('low score', () => {
   it('per round, net, 4 × $100 = $400 → $200 a day paid 60/40', () => {
-    const g: GameConfig = { id: 'low', type: 'lowScore', label: 'Low neto', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', scope: 'perRound' }, money: money({ source: 'side', buyIn: 100, split: [60, 40] }) }
+    const g: GameConfig = {
+      id: 'low',
+      type: 'lowScore',
+      label: 'Low neto',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { basis: 'net', scope: 'perRound' },
+      money: money({ source: 'side', buyIn: 100, split: [60, 40] }),
+    }
     const snap = setup([g], { players: 4, rounds: 2 })
     // Day 1: J1 −2, J2 −1, J3 E, J4 +1. Day 2: J4 −3, J3 −1, J1/J2 E.
     card(snap, 'r1', 'p1', { 1: -1, 2: -1 })
@@ -159,13 +194,27 @@ describe('low score', () => {
     const st = run(snap)
     const paid = st.prizes.filter((p) => p.gameId === 'low').map((p) => `${words(p.label)}=${p.amount}`)
     // $200 per day: 60% = $120, 40% = $80.
-    expect(paid.sort()).toEqual(['Low neto, Día 1, 1.º=120', 'Low neto, Día 1, 2.º=80', 'Low neto, Día 2, 1.º=120', 'Low neto, Día 2, 2.º=80'])
+    expect(paid.sort()).toEqual([
+      'Low neto, Día 1, 1.º=120',
+      'Low neto, Día 1, 2.º=80',
+      'Low neto, Día 2, 1.º=120',
+      'Low neto, Día 2, 2.º=80',
+    ])
     expect(st.prizes.find((p) => words(p.label) === 'Low neto, Día 2, 1.º')!.playerId).toBe('p4')
     expect(st.money.banker.balanced).toBe(true)
   })
 
   it('overall gross ties share the places they occupy; a pick-up counts as net double bogey', () => {
-    const g: GameConfig = { id: 'low', type: 'lowScore', label: 'Low gross', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'gross', scope: 'overall' }, money: money({ source: 'main', amount: 1000, split: [70, 30] }) }
+    const g: GameConfig = {
+      id: 'low',
+      type: 'lowScore',
+      label: 'Low gross',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { basis: 'gross', scope: 'overall' },
+      money: money({ source: 'main', amount: 1000, split: [70, 30] }),
+    }
     const snap = setup([g], { players: 3 })
     card(snap, 'r1', 'p1', { 1: -1 })
     card(snap, 'r1', 'p2', { 2: -1 })
@@ -174,8 +223,14 @@ describe('low score', () => {
     snap.scores.find((s) => s.playerId === 'p3' && s.hole === 5)!.pickedUp = true
     finish(snap)
     const st = run(snap)
-    const rows = (st.games.low!.state as { tables: Array<{ rows: Array<{ playerId: string; label: string; value: number }> }> }).tables[0]!.rows
-    expect(rows.map((r) => [r.playerId, r.label, r.value])).toEqual([['p1', 'T1', -1], ['p2', 'T1', -1], ['p3', '3', 2]])
+    const rows = (
+      st.games.low!.state as { tables: Array<{ rows: Array<{ playerId: string; label: string; value: number }> }> }
+    ).tables[0]!.rows
+    expect(rows.map((r) => [r.playerId, r.label, r.value])).toEqual([
+      ['p1', 'T1', -1],
+      ['p2', 'T1', -1],
+      ['p3', '3', 2],
+    ])
     // Tied 1st share 70% + 30% of $1,000 = $500 each.
     expect(st.prizes.map((p) => p.amount)).toEqual([500, 500])
   })
@@ -183,7 +238,16 @@ describe('low score', () => {
 
 describe('event pots', () => {
   it('birdie pot from the main pot: $300 over 3 birdies → J1 2 = $200, J2 1 = $100', () => {
-    const g: GameConfig = { id: 'birdies', type: 'eventPot', label: 'Birdies', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: money({ source: 'main', amount: 300 }) }
+    const g: GameConfig = {
+      id: 'birdies',
+      type: 'eventPot',
+      label: 'Birdies',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { event: 'birdie', basis: 'gross' },
+      money: money({ source: 'main', amount: 300 }),
+    }
     const snap = setup([g])
     card(snap, 'r1', 'p1', { 1: -1, 9: -2 }) // an eagle is also a birdie or better
     card(snap, 'r1', 'p2', { 4: -1 })
@@ -194,7 +258,16 @@ describe('event pots', () => {
   })
 
   it('a pot nobody won: from the inscriptions it stays unassigned with a warning; a side pot goes back to who paid it (MONEY-10)', () => {
-    const eagles = (m: GameMoney): GameConfig => ({ id: 'aguilas', type: 'eventPot', label: 'Águilas', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'eagle', basis: 'gross' }, money: m })
+    const eagles = (m: GameMoney): GameConfig => ({
+      id: 'aguilas',
+      type: 'eventPot',
+      label: 'Águilas',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { event: 'eagle', basis: 'gross' },
+      money: m,
+    })
     const main = setup([eagles(money({ source: 'main', amount: 300 }))])
     card(main, 'r1', 'p1', { 1: -1 }) // a birdie is not an eagle
     card(main, 'r1', 'p2')
@@ -203,25 +276,41 @@ describe('event pots', () => {
     finish(main)
     let st = run(main)
     expect(st.prizes).toEqual([])
-    expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual(['Águilas: nadie ganó un águila; $300 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual([
+      'Águilas: nadie ganó un águila; $300 quedan sin asignar. El Comité decide.',
+    ])
 
     const side = setup([eagles(money({ source: 'side', buyIn: 50 }))])
     for (const id of ['p1', 'p2', 'p3']) card(side, 'r1', id)
     finish(side)
     st = run(side)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(
+      ['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']),
+    )
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual([])
   })
 
   it('three-putts are fines: $5 to each other player per three-putt', () => {
-    const g: GameConfig = { id: 'tp', type: 'eventPot', label: 'Tres putts', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'threePutt', basis: 'gross' }, money: money({ source: 'direct', stake: 5 }) }
+    const g: GameConfig = {
+      id: 'tp',
+      type: 'eventPot',
+      label: 'Tres putts',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { event: 'threePutt', basis: 'gross' },
+      money: money({ source: 'direct', stake: 5 }),
+    }
     const snap = setup([g])
     card(snap, 'r1', 'p1', {}, { putts: { 3: 3, 7: 3 } })
     card(snap, 'r1', 'p2', {}, { putts: { 10: 4 } })
     card(snap, 'r1', 'p3')
     finish(snap)
-    const bets = run(snap).money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}:${f.amount}`).sort()
+    const bets = run(snap)
+      .money.flows.filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}:${f.amount}`)
+      .sort()
     // J1: 2 × $5 to J2 and to J3; J2: 1 × $5 to J1 and to J3. J1↔J2 nets to $5.
     expect(bets).toEqual(['p1>p2:5', 'p1>p3:10', 'p2>p3:5'])
   })
@@ -235,7 +324,15 @@ describe('match play / Nassau', () => {
     enabled: true,
     rounds: 'all',
     entrants: 'all',
-    options: { format: 'nassau', basis: 'gross', pairScoring: 'bestBall', pressAt: 2, maxPresses: 1, matches: [{ id: 'm1', a: ['p1'], b: ['p2'] }], ...over },
+    options: {
+      format: 'nassau',
+      basis: 'gross',
+      pairScoring: 'bestBall',
+      pressAt: 2,
+      maxPresses: 1,
+      matches: [{ id: 'm1', a: ['p1'], b: ['p2'] }],
+      ...over,
+    },
     money: money({ source: 'direct', stake: 100 }),
   })
 
@@ -247,10 +344,16 @@ describe('match play / Nassau', () => {
     const st = run(snap)
     const [front, back, total] = (st.games.nassau!.state as MatchState).rounds[0]!.segments
     // Front original: −1 −1 +1 −1 = J2 2 up. Press from the 3rd: +1 −1 = halved.
-    expect(front!.bets.map((b) => [b.press, b.fromHole, b.up])).toEqual([[0, 1, -2], [1, 3, 0]])
+    expect(front!.bets.map((b) => [b.press, b.fromHole, b.up])).toEqual([
+      [0, 1, -2],
+      [1, 3, 0],
+    ])
     expect(back!.bets.map((b) => b.up)).toEqual([0])
     // The 18 presses the same way.
-    expect(total!.bets.map((b) => [b.press, b.fromHole, b.up])).toEqual([[0, 1, -2], [1, 3, 0]])
+    expect(total!.bets.map((b) => [b.press, b.fromHole, b.up])).toEqual([
+      [0, 1, -2],
+      [1, 3, 0],
+    ])
     // Money: front J2 $100, total J2 $100, presses and back halved → J1 pays J2 $200.
     const bets = st.money.flows.filter((f) => f.kind === 'bet')
     expect(bets.map((f) => `${f.from}>${f.to}:${f.amount}`)).toEqual(['p1>p2:200'])
@@ -267,7 +370,10 @@ describe('match play / Nassau', () => {
     finish(snap)
     const back = (run(snap).games.nassau!.state as MatchState).rounds[0]!.segments[1]!
     expect(back.results.slice(0, 3).map((r) => r.hole)).toEqual([10, 11, 12])
-    expect(back.bets.map((b) => [b.fromHole, b.up])).toEqual([[10, -2], [12, 0]])
+    expect(back.bets.map((b) => [b.fromHole, b.up])).toEqual([
+      [10, -2],
+      [12, 0],
+    ])
   })
 
   it('closes out early: 5 up with 4 to play is "Gana 5 y 4"; later holes do not matter', () => {
@@ -281,7 +387,10 @@ describe('match play / Nassau', () => {
   })
 
   it('pairs, best ball: the better ball of each pair decides the hole; each loser pays his opposite', () => {
-    const snap = setup([nassau({ format: 'match', pressAt: 0, matches: [{ id: 'm1', a: ['p1', 'p2'], b: ['p3', 'p4'] }] })], { players: 4 })
+    const snap = setup(
+      [nassau({ format: 'match', pressAt: 0, matches: [{ id: 'm1', a: ['p1', 'p2'], b: ['p3', 'p4'] }] })],
+      { players: 4 },
+    )
     card(snap, 'r1', 'p1', { 1: -1 })
     card(snap, 'r1', 'p2', { 1: 2, 2: 2 })
     card(snap, 'r1', 'p3', { 2: 1 })
@@ -290,7 +399,10 @@ describe('match play / Nassau', () => {
     const st = run(snap)
     // Hole 1: A best 3 vs B 4 → A. Hole 2: A best par (J1) vs B par (J4) → halved. Rest halved. A 1 up.
     expect((st.games.nassau!.state as MatchState).rounds[0]!.segments[0]!.bets[0]!.up).toBe(1)
-    const bets = st.money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}:${f.amount}`).sort()
+    const bets = st.money.flows
+      .filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}:${f.amount}`)
+      .sort()
     expect(bets).toEqual(['p3>p1:100', 'p4>p2:100'])
   })
 
@@ -299,7 +411,9 @@ describe('match play / Nassau', () => {
     card(snap, 'r1', 'p1', {}, { holes: 9 })
     card(snap, 'r1', 'p2', {}, { holes: 9 })
     finish(snap)
-    expect((run(snap).games.nassau!.state as MatchState).rounds[0]!.segments.map((s) => words(s.label))).toEqual(['9 hoyos'])
+    expect((run(snap).games.nassau!.state as MatchState).rounds[0]!.segments.map((s) => words(s.label))).toEqual([
+      '9 hoyos',
+    ])
   })
 
   it('a match naming a player outside the game is ignored and flagged', () => {

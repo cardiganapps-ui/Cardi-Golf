@@ -89,7 +89,8 @@ const NETWORK =
 
 /** RequestTimeout: fetchWithTimeout (supabase.ts); TimeoutError: withTimeout; AbortError: an abort without a reason. */
 const TIMEOUT_NAMES = new Set(['RequestTimeout', 'TimeoutError', 'AbortError'])
-const TIMEOUT = /^(RequestTimeout|TimeoutError|AbortError)\b|signal is aborted|aborted a request|operation was aborted|timed? ?out|statement timeout/i
+const TIMEOUT =
+  /^(RequestTimeout|TimeoutError|AbortError)\b|signal is aborted|aborted a request|operation was aborted|timed? ?out|statement timeout/i
 
 const SESSION_NAMES = new Set(['AuthSessionMissingError', 'AuthInvalidJwtError', 'AuthInvalidTokenResponseError'])
 const SESSION_CODES = new Set([
@@ -130,7 +131,11 @@ function fromCode(p: Parts): string | null {
   if (code === '42501' || /row-level security|permission denied/i.test(message)) return E.permission
   if (code === '23505' || /duplicate key/i.test(message)) return E.duplicate
   if (code === '23503' || /foreign key/i.test(message)) return E.linked
-  if (INVALID_CODES.has(code) || /invalid input|check constraint|null value in column|value too long|out of range/i.test(message)) return E.invalid
+  if (
+    INVALID_CODES.has(code) ||
+    /invalid input|check constraint|null value in column|value too long|out of range/i.test(message)
+  )
+    return E.invalid
   return null
 }
 
@@ -139,8 +144,14 @@ function offline(): boolean {
 }
 
 function generic(p: Parts): string {
-  const raw = p.code || (p.status ? `HTTP ${p.status}` : '') || (p.name && p.name !== 'Error' && p.name !== 'UserError' ? p.name : '')
-  const ref = raw.replace(/[^\w. -]/g, '').slice(0, 40).trim()
+  const raw =
+    p.code ||
+    (p.status ? `HTTP ${p.status}` : '') ||
+    (p.name && p.name !== 'Error' && p.name !== 'UserError' ? p.name : '')
+  const ref = raw
+    .replace(/[^\w. -]/g, '')
+    .slice(0, 40)
+    .trim()
   return ref ? E.unknownRef(ref) : E.unknown
 }
 
@@ -166,9 +177,22 @@ export function humanError(e: unknown, overrides: ErrorOverrides = {}): string {
   if (own) return own
   // A server answer (a code or a status) proves the phone has signal.
   const answered = !!p.code || (p.status ?? 0) > 0
-  if (NETWORK.test(p.message) || (p.name === 'AuthRetryableFetchError' && !answered) || (!isString && !answered && offline())) return E.network
-  if (TIMEOUT_NAMES.has(p.name) || TIMEOUT.test(p.message) || p.code === '57014' || p.status === 408 || p.status === 504) return E.timeout
-  if (SESSION_NAMES.has(p.name) || SESSION_CODES.has(p.code) || SESSION.test(p.message) || p.status === 401) return E.session
+  if (
+    NETWORK.test(p.message) ||
+    (p.name === 'AuthRetryableFetchError' && !answered) ||
+    (!isString && !answered && offline())
+  )
+    return E.network
+  if (
+    TIMEOUT_NAMES.has(p.name) ||
+    TIMEOUT.test(p.message) ||
+    p.code === '57014' ||
+    p.status === 408 ||
+    p.status === 504
+  )
+    return E.timeout
+  if (SESSION_NAMES.has(p.name) || SESSION_CODES.has(p.code) || SESSION.test(p.message) || p.status === 401)
+    return E.session
   const auth = AUTH.get(p.code)
   if (auth) return auth
   const coded = fromCode(p)
@@ -176,6 +200,7 @@ export function humanError(e: unknown, overrides: ErrorOverrides = {}): string {
   if (p.status === 403) return E.permission
   if (p.status === 429) return E.tooMany
   if (p.status != null && p.status >= 500) return E.server
-  if (isString && p.message.trim() && !TECHNICAL.test(p.message.replace(REF, '').replace(QUOTED, '«»'))) return p.message
+  if (isString && p.message.trim() && !TECHNICAL.test(p.message.replace(REF, '').replace(QUOTED, '«»')))
+    return p.message
   return generic(p)
 }

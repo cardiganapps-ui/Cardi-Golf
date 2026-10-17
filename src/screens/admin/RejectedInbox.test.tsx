@@ -14,7 +14,11 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const server = vi.hoisted(() => ({ calls: [] as unknown[][], fail: null as Error | null, failFor: {} as Record<string, Error> }))
+const server = vi.hoisted(() => ({
+  calls: [] as unknown[][],
+  fail: null as Error | null,
+  failFor: {} as Record<string, Error>,
+}))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
   resolveRejectedWrite: vi.fn(async (id: string, action: string, reason: string, seen?: unknown) => {
@@ -40,7 +44,16 @@ function renderInbox() {
   const snapshot = fx.snapshot
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snapshot.tournament.id, slug: 'viaje', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snapshot.tournament.id,
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <RejectedInbox />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -50,7 +63,13 @@ beforeEach(() => {
   const fx = getFixture('full12-live')!
   const snapshot = structuredClone(fx.snapshot)
   useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(snapshot), reload })
-  useRejectedInbox.setState({ tournamentId: snapshot.tournament.id, items: structuredClone(fx.inbox!), status: 'ready', error: null, fixture: true })
+  useRejectedInbox.setState({
+    tournamentId: snapshot.tournament.id,
+    items: structuredClone(fx.inbox!),
+    status: 'ready',
+    error: null,
+    fixture: true,
+  })
   renderInbox()
 })
 afterEach(() => {
@@ -68,7 +87,9 @@ const confirm = (label: string) => act(async () => fireEvent.click(sheet().getBy
 const ids = () => useRejectedInbox.getState().items.map((x) => x.id)
 /** A hole of the fixture as the screen shows it, and sends as what it saw. */
 const seenOf = (roundId: string, playerId: string, hole: number) => {
-  const x = getFixture('full12-live')!.snapshot.scores.find((y) => y.roundId === roundId && y.playerId === playerId && y.hole === hole)!
+  const x = getFixture('full12-live')!.snapshot.scores.find(
+    (y) => y.roundId === roundId && y.playerId === playerId && y.hole === hole,
+  )!
   return { strokes: x.strokes, putts: x.putts, picked_up: x.pickedUp }
 }
 
@@ -81,10 +102,18 @@ describe('«Pendientes de revisar»', () => {
     expect(text).toContain(SI.wouldBe('9 golpes, 3 putts'))
   })
 
-  it('an untouched default on an empty hole says it was the Tarjeta\'s par, and can be applied as the hole is, empty', async () => {
+  it("an untouched default on an empty hole says it was the Tarjeta's par, and can be applied as the hole is, empty", async () => {
     cleanup()
     const fx = getFixture('full12-live')!
-    const item = { ...structuredClone(fx.inbox![0]!), id: 'fx-rw-auto', roundId: 'r2', hole: 17, playerId: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, auto: true }
+    const item = {
+      ...structuredClone(fx.inbox![0]!),
+      id: 'fx-rw-auto',
+      roundId: 'r2',
+      hole: 17,
+      playerId: 'p2',
+      fields: { strokes: 4, putts: 2, picked_up: false },
+      auto: true,
+    }
     useRejectedInbox.setState({ items: [item], status: 'ready', fixture: true })
     renderInbox()
     const text = box().getByText('Bruno, día 2, hoyo 17').closest('div')!.textContent
@@ -103,12 +132,14 @@ describe('«Pendientes de revisar»', () => {
     expect(text).toContain(SI.wouldBe('3 golpes, 2 putts'))
   })
 
-  it('what the card holds is the server\'s row, not a write this phone still has to send', () => {
+  it("what the card holds is the server's row, not a write this phone still has to send", () => {
     cleanup()
     const fx = getFixture('full12-live')!
     const base = structuredClone(fx.snapshot)
     const shown = structuredClone(fx.snapshot)
-    shown.scores = shown.scores.map((x) => (x.roundId === 'r2' && x.playerId === 'p4' && x.hole === 4 ? { ...x, strokes: 8 } : x))
+    shown.scores = shown.scores.map((x) =>
+      x.roundId === 'r2' && x.playerId === 'p4' && x.hole === 4 ? { ...x, strokes: 8 } : x,
+    )
     useTournament.setState({ data: { ...dataFromSnapshot(base), snapshot: shown } })
     renderInbox()
     expect(box().getByText('Damián, día 2, hoyo 4').closest('div')!.textContent).toContain(SI.now('7 golpes, 2 putts'))
@@ -128,7 +159,9 @@ describe('«Pendientes de revisar»', () => {
     expect(server.calls).toEqual([])
     type('  Damián confirma el 3  ')
     await confirm(SI.apply)
-    expect(server.calls).toEqual([['fx-rw-2', 'apply', 'Damián confirma el 3', { strokes: 7, putts: 2, picked_up: false }]])
+    expect(server.calls).toEqual([
+      ['fx-rw-2', 'apply', 'Damián confirma el 3', { strokes: 7, putts: 2, picked_up: false }],
+    ])
     expect(ids()).not.toContain('fx-rw-2')
     expect(box().queryByText('Damián, día 2, hoyo 4')).toBeNull()
     expect(reload).toHaveBeenCalledTimes(1)
@@ -143,7 +176,7 @@ describe('«Pendientes de revisar»', () => {
     expect(reload).not.toHaveBeenCalled()
   })
 
-  it('a refusal stays in the sheet in the server\'s words, and the row stays', async () => {
+  it("a refusal stays in the sheet in the server's words, and the row stays", async () => {
     server.fail = new ApiError('Esa captura ya estaba resuelta', '22023')
     fireEvent.click(box().getByRole('button', { name: `${SI.dismiss}: Bruno, día 1, hoyo 16` }))
     type('Se equivocó de día')
@@ -172,7 +205,7 @@ describe('«Pendientes de revisar»', () => {
     expect(ids()).toContain('fx-rw-4')
     expect(ids()).not.toContain('fx-rw-3')
   })
-  it('a hole that changed since the row showed it: refused in the server\'s words, the boards read again, nothing left as applied', async () => {
+  it("a hole that changed since the row showed it: refused in the server's words, the boards read again, nothing left as applied", async () => {
     server.fail = new ApiError('El hoyo cambió mientras lo revisabas; vuelve a mirarlo', '22023')
     fireEvent.click(box().getByRole('button', { name: `${SI.apply}: Damián, día 2, hoyo 4` }))
     type('Damián confirma el 3')

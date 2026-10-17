@@ -18,7 +18,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 const toasts = vi.hoisted(() => [] as string[])
-vi.mock('./toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('./toast')>()), toast: vi.fn((msg: string) => void toasts.push(msg)) }))
+vi.mock('./toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./toast')>()),
+  toast: vi.fn((msg: string) => void toasts.push(msg)),
+}))
 const outbox = vi.hoisted(() => ({ discarded: [] as string[], resent: [] as string[] }))
 vi.mock('../data/outbox', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../data/outbox')>()),
@@ -44,12 +47,24 @@ const hole11: RejectedItem = {
   key: 'score:r2:p3:11',
   kind: 'score',
   tournamentId: 'fx-full',
-  payload: { round_id: 'r2', player_id: CAMILO, hole: 11, strokes: 5, putts: 2, picked_up: false, entered_by: CAMILO, client_ts: '2027-04-10T15:00:00Z' },
+  payload: {
+    round_id: 'r2',
+    player_id: CAMILO,
+    hole: 11,
+    strokes: 5,
+    putts: 2,
+    picked_up: false,
+    entered_by: CAMILO,
+    client_ts: '2027-04-10T15:00:00Z',
+  },
   message: t.sync.errDenied,
   at: 1,
 }
 
-function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isComite?: boolean; rejected?: RejectedItem[]; me?: string } = {}) {
+function mount(
+  ui: 'tarjeta' | 'list',
+  opts: { edit?: (s: Snapshot) => void; isComite?: boolean; rejected?: RejectedItem[]; me?: string } = {},
+) {
   const fx = getFixture('full12-live')!
   const snapshot = structuredClone(fx.snapshot)
   opts.edit?.(snapshot)
@@ -57,7 +72,16 @@ function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isC
   const me = { playerId: opts.me ?? CAMILO, isOrganizer: false, isComite: opts.isComite ?? false }
   const view = render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'viaje', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 'fx-full',
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         {ui === 'tarjeta' ? <ScorecardScreen /> : <RejectedWrites canResend={me.isComite} playerId={me.playerId} />}
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -94,17 +118,23 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
     expect(list().getByRole('button', { name: `${IB.discard}: ${HOLE11}` })).toBeTruthy()
   })
 
-  it('«Mandar al Comité» hands the values to the phone\'s share sheet', async () => {
+  it("«Mandar al Comité» hands the values to the phone's share sheet", async () => {
     const share = vi.fn(async () => undefined)
     vi.stubGlobal('navigator', { ...navigator, share })
     mount('tarjeta', { edit: finishDay2 })
     await send()
-    expect(share).toHaveBeenCalledWith({ text: `${IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')}\n${HOLE11}` })
+    expect(share).toHaveBeenCalledWith({
+      text: `${IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')}\n${HOLE11}`,
+    })
   })
 
   it('closing the share sheet is a choice: nothing is copied and nothing is said', async () => {
     const writeText = vi.fn(async () => undefined)
-    vi.stubGlobal('navigator', { ...navigator, share: vi.fn(async () => Promise.reject(new DOMException('cancelled', 'AbortError'))), clipboard: { writeText } })
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      share: vi.fn(async () => Promise.reject(new DOMException('cancelled', 'AbortError'))),
+      clipboard: { writeText },
+    })
     mount('tarjeta', { edit: finishDay2 })
     await send()
     expect(writeText).not.toHaveBeenCalled()
@@ -121,7 +151,11 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
   })
 
   it('when the phone can neither share nor copy, the text is on screen to copy by hand or show', async () => {
-    vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText: vi.fn(async () => Promise.reject(new Error('denied'))) } })
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      share: undefined,
+      clipboard: { writeText: vi.fn(async () => Promise.reject(new Error('denied'))) },
+    })
     mount('tarjeta', { edit: finishDay2 })
     await send()
     const sheet = screen.getByRole('dialog', { name: IB.sendToComite })
@@ -134,7 +168,9 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
     vi.stubGlobal('navigator', { ...navigator, share })
     mount('tarjeta', { edit: signCamilo })
     await send()
-    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')) })
+    expect(share).toHaveBeenCalledWith({
+      text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')),
+    })
   })
 
   it('a player in no group still sees them, and is not offered a resend the server would refuse', () => {
@@ -167,14 +203,14 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
 })
 
 describe('a hole save_hole refused and kept for the Comité (REL-08, 0026)', () => {
-  it('a player\'s phone says his own hole went to the Comité\'s list', () => {
+  it("a player's phone says his own hole went to the Comité's list", () => {
     mount('list', { edit: finishDay2, rejected: [{ ...hole11, atServer: true }] })
     expect(list().getByText(IB.leftForComite(11, null))).toBeTruthy()
     expect(IB.leftForComite(11, null)).toMatch(/^Tu hoyo 11 quedó para el Comité/)
     expect(list().getByText(IB.reasonClosed(2))).toBeTruthy()
   })
 
-  it('another player\'s hole (the phone keeps the other pair\'s card) is named as his, not «tu hoyo»', () => {
+  it("another player's hole (the phone keeps the other pair's card) is named as his, not «tu hoyo»", () => {
     mount('list', { edit: finishDay2, rejected: [{ ...hole11, atServer: true }], me: 'p1' })
     expect(list().getByText(IB.leftForComite(11, 'Camilo'))).toBeTruthy()
     expect(IB.leftForComite(11, 'Camilo')).toMatch(/^El hoyo 11 de Camilo quedó para el Comité/)
@@ -193,7 +229,7 @@ describe('a hole save_hole refused and kept for the Comité (REL-08, 0026)', () 
 })
 
 describe('the refused list says what stands in the way now, and who can send it again', () => {
-  it('a signed card: the reason says so, and a player can\'t resend', () => {
+  it("a signed card: the reason says so, and a player can't resend", () => {
     mount('list', { edit: signCamilo })
     expect(list().getByText(IB.reasonSigned)).toBeTruthy()
     expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
@@ -215,7 +251,17 @@ describe('the refused list says what stands in the way now, and who can send it 
       edit: (s) => {
         const now = s.scores.find((x) => x.roundId === 'r2' && x.playerId === CAMILO && x.hole === 11)
         if (now) Object.assign(now, { strokes: 6, putts: 2, pickedUp: false })
-        else s.scores.push({ roundId: 'r2', playerId: CAMILO, hole: 11, strokes: 6, putts: 2, pickedUp: false, enteredBy: 'p9', updatedAt: null })
+        else
+          s.scores.push({
+            roundId: 'r2',
+            playerId: CAMILO,
+            hole: 11,
+            strokes: 6,
+            putts: 2,
+            pickedUp: false,
+            enteredBy: 'p9',
+            updatedAt: null,
+          })
       },
     })
     expect(list().getByText(IB.rejectedHintResend)).toBeTruthy()
@@ -235,7 +281,7 @@ describe('the refused list says what stands in the way now, and who can send it 
     expect(list().getByText(IB.nowOnCard('5 golpes, 3 putts'))).toBeTruthy()
   })
 
-  it('a day that never closed, but this phone\'s player moved to another group: no resend, and the reason says so', () => {
+  it("a day that never closed, but this phone's player moved to another group: no resend, and the reason says so", () => {
     mount('list', {
       edit: (s) => {
         // The Comité swaps Camilo (group 3) with Arturo (group 1) on day 2; the day stays live.
@@ -244,7 +290,13 @@ describe('the refused list says what stands in the way now, and who can send it 
         g1.playerIds = g1.playerIds.map((id) => (id === 'p1' ? CAMILO : id))
         g3.playerIds = g3.playerIds.map((id) => (id === CAMILO ? 'p1' : id))
       },
-      rejected: [{ ...hole11, key: 'score:r2:p12:11', payload: { ...hole11.payload, player_id: 'p12' } as RejectedItem['payload'] }],
+      rejected: [
+        {
+          ...hole11,
+          key: 'score:r2:p12:11',
+          payload: { ...hole11.payload, player_id: 'p12' } as RejectedItem['payload'],
+        },
+      ],
     })
     expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
     expect(list().getByText(IB.reasonNotInGroup(2))).toBeTruthy()
@@ -256,7 +308,8 @@ describe('the refused list says what stands in the way now, and who can send it 
   it('his own hole, after a move to another group, can still go again: the server asks only that writer and player share a group', () => {
     mount('list', {
       edit: (s) => {
-        for (const g of s.groups.filter((x) => x.roundId === 'r2')) g.playerIds = g.playerIds.filter((id) => id !== CAMILO)
+        for (const g of s.groups.filter((x) => x.roundId === 'r2'))
+          g.playerIds = g.playerIds.filter((id) => id !== CAMILO)
         s.groups.push({ id: 'r2g4', roundId: 'r2', number: 4, teeTime: null, startHole: 1, playerIds: [CAMILO] })
       },
     })
@@ -264,7 +317,11 @@ describe('the refused list says what stands in the way now, and who can send it 
   })
 
   it('a mixed list keeps both instructions: resend what can go, send the rest to the Comité', () => {
-    const day1: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4 } as RejectedItem['payload'] }
+    const day1: RejectedItem = {
+      ...hole11,
+      key: 'score:r1:p3:4',
+      payload: { ...hole11.payload, round_id: 'r1', hole: 4 },
+    }
     mount('list', { rejected: [hole11, day1] })
     expect(list().getByText(IB.rejectedHintMixed)).toBeTruthy()
     expect(list().getByRole('button', { name: `${IB.resend}: ${HOLE11}` })).toBeTruthy()
@@ -274,17 +331,45 @@ describe('the refused list says what stands in the way now, and who can send it 
   })
 
   it('a tiebreak or a contest goes again only from a phone in that group, naming players of that group', () => {
-    const tiebreak = (group: string, last: string): RejectedItem => ({ ...hole11, key: `tb:${group}:${last}`, kind: 'tiebreak', payload: { round_id: 'r2', group_id: group, hole: 5, last_holed_player_id: last, decided_by: CAMILO } })
-    const award: RejectedItem = { ...hole11, key: 'aw', kind: 'award', payload: { round_id: 'r2', group_id: 'r2g3', hole: 7, game_id: 'closest', player_ids: ['p6', 'p9'], decided_by: CAMILO } }
+    const tiebreak = (group: string, last: string): RejectedItem => ({
+      ...hole11,
+      key: `tb:${group}:${last}`,
+      kind: 'tiebreak',
+      payload: { round_id: 'r2', group_id: group, hole: 5, last_holed_player_id: last, decided_by: CAMILO },
+    })
+    const award: RejectedItem = {
+      ...hole11,
+      key: 'aw',
+      kind: 'award',
+      payload: {
+        round_id: 'r2',
+        group_id: 'r2g3',
+        hole: 7,
+        game_id: 'closest',
+        player_ids: ['p6', 'p9'],
+        decided_by: CAMILO,
+      },
+    }
     mount('list', { rejected: [tiebreak('r2g3', 'p12'), tiebreak('r2g1', 'p1'), award] })
     const resend = list().getAllByRole('button', { name: new RegExp(`^${IB.resend}`) })
-    expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([expect.stringMatching(/^Volver a mandar: La Víbora, grupo 3,/), expect.stringMatching(/hoyo 7/)])
+    expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(/^Volver a mandar: La Víbora, grupo 3,/),
+      expect.stringMatching(/hoyo 7/),
+    ])
   })
 
   it('a signature goes again only for the other pair of his group: a pair never signs its own card', () => {
-    const sig = (pair: string): RejectedItem => ({ ...hole11, key: `sig:${pair}`, kind: 'signature', payload: { round_id: 'r2', pair_id: pair, signed_by: CAMILO } })
+    const sig = (pair: string): RejectedItem => ({
+      ...hole11,
+      key: `sig:${pair}`,
+      kind: 'signature',
+      payload: { round_id: 'r2', pair_id: pair, signed_by: CAMILO },
+    })
     // Camilo's group on day 2: his pair (pair3, with p12) and pair6 (p6, p9); pair1 plays in another group.
-    mount('list', { edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((x) => x.roundId !== 'r2')), rejected: [sig('pair6'), sig('pair3'), sig('pair1')] })
+    mount('list', {
+      edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((x) => x.roundId !== 'r2')),
+      rejected: [sig('pair6'), sig('pair3'), sig('pair1')],
+    })
     const resend = list().getAllByRole('button', { name: new RegExp(`^${IB.resend}`) })
     expect(resend).toHaveLength(1)
     const pair6 = getFixture('full12-live')!.snapshot.pairs.find((x) => x.id === 'pair6')!.name!
@@ -292,7 +377,7 @@ describe('the refused list says what stands in the way now, and who can send it 
     expect(list().getAllByText(IB.reasonNotInGroup(2))).toHaveLength(2)
   })
 
-  it('a Comité device resends anything, is not asked to send it to itself, and keeps the server\'s reason', () => {
+  it("a Comité device resends anything, is not asked to send it to itself, and keeps the server's reason", () => {
     mount('list', { edit: finishDay2, isComite: true })
     expect(list().getByText(IB.rejectedHint)).toBeTruthy()
     expect(list().getByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeTruthy()
@@ -300,11 +385,44 @@ describe('the refused list says what stands in the way now, and who can send it 
     expect(list().getByText(t.sync.errDenied)).toBeTruthy()
   })
 
-  it('every kind of capture names its day; a tiebreak keeps the server\'s reason', () => {
-    const picked: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4, strokes: null, putts: 1, picked_up: true } as RejectedItem['payload'] }
-    const tiebreak: RejectedItem = { ...hole11, key: 'tb', kind: 'tiebreak', payload: { round_id: 'r2', group_id: 'g1', hole: 5, last_holed_player_id: CAMILO, decided_by: CAMILO } }
-    const award: RejectedItem = { ...hole11, key: 'aw', kind: 'award', payload: { round_id: 'r2', group_id: 'g1', hole: 7, game_id: 'closest', player_ids: [CAMILO], decided_by: CAMILO } }
-    const signature: RejectedItem = { ...hole11, key: 'sig', kind: 'signature', payload: { round_id: 'r2', pair_id: 'pair1', signed_by: CAMILO } }
+  it("every kind of capture names its day; a tiebreak keeps the server's reason", () => {
+    const picked: RejectedItem = {
+      ...hole11,
+      key: 'score:r1:p3:4',
+      payload: {
+        ...hole11.payload,
+        round_id: 'r1',
+        hole: 4,
+        strokes: null,
+        putts: 1,
+        picked_up: true,
+      } as RejectedItem['payload'],
+    }
+    const tiebreak: RejectedItem = {
+      ...hole11,
+      key: 'tb',
+      kind: 'tiebreak',
+      payload: { round_id: 'r2', group_id: 'g1', hole: 5, last_holed_player_id: CAMILO, decided_by: CAMILO },
+    }
+    const award: RejectedItem = {
+      ...hole11,
+      key: 'aw',
+      kind: 'award',
+      payload: {
+        round_id: 'r2',
+        group_id: 'g1',
+        hole: 7,
+        game_id: 'closest',
+        player_ids: [CAMILO],
+        decided_by: CAMILO,
+      },
+    }
+    const signature: RejectedItem = {
+      ...hole11,
+      key: 'sig',
+      kind: 'signature',
+      payload: { round_id: 'r2', pair_id: 'pair1', signed_by: CAMILO },
+    }
     mount('list', { edit: finishDay2, rejected: [picked, tiebreak, award, signature] })
     expect(list().getByText('Camilo, día 1, hoyo 4: levantó, 1 putt')).toBeTruthy()
     expect(list().getByText(/^La Víbora, grupo \d+, día 2, hoyo 5: Camilo$/)).toBeTruthy()
@@ -328,11 +446,16 @@ describe('the refused list says what stands in the way now, and who can send it 
         finishDay2(s)
         const camilo = s.players.find((p) => p.id === CAMILO)!
         Object.assign(camilo, { displayName: 'Diego', fullName: 'Diego Arámburu' })
-        Object.assign(s.players.find((p) => p.id === 'p4')!, { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' })
+        Object.assign(
+          s.players.find((p) => p.id === 'p4')!,
+          { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' },
+        )
       },
     })
     expect(list().getByText('Diego Arámburu, día 2, hoyo 11: 5 golpes, 2 putts')).toBeTruthy()
     await send()
-    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Diego Arámburu')) })
+    expect(share).toHaveBeenCalledWith({
+      text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Diego Arámburu')),
+    })
   })
 })

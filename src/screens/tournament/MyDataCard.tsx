@@ -73,7 +73,12 @@ export const MyDataCard = memo(function MyDataCard() {
         ? M.handicapEstimate(player.estimateInputs.map((r) => String(r.gross)).join(', '))
         : M.handicapManual(formatIndex(player.baseHcp))
   const lines: Array<[string, string]> = [
-    [M.name, player.fullName && player.fullName !== player.displayName ? `${player.fullName}, ${M.shortName(player.displayName)}` : player.displayName],
+    [
+      M.name,
+      player.fullName && player.fullName !== player.displayName
+        ? `${player.fullName}, ${M.shortName(player.displayName)}`
+        : player.displayName,
+    ],
     [M.photo, player.avatarUrl ? M.photoYes : M.photoNo],
     ...(player.tier ? ([[M.tier, player.tier]] as Array<[string, string]>) : []),
     [M.handicap, handicap],
@@ -101,7 +106,13 @@ export const MyDataCard = memo(function MyDataCard() {
           }}
         >
           <Field label={M.what} hint={M.whatHint}>
-            <textarea className="textarea" rows={3} maxLength={500} value={what} onChange={(e) => setWhat(e.target.value)} />
+            <textarea
+              className="textarea"
+              rows={3}
+              maxLength={500}
+              value={what}
+              onChange={(e) => setWhat(e.target.value)}
+            />
           </Field>
           <div className={styles.actions}>
             <Button variant="primary" size="sm" type="submit" disabled={busy || what.trim().length < 3}>

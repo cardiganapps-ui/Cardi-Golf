@@ -52,7 +52,10 @@ describe('useServerMutation', () => {
     const { result } = renderHook(() => useServerMutation())
     let ok = true
     await act(async () => {
-      ok = await result.current.run(() => Promise.reject(new ApiError('new row violates row-level security policy for table "crews"', '42501')), { done: 'Listo' })
+      ok = await result.current.run(
+        () => Promise.reject(new ApiError('new row violates row-level security policy for table "crews"', '42501')),
+        { done: 'Listo' },
+      )
     })
     expect(ok).toBe(false)
     expect(said).toEqual([t.errors.permission])
@@ -89,7 +92,9 @@ describe('useServerMutation', () => {
     }
     render(<Crews />)
     await screen.findByText('leídas 1')
-    const { result } = renderHook(() => useServerMutation({ invalidates: [['crews']], after: () => order.push('after') }))
+    const { result } = renderHook(() =>
+      useServerMutation({ invalidates: [['crews']], after: () => order.push('after') }),
+    )
     await act(async () => {
       await result.current.run(async () => order.push('job'))
     })
@@ -125,7 +130,12 @@ function files(dir: string): string[] {
  * vivo's share card, Dinero, the tournament's notices switch) or beside it, where Query is kept out (ARCH-18).
  * Shrink this list; never grow it.
  */
-const ON_THE_PLAYER_PATH = new Set(['src/components/ShareCard.tsx', 'src/components/CloseGate.tsx', 'src/screens/tournament/MoneyScreen.tsx', 'src/screens/profile/usePushSwitch.ts'])
+const ON_THE_PLAYER_PATH = new Set([
+  'src/components/ShareCard.tsx',
+  'src/components/CloseGate.tsx',
+  'src/screens/tournament/MoneyScreen.tsx',
+  'src/screens/profile/usePushSwitch.ts',
+])
 
 describe('no screen writes its own run() again', () => {
   it('the copied wrappers are gone, but for the player path', () => {

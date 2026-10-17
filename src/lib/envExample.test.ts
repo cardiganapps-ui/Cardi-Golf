@@ -15,7 +15,11 @@ function files(dir: string): string[] {
   return readdirSync(join(ROOT, dir)).flatMap((name) => {
     const rel = join(dir, name)
     if (name === 'node_modules' || name.startsWith('.')) return []
-    return statSync(join(ROOT, rel)).isDirectory() ? files(rel) : /\.(ts|tsx|mjs|js)$/.test(name) && !/\.test\./.test(name) ? [rel] : []
+    return statSync(join(ROOT, rel)).isDirectory()
+      ? files(rel)
+      : /\.(ts|tsx|mjs|js)$/.test(name) && !/\.test\./.test(name)
+        ? [rel]
+        : []
   })
 }
 
@@ -31,12 +35,15 @@ function namesRead(source: string): string[] {
 }
 
 describe('.env.example documents every variable the code reads', () => {
-  const documented = new Set([...readFileSync(join(ROOT, '.env.example'), 'utf8').matchAll(/^#?\s*([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]!))
+  const documented = new Set(
+    [...readFileSync(join(ROOT, '.env.example'), 'utf8').matchAll(/^#?\s*([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]!),
+  )
   const sources = [...files('api'), ...files('src'), ...files('scripts'), ...files('e2e'), 'vite.config.ts']
 
   it('finds the variables it is meant to find', () => {
     const all = new Set(sources.flatMap((f) => namesRead(readFileSync(join(ROOT, f), 'utf8'))))
-    for (const name of ['VITE_SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'CRON_SECRET', 'VAPID_PRIVATE_KEY', 'SUPABASE_URL']) expect(all.has(name), name).toBe(true)
+    for (const name of ['VITE_SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'CRON_SECRET', 'VAPID_PRIVATE_KEY', 'SUPABASE_URL'])
+      expect(all.has(name), name).toBe(true)
   })
 
   it('has every one of them', () => {

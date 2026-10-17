@@ -101,7 +101,8 @@ export function MyTournamentsScreen() {
                     <span className={styles.itemText}>
                       <span className={styles.itemName}>{it.name}</span>
                       <span className={styles.itemSub}>
-                        {t.status[it.status as keyof typeof t.status] ?? it.status}, {t.organizer.joinCode.toLowerCase()} <span className={styles.code}>{it.joinCode}</span>
+                        {t.status[it.status as keyof typeof t.status] ?? it.status},{' '}
+                        {t.organizer.joinCode.toLowerCase()} <span className={styles.code}>{it.joinCode}</span>
                       </span>
                     </span>
                   </Link>

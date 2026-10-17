@@ -57,7 +57,10 @@ export function markInstalled(): void {
   useInstallOffer.setState({ installed: true })
 }
 
-export const useInstallOffer = create<{ offer: InstallPromptEvent | null; installed: boolean }>(() => ({ offer: null, installed: false }))
+export const useInstallOffer = create<{ offer: InstallPromptEvent | null; installed: boolean }>(() => ({
+  offer: null,
+  installed: false,
+}))
 
 /** Opens the browser's own install dialog, when it offered one; the offer is single-use. */
 export async function installNow(): Promise<boolean> {

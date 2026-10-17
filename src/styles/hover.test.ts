@@ -40,7 +40,12 @@ function rules(css: string): Rule[] {
       buf = ''
     } else if (c === '}') {
       const prelude = stack.pop() ?? ''
-      if (!prelude.startsWith('@')) out.push({ selectors: prelude.split(',').map((s) => s.trim()), body: buf.trim(), media: stack.filter((s) => s.startsWith('@')).join(' ') })
+      if (!prelude.startsWith('@'))
+        out.push({
+          selectors: prelude.split(',').map((s) => s.trim()),
+          body: buf.trim(),
+          media: stack.filter((s) => s.startsWith('@')).join(' '),
+        })
       buf = ''
     } else buf += c
   }
@@ -73,14 +78,19 @@ describe('hover states (VIS-12)', () => {
     for (const f of files) {
       for (const r of rules(readFileSync(join(ROOT, f), 'utf8'))) {
         if (r.media.includes('(hover: hover)')) continue
-        for (const sel of r.selectors.filter((s) => s.includes(':hover'))) if (!ALLOWED.has(`${f}: ${sel}`)) bare.push(`${f}: ${sel}`)
+        for (const sel of r.selectors.filter((s) => s.includes(':hover')))
+          if (!ALLOWED.has(`${f}: ${sel}`)) bare.push(`${f}: ${sel}`)
       }
     }
     expect(bare).toEqual([])
   })
 
   it('covers the primitives a laptop meets first: buttons, rows, the Comité’s sections, the swatches, links and fields', () => {
-    const all = files.flatMap((f) => rules(readFileSync(join(ROOT, f), 'utf8')).filter((r) => r.media.includes('(hover: hover)')).flatMap((r) => r.selectors.map((s) => `${f}: ${s}`)))
+    const all = files.flatMap((f) =>
+      rules(readFileSync(join(ROOT, f), 'utf8'))
+        .filter((r) => r.media.includes('(hover: hover)'))
+        .flatMap((r) => r.selectors.map((s) => `${f}: ${s}`)),
+    )
     for (const want of [
       'styles/global.css: .btn--primary:not(:disabled):hover',
       'styles/global.css: .btn--secondary:not(:disabled):hover',

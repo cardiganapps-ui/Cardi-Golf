@@ -3,7 +3,7 @@
  * when he was, and what the phone keeps of a half-entered hole (PWA-05). The decisions are `holeEntry.ts`'s;
  * this keeps the refs and the state, and the effects that run when the hole or its server values change.
  */
-import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { useOutbox, type HoleFields } from '../../../data/outbox'
 import type { HoleResult } from '../../../engine/core/types'
 import { readKept, sweepKept, writeKept, type Draft, type KeptDraft } from '../tarjetaDrafts'
@@ -22,10 +22,19 @@ export interface HoleDraftsInput {
   rowOf: (pid: string) => HoleFields
   /** The card's live region, and what the last save left to say with the next hole («Hoyo 12 guardado»). */
   say: (text: string) => void
-  sayWithNextHole: MutableRefObject<string>
+  sayWithNextHole: RefObject<string>
 }
 
-export function useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editableFor, rowOf, say, sayWithNextHole }: HoleDraftsInput) {
+export function useHoleDrafts({
+  holeKey,
+  playerIds,
+  holeInfo,
+  holeSpoken,
+  editableFor,
+  rowOf,
+  say,
+  sayWithNextHole,
+}: HoleDraftsInput) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   /** Players whose steppers were changed on this hole: only they, and players the server has nothing for, are written (REL-05). */
   const touched = useRef<Set<string>>(new Set())
@@ -84,7 +93,13 @@ export function useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editab
       for (const id of playerIds) next[id] = openingDraft(holeInfo(id))
       initialDrafts.current = JSON.stringify(next)
       // What was typed here and not saved yet comes back, unless the server has moved on for that player or the card can't be edited.
-      const { restore, held } = restoreKept({ playerIds, kept: readKept(holeKey), editable: editableFor, serverOf: serverNow, queueRead: useOutbox.getState().queueRead })
+      const { restore, held } = restoreKept({
+        playerIds,
+        kept: readKept(holeKey),
+        editable: editableFor,
+        serverOf: serverNow,
+        queueRead: useOutbox.getState().queueRead,
+      })
       heldKept.current = held
       for (const [id, k] of Object.entries(restore)) {
         next[id] = k.draft
@@ -110,7 +125,13 @@ export function useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editab
       bases.current.delete(id)
     }
     setRestoredCount(restoredShown.current.size)
-    const merged = takeServerValues({ playerIds, drafts: current, initial: parseDrafts(initialDrafts.current), touched: touched.current, holeOf: holeInfo })
+    const merged = takeServerValues({
+      playerIds,
+      drafts: current,
+      initial: parseDrafts(initialDrafts.current),
+      touched: touched.current,
+      holeOf: holeInfo,
+    })
     if (merged) {
       setDrafts(merged.drafts)
       initialDrafts.current = JSON.stringify(merged.initial)
@@ -119,7 +140,10 @@ export function useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editab
   // Keep what was typed on this hole, for the players touched here (PWA-05).
   useEffect(() => {
     if (!shownHole.current) return
-    writeKept(shownHole.current, keptPlayers({ held: heldKept.current, touched: touched.current, drafts, baselines: baselines.current, serverOf }))
+    writeKept(
+      shownHole.current,
+      keptPlayers({ held: heldKept.current, touched: touched.current, drafts, baselines: baselines.current, serverOf }),
+    )
   }, [drafts]) // eslint-disable-line react-hooks/exhaustive-deps -- written when the drafts change, with the server values of that moment
   // An unsaved hole defers the "new version" reload offer (main.tsx).
   useEffect(() => {

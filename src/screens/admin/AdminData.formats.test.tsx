@@ -9,7 +9,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../data/backup', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/backup')>()), downloadText: vi.fn() }))
+vi.mock('../../data/backup', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/backup')>()),
+  downloadText: vi.fn(),
+}))
 
 import { downloadText } from '../../data/backup'
 import { getFixture } from '../../dev/fixtures'
@@ -22,10 +25,25 @@ import { AdminData } from './AdminData'
 function resultsCsv(fixture: string) {
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: fixture, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: fixture,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminData />
       </TournamentContext.Provider>
     </MemoryRouter>,

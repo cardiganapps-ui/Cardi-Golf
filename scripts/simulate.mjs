@@ -49,7 +49,9 @@ const must = (r, ctx) => {
 
 const t = must(await sb.from('tournaments').select('*').eq('slug', slug).single(), 'tournament')
 const rounds = must(await sb.from('rounds').select('*').eq('tournament_id', t.id).order('number'), 'rounds')
-const round = roundNumber ? rounds.find((r) => r.number === roundNumber) : rounds.find((r) => r.status !== 'finished' && r.status !== 'cancelled')
+const round = roundNumber
+  ? rounds.find((r) => r.number === roundNumber)
+  : rounds.find((r) => r.status !== 'finished' && r.status !== 'cancelled')
 if (!round) {
   console.error('No round to simulate')
   process.exit(1)
@@ -64,7 +66,14 @@ if (round.status === 'finished' || round.status === 'cancelled') {
   process.exit(1)
 }
 const players = must(await sb.from('players').select('*').eq('tournament_id', t.id), 'players')
-const groups = must(await sb.from('groups').select('id, number, start_hole, group_members!group_members_group_id_fkey(player_id)').eq('round_id', round.id).order('number'), 'groups')
+const groups = must(
+  await sb
+    .from('groups')
+    .select('id, number, start_hole, group_members!group_members_group_id_fkey(player_id)')
+    .eq('round_id', round.id)
+    .order('number'),
+  'groups',
+)
 if (!groups.length) {
   console.error('The round has no groups yet: build them in Comité › Grupos first.')
   process.exit(1)
@@ -80,7 +89,18 @@ const roundIds = rounds.map((r) => r.id)
 const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))]
 const courses = must(await sb.from('courses').select('*').in('id', courseIds), 'courses')
 const tees = must(await sb.from('tees').select('*').in('course_id', courseIds), 'tees')
-const holes = tees.length ? must(await sb.from('holes').select('*').in('tee_id', tees.map((x) => x.id)), 'holes') : []
+const holes = tees.length
+  ? must(
+      await sb
+        .from('holes')
+        .select('*')
+        .in(
+          'tee_id',
+          tees.map((x) => x.id),
+        ),
+      'holes',
+    )
+  : []
 if (!tees.some((x) => x.course_id === round.course_id)) {
   console.error('The round has no course: load one in Comité › Campos and assign it in Rondas.')
   process.exit(1)
@@ -103,8 +123,14 @@ const roundTees = await every('round_tees', ['round_id', 'player_id'])
 const scores = await every('scores', ['id'])
 const overrides = await every('handicap_overrides', ['round_id', 'player_id'])
 const { runnerImport } = await import('vite')
-const { module: simulation } = await runnerImport(new URL('../src/data/testing/simulation.ts', import.meta.url).pathname, { configFile: false, logLevel: 'error' })
-const day = simulation.dayStrokes({ tournament: t, players, rounds, courses, tees, holes, roundTees, scores, overrides }, round.id)
+const { module: simulation } = await runnerImport(
+  new URL('../src/data/testing/simulation.ts', import.meta.url).pathname,
+  { configFile: false, logLevel: 'error' },
+)
+const day = simulation.dayStrokes(
+  { tournament: t, players, rounds, courses, tees, holes, roundTees, scores, overrides },
+  round.id,
+)
 
 if (reset) {
   must(await sb.from('snake_tiebreaks').delete().eq('round_id', round.id).select('hole'), 'reset tiebreaks')
@@ -119,7 +145,9 @@ if (round.status === 'scheduled') {
 
 const holesPerRound = round.holes ?? 18
 const order = (start) => Array.from({ length: holesPerRound }, (_, i) => ((start - 1 + i) % 18) + 1)
-console.log(`${t.name} · día ${round.number} · ${groups.length} grupos · ${interval ? `${interval}s por hoyo` : 'de golpe'}`)
+console.log(
+  `${t.name} · día ${round.number} · ${groups.length} grupos · ${interval ? `${interval}s por hoyo` : 'de golpe'}`,
+)
 
 for (let i = 0; i < Math.min(maxHoles, holesPerRound); i++) {
   for (const g of groups) {
@@ -141,16 +169,41 @@ for (let i = 0; i < Math.min(maxHoles, holesPerRound); i++) {
       const pickedUp = noise >= 2 && rng() < 0.15
       if (pickedUp) strokes = null
       const saved = pickedUp ? null : Math.min(putts, strokes)
-      rows.push({ round_id: round.id, player_id: p.id, hole, strokes, putts: saved, picked_up: pickedUp, entered_by: null, client_ts: new Date().toISOString() })
+      rows.push({
+        round_id: round.id,
+        player_id: p.id,
+        hole,
+        strokes,
+        putts: saved,
+        picked_up: pickedUp,
+        entered_by: null,
+        client_ts: new Date().toISOString(),
+      })
       // Only what was actually saved counts toward the snake (a 3-putt clamped to 2 by a 2-stroke hole is not one).
       if (saved != null && saved >= day.settings.modules.snake.puttsThreshold) threePutters.push(p.id)
     }
-    if (rows.length) must(await sb.from('scores').upsert(rows, { onConflict: 'round_id,player_id,hole' }).select('hole'), `scores g${g.number} h${hole}`)
+    if (rows.length)
+      must(
+        await sb.from('scores').upsert(rows, { onConflict: 'round_id,player_id,hole' }).select('hole'),
+        `scores g${g.number} h${hole}`,
+      )
     if (threePutters.length >= 2) {
       const last = threePutters[Math.floor(rng() * threePutters.length)]
-      must(await sb.from('snake_tiebreaks').upsert({ round_id: round.id, group_id: g.id, hole, last_holed_player_id: last, decided_by: null }, { onConflict: 'round_id,group_id,hole' }).select('hole'), 'tiebreak')
+      must(
+        await sb
+          .from('snake_tiebreaks')
+          .upsert(
+            { round_id: round.id, group_id: g.id, hole, last_holed_player_id: last, decided_by: null },
+            { onConflict: 'round_id,group_id,hole' },
+          )
+          .select('hole'),
+        'tiebreak',
+      )
     }
-    if (interval) console.log(`  grupo ${g.number} · hoyo ${hole}${threePutters.length >= 2 ? ' · víbora: ¿quién embocó al último? (resuelto)' : ''}`)
+    if (interval)
+      console.log(
+        `  grupo ${g.number} · hoyo ${hole}${threePutters.length >= 2 ? ' · víbora: ¿quién embocó al último? (resuelto)' : ''}`,
+      )
   }
   if (interval && i < Math.min(maxHoles, holesPerRound) - 1) await sleep(interval * 1000)
 }

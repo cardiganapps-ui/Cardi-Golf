@@ -26,7 +26,9 @@ export function nineHoleRanks(holes: Hole[]): Map<number, number> {
  * stroke index, the strokes received, the gross, the net and the points
  * (COPY-19's words are `explain`'s `hole.*`).
  */
-export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>): Explanation {
+export function holeWhy(
+  r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>,
+): Explanation {
   const { par, strokesReceived: received, points } = r
   const gross = r.gross ?? 0
   return {
@@ -54,10 +56,21 @@ export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesRece
 const HOLE_WHY = new Map<number, Explanation>()
 const small = (n: number, max: number) => Number.isInteger(n) && n >= 0 && n <= max
 
-function sharedHoleWhy(par: number, strokeIndex: number, sr: number, g: number | null, net: number | null, pts: number, pickedUp: boolean, played: boolean): Explanation {
+function sharedHoleWhy(
+  par: number,
+  strokeIndex: number,
+  sr: number,
+  g: number | null,
+  net: number | null,
+  pts: number,
+  pickedUp: boolean,
+  played: boolean,
+): Explanation {
   const fresh = () => holeWhy({ par, strokeIndex, strokesReceived: sr, gross: g, net, points: pts, pickedUp, played })
   if (!small(par, 15) || !small(strokeIndex, 63) || !small(sr, 15) || (g != null && !small(g, 62))) return fresh()
-  const key = ((((par * 64 + strokeIndex) * 16 + sr) * 64 + (g == null ? 0 : g + 1)) * 2 + (played ? 1 : 0)) * 2 + (pickedUp ? 1 : 0)
+  const key =
+    ((((par * 64 + strokeIndex) * 16 + sr) * 64 + (g == null ? 0 : g + 1)) * 2 + (played ? 1 : 0)) * 2 +
+    (pickedUp ? 1 : 0)
   let why = HOLE_WHY.get(key)
   if (!why) {
     const built = fresh()
@@ -101,7 +114,10 @@ function teePar(tee: Tee | null, holes: number): number {
 }
 
 /** Where a player's handicap starts: an estimate from three scores, an index, or the base the Comité typed (§13b). */
-export function baseHandicap(player: Pick<Player, 'handicapSource' | 'baseHcp' | 'handicapIndex' | 'estimateInputs'>, settings: TournamentSettings): CoreState['handicaps'][string] {
+export function baseHandicap(
+  player: Pick<Player, 'handicapSource' | 'baseHcp' | 'handicapIndex' | 'estimateInputs'>,
+  settings: TournamentSettings,
+): CoreState['handicaps'][string] {
   if (player.handicapSource === 'estimate' && player.estimateInputs) {
     const est = estimateIndex(player.estimateInputs, settings.handicap)
     return { source: 'estimate', base: est.value, estimated: true, why: est.why }
@@ -136,9 +152,9 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
   const scoresIdx = new Map<Id, Map<Id, Map<number, Score>>>()
   for (const s of snapshot.scores) {
     let byPlayer = scoresIdx.get(s.roundId)
-    if (!byPlayer) scoresIdx.set(s.roundId, (byPlayer = new Map()))
+    if (!byPlayer) scoresIdx.set(s.roundId, (byPlayer = new Map<Id, Map<number, Score>>()))
     let byHole = byPlayer.get(s.playerId)
-    if (!byHole) byPlayer.set(s.playerId, (byHole = new Map()))
+    if (!byHole) byPlayer.set(s.playerId, (byHole = new Map<number, Score>()))
     byHole.set(s.hole, s)
   }
 
@@ -170,7 +186,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       if (hc.source !== 'manual') {
         const useTee = settings.handicap.perRoundSlope
           ? tee
-          : (p.defaultTeeId ? tees.get(p.defaultTeeId) : undefined) ?? tee
+          : ((p.defaultTeeId ? tees.get(p.defaultTeeId) : undefined) ?? tee)
         if (useTee) {
           const ch = courseHandicap(hc.base, { slope: useTee.slope, rating: useTee.rating, par: teePar(useTee, 18) })
           courseHcp = ch.value
@@ -184,7 +200,10 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const cuts = cutsSoFar[p.id]!
       if (ri > 0) {
         const prev = prevPoints[p.id]
-        const cut = prev == null ? { value: 0, why: { title: msg('cut.title', { value: 0 }), steps: [say('cut.notPlayed')] } } : nextRoundCut(prev, settings.day2Cut)
+        const cut =
+          prev == null
+            ? { value: 0, why: { title: msg('cut.title', { value: 0 }), steps: [say('cut.notPlayed')] } }
+            : nextRoundCut(prev, settings.day2Cut)
         // Rounds 3+: `previous` recomputes from the last round alone; `cumulative` adds the cuts up (§5.2 only defines Day 2).
         if (settings.day2Cut.mode === 'cumulative') {
           cuts.total += cut.value
@@ -202,7 +221,9 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       if (cuts.total > 0)
         steps.push(
           ...cuts.steps,
-          ph.value < 0 ? msg('cut.plusKeeps', { value: ph.value }) : msg('cut.applied', { playing: ph.value, cut: cuts.total, after: afterCut }),
+          ph.value < 0
+            ? msg('cut.plusKeeps', { value: ph.value })
+            : msg('cut.applied', { playing: ph.value, cut: cuts.total, after: afterCut }),
         )
       else if (ri > 0) steps.push(...cuts.steps)
       let overridden = false
@@ -230,7 +251,9 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const card = scoresIdx.get(round.id)?.get(p.id)
       for (const h of holes) {
         const s = card?.get(h.number)
-        const sr = nineRank ? strokesReceived(roundHalfUp(playingHcp / 2), nineRank.get(h.number)!, 9) : strokesReceived(playingHcp, h.strokeIndex, round.holes)
+        const sr = nineRank
+          ? strokesReceived(roundHalfUp(playingHcp / 2), nineRank.get(h.number)!, 9)
+          : strokesReceived(playingHcp, h.strokeIndex, round.holes)
         const played = !!s && (s.strokes != null || s.pickedUp)
         const g = played && !s.pickedUp ? s.strokes : null
         const pts = played ? stablefordPoints(h.par, sr, g, s.pickedUp) : 0

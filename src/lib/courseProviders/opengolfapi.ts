@@ -57,7 +57,12 @@ export function mapCourse(c: Any): ProviderCourse {
       baseHoles.map((h, i) => {
         const y = h.yardages ?? {}
         const yards = num(teeKey && y[teeKey]) ?? num(color && y[color]) ?? num(color && y[String(color).toLowerCase()])
-        return { number: Number(h.number) || i + 1, par: Number(h.par) || 4, strokeIndex: Number(h.handicap_index) || i + 1, yards }
+        return {
+          number: Number(h.number) || i + 1,
+          par: Number(h.par) || 4,
+          strokeIndex: Number(h.handicap_index) || i + 1,
+          yards,
+        }
       })
     // A par or stroke index the provider didn't give (or gave out of range) is filled in: the tee is `assumed`.
     const filled = baseHoles.some((h) => given(h.par, 3, 6) == null || given(h.handicap_index, 1, 18) == null)
@@ -81,7 +86,16 @@ export function mapCourse(c: Any): ProviderCourse {
         })
       }
     } else {
-      tees.push({ name: 'Tee', color: null, rating: null, slope: null, parTotal: num(c.par), gender: null, holes: fixSi(mkHoles(null, null)), assumed })
+      tees.push({
+        name: 'Tee',
+        color: null,
+        rating: null,
+        slope: null,
+        parTotal: num(c.par),
+        gender: null,
+        holes: fixSi(mkHoles(null, null)),
+        assumed,
+      })
     }
   }
   return {

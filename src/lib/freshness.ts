@@ -15,7 +15,12 @@ const clock = (d: Date) => d.toLocaleTimeString('es-MX', { hour: 'numeric', minu
 export const clockTime = (at: string | number | Date) => clock(new Date(at))
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 /** The date, with the year when it is not this year's: «el 6 de marzo» read like this spring's. */
-const dateOf = (d: Date, now: Date) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) })
+const dateOf = (d: Date, now: Date) =>
+  d.toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+  })
 
 /** `at` and `now` in ms; the device's own time zone decides «hoy» and «ayer». */
 export function savedWhen(at: number, now = Date.now()): string {

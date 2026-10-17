@@ -16,19 +16,31 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 // No network: no Google, no courses, no PINs or profiles to list, and this browser can take push.
-vi.mock('../data/account', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/account')>()), googleAvailable: vi.fn(async () => false) }))
+vi.mock('../data/account', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/account')>()),
+  googleAvailable: vi.fn(async () => false),
+}))
 vi.mock('../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../data/api')>()),
   listCourses: vi.fn(async () => []),
   playersWithPin: vi.fn(async () => new Set<string>()),
 }))
-vi.mock('../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
-vi.mock('../data/push', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/push')>()), pushState: vi.fn(async () => 'off') }))
+vi.mock('../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
+vi.mock('../data/push', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/push')>()),
+  pushState: vi.fn(async () => 'off'),
+}))
 /** Holes this phone queued before its session lapsed (REL-16): the grid shows them above the faces. */
 const queued = vi.hoisted(() => ({ held: 0 }))
 vi.mock('../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../data/outbox')>()
-  return { ...real, queuedFor: (id: string) => (queued.held ? { holes: queued.held, heldHoles: queued.held } : real.queuedFor(id)) }
+  return {
+    ...real,
+    queuedFor: (id: string) => (queued.held ? { holes: queued.held, heldHoles: queued.held } : real.queuedFor(id)),
+  }
 })
 
 import { googleAvailable } from '../data/account'
@@ -68,10 +80,14 @@ function consentLine(text: string, pages: string[]): HTMLElement {
 }
 
 /** Each line as a screen reader hears it: «(se abre en otra pestaña)» after each link. */
-const ENTER_LINE = 'Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
-const CONTINUE_LINE = 'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
-const OTHERS_NOTE = 'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).'
-const PUSH_NOTE = 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'
+const ENTER_LINE =
+  'Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
+const CONTINUE_LINE =
+  'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
+const OTHERS_NOTE =
+  'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).'
+const PUSH_NOTE =
+  'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'
 const PIN_PUSH_NOTE =
   'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el Aviso de privacidad (se abre en otra pestaña).'
 const SCORECARD_NOTE =
@@ -79,7 +95,20 @@ const SCORECARD_NOTE =
 const BOTH = ['/terminos', '/privacidad']
 const NOTICE = ['/privacidad']
 
-const NAMES = ['Andrés', 'Diego', 'Emiliano', 'Justo', 'Martín', 'Mateo', 'Mauricio', 'Nicolás', 'René', 'Rodrigo', 'Ignacio', 'Pablo']
+const NAMES = [
+  'Andrés',
+  'Diego',
+  'Emiliano',
+  'Justo',
+  'Martín',
+  'Mateo',
+  'Mauricio',
+  'Nicolás',
+  'René',
+  'Rodrigo',
+  'Ignacio',
+  'Pablo',
+]
 const field = (names: string[]): LookupResult => ({
   id: 't1',
   slug: 'bachelor',
@@ -89,7 +118,15 @@ const field = (names: string[]): LookupResult => ({
   accentColor: null,
   status: 'live',
   joinCode: 'ABC123',
-  players: names.map((n, i) => ({ id: `p${i + 1}`, displayName: n, fullName: `${n} Pérez`, tier: 'ABCD'[i % 4]!, avatarUrl: null, isHonoree: i === 3, hasPin: true })),
+  players: names.map((n, i) => ({
+    id: `p${i + 1}`,
+    displayName: n,
+    fullName: `${n} Pérez`,
+    tier: 'ABCD'[i % 4]!,
+    avatarUrl: null,
+    isHonoree: i === 3,
+    hasPin: true,
+  })),
 })
 const lookup = field(NAMES)
 /** Past 16 the grid goes dense and gets a name filter (EnterScreen's DENSE_FROM). */
@@ -102,7 +139,8 @@ function enter(l: LookupResult = lookup) {
     </MemoryRouter>,
   )
 }
-const faces = (names: string[]) => screen.getAllByRole('button').filter((b) => names.some((n) => b.textContent?.includes(n)))
+const faces = (names: string[]) =>
+  screen.getAllByRole('button').filter((b) => names.some((n) => b.textContent?.includes(n)))
 
 describe('the face grid and the PIN step (TRUST-05, P1)', () => {
   it('the grid says it above the faces, where a full field still shows it', () => {
@@ -190,13 +228,27 @@ describe('Ronda rápida: friends and guests added by the organizer', () => {
   })
 })
 
-describe('Comité › Jugadores: other people\'s data (TRUST-05, TRUST-16)', () => {
+describe("Comité › Jugadores: other people's data (TRUST-05, TRUST-16)", () => {
   function mount() {
     const fx = getFixture('full12-live')!
-    useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null })
+    useTournament.setState({
+      tournamentId: 'fixture:full12-live',
+      data: dataFromSnapshot(structuredClone(fx.snapshot)),
+      loading: false,
+      error: null,
+    })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: 'fixture:full12-live', slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: 'fixture:full12-live',
+            slug: '_/full12-live',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <AdminPlayers />
         </TournamentContext.Provider>
       </MemoryRouter>,
@@ -234,7 +286,11 @@ describe('the push switch', () => {
       )
       const enable = await screen.findByRole('button', { name: t.push.enable })
       // What the switch promises, word for word: only the app's own notices are free of amounts (platform_broadcast is free text).
-      expectShown(screen.getByText('Te llega como notificación cada aviso nuevo: solicitudes de amistad, rivalidades, resultados y más. Los de la app nunca llevan montos.'))
+      expectShown(
+        screen.getByText(
+          'Te llega como notificación cada aviso nuevo: solicitudes de amistad, rivalidades, resultados y más. Los de la app nunca llevan montos.',
+        ),
+      )
       const line = consentLine(PUSH_NOTE, NOTICE)
       expect(before(line, enable)).toBe(true)
       // P3: like the PIN field and «Subir tarjeta», a screen reader hears the note with the button.
@@ -245,10 +301,24 @@ describe('the push switch', () => {
 
   it('Más › «Avisos del torneo» on a PIN phone (PWA-10): what it keeps and until when, before «Activar avisos»', async () => {
     const fx = getFixture('full12-live')!
-    useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null })
+    useTournament.setState({
+      tournamentId: 'fixture:full12-live',
+      data: dataFromSnapshot(structuredClone(fx.snapshot)),
+      loading: false,
+      error: null,
+    })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: fx.snapshot.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: { ...fx.me, via: 'device' }, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: fx.snapshot.tournament.id,
+            slug: '_/full12-live',
+            lookup: fx.lookup,
+            me: { ...fx.me, via: 'device' },
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <TournamentPushSwitch />
         </TournamentContext.Provider>
       </MemoryRouter>,

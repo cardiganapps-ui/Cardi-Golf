@@ -40,10 +40,25 @@ function mountEmptyGroup(playerIds: string[]) {
   const snap = structuredClone(fx.snapshot)
   const round = snap.rounds.find((r) => r.status === 'live')!
   snap.groups.push({ id: 'g-empty', roundId: round.id, number: 9, teeTime: null, startHole: 1, playerIds })
-  useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:minimal4-live',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -59,7 +74,9 @@ describe('a group with nobody on the boards (ARCH-14)', () => {
     it(`${what}: the card draws, both views, and a save writes nobody`, async () => {
       mountEmptyGroup([...ids])
       expect(screen.getByText(S.groupLine(1, 9))).toBeTruthy()
-      expect(screen.queryAllByRole('group', { name: /./ }).filter((g) => g.querySelector('[class*="stepValue"]'))).toHaveLength(0)
+      expect(
+        screen.queryAllByRole('group', { name: /./ }).filter((g) => g.querySelector('[class*="stepValue"]')),
+      ).toHaveLength(0)
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) }))
       })

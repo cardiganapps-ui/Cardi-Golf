@@ -8,7 +8,9 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 
-const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+  headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>
+}
 const site = vercel.headers.find((h) => h.source === '/(.*)')
 const header = (key: string) => site?.headers.find((h) => h.key.toLowerCase() === key.toLowerCase())?.value
 const directives = Object.fromEntries(
@@ -47,9 +49,18 @@ describe('security headers (SEC-01)', () => {
 
   it('allow every inline script index.html has, and nothing more', () => {
     const html = readFileSync('index.html', 'utf8')
-    const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => `'sha256-${createHash('sha256').update(m[1] ?? '', 'utf8').digest('base64')}'`)
+    const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+      (m) =>
+        `'sha256-${createHash('sha256')
+          .update(m[1] ?? '', 'utf8')
+          .digest('base64')}'`,
+    )
     expect(hashes.length).toBeGreaterThan(0)
-    expect(csp('script-src').filter((s) => s.startsWith("'sha256-")).sort()).toEqual(hashes.sort())
+    expect(
+      csp('script-src')
+        .filter((s) => s.startsWith("'sha256-"))
+        .sort(),
+    ).toEqual(hashes.sort())
   })
 
   it('reach the database and its live channel, and nothing else off the site', () => {

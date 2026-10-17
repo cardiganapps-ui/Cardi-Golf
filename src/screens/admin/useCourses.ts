@@ -11,7 +11,7 @@ export function useCourses() {
     setError(null)
     listCourses()
       .then(setCourses)
-      .catch((e) => setError(humanError(e)))
+      .catch((e: unknown) => setError(humanError(e)))
       .finally(() => setLoading(false))
   }, [])
   useEffect(() => refresh(), [refresh])

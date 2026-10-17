@@ -22,18 +22,51 @@ function mount() {
   const fx = getFixture('full12-live')!
   const snap = structuredClone(fx.snapshot)
   const st = snap.tournament.settings as TournamentSettings
-  snap.tournament.settings = { ...st, modules: { ...st.modules, snake: { ...st.modules.snake, enabled: true }, fewestPutts: { ...st.modules.fewestPutts, enabled: true } } }
+  snap.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      snake: { ...st.modules.snake, enabled: true },
+      fewestPutts: { ...st.modules.fewestPutts, enabled: true },
+    },
+  }
   const round = snap.rounds.find((r) => r.number === 1)!
   const pid = snap.players[5]!.id
   for (const hole of [3, 7]) {
     const sc = snap.scores.find((x) => x.roundId === round.id && x.playerId === pid && x.hole === hole)
     if (sc) sc.putts = null
-    else snap.scores.push({ roundId: round.id, playerId: pid, hole, strokes: 5, putts: null, pickedUp: false, enteredBy: pid, updatedAt: '2027-04-09T16:00:00Z' })
+    else
+      snap.scores.push({
+        roundId: round.id,
+        playerId: pid,
+        hole,
+        strokes: 5,
+        putts: null,
+        pickedUp: false,
+        enteredBy: pid,
+        updatedAt: '2027-04-09T16:00:00Z',
+      })
   }
-  useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off', reload: async () => undefined } as never)
+  useTournament.setState({
+    tournamentId: 'fixture:full12-live',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+    reload: async () => undefined,
+  } as never)
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/full12-live',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminScores />
       </TournamentContext.Provider>
     </MemoryRouter>,

@@ -12,7 +12,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, flush, useOutbox, discardRejected, retryRejected } = await import('./outbox')
@@ -20,8 +29,23 @@ const { useAuth } = await import('./auth')
 // A phone that entered with its PIN: its writes carry who wrote them (unconfirmed ones wait, see outbox.identity.test).
 useAuth.setState({ user: { id: 'uid-phone' } as never })
 
-const score = (hole: number, tournamentId = 't1') =>
-  ({ key: `score:r1:p1:${hole}`, kind: 'score' as const, tournamentId, payload: { round_id: 'r1', player_id: 'p1', hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'now' }, attempts: 0, createdAt: hole })
+const score = (hole: number, tournamentId = 't1') => ({
+  key: `score:r1:p1:${hole}`,
+  kind: 'score' as const,
+  tournamentId,
+  payload: {
+    round_id: 'r1',
+    player_id: 'p1',
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'now',
+  },
+  attempts: 0,
+  createdAt: hole,
+})
 
 describe('outbox', () => {
   beforeEach(() => {

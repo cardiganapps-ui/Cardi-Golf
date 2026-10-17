@@ -56,18 +56,44 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
         const allIn = scores.every((s) => s.h?.played)
         if (blocked || (!allIn && !roundFinal)) {
           blocked = true
-          holes.push({ roundId: rid, roundNumber: roundNumberOf(ctx, rid), hole, winnerId: null, value, status: 'pending', best: null })
+          holes.push({
+            roundId: rid,
+            roundNumber: roundNumberOf(ctx, rid),
+            hole,
+            winnerId: null,
+            value,
+            status: 'pending',
+            best: null,
+          })
           continue
         }
-        const valid = scores.map((s) => ({ id: s.id, v: holeScore(s.h, basis) })).filter((s): s is { id: Id; v: number } => s.v != null)
+        const valid = scores
+          .map((s) => ({ id: s.id, v: holeScore(s.h, basis) }))
+          .filter((s): s is { id: Id; v: number } => s.v != null)
         const best = valid.length ? Math.min(...valid.map((s) => s.v)) : null
         const at = valid.filter((s) => s.v === best)
         if (at.length === 1) {
           units[at[0]!.id] = (units[at[0]!.id] ?? 0) + value
-          holes.push({ roundId: rid, roundNumber: roundNumberOf(ctx, rid), hole, winnerId: at[0]!.id, value, status: 'won', best })
+          holes.push({
+            roundId: rid,
+            roundNumber: roundNumberOf(ctx, rid),
+            hole,
+            winnerId: at[0]!.id,
+            value,
+            status: 'won',
+            best,
+          })
           carry = 0
         } else {
-          holes.push({ roundId: rid, roundNumber: roundNumberOf(ctx, rid), hole, winnerId: null, value, status: 'tied', best })
+          holes.push({
+            roundId: rid,
+            roundNumber: roundNumberOf(ctx, rid),
+            hole,
+            winnerId: null,
+            value,
+            status: 'tied',
+            best,
+          })
           carry = carryOver ? value : 0
         }
       }

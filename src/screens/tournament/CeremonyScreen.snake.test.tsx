@@ -33,20 +33,42 @@ describe('the Ceremonia’s snake totals', () => {
     const before = dataFromSnapshot(snap)
     const bucket = before.state.money.unassigned.buckets.find((b) => b.key === 'snake')!
     const refund = proRata(bucket.remaining, bucket.contributors!)
-    snap.moneyAdjustments = refund.map((r, i) => ({ id: `ref-${i}`, callId: 'ref', sourceKey: 'snake', kind: 'refund' as const, toPlayerId: r.playerId, amount: r.amount, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }))
+    snap.moneyAdjustments = refund.map((r, i) => ({
+      id: `ref-${i}`,
+      callId: 'ref',
+      sourceKey: 'snake',
+      kind: 'refund' as const,
+      toPlayerId: r.playerId,
+      amount: r.amount,
+      reason: 'Día 2 cancelado',
+      createdAt: '2027-04-11T20:00:00+00:00',
+      createdBy: 'org',
+      voidedAt: null,
+      voidReason: null,
+    }))
     const data = dataFromSnapshot(snap)
     expect(data.state.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
     useTournament.setState({ tournamentId: 'fixture:full12-live', data, loading: false, error: null, realtime: 'off' })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: '_/full12-live',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <CeremonyScreen />
         </TournamentContext.Provider>
       </MemoryRouter>,
     )
     const title = C.steps.snake((snap.tournament.settings as TournamentSettings).modules.snake.label)
     fireEvent.click(screen.getByRole('button', { name: C.start }))
-    for (let i = 0; i < 40 && screen.getByRole('region').getAttribute('aria-label') !== title; i++) fireEvent.click(screen.getByRole('button', { name: C.next }))
+    for (let i = 0; i < 40 && screen.getByRole('region').getAttribute('aria-label') !== title; i++)
+      fireEvent.click(screen.getByRole('button', { name: C.next }))
     expect(screen.getByRole('region').getAttribute('aria-label')).toBe(title)
     fireEvent.click(screen.getByRole('button', { name: C.next }))
     const text = screen.getByRole('region').textContent ?? ''
@@ -77,14 +99,35 @@ describe('the Ceremonia shows what the Comité gave from the other lines too (ro
     ]
     snap.moneyAdjustments = lines.map(([key, to, amount], i) => {
       expect(before.find((x) => x.key === key)!.remaining).toBeGreaterThanOrEqual(amount)
-      return { id: `a${i}`, callId: `c${i}`, sourceKey: key, kind: 'award' as const, toPlayerId: to, amount, reason: 'Decidido', createdAt: `2027-04-11T20:0${i}:00+00:00`, createdBy: 'org', voidedAt: null, voidReason: null }
+      return {
+        id: `a${i}`,
+        callId: `c${i}`,
+        sourceKey: key,
+        kind: 'award' as const,
+        toPlayerId: to,
+        amount,
+        reason: 'Decidido',
+        createdAt: `2027-04-11T20:0${i}:00+00:00`,
+        createdBy: 'org',
+        voidedAt: null,
+        voidReason: null,
+      }
     })
     const data = dataFromSnapshot(snap)
     expect(data.state.money.unassigned.assignments.every((a) => a.status === 'applied')).toBe(true)
     useTournament.setState({ tournamentId: 'fixture:full12-live', data, loading: false, error: null, realtime: 'off' })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: '_/full12-live',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <CeremonyScreen />
         </TournamentContext.Provider>
       </MemoryRouter>,
@@ -100,16 +143,24 @@ describe('the Ceremonia shows what the Comité gave from the other lines too (ro
         // Revealed, its list has one row per person the Comité paid from that line (happy-dom lays out no page, but counts them).
         fireEvent.click(screen.getByRole('button', { name: C.next }))
         const text = screen.getByRole('region').textContent ?? ''
-        const line = snap.moneyAdjustments.find((a) => title === C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label))
+        const line = snap.moneyAdjustments.find(
+          (a) =>
+            title === C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label),
+        )
         if (line) counts[line.sourceKey] = Number(/de (\d+)$/.exec(text.slice(text.lastIndexOf(title)))?.[1])
       }
       const next = screen.queryByRole('button', { name: C.next })
       if (!next) break
       fireEvent.click(next)
     }
-    for (const a of snap.moneyAdjustments) expect(seen).toContain(C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label))
+    for (const a of snap.moneyAdjustments)
+      expect(seen).toContain(
+        C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label),
+      )
     expect(counts).toEqual({ fewestPutts: 1, bestRound: 1, individual: 1 })
     // The placings' step comes before the champion's, who closes the night.
-    expect(seen.indexOf(C.steps.byComite(settings.modules.individual.label))).toBeLessThan(seen.indexOf(C.steps.place(1)))
+    expect(seen.indexOf(C.steps.byComite(settings.modules.individual.label))).toBeLessThan(
+      seen.indexOf(C.steps.place(1)),
+    )
   })
 })

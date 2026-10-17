@@ -86,7 +86,9 @@ export const TournamentPushOffer = memo(function TournamentPushOffer() {
   const { me, tournamentId } = useTournamentCtx()
   const whose = useWhose()
   // A hole this phone's player saved (here or on his other phone): the boards say so, offline too.
-  const saved = useTournament((s) => !!me.playerId && !!s.data?.snapshot.scores.some((x) => x.enteredBy === me.playerId))
+  const saved = useTournament(
+    (s) => !!me.playerId && !!s.data?.snapshot.scores.some((x) => x.enteredBy === me.playerId),
+  )
   const [later, setLater] = useState(() => putOff(tournamentId))
   if (whose === undefined || !saved || later || !isStandalone()) return null
   return (

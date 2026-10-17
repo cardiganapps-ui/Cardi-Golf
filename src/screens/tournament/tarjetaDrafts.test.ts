@@ -7,8 +7,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DRAFT_PREFIX, DRAFT_TTL_MS, _tarjetaDraftsTest, readKept, sweepKept, writeKept } from './tarjetaDrafts'
 
-const kept = () => Object.keys(localStorage).filter((k) => k.startsWith(DRAFT_PREFIX)).sort()
-const at = (ms: number) => JSON.stringify({ at: ms, players: { p1: { draft: { strokes: 5, putts: 2, pickedUp: false }, server: '-' } } })
+const kept = () =>
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(DRAFT_PREFIX))
+    .sort()
+const at = (ms: number) =>
+  JSON.stringify({ at: ms, players: { p1: { draft: { strokes: 5, putts: 2, pickedUp: false }, server: '-' } } })
 
 beforeEach(() => {
   localStorage.clear()

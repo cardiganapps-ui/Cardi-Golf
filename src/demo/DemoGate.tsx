@@ -16,7 +16,7 @@ import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { forgetBoards, SPECTATOR_ME, spectatorLookup } from '../screens/spectator/spectatorView'
 import { DEMO_ID, demoSnapshot } from './demoTournament'
 
-const noop = async () => undefined
+const noop = () => Promise.resolve()
 /** Where the example lives: its screens, the TV, and the link its share cards carry. */
 export const DEMO_BASE = '/demo'
 

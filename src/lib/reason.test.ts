@@ -9,15 +9,17 @@ import { describe, expect, it } from 'vitest'
 import { reasonLength, trimReason } from './reason'
 
 const TRIMMED = [
-  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85, 0xa0, 0x1680, 0x180e, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x2028, 0x2029,
-  0x202f, 0x205f, 0x2060, 0x3000, 0xfeff,
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85, 0xa0, 0x1680, 0x180e, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005,
+  0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x2028, 0x2029, 0x202f, 0x205f, 0x2060, 0x3000, 0xfeff,
 ]
 const KEPT = [0x1c, 0x1f, 0x200c, 0x200d, 0x2061, 0xe000]
 
 describe('a reason as the server reads it', () => {
   it('trims at both ends what the database trims, and nothing else', () => {
-    for (const c of TRIMMED) expect(trimReason(`${String.fromCodePoint(c)}ab${String.fromCodePoint(c)}`), c.toString(16)).toBe('ab')
-    for (const c of KEPT) expect(trimReason(`${String.fromCodePoint(c)}ab`), c.toString(16)).toBe(`${String.fromCodePoint(c)}ab`)
+    for (const c of TRIMMED)
+      expect(trimReason(`${String.fromCodePoint(c)}ab${String.fromCodePoint(c)}`), c.toString(16)).toBe('ab')
+    for (const c of KEPT)
+      expect(trimReason(`${String.fromCodePoint(c)}ab`), c.toString(16)).toBe(`${String.fromCodePoint(c)}ab`)
     expect(trimReason('\t\t\t')).toBe('')
     expect(trimReason('Lo vio el Comité')).toBe('Lo vio el Comité')
     expect(trimReason(' a  b ')).toBe('a  b')

@@ -12,11 +12,16 @@ import { expect, open, test } from './base'
 const R = t.stats.raceChart
 const chart = (page: Page) => page.locator('[role="img"]').filter({ has: page.locator('[data-reveal]') })
 /** Where the cover over the race not reached yet stands, in px from the plot's left. */
-const REVEAL = (el: Element) => Number(/translateX\(([-\d.]+)px\)/.exec((el.querySelector('[data-reveal]') as HTMLElement).style.transform)?.[1] ?? NaN)
+const REVEAL = (el: Element) =>
+  Number(
+    /translateX\(([-\d.]+)px\)/.exec((el.querySelector('[data-reveal]') as HTMLElement).style.transform)?.[1] ?? NaN,
+  )
 
 async function serious(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 
 for (const [fixture, count] of [
@@ -24,12 +29,17 @@ for (const [fixture, count] of [
   ['large60', 60],
 ] as const) {
   for (const width of [375, 393]) {
-    test(`${fixture} at ${width}px: a named chart, its table, no sideways scroll, axe clean`, async ({ page, pageErrors }) => {
+    test(`${fixture} at ${width}px: a named chart, its table, no sideways scroll, axe clean`, async ({
+      page,
+      pageErrors,
+    }) => {
       await page.setViewportSize({ width, height: 852 })
       await open(page, `/t/_/${fixture}/stats`)
       const svg = chart(page)
       await expect(svg).toBeVisible()
-      expect(await svg.getAttribute('aria-label')).toMatch(new RegExp(`^${t.stats.race}: ${count} jugadores, \\d+ hoyos\\. Va(n)? al frente `))
+      expect(await svg.getAttribute('aria-label')).toMatch(
+        new RegExp(`^${t.stats.race}: ${count} jugadores, \\d+ hoyos\\. Va(n)? al frente `),
+      )
       expect(await svg.getAttribute('tabindex')).toBeNull()
       expect(await page.locator('[role="application"]').count()).toBe(0)
       // The chart fits the screen, and so does the page.
@@ -119,7 +129,10 @@ test('under reduced motion there is no replay and the race shows whole (MOT-15)'
   await expect(chart(page)).toBeVisible()
   await expect(page.getByRole('button', { name: t.stats.play })).toHaveCount(0)
   // The final frame: the cover stands past the last hole played and every coloured line is named.
-  const { at, width } = await chart(page).evaluate((el) => ({ at: Number((el.querySelector('[data-reveal]') as HTMLElement).dataset.at), width: el.getBoundingClientRect().width }))
+  const { at, width } = await chart(page).evaluate((el) => ({
+    at: Number((el.querySelector('[data-reveal]') as HTMLElement).dataset.at),
+    width: el.getBoundingClientRect().width,
+  }))
   expect(at).toBeGreaterThan(0)
   const bar = page.getByRole('slider', { name: R.cursor })
   expect(at).toBe(Number(await bar.getAttribute('max')))

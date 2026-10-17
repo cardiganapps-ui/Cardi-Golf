@@ -38,7 +38,10 @@ const srv = vi.hoisted(() => {
       },
       then<A, B>(ok?: (v: { data: Row[] | null; error: null }) => A, bad?: (e: unknown) => B) {
         if (asked) state.selected.push(`${table}:${method}`)
-        const answer = { data: asked ? structuredClone(state.answers.get(`${table}:${method}`) ?? []) : null, error: null }
+        const answer = {
+          data: asked ? structuredClone(state.answers.get(`${table}:${method}`) ?? []) : null,
+          error: null,
+        }
         return new Promise<typeof answer>((r) => setTimeout(() => r(answer), state.delay)).then(ok, bad)
       },
     }
@@ -78,7 +81,8 @@ vi.mock('./tournamentStore', () => ({
       patch: () => undefined,
       refresh: () => undefined,
       reload: async () => void srv.reloads++,
-      landChanges: (tournamentId: string, changes: unknown[], since: number, _sentAt: number, opts?: unknown) => srv.landed.push({ tournamentId, changes, since, opts }),
+      landChanges: (tournamentId: string, changes: unknown[], since: number, _sentAt: number, opts?: unknown) =>
+        srv.landed.push({ tournamentId, changes, since, opts }),
       pushesDone: () => void srv.pushesDone++,
     }),
   },
@@ -87,9 +91,31 @@ vi.mock('./tournamentStore', () => ({
 const { _outboxTest, enqueueHole, flush, startOutbox, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 
-const item = <K extends 'score' | 'tiebreak' | 'award' | 'signature'>(kind: K, key: string, payload: Record<string, unknown>) => ({ key, kind, tournamentId: 't1', payload, attempts: 0, createdAt: 1 }) as never
-const award = (winners: string[]) => item('award', 'award:r1:g1:closest:12', { round_id: 'r1', group_id: 'g1', hole: 12, game_id: 'closest', player_ids: winners, decided_by: 'p1' })
-const winner = (id: string, player: string) => ({ id, round_id: 'r1', group_id: 'g1', hole: 12, game_id: 'closest', player_id: player, decided_by: 'p1', created_at: '2027-04-09T18:00:00.5+00:00', source: 'group' })
+const item = <K extends 'score' | 'tiebreak' | 'award' | 'signature'>(
+  kind: K,
+  key: string,
+  payload: Record<string, unknown>,
+) => ({ key, kind, tournamentId: 't1', payload, attempts: 0, createdAt: 1 }) as never
+const award = (winners: string[]) =>
+  item('award', 'award:r1:g1:closest:12', {
+    round_id: 'r1',
+    group_id: 'g1',
+    hole: 12,
+    game_id: 'closest',
+    player_ids: winners,
+    decided_by: 'p1',
+  })
+const winner = (id: string, player: string) => ({
+  id,
+  round_id: 'r1',
+  group_id: 'g1',
+  hole: 12,
+  game_id: 'closest',
+  player_id: player,
+  decided_by: 'p1',
+  created_at: '2027-04-09T18:00:00.5+00:00',
+  source: 'group',
+})
 /** A winner the call took away, by the key a delete names. */
 const taken = (player: string) => ({ round_id: 'r1', game_id: 'closest', hole: 12, player_id: player, source: 'group' })
 
@@ -108,32 +134,96 @@ beforeEach(() => {
 
 describe('a push hands the store the rows the server stored', () => {
   it('a score: the row as stored, with its id, its time and what its trigger flagged', async () => {
-    const row = { id: 's-1', round_id: 'r1', player_id: 'p1', hole: 12, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x', updated_at: '2027-04-09T18:00:00.123456+00:00', disputed: true, previous: 5, reason: null }
+    const row = {
+      id: 's-1',
+      round_id: 'r1',
+      player_id: 'p1',
+      hole: 12,
+      strokes: 4,
+      putts: 2,
+      picked_up: false,
+      entered_by: 'p1',
+      client_ts: 'x',
+      updated_at: '2027-04-09T18:00:00.123456+00:00',
+      disputed: true,
+      previous: 5,
+      reason: null,
+    }
     srv.answers.set('scores:upsert', [row])
-    await _outboxTest.enqueue(item('score', 'score:r1:p1:12', { round_id: 'r1', player_id: 'p1', hole: 12, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' }))
+    await _outboxTest.enqueue(
+      item('score', 'score:r1:p1:12', {
+        round_id: 'r1',
+        player_id: 'p1',
+        hole: 12,
+        strokes: 4,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p1',
+        client_ts: 'x',
+      }),
+    )
     await flush()
     expect(srv.selected).toEqual(['scores:upsert'])
     // Since: the channel's position when the push went out, so an echo heard meanwhile is known. A landing during a
     // flush asks its one more fetch of the flush's end, which the store hears once.
-    expect(srv.landed).toEqual([{ tournamentId: 't1', since: 7, changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], opts: { flushing: true, fetch: false } }])
+    expect(srv.landed).toEqual([
+      {
+        tournamentId: 't1',
+        since: 7,
+        changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }],
+        opts: { flushing: true, fetch: false },
+      },
+    ])
     expect(_outboxTest.queue()).toEqual([])
     expect(srv.pushesDone).toBe(1)
   })
 
   it('a snake answer: the row as stored', async () => {
-    const row = { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p4', decided_by: 'p1', created_at: '2027-04-09T18:00:00+00:00' }
+    const row = {
+      round_id: 'r1',
+      group_id: 'g1',
+      hole: 7,
+      last_holed_player_id: 'p4',
+      decided_by: 'p1',
+      created_at: '2027-04-09T18:00:00+00:00',
+    }
     srv.answers.set('snake_tiebreaks:upsert', [row])
-    await _outboxTest.enqueue(item('tiebreak', 'tiebreak:r1:g1:7', { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p4', decided_by: 'p1' }))
+    await _outboxTest.enqueue(
+      item('tiebreak', 'tiebreak:r1:g1:7', {
+        round_id: 'r1',
+        group_id: 'g1',
+        hole: 7,
+        last_holed_player_id: 'p4',
+        decided_by: 'p1',
+      }),
+    )
     await flush()
-    expect(srv.landed.map((l) => l.changes)).toEqual([[{ table: 'snake_tiebreaks', eventType: 'UPDATE', new: row, old: {} }]])
+    expect(srv.landed.map((l) => l.changes)).toEqual([
+      [{ table: 'snake_tiebreaks', eventType: 'UPDATE', new: row, old: {} }],
+    ])
   })
 
   it('winners replaced in one call (0044): the ones taken away, by the key a delete names, then the ones put in', async () => {
-    srv.rpcAnswers.set('save_group_awards', { deleted: [taken('p3')], rows: [winner('a-new', 'p1'), winner('a-new2', 'p2')] })
+    srv.rpcAnswers.set('save_group_awards', {
+      deleted: [taken('p3')],
+      rows: [winner('a-new', 'p1'), winner('a-new2', 'p2')],
+    })
     await _outboxTest.enqueue(award(['p1', 'p2']))
     await flush()
     expect(srv.selected).toEqual(['rpc:save_group_awards'])
-    expect(srv.rpcCalls).toEqual([{ name: 'save_group_awards', args: { p_round_id: 'r1', p_group_id: 'g1', p_game_id: 'closest', p_hole: 12, p_player_ids: ['p1', 'p2'], p_decided_by: 'p1' } }])
+    expect(srv.rpcCalls).toEqual([
+      {
+        name: 'save_group_awards',
+        args: {
+          p_round_id: 'r1',
+          p_group_id: 'g1',
+          p_game_id: 'closest',
+          p_hole: 12,
+          p_player_ids: ['p1', 'p2'],
+          p_decided_by: 'p1',
+        },
+      },
+    ])
     expect(srv.landed.map((l) => l.changes)).toEqual([
       [
         { table: 'hole_awards', eventType: 'DELETE', new: {}, old: taken('p3') },
@@ -166,7 +256,9 @@ describe('a push hands the store the rows the server stored', () => {
   })
 
   it('a card the other pair signed first comes back empty: the write is taken, nothing lands over its signature, and a fetch shows that signature', async () => {
-    await _outboxTest.enqueue(item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }))
+    await _outboxTest.enqueue(
+      item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }),
+    )
     await flush()
     expect(srv.selected).toEqual(['card_signatures:upsert'])
     expect(srv.landed.map((l) => [l.changes, l.opts])).toEqual([[[], { flushing: true, fetch: true }]])
@@ -183,17 +275,55 @@ describe('a push hands the store the rows the server stored', () => {
     const tab = new BroadcastChannel('cardi-golf-outbox')
     tab.onmessage = (e: MessageEvent) => heard.push(e.data)
     try {
-      await _outboxTest.enqueue(item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }))
+      await _outboxTest.enqueue(
+        item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }),
+      )
       await flush()
-      const row = { id: 's-2', round_id: 'r1', player_id: 'p1', hole: 3, strokes: 5, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x', updated_at: '2027-04-09T18:00:01+00:00', disputed: false, previous: null, reason: null }
+      const row = {
+        id: 's-2',
+        round_id: 'r1',
+        player_id: 'p1',
+        hole: 3,
+        strokes: 5,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p1',
+        client_ts: 'x',
+        updated_at: '2027-04-09T18:00:01+00:00',
+        disputed: false,
+        previous: null,
+        reason: null,
+      }
       srv.answers.set('scores:upsert', [row])
       // The server takes a moment: the other tabs hear how long the push was out.
       srv.delay = 60
-      await _outboxTest.enqueue(item('score', 'score:r1:p1:3', { round_id: 'r1', player_id: 'p1', hole: 3, strokes: 5, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' }))
+      await _outboxTest.enqueue(
+        item('score', 'score:r1:p1:3', {
+          round_id: 'r1',
+          player_id: 'p1',
+          hole: 3,
+          strokes: 5,
+          putts: 2,
+          picked_up: false,
+          entered_by: 'p1',
+          client_ts: 'x',
+        }),
+      )
       await flush()
       // With how long ago the push went out (each tab's clock has its own origin): a fetch the other tab landed since
       // may have read past it.
-      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], age: expect.any(Number), postedAt: expect.any(Number) } }]))
+      await vi.waitFor(() =>
+        expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([
+          {
+            landed: {
+              tournamentId: 't1',
+              changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }],
+              age: expect.any(Number),
+              postedAt: expect.any(Number),
+            },
+          },
+        ]),
+      )
       const { age } = (heard.find((m) => (m as { landed?: unknown }).landed) as { landed: { age: number } }).landed
       expect(age).toBeGreaterThanOrEqual(50)
       expect(age).toBeLessThan(5_000)
@@ -207,11 +337,33 @@ describe('a push hands the store the rows the server stored', () => {
 // status word: a list that held something else reached the boards (a row that is null) or the questions the
 // Tarjeta asks (a conflict whose fields are a word), and the hole was taken off the queue as settled.
 describe('save_hole’s answer is read before it is settled (ARCH-03)', () => {
-  const stored = { id: 's-9', round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 2, picked_up: false, updated_at: '2027-04-09T18:00:00+00:00' }
-  const hole = () => enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p2', fields: { strokes: 5 }, base: {} }] })
+  const stored = {
+    id: 's-9',
+    round_id: 'r1',
+    player_id: 'p2',
+    hole: 4,
+    strokes: 5,
+    putts: 2,
+    picked_up: false,
+    updated_at: '2027-04-09T18:00:00+00:00',
+  }
+  const hole = () =>
+    enqueueHole('t1', {
+      round_id: 'r1',
+      hole: 4,
+      entered_by: 'p1',
+      entries: [{ player_id: 'p2', fields: { strokes: 5 }, base: {} }],
+    })
 
   it('a readable answer lands its rows, and keys this build does not know are no reason to refuse it', async () => {
-    srv.rpcAnswers.set('save_hole', { status: 'ok', rows: [stored], conflicts: [], rejected: [], unchanged: [], newer: 'kept' })
+    srv.rpcAnswers.set('save_hole', {
+      status: 'ok',
+      rows: [stored],
+      conflicts: [],
+      rejected: [],
+      unchanged: [],
+      newer: 'kept',
+    })
     await hole()
     await flush()
     expect(srv.selected).toEqual(['rpc:save_hole'])
@@ -221,8 +373,20 @@ describe('save_hole’s answer is read before it is settled (ARCH-03)', () => {
 
   it.each([
     ['rows that are not rows', { status: 'ok', rows: [null], conflicts: [], rejected: [], unchanged: [] }],
-    ['a conflict whose fields are not a list', { status: 'conflict', rows: [], conflicts: [{ player_id: 'p2', fields: 'strokes', server: null }], rejected: [], unchanged: [] }],
-    ['a refusal with no reason', { status: 'rejected', rows: [], conflicts: [], rejected: [{ player_id: 'p2' }], unchanged: [] }],
+    [
+      'a conflict whose fields are not a list',
+      {
+        status: 'conflict',
+        rows: [],
+        conflicts: [{ player_id: 'p2', fields: 'strokes', server: null }],
+        rejected: [],
+        unchanged: [],
+      },
+    ],
+    [
+      'a refusal with no reason',
+      { status: 'rejected', rows: [], conflicts: [], rejected: [{ player_id: 'p2' }], unchanged: [] },
+    ],
   ])('%s is no answer: nothing lands, nothing is asked, and the hole waits to go again', async (_what, answer) => {
     srv.rpcAnswers.set('save_hole', answer)
     await hole()

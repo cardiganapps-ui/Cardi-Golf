@@ -70,7 +70,15 @@ export interface RoundStats {
   easiest: HoleStat | null
 }
 
-export type AwardId = 'mostBirdies' | 'mostOnePutts' | 'mostThreePutts' | 'biggestGain' | 'mostConsistent' | 'snakeGold' | 'bestRoi' | 'worstRoi'
+export type AwardId =
+  | 'mostBirdies'
+  | 'mostOnePutts'
+  | 'mostThreePutts'
+  | 'biggestGain'
+  | 'mostConsistent'
+  | 'snakeGold'
+  | 'bestRoi'
+  | 'worstRoi'
 
 export interface Award {
   id: AwardId
@@ -95,7 +103,12 @@ function playedHoles(holes: HoleResult[]) {
   return holes.filter((h) => h.played)
 }
 
-export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?: SnakeState; auction?: AuctionState }, scoring: MainScoring = 'points'): StatsState {
+export function computeStats(
+  snapshot: Snapshot,
+  core: CoreState,
+  mods: { snake?: SnakeState; auction?: AuctionState },
+  scoring: MainScoring = 'points',
+): StatsState {
   const players: Record<Id, PlayerStats> = {}
   // The tournament's best hole figure so far; ties go to the harder stroke index, then to the first one read.
   let moment: StatsState['moment'] = null
@@ -153,7 +166,7 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
         roundValue += v
         st.race.push(cum)
         st.pointsRace.push(cumPoints)
-        const par = (h.par === 3 || h.par === 5 ? h.par : 4) as 3 | 4 | 5
+        const par = h.par === 3 || h.par === 5 ? h.par : 4
         st.pointsByPar[par] += h.points
         st.valueByPar[par] += v
         if (h.pickedUp) st.pickUps++
@@ -176,11 +189,19 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
         st.longestStreak = Math.max(st.longestStreak, streak)
         // A hole is written down only where it takes a place (PERF-14: one copy of every hole was made to find the moment).
         const si = h.strokeIndex
-        const isBest = !st.bestHole || better(v, st.bestHole.value) || (v === st.bestHole.value && si < st.bestHole.strokeIndex)
-        const isWorst = !st.worstHole || better(st.worstHole.value, v) || (v === st.worstHole.value && si > st.worstHole.strokeIndex)
+        const isBest =
+          !st.bestHole || better(v, st.bestHole.value) || (v === st.bestHole.value && si < st.bestHole.strokeIndex)
+        const isWorst =
+          !st.worstHole || better(st.worstHole.value, v) || (v === st.worstHole.value && si > st.worstHole.strokeIndex)
         const isMoment = !moment || better(v, moment.value) || (v === moment.value && si < moment.strokeIndex)
         if (isBest || isWorst || isMoment) {
-          const m: NonNullable<PlayerStats['bestHole']> = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, value: v, strokeIndex: si }
+          const m: NonNullable<PlayerStats['bestHole']> = {
+            roundNumber: pr.roundNumber,
+            hole: h.hole,
+            points: h.points,
+            value: v,
+            strokeIndex: si,
+          }
           if (isBest) st.bestHole = m
           if (isWorst) st.worstHole = m
           if (isMoment) moment = { playerId: p.id, ...m }
@@ -212,18 +233,38 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
       }
     }
     const holes: HoleStat[] = [...acc.entries()]
-      .map(([hole, a]) => ({ hole, par: a.par, strokeIndex: a.strokeIndex, avgPoints: Math.round((a.sum / a.n) * 100) / 100, avg: Math.round((a.value / a.n) * 100) / 100, played: a.n }))
+      .map(([hole, a]) => ({
+        hole,
+        par: a.par,
+        strokeIndex: a.strokeIndex,
+        avgPoints: Math.round((a.sum / a.n) * 100) / 100,
+        avg: Math.round((a.value / a.n) * 100) / 100,
+        played: a.n,
+      }))
       .sort((a, b) => a.hole - b.hole)
     // Hardest first: fewest points, or most strokes against par.
     const ranked = [...holes].sort((a, b) => (points ? a.avg - b.avg : b.avg - a.avg) || a.hole - b.hole)
-    rounds.push({ roundId: rid, roundNumber: round.number, holes, hardest: ranked[0] ?? null, easiest: ranked.at(-1) ?? null })
+    rounds.push({
+      roundId: rid,
+      roundNumber: round.number,
+      holes,
+      hardest: ranked[0] ?? null,
+      easiest: ranked.at(-1) ?? null,
+    })
   }
 
   // Awards.
   const awards: Award[] = []
   const list = Object.values(players)
-  const top = (id: AwardId, unit: Award['unit'], value: (s: PlayerStats) => number | null, opts: { min?: boolean; ok?: (s: PlayerStats) => boolean } = {}) => {
-    const cands = list.map((s) => ({ s, v: value(s) })).filter((x): x is { s: PlayerStats; v: number } => x.v != null && (opts.ok ? opts.ok(x.s) : true))
+  const top = (
+    id: AwardId,
+    unit: Award['unit'],
+    value: (s: PlayerStats) => number | null,
+    opts: { min?: boolean; ok?: (s: PlayerStats) => boolean } = {},
+  ) => {
+    const cands = list
+      .map((s) => ({ s, v: value(s) }))
+      .filter((x): x is { s: PlayerStats; v: number } => x.v != null && (opts.ok ? opts.ok(x.s) : true))
     if (cands.length === 0) return
     const best = opts.min ? Math.min(...cands.map((c) => c.v)) : Math.max(...cands.map((c) => c.v))
     if (!opts.min && best <= 0) return
@@ -235,18 +276,34 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   // Points gained from day 1 to day 2, or strokes saved against par: only for a
   // player who played both days whole. Under strokes an unplayed day reads 0,
   // which is a gain on any day-1 card over par (a knocked-out player won it).
-  top('biggestGain', points ? 'points' : 'strokes', (s) => (s.valuePerRound.length >= 2 ? (points ? 1 : -1) * (s.valuePerRound[1]! - s.valuePerRound[0]!) : null), {
-    ok: (s) => s.holesPlayed >= 2 * 9 && s.roundComplete[0] === true && s.roundComplete[1] === true,
-  })
+  top(
+    'biggestGain',
+    points ? 'points' : 'strokes',
+    (s) => (s.valuePerRound.length >= 2 ? (points ? 1 : -1) * (s.valuePerRound[1]! - s.valuePerRound[0]!) : null),
+    {
+      ok: (s) => s.holesPlayed >= 2 * 9 && s.roundComplete[0] === true && s.roundComplete[1] === true,
+    },
+  )
   top('mostConsistent', 'variance', (s) => s.variance, { min: true, ok: (s) => s.holesPlayed >= 9 })
   if (mods.snake) top('snakeGold', 'count', (s) => s.snakeHoles)
   if (mods.auction && mods.auction.soldCount > 0) {
-    const roi = new Map(mods.auction.portfolios.filter((pf) => pf.roi != null).map((pf) => [pf.ownerId, pf.roi as number]))
+    const roi = new Map(mods.auction.portfolios.filter((pf) => pf.roi != null).map((pf) => [pf.ownerId, pf.roi!]))
     if (roi.size > 0) {
       const best = Math.max(...roi.values())
       const worst = Math.min(...roi.values())
-      awards.push({ id: 'bestRoi', playerIds: [...roi].filter(([, v]) => v === best).map(([k]) => k), value: best, unit: 'pct' })
-      if (worst !== best) awards.push({ id: 'worstRoi', playerIds: [...roi].filter(([, v]) => v === worst).map(([k]) => k), value: worst, unit: 'pct' })
+      awards.push({
+        id: 'bestRoi',
+        playerIds: [...roi].filter(([, v]) => v === best).map(([k]) => k),
+        value: best,
+        unit: 'pct',
+      })
+      if (worst !== best)
+        awards.push({
+          id: 'worstRoi',
+          playerIds: [...roi].filter(([, v]) => v === worst).map(([k]) => k),
+          value: worst,
+          unit: 'pct',
+        })
     }
   }
 
@@ -255,7 +312,8 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   for (const r of rounds) {
     for (const h of r.holes) {
       if (h.played < 2) continue
-      if (!cursedHole || better(cursedHole.avg, h.avg)) cursedHole = { roundNumber: r.roundNumber, hole: h.hole, avgPoints: h.avgPoints, avg: h.avg }
+      if (!cursedHole || better(cursedHole.avg, h.avg))
+        cursedHole = { roundNumber: r.roundNumber, hole: h.hole, avgPoints: h.avgPoints, avg: h.avg }
     }
   }
   // Moment of the tournament (above): the best hole figure. A moment is a good hole: some points, or under par.

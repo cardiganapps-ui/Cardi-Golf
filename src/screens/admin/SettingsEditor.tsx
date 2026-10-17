@@ -48,127 +48,216 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
   return (
     <div className="stack stack--lg">
       {section === 'rules' && (
-      <section className="stack">
-        <FormatEditor value={value} onChange={onChange} />
-        <div className="grid2">
-          <Field label={A.lastPlaceLabel} hint={A.lastPlaceHint}>
-            <input className="input" value={value.labels.lastPlace} onChange={(e) => set((d) => (d.labels.lastPlace = e.target.value))} />
-          </Field>
-          <Field label={A.honoreeLabel} hint={A.honoreeHint}>
-            <input className="input" value={value.labels.honoree} onChange={(e) => set((d) => (d.labels.honoree = e.target.value))} />
-          </Field>
-          <Field label={A.trophyLabel} hint={A.trophyHint}>
-            <input className="input" value={value.labels.trophy} maxLength={40} onChange={(e) => set((d) => (d.labels.trophy = e.target.value))} />
-          </Field>
-        </div>
-        {m.pairs.enabled && (
+        <section className="stack">
+          <FormatEditor value={value} onChange={onChange} />
           <div className="grid2">
-            <Field label={A.pairingRules}>
-              <select
-                className="select"
-                value={m.pairs.pairing.map((p) => p.join('-')).join(',')}
-                onChange={(e) =>
-                  set((d) => {
-                    d.modules.pairs.pairing = e.target.value ? e.target.value.split(',').map((p) => p.split('-') as [string, string]) : []
-                  })
-                }
-              >
-                {pairingOptions(value.tiers, m.pairs.pairing.map((p) => p.join('-')).join(',')).map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+            <Field label={A.lastPlaceLabel} hint={A.lastPlaceHint}>
+              <input
+                className="input"
+                value={value.labels.lastPlace}
+                onChange={(e) => set((d) => (d.labels.lastPlace = e.target.value))}
+              />
             </Field>
-            <Toggle label={A.honoreePicks(value.labels.honoree)} checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
+            <Field label={A.honoreeLabel} hint={A.honoreeHint}>
+              <input
+                className="input"
+                value={value.labels.honoree}
+                onChange={(e) => set((d) => (d.labels.honoree = e.target.value))}
+              />
+            </Field>
+            <Field label={A.trophyLabel} hint={A.trophyHint}>
+              <input
+                className="input"
+                value={value.labels.trophy}
+                maxLength={40}
+                onChange={(e) => set((d) => (d.labels.trophy = e.target.value))}
+              />
+            </Field>
           </div>
-        )}
-        <CardSigningField value={value} onChange={(mode) => set((d) => (d.cardSigning = mode))} />
-      </section>
+          {m.pairs.enabled && (
+            <div className="grid2">
+              <Field label={A.pairingRules}>
+                <select
+                  className="select"
+                  value={m.pairs.pairing.map((p) => p.join('-')).join(',')}
+                  onChange={(e) =>
+                    set((d) => {
+                      d.modules.pairs.pairing = e.target.value
+                        ? e.target.value.split(',').map((p) => p.split('-') as [string, string])
+                        : []
+                    })
+                  }
+                >
+                  {pairingOptions(value.tiers, m.pairs.pairing.map((p) => p.join('-')).join(',')).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Toggle
+                label={A.honoreePicks(value.labels.honoree)}
+                checked={m.pairs.honoreePicks}
+                onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))}
+              />
+            </div>
+          )}
+          <CardSigningField value={value} onChange={(mode) => set((d) => (d.cardSigning = mode))} />
+        </section>
       )}
 
       {section === 'games' && (
-      <section className="stack">
-        <GameCatalog value={value} onChange={onChange} field={field} />
-      </section>
+        <section className="stack">
+          <GameCatalog value={value} onChange={onChange} field={field} />
+        </section>
       )}
 
       {section === 'rules' && (
-      <section className="stack">
-        <span className="label">{A.handicap}</span>
-        <div className="grid2">
-          <Field label={A.allowance}>
-            <NumberField min={0} max={100} suffix="%" value={Math.round(value.handicap.allowance * 100)} onChange={(v) => set((d) => (d.handicap.allowance = v / 100))} />
-          </Field>
-          <Field label={A.cap}>
-            <NumberField min={1} max={54} value={value.handicap.cap} onChange={(v) => set((d) => (d.handicap.cap = v))} />
-          </Field>
-        </div>
-        {/* A scratch event is one on purpose (MONEY-13): 0 % says so, where it is typed. */}
-        {value.handicap.allowance === 0 && <p className="help">{t.admin.sense.scratch}</p>}
-        {value.rounds > 1 && (
-          <>
-            <span className="help">{A.cutTitle}</span>
-            <div className="grid3">
-              <Field label={A.cutThreshold}>
-                <NumberField value={value.day2Cut.threshold} onChange={(v) => set((d) => (d.day2Cut.threshold = v))} />
-              </Field>
-              <Field label={A.cutPer}>
-                <NumberField min={1} value={value.day2Cut.pointsPerStroke} onChange={(v) => set((d) => (d.day2Cut.pointsPerStroke = v))} />
-              </Field>
-              <Field label={A.cutMax}>
-                <NumberField min={0} max={CUT_MAX_STROKES} value={value.day2Cut.maxStrokes} onChange={(v) => set((d) => (d.day2Cut.maxStrokes = v))} />
-              </Field>
-            </div>
-            {value.rounds > 2 && (
-              <Field label={A.cutMode}>
-                <select className="select" value={value.day2Cut.mode} onChange={(e) => set((d) => (d.day2Cut.mode = e.target.value === 'cumulative' ? 'cumulative' : 'previous'))}>
-                  <option value="previous">{A.cutModePrevious}</option>
-                  <option value="cumulative">{A.cutModeCumulative}</option>
-                </select>
-              </Field>
-            )}
-          </>
-        )}
-        {<Toggle label={A.perRoundSlope} hint={A.perRoundSlopeHint} checked={value.handicap.perRoundSlope} onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))} />}
-      </section>
+        <section className="stack">
+          <span className="label">{A.handicap}</span>
+          <div className="grid2">
+            <Field label={A.allowance}>
+              <NumberField
+                min={0}
+                max={100}
+                suffix="%"
+                value={Math.round(value.handicap.allowance * 100)}
+                onChange={(v) => set((d) => (d.handicap.allowance = v / 100))}
+              />
+            </Field>
+            <Field label={A.cap}>
+              <NumberField
+                min={1}
+                max={54}
+                value={value.handicap.cap}
+                onChange={(v) => set((d) => (d.handicap.cap = v))}
+              />
+            </Field>
+          </div>
+          {/* A scratch event is one on purpose (MONEY-13): 0 % says so, where it is typed. */}
+          {value.handicap.allowance === 0 && <p className="help">{t.admin.sense.scratch}</p>}
+          {value.rounds > 1 && (
+            <>
+              <span className="help">{A.cutTitle}</span>
+              <div className="grid3">
+                <Field label={A.cutThreshold}>
+                  <NumberField
+                    value={value.day2Cut.threshold}
+                    onChange={(v) => set((d) => (d.day2Cut.threshold = v))}
+                  />
+                </Field>
+                <Field label={A.cutPer}>
+                  <NumberField
+                    min={1}
+                    value={value.day2Cut.pointsPerStroke}
+                    onChange={(v) => set((d) => (d.day2Cut.pointsPerStroke = v))}
+                  />
+                </Field>
+                <Field label={A.cutMax}>
+                  <NumberField
+                    min={0}
+                    max={CUT_MAX_STROKES}
+                    value={value.day2Cut.maxStrokes}
+                    onChange={(v) => set((d) => (d.day2Cut.maxStrokes = v))}
+                  />
+                </Field>
+              </div>
+              {value.rounds > 2 && (
+                <Field label={A.cutMode}>
+                  <select
+                    className="select"
+                    value={value.day2Cut.mode}
+                    onChange={(e) =>
+                      set((d) => (d.day2Cut.mode = e.target.value === 'cumulative' ? 'cumulative' : 'previous'))
+                    }
+                  >
+                    <option value="previous">{A.cutModePrevious}</option>
+                    <option value="cumulative">{A.cutModeCumulative}</option>
+                  </select>
+                </Field>
+              )}
+            </>
+          )}
+          {
+            <Toggle
+              label={A.perRoundSlope}
+              hint={A.perRoundSlopeHint}
+              checked={value.handicap.perRoundSlope}
+              onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))}
+            />
+          }
+        </section>
       )}
 
       {section === 'money' && (
-      <section className="stack">
-        <span className="label">{A.prizesTitle}</span>
-        <MoneyEditor value={value} onChange={onChange} field={field} />
-        {m.fewestPutts.enabled && (
-          <Field label={A.pickupPutts}>
-            <NumberField min={0} max={10} value={value.pickupPuttsForFewestPutts} onChange={(v) => set((d) => (d.pickupPuttsForFewestPutts = v))} />
-          </Field>
-        )}
-      </section>
+        <section className="stack">
+          <span className="label">{A.prizesTitle}</span>
+          <MoneyEditor value={value} onChange={onChange} field={field} />
+          {m.fewestPutts.enabled && (
+            <Field label={A.pickupPutts}>
+              <NumberField
+                min={0}
+                max={10}
+                value={value.pickupPuttsForFewestPutts}
+                onChange={(v) => set((d) => (d.pickupPuttsForFewestPutts = v))}
+              />
+            </Field>
+          )}
+        </section>
       )}
 
       {section === 'auction' && m.auction.enabled && (
         <section className="stack">
           <div className="grid3">
             <Field label={A.openingBid}>
-              <NumberField min={1} prefix="$" value={value.auction.openingBid} onChange={(v) => set((d) => (d.auction.openingBid = v))} />
+              <NumberField
+                min={1}
+                prefix="$"
+                value={value.auction.openingBid}
+                onChange={(v) => set((d) => (d.auction.openingBid = v))}
+              />
             </Field>
             <Field label={A.increment}>
-              <NumberField min={1} prefix="$" value={value.auction.increment} onChange={(v) => set((d) => (d.auction.increment = v))} />
+              <NumberField
+                min={1}
+                prefix="$"
+                value={value.auction.increment}
+                onChange={(v) => set((d) => (d.auction.increment = v))}
+              />
             </Field>
             <Field label={A.maxPerOwner}>
-              <NumberField min={1} value={value.auction.maxPlayersPerOwner} onChange={(v) => set((d) => (d.auction.maxPlayersPerOwner = v))} />
+              <NumberField
+                min={1}
+                value={value.auction.maxPlayersPerOwner}
+                onChange={(v) => set((d) => (d.auction.maxPlayersPerOwner = v))}
+              />
             </Field>
           </div>
           <Field label={A.buybackMax}>
-            <NumberField min={0} max={BUYBACK_MAX_PCT} suffix="%" value={value.auction.buybackMaxPct} onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))} />
+            <NumberField
+              min={0}
+              max={BUYBACK_MAX_PCT}
+              suffix="%"
+              value={value.auction.buybackMaxPct}
+              onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))}
+            />
           </Field>
-          <Toggle label={A.selfCounts} checked={value.auction.selfOwnedCountsTowardMax} onChange={(v) => set((d) => (d.auction.selfOwnedCountsTowardMax = v))} />
+          <Toggle
+            label={A.selfCounts}
+            checked={value.auction.selfOwnedCountsTowardMax}
+            onChange={(v) => set((d) => (d.auction.selfOwnedCountsTowardMax = v))}
+          />
           <span className="help">{A.auctionPayoutSlots}</span>
           <div className="stack">
             {value.auction.payout.map((slot, i) => (
               <div key={i} className="row">
                 <span className="grow small">
-                  {t.rules.slotName(slot.slot, 'place' in slot ? slot.place : undefined, 'tier' in slot ? slot.tier : undefined, value.labels.lastPlace)}
+                  {t.rules.slotName(
+                    slot.slot,
+                    'place' in slot ? slot.place : undefined,
+                    'tier' in slot ? slot.tier : undefined,
+                    value.labels.lastPlace,
+                  )}
                 </span>
                 {slot.slot === 'bestOfTier' && (
                   <select
@@ -202,7 +291,9 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
                 />
               </div>
             ))}
-            <p className="help">Suma: {Math.round(value.auction.payout.reduce((s, x) => s + x.share, 0) * 1000) / 10}%</p>
+            <p className="help">
+              Suma: {Math.round(value.auction.payout.reduce((s, x) => s + x.share, 0) * 1000) / 10}%
+            </p>
           </div>
         </section>
       )}
@@ -216,7 +307,13 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
  * always had); the pairs' rule is offered with the pairs game on, and while it is the stored value, so the Comité
  * can change it once the game is off (the save waits for that: settings/sense.ts).
  */
-function CardSigningField({ value, onChange }: { value: TournamentSettings; onChange: (mode: CardSigningMode) => void }) {
+function CardSigningField({
+  value,
+  onChange,
+}: {
+  value: TournamentSettings
+  onChange: (mode: CardSigningMode) => void
+}) {
   const A = t.admin.tournament
   const mode = value.cardSigning ?? cardSigningMode(value)
   const options = CARD_SIGNING_MODES.filter((m) => m !== 'pairs' || value.modules.pairs.enabled || mode === 'pairs')

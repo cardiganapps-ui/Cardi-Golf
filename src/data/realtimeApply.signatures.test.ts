@@ -12,8 +12,18 @@ import { applyChange, type LiveChange } from './realtimeApply'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
-const ins = (row: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'INSERT', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const del = (key: Record<string, unknown>): LiveChange => ({ table: 'card_signatures', eventType: 'DELETE', new: {} as LiveChange['new'], old: key as LiveChange['old'] })
+const ins = (row: Record<string, unknown>): LiveChange => ({
+  table: 'card_signatures',
+  eventType: 'INSERT',
+  new: row,
+  old: {},
+})
+const del = (key: Record<string, unknown>): LiveChange => ({
+  table: 'card_signatures',
+  eventType: 'DELETE',
+  new: {},
+  old: key,
+})
 
 describe('a player’s signature on the live channel', () => {
   it('lands as the player’s card, beside a pair’s of the same day, in card order', () => {
@@ -21,16 +31,58 @@ describe('a player’s signature on the live channel', () => {
     const r1 = s.rounds[0]!.id
     const pair = s.pairs[0]!
     s.cardSignatures = []
-    expect(applyChange(s, T(s), ins({ round_id: r1, pair_id: null, player_id: 'p9', card_id: 'p9', signed_by: 'p1', signed_at: '2027-04-09T15:00:00Z', tournament_id: T(s) }))).toBe('applied')
-    expect(applyChange(s, T(s), ins({ round_id: r1, pair_id: pair.id, player_id: null, card_id: pair.id, signed_by: 'p1', signed_at: '2027-04-09T15:01:00Z', tournament_id: T(s) }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins({
+          round_id: r1,
+          pair_id: null,
+          player_id: 'p9',
+          card_id: 'p9',
+          signed_by: 'p1',
+          signed_at: '2027-04-09T15:00:00Z',
+          tournament_id: T(s),
+        }),
+      ),
+    ).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins({
+          round_id: r1,
+          pair_id: pair.id,
+          player_id: null,
+          card_id: pair.id,
+          signed_by: 'p1',
+          signed_at: '2027-04-09T15:01:00Z',
+          tournament_id: T(s),
+        }),
+      ),
+    ).toBe('applied')
     expect(s.cardSignatures).toEqual(
       [
         { roundId: r1, pairId: null, playerId: 'p9', signedBy: 'p1', signedAt: '2027-04-09T15:00:00Z' },
         { roundId: r1, pairId: pair.id, signedBy: 'p1', signedAt: '2027-04-09T15:01:00Z' },
-      ].sort((a, b) => ((a.pairId ?? a.playerId)! < (b.pairId ?? b.playerId)! ? -1 : 1)),
+      ].sort((a, b) => ((a.pairId ?? a.playerId) < (b.pairId ?? b.playerId) ? -1 : 1)),
     )
     // Its echo is the same row: nothing doubles.
-    expect(applyChange(s, T(s), ins({ round_id: r1, pair_id: null, player_id: 'p9', card_id: 'p9', signed_by: 'p1', signed_at: '2027-04-09T15:00:00Z', tournament_id: T(s) }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins({
+          round_id: r1,
+          pair_id: null,
+          player_id: 'p9',
+          card_id: 'p9',
+          signed_by: 'p1',
+          signed_at: '2027-04-09T15:00:00Z',
+          tournament_id: T(s),
+        }),
+      ),
+    ).toBe('applied')
     expect(s.cardSignatures).toHaveLength(2)
   })
 
@@ -44,7 +96,10 @@ describe('a player’s signature on the live channel', () => {
       { roundId: r2!.id, pairId: null, playerId: 'p9', signedBy: 'p1', signedAt: '' },
     ]
     expect(applyChange(s, T(s), del({ round_id: r1!.id, card_id: 'p9' }))).toBe('applied')
-    expect(s.cardSignatures.map((x) => `${x.roundId}:${x.pairId ?? x.playerId}`)).toEqual([`${r1!.id}:${pair.id}`, `${r2!.id}:p9`])
+    expect(s.cardSignatures.map((x) => `${x.roundId}:${x.pairId ?? x.playerId}`)).toEqual([
+      `${r1!.id}:${pair.id}`,
+      `${r2!.id}:p9`,
+    ])
     expect(applyChange(s, T(s), del({ round_id: r1!.id, pair_id: pair.id }))).toBe('applied')
     expect(applyChange(s, T(s), del({ round_id: r1!.id, card_id: 'p9' }))).toBe('ignored')
     expect(s.cardSignatures.map((x) => `${x.roundId}:${x.pairId ?? x.playerId}`)).toEqual([`${r2!.id}:p9`])

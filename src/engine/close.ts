@@ -23,7 +23,15 @@ import type { TournamentSettings } from './settings/schema'
 import type { Snapshot } from './types'
 import { openDays } from './core/unassigned'
 
-export type CloseBlockerKind = 'missingRounds' | 'openRounds' | 'tiebreaks' | 'missingPutts' | 'unassigned' | 'badAssignments' | 'unsignedCards' | 'rejectedWrites'
+export type CloseBlockerKind =
+  | 'missingRounds'
+  | 'openRounds'
+  | 'tiebreaks'
+  | 'missingPutts'
+  | 'unassigned'
+  | 'badAssignments'
+  | 'unsignedCards'
+  | 'rejectedWrites'
 
 export interface CloseBlocker {
   kind: CloseBlockerKind
@@ -54,7 +62,9 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   const closed: Snapshot = {
     ...snapshot,
     tournament: { ...snapshot.tournament, status: 'finished' },
-    rounds: snapshot.rounds.map((r) => (opts.finishLiveRounds && r.status === 'live' ? { ...r, status: 'finished' } : r)),
+    rounds: snapshot.rounds.map((r) =>
+      opts.finishLiveRounds && r.status === 'live' ? { ...r, status: 'finished' } : r,
+    ),
   }
   const state = computeTournament(closed, settings)
   const blockers: CloseBlocker[] = []
@@ -64,13 +74,22 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   if (missing.length) blockers.push({ kind: 'missingRounds', says: msg('close.missingRounds', { days: missing }) })
   if (open.length) blockers.push({ kind: 'openRounds', says: msg('close.openRounds', { days: open }) })
   const pending = state.flags.pendingSnakeTiebreaks.length
-  if (pending) blockers.push({ kind: 'tiebreaks', says: msg('close.tiebreaks', { n: pending, game: settings.modules.snake.label }) })
+  if (pending)
+    blockers.push({
+      kind: 'tiebreaks',
+      says: msg('close.tiebreaks', { n: pending, game: settings.modules.snake.label }),
+    })
   // A hole without putts would close on a guess: the putting games never read it as 0 (MONEY-18).
   const noPutts = state.flags.missingPutts.reduce((n, m) => n + m.holes.length, 0)
   if (noPutts) blockers.push({ kind: 'missingPutts', says: msg('close.missingPutts', { n: noPutts }) })
   if (settings.modules.auction.enabled) {
     const unsold = closed.calcuttaLots.filter((l) => l.status !== 'sold')
-    if (unsold.length) warnings.push(msg('close.unsoldLots', { names: unsold.map((l) => closed.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId) }))
+    if (unsold.length)
+      warnings.push(
+        msg('close.unsoldLots', {
+          names: unsold.map((l) => closed.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId),
+        }),
+      )
   }
   // Money only once play is over, as Dinero lists it: before, the day to finish or cancel is what blocks.
   const u = state.money.unassigned
@@ -84,7 +103,8 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   if (unsigned) blockers.push({ kind: 'unsignedCards', says: msg('close.unsignedCards', { n: unsigned }) })
   // A hole the server kept for the Comité may be a score that changes the money: applied or dismissed before closing.
   if (opts.openRejected === null) warnings.push(say('close.rejectedUnavailable'))
-  else if (opts.openRejected > 0) blockers.push({ kind: 'rejectedWrites', says: msg('close.rejectedWrites', { n: opts.openRejected }) })
+  else if (opts.openRejected > 0)
+    blockers.push({ kind: 'rejectedWrites', says: msg('close.rejectedWrites', { n: opts.openRejected }) })
 
   const owed = state.money.accounts.filter((a) => a.due > 0 && a.from !== null)
   if (owed.length) {

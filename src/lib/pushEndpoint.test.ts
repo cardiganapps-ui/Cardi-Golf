@@ -41,7 +41,10 @@ describe('pushEndpointOk (SEC-03)', () => {
   })
   it('the migration checks the same hosts', () => {
     const sql = readFileSync(new URL('../../supabase/migrations/0055_push_endpoints.sql', import.meta.url), 'utf8')
-    const exact = /array\[([^\]]+)\]/.exec(sql)![1]!.match(/'([^']+)'/g)!.map((x) => x.slice(1, -1))
+    const exact = /array\[([^\]]+)\]/
+      .exec(sql)![1]!
+      .match(/'([^']+)'/g)!
+      .map((x) => x.slice(1, -1))
     expect(exact).toEqual([...PUSH_HOSTS])
     for (const suffix of PUSH_HOST_SUFFIXES) expect(sql).toContain(`${suffix.replaceAll('.', '\\.')}$'`)
   })

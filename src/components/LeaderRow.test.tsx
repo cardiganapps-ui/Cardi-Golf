@@ -13,7 +13,14 @@ import s from './primitives.module.css'
 
 afterEach(() => cleanup())
 
-const BASE: LeaderRowProps = { pos: '4', name: 'Camilo', today: '12', thru: '9', figure: '40', speech: { unit: 'points' } }
+const BASE: LeaderRowProps = {
+  pos: '4',
+  name: 'Camilo',
+  today: '12',
+  thru: '9',
+  figure: '40',
+  speech: { unit: 'points' },
+}
 const row = () => screen.getByRole('button')
 const cell = (cls: string) => row().querySelector<HTMLElement>(`.${cls}`)!
 const washOf = (cls: string) => cell(cls).dataset.wash

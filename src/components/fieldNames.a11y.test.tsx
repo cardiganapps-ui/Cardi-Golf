@@ -131,7 +131,14 @@ describe('«SI» is said as words (A11Y-22)', () => {
   })
 
   it('the player sheet’s card heads its index row in words', () => {
-    const holes: GridHole[] = Array.from({ length: 9 }, (_, i) => ({ n: i + 1, par: 4, si: i + 1, gross: 4, pts: 2, putts: 2 }))
+    const holes: GridHole[] = Array.from({ length: 9 }, (_, i) => ({
+      n: i + 1,
+      par: 4,
+      si: i + 1,
+      gross: 4,
+      pts: 2,
+      putts: 2,
+    }))
     render(<ScorecardGrid holes={holes} playerLabel="Camilo" showPoints showPutts onHole={vi.fn()} />)
     expect(screen.getByRole('rowheader', { name: t.player.siSpoken })).toBeTruthy()
     expect(screen.queryByRole('rowheader', { name: 'SI' })).toBeNull()

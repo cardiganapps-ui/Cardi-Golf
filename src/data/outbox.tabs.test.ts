@@ -13,7 +13,17 @@
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { enterAs, gate, holeScore, installFakePhone, isWrite, OUTBOX_CHANNEL, settle, until, type Outcome } from './testing/fakePhone'
+import {
+  enterAs,
+  gate,
+  holeScore,
+  installFakePhone,
+  isWrite,
+  OUTBOX_CHANNEL,
+  settle,
+  until,
+  type Outcome,
+} from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, startOutbox, useOutbox } = await import('./outbox')

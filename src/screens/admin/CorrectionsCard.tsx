@@ -50,7 +50,12 @@ export function CorrectionsCard({ tournamentId }: { tournamentId: string }) {
               <span className={a.rowTitle}>{r.text}</span>
               <span className={a.rowSub}>{M.requestLine(name(r.playerId), relTime(r.at))}</span>
             </span>
-            <button className="btn btn--secondary btn--sm" type="button" disabled={busy === r.id} onClick={() => void done(r.id)}>
+            <button
+              className="btn btn--secondary btn--sm"
+              type="button"
+              disabled={busy === r.id}
+              onClick={() => void done(r.id)}
+            >
               {M.done}
             </button>
           </div>

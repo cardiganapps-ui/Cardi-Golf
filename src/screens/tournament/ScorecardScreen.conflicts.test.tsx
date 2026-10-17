@@ -52,7 +52,16 @@ function mount(edit: ((s: Snapshot) => void) | null, conflicts: ConflictItem[]) 
   const me = { playerId: CAMILO, isOrganizer: false, isComite: false }
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'viaje', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 'fx-full',
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -103,7 +112,10 @@ describe('an unanswered conflict, once its day is closed (N1)', () => {
   })
 
   it('a phone whose player is in no group of the day: still asked', () => {
-    mount((s) => void (s.groups = s.groups.filter((g) => !(g.roundId === 'r2' && g.playerIds.includes(CAMILO)))), [conflict('r2', 10)])
+    mount(
+      (s) => void (s.groups = s.groups.filter((g) => !(g.roundId === 'r2' && g.playerIds.includes(CAMILO)))),
+      [conflict('r2', 10)],
+    )
     expect(screen.queryByText(S.conflictTitle)).not.toBeNull()
   })
 })

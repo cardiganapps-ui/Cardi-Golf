@@ -77,7 +77,12 @@ describe('one button (VIS-17)', () => {
     expect(stale.map(([f, n]) => `${f}: ${files.includes(f) ? handSpelled(f) : 'gone'} (listed ${n})`)).toEqual([])
   })
   it('leaves every player screen and the shared components with none', () => {
-    const main = Object.keys(STILL).filter((f) => /^(components|app)\//.test(f) || /^screens\/tournament\//.test(f) || /^screens\/(HomeScreen|NotFoundScreen)\.tsx$/.test(f))
+    const main = Object.keys(STILL).filter(
+      (f) =>
+        /^(components|app)\//.test(f) ||
+        /^screens\/tournament\//.test(f) ||
+        /^screens\/(HomeScreen|NotFoundScreen)\.tsx$/.test(f),
+    )
     expect(main).toEqual([])
   })
 })

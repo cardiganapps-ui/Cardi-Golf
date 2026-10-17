@@ -14,7 +14,10 @@ import { t } from '../../i18n/es-MX'
 import { TournamentContext } from '../tournament/tournamentContext'
 
 const audit = vi.hoisted(() => ({ entries: [] as AuditEntry[] }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit: vi.fn(async () => audit.entries) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  tournamentAudit: vi.fn(async () => audit.entries),
+}))
 const { AdminHistory } = await import('./AdminHistory')
 
 const H = t.admin.history
@@ -37,10 +40,23 @@ const entry = (e: Partial<AuditEntry>): AuditEntry => ({
 })
 
 function mount() {
-  useTournament.setState({ tournamentId: 't-history', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-history',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-history',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminHistory />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -53,8 +69,19 @@ describe('Historial reads what 0064 adds (DB-13)', () => {
   it('a first PIN, a new one and an unlock are three different lines', async () => {
     audit.entries = [
       entry({ table: 'player_pins', after: { player_id: ana.id, pin: 'new' } }),
-      entry({ table: 'player_pins', action: 'UPDATE', before: { player_id: beto.id, pin: 'old' }, after: { player_id: beto.id, pin: 'new' } }),
-      entry({ table: 'player_pins', action: 'UPDATE', reason: 'PIN desbloqueado', before: { player_id: ana.id, locked: true }, after: { player_id: ana.id, locked: false } }),
+      entry({
+        table: 'player_pins',
+        action: 'UPDATE',
+        before: { player_id: beto.id, pin: 'old' },
+        after: { player_id: beto.id, pin: 'new' },
+      }),
+      entry({
+        table: 'player_pins',
+        action: 'UPDATE',
+        reason: 'PIN desbloqueado',
+        before: { player_id: ana.id, locked: true },
+        after: { player_id: ana.id, locked: false },
+      }),
     ]
     mount()
     expect(await screen.findByText(H.claim.pinSet(ana.displayName))).toBeTruthy()
@@ -68,7 +95,13 @@ describe('Historial reads what 0064 adds (DB-13)', () => {
   it('the results published, published again and withdrawn, by their counts', async () => {
     audit.entries = [
       entry({ table: 'tournament_results', rowId: 't-history', after: { players: 12, nets: 12 } }),
-      entry({ table: 'tournament_results', rowId: 't-history', action: 'UPDATE', before: { players: 12, nets: 12 }, after: { players: 12, nets: 11 } }),
+      entry({
+        table: 'tournament_results',
+        rowId: 't-history',
+        action: 'UPDATE',
+        before: { players: 12, nets: 12 },
+        after: { players: 12, nets: 11 },
+      }),
       entry({ table: 'tournament_results', rowId: 't-history', action: 'DELETE', before: { players: 12, nets: 11 } }),
     ]
     mount()
@@ -89,7 +122,8 @@ describe('Historial reads what 0064 adds (DB-13)', () => {
     mount()
     await screen.findByText(new RegExp(`^${t.platform.tables.team_members} ${ana.displayName}, `))
     const text = document.body.textContent ?? ''
-    for (const raw of ['teams', 'team_members', 'photos', 'money_adjustments']) expect(text).not.toMatch(new RegExp(`\\b${raw}\\b`))
+    for (const raw of ['teams', 'team_members', 'photos', 'money_adjustments'])
+      expect(text).not.toMatch(new RegExp(`\\b${raw}\\b`))
     expect(text).toContain(`${t.platform.tables.photos} ${beto.displayName}`)
   })
 })

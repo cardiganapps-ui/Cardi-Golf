@@ -42,10 +42,13 @@ const ROOMS: Array<[string, number, number]> = [
 
 async function seriousViolations(page: import('@playwright/test').Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 /** Every amount in pesos the page shows. */
-const pesos = (page: import('@playwright/test').Page) => page.evaluate(() => document.body.innerText.match(/\$\s?[\d,.]+/g) ?? [])
+const pesos = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => document.body.innerText.match(/\$\s?[\d,.]+/g) ?? [])
 /** The link's own address: `/v/_/<fixture>` or `/v/_dinero/<fixture>`. */
 const baseOf = (path: string) => `/v/${path.split('/').slice(0, 2).join('/')}`
 
@@ -76,7 +79,10 @@ for (const [path, money] of PAGES) {
       await page.setViewportSize({ width, height: 852 })
       await open(page, `/v/${path}`)
       expect(pageErrors, 'uncaught errors').toEqual([])
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+        'horizontal scroll (px)',
+      ).toBeLessThanOrEqual(0)
       expect(await seriousViolations(page)).toEqual([])
       if (!money) expect(await pesos(page)).toEqual([])
       // Read-only: no Tarjeta and no Más; Dinero only «Con dinero».
@@ -86,7 +92,9 @@ for (const [path, money] of PAGES) {
       expect(tabs.includes(t.nav.money)).toBe(money)
       // Every address on the page stays on the link: none leads to the tournament's own pages (Entrar, the PIN, the Comité).
       const base = baseOf(path)
-      for (const href of await page.locator('a[href^="/"]').evaluateAll((els) => els.map((a) => a.getAttribute('href')!))) {
+      for (const href of await page
+        .locator('a[href^="/"]')
+        .evaluateAll((els) => els.map((a) => a.getAttribute('href')!))) {
         expect(href === base || href.startsWith(`${base}/`), href).toBe(true)
       }
     })
@@ -99,14 +107,20 @@ for (const [path, width, height] of ROOMS) {
     await page.goto(`/v/${path}`, { waitUntil: 'networkidle' })
     await page.waitForTimeout(500)
     expect(pageErrors, 'uncaught errors').toEqual([])
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      'horizontal scroll (px)',
+    ).toBeLessThanOrEqual(0)
     expect(await seriousViolations(page)).toEqual([])
     expect(await underFloor(page)).toEqual([])
     if (path.startsWith('_/')) expect(await pesos(page)).toEqual([])
   })
 }
 
-test('the TV «Sin dinero»: a turn of the whole rotation, and never a peso or the Calcutta', async ({ page, pageErrors }) => {
+test('the TV «Sin dinero»: a turn of the whole rotation, and never a peso or the Calcutta', async ({
+  page,
+  pageErrors,
+}) => {
   test.setTimeout(120_000)
   await page.clock.install()
   await page.setViewportSize({ width: 1920, height: 1080 })
@@ -114,7 +128,8 @@ test('the TV «Sin dinero»: a turn of the whole rotation, and never a peso or t
   await page.waitForTimeout(500)
   const boards = new Set<string>()
   for (let i = 0; i < 8; i++) {
-    for (const title of await page.locator('section h2').allTextContents()) boards.add(title.replace(/\s*\d+–\d+ de \d+$/, '').trim())
+    for (const title of await page.locator('section h2').allTextContents())
+      boards.add(title.replace(/\s*\d+–\d+ de \d+$/, '').trim())
     expect(await pesos(page), `boards ${[...boards].join(', ')}`).toEqual([])
     await page.clock.runFor(12_000)
     await page.waitForTimeout(300)
@@ -156,11 +171,14 @@ test('Dinero on a link «Sin dinero» leads back to En vivo', async ({ page }) =
   expect(await pesos(page)).toEqual([])
 })
 
-test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage, no install offer, no search engine', async ({ browser }) => {
+test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage, no install offer, no search engine', async ({
+  browser,
+}) => {
   // An iPhone's browser, where the install card would show on a member's En vivo.
   const context = await browser.newContext({
     viewport: { width: 393, height: 852 },
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     isMobile: true,
     hasTouch: true,
   })
@@ -172,7 +190,12 @@ test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage
     asked.push(new URL(r.request().url()).pathname)
     return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
-  for (const path of ['/v/_/full12-live', '/v/_/full12-live/juegos', '/v/_dinero/full12-live/dinero', '/v/_/full12-live/tv']) {
+  for (const path of [
+    '/v/_/full12-live',
+    '/v/_/full12-live/juegos',
+    '/v/_dinero/full12-live/dinero',
+    '/v/_/full12-live/tv',
+  ]) {
     await open(page, path)
     expect(await page.locator('meta[name="robots"]').getAttribute('content'), path).toBe('noindex, nofollow')
   }
@@ -185,18 +208,36 @@ test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage
     session: Object.keys(sessionStorage),
   }))
   expect(kept.databases, 'IndexedDB: the outbox and the boards a member keeps are never opened').toEqual([])
-  expect(kept.local.filter((k) => k.startsWith('cardi-golf')), 'localStorage').toEqual([])
-  expect(kept.session.filter((k) => k.startsWith('cardi-golf')), 'sessionStorage').toEqual([])
+  expect(
+    kept.local.filter((k) => k.startsWith('cardi-golf')),
+    'localStorage',
+  ).toEqual([])
+  expect(
+    kept.session.filter((k) => k.startsWith('cardi-golf')),
+    'sessionStorage',
+  ).toEqual([])
   // No session asked for, so no sign-in, profile or inbox: only the app's switches.
-  expect([...new Set(asked)].filter((p) => !p.endsWith('/rpc/app_flags')), 'requests').toEqual([])
+  expect(
+    [...new Set(asked)].filter((p) => !p.endsWith('/rpc/app_flags')),
+    'requests',
+  ).toEqual([])
   expect(errors).toEqual([])
   await context.close()
 })
 
-test('in a browser that keeps someone’s Polo session, a link asks as anon and leaves that session as it was', async ({ browser }) => {
+test('in a browser that keeps someone’s Polo session, a link asks as anon and leaves that session as it was', async ({
+  browser,
+}) => {
   const context = await browser.newContext({ viewport: { width: 393, height: 852 } })
   // Someone entered Polo in this browser once, and their session has expired: the app's client would refresh it.
-  const session = JSON.stringify({ access_token: 'the-user-jwt', token_type: 'bearer', expires_in: 3600, expires_at: 1, refresh_token: 'the-refresh-token', user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated' } })
+  const session = JSON.stringify({
+    access_token: 'the-user-jwt',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: 1,
+    refresh_token: 'the-refresh-token',
+    user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated' },
+  })
   await context.addInitScript((s) => {
     if (!localStorage.getItem('cardi-golf-auth')) localStorage.setItem('cardi-golf-auth', s)
   }, session)
@@ -206,15 +247,30 @@ test('in a browser that keeps someone’s Polo session, a link asks as anon and 
   const asked: Array<{ path: string; authorization: string | undefined; apikey: string | undefined }> = []
   await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, async (r) => {
     const headers = await r.request().allHeaders()
-    asked.push({ path: new URL(r.request().url()).pathname, authorization: headers.authorization, apikey: headers.apikey })
+    asked.push({
+      path: new URL(r.request().url()).pathname,
+      authorization: headers.authorization,
+      apikey: headers.apikey,
+    })
     return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
-  for (const path of ['/v/_/full12-live', '/V/_/full12-live/juegos', '/v/_dinero/full12-live/dinero/', '/v/_/full12-live/tv']) await open(page, path)
+  for (const path of [
+    '/v/_/full12-live',
+    '/V/_/full12-live/juegos',
+    '/v/_dinero/full12-live/dinero/',
+    '/v/_/full12-live/tv',
+  ])
+    await open(page, path)
   expect(asked.length, 'the app’s switches were asked').toBeGreaterThan(0)
-  expect(asked.filter((a) => a.path.includes('/auth/v1/')), 'no sign-in or token refresh').toEqual([])
+  expect(
+    asked.filter((a) => a.path.includes('/auth/v1/')),
+    'no sign-in or token refresh',
+  ).toEqual([])
   for (const a of asked) expect(a, a.path).toMatchObject({ authorization: `Bearer ${a.apikey}` })
   expect(JSON.stringify(asked)).not.toContain('the-user-jwt')
-  expect(await page.evaluate(() => localStorage.getItem('cardi-golf-auth')), 'the session kept here, untouched').toBe(session)
+  expect(await page.evaluate(() => localStorage.getItem('cardi-golf-auth')), 'the session kept here, untouched').toBe(
+    session,
+  )
   expect(await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name))).toEqual([])
   expect(errors).toEqual([])
   await context.close()

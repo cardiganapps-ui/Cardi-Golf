@@ -37,7 +37,9 @@ for (const [key, entry] of Object.entries(summary)) {
   areas.set(area, sum)
 }
 const pct = (c) => (c.total ? `${((100 * c.covered) / c.total).toFixed(1)}%` : '–')
-const rows = [...areas].sort(([a], [b]) => a.localeCompare(b)).map(([area, sum]) => `| ${area} | ${KINDS.map((k) => pct(sum[k])).join(' | ')} |`)
+const rows = [...areas]
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([area, sum]) => `| ${area} | ${KINDS.map((k) => pct(sum[k])).join(' | ')} |`)
 const total = summary.total
 const md = [
   '### Coverage',

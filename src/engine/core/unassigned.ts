@@ -120,7 +120,18 @@ export interface UnassignedState {
   warnings: Msg[]
 }
 
-export const NO_UNASSIGNED: UnassignedState = { closing: false, openDays: null, buckets: [], total: 0, held: [], heldTotal: 0, assignments: [], awards: [], toHouse: 0, warnings: [] }
+export const NO_UNASSIGNED: UnassignedState = {
+  closing: false,
+  openDays: null,
+  buckets: [],
+  total: 0,
+  held: [],
+  heldTotal: 0,
+  assignments: [],
+  awards: [],
+  toHouse: 0,
+  warnings: [],
+}
 
 export interface UnassignedInput {
   snapshot: Snapshot
@@ -160,14 +171,20 @@ export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'c
       label: msg('unassigned.held', { game: label, day: g.roundNumber, group: g.groupNumber }),
       amount: g.pot,
       note: msg('unassigned.heldNote', { hole: g.pendingHole! }),
-      why: { title: msg('unassigned.heldTitle', { amount: g.pot }), steps: [msg('unassigned.pendingTiebreak', { day: g.roundNumber, group: g.groupNumber, hole: g.pendingHole! }), msg('unassigned.heldWhy', { amount: g.pot, game: label })] },
+      why: {
+        title: msg('unassigned.heldTitle', { amount: g.pot }),
+        steps: [
+          msg('unassigned.pendingTiebreak', { day: g.roundNumber, group: g.groupNumber, hole: g.pendingHole! }),
+          msg('unassigned.heldWhy', { amount: g.pot, game: label }),
+        ],
+      },
     }))
 }
 
 /** A pot line's label as the settings name it: its module's, or its game's. */
 function lineLabel(settings: TournamentSettings, id: string): string {
   if (id.startsWith('game:')) return settings.games.find((g) => `game:${g.id}` === id)?.label ?? id
-  return settings.modules[id as keyof TournamentSettings['modules']]?.label ?? id
+  return (settings.modules as Partial<Record<string, { label: string }>>)[id]?.label ?? id
 }
 
 export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
@@ -179,7 +196,8 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
     if (line && pr.amount > 0) paid.set(line, (paid.get(line) ?? 0) + pr.amount)
   }
   const players = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder)
-  const entries: Contributor[] | undefined = settings.entryFee > 0 ? players.map((p) => ({ playerId: p.id, amount: settings.entryFee })) : undefined
+  const entries: Contributor[] | undefined =
+    settings.entryFee > 0 ? players.map((p) => ({ playerId: p.id, amount: settings.entryFee })) : undefined
   // The snake's groups waiting on a tiebreak: their money is the snake's, not a bucket.
   const held = heldMoney(input).reduce((s, h) => s + h.amount, 0)
   // Days whose money the line budgets but nobody played.
@@ -194,15 +212,40 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   }
 
   const out: UnassignedBucket[] = []
-  const add = (key: string, game: string, potId: string, budget: number, notes: Msg[], contributors?: Contributor[], waiting = 0) => {
+  const add = (
+    key: string,
+    game: string,
+    potId: string,
+    budget: number,
+    notes: Msg[],
+    contributors?: Contributor[],
+    waiting = 0,
+  ) => {
     const given = paid.get(key) ?? 0
     const amount = budget - given - waiting
     if (amount <= 0) return
     // The engine's own word on it («Skins: nadie ganó un skin…»), without its «El Comité decide», said once below.
     const own = warnings.filter((w) => opensWith(w) === game).map((warning) => msg('unassigned.own', { warning }))
     const name = label(game)
-    const steps = [msg('unassigned.budget', { label: name, amount: budget }), msg('unassigned.paid', { amount: given }), ...(waiting > 0 ? [msg('unassigned.heldApart', { amount: waiting })] : []), ...notes, ...own, msg('unassigned.left', { amount }), say('unassigned.decides')]
-    out.push({ key, label: name, potId, amount, assigned: 0, remaining: amount, why: { title: msg('unassigned.title', { amount }), steps }, contributors })
+    const steps = [
+      msg('unassigned.budget', { label: name, amount: budget }),
+      msg('unassigned.paid', { amount: given }),
+      ...(waiting > 0 ? [msg('unassigned.heldApart', { amount: waiting })] : []),
+      ...notes,
+      ...own,
+      msg('unassigned.left', { amount }),
+      say('unassigned.decides'),
+    ]
+    out.push({
+      key,
+      label: name,
+      potId,
+      amount,
+      assigned: 0,
+      remaining: amount,
+      why: { title: msg('unassigned.title', { amount }), steps },
+      contributors,
+    })
   }
 
   // The entries: each module's and main-pot game's line, as the prize check budgets it.
@@ -210,7 +253,15 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
     if (line.moduleId === 'house') continue
     const notes: Msg[] = []
     if (line.moduleId === 'bestRound' || line.moduleId === 'snake') notes.push(...lostDays())
-    add(line.moduleId, lineLabel(settings, line.moduleId), 'main', line.amount, notes, entries, line.moduleId === 'snake' ? held : 0)
+    add(
+      line.moduleId,
+      lineLabel(settings, line.moduleId),
+      'main',
+      line.amount,
+      notes,
+      entries,
+      line.moduleId === 'snake' ? held : 0,
+    )
   }
   // Entries no prize claims (the prize check warns while play goes on).
   if (pool.difference > 0) {
@@ -221,7 +272,14 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
       amount: pool.difference,
       assigned: 0,
       remaining: pool.difference,
-      why: { title: msg('unassigned.title', { amount: pool.difference }), steps: [msg('unassigned.poolSurplus', { entries: pool.entryPot, prizes: pool.prizesTotal }), msg('unassigned.left', { amount: pool.difference }), say('unassigned.decides')] },
+      why: {
+        title: msg('unassigned.title', { amount: pool.difference }),
+        steps: [
+          msg('unassigned.poolSurplus', { entries: pool.entryPot, prizes: pool.prizesTotal }),
+          msg('unassigned.left', { amount: pool.difference }),
+          say('unassigned.decides'),
+        ],
+      },
       contributors: entries,
     })
   }
@@ -229,15 +287,26 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   for (const g of Object.values(games)) {
     if (g.config.money.source !== 'side' || g.pot <= 0) continue
     const buyIn = g.config.money.buyIn
-    add(`game:${g.config.id}`, g.config.label, g.config.id, g.pot, [], g.entrants.map((playerId) => ({ playerId, amount: buyIn })))
+    add(
+      `game:${g.config.id}`,
+      g.config.label,
+      g.config.id,
+      g.pot,
+      [],
+      g.entrants.map((playerId) => ({ playerId, amount: buyIn })),
+    )
   }
   // The Calcutta pot: what each owner paid for his share. After a buyback the player paid
   // his part (to the owner, who paid the bank the whole price), so he is a contributor too.
   if (auction && auction.pot > 0) {
     const owners = new Map<Id, number>()
-    for (const lot of auction.lots) if (lot.status === 'sold') for (const o of lot.owners) owners.set(o.ownerId, (owners.get(o.ownerId) ?? 0) + o.paid)
+    for (const lot of auction.lots)
+      if (lot.status === 'sold')
+        for (const o of lot.owners) owners.set(o.ownerId, (owners.get(o.ownerId) ?? 0) + o.paid)
     const order = new Map(players.map((p, i) => [p.id, i]))
-    const contributors = [...owners].map(([playerId, amount]) => ({ playerId, amount })).sort((a, b) => (order.get(a.playerId) ?? 0) - (order.get(b.playerId) ?? 0))
+    const contributors = [...owners]
+      .map(([playerId, amount]) => ({ playerId, amount }))
+      .sort((a, b) => (order.get(a.playerId) ?? 0) - (order.get(b.playerId) ?? 0))
     add('calcutta', settings.modules.auction.label, 'calcutta', auction.pot, [], contributors)
   }
   return out
@@ -254,9 +323,16 @@ export function proRata(amount: number, contributors: readonly Contributor[]): C
   const total = list.reduce((s, c) => s + c.amount, 0)
   if (amount <= 0 || total <= 0) return []
   // Integer arithmetic: the fraction left over is (amount × c) mod total.
-  const shares = list.map((c) => ({ playerId: c.playerId, amount: Math.floor((amount * c.amount) / total), left: (amount * c.amount) % total, weight: c.amount }))
+  const shares = list.map((c) => ({
+    playerId: c.playerId,
+    amount: Math.floor((amount * c.amount) / total),
+    left: (amount * c.amount) % total,
+    weight: c.amount,
+  }))
   let rest = amount - shares.reduce((s, c) => s + c.amount, 0)
-  const order = shares.map((s, i) => ({ s, i })).sort((a, b) => b.s.left - a.s.left || b.s.weight - a.s.weight || a.i - b.i)
+  const order = shares
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => b.s.left - a.s.left || b.s.weight - a.s.weight || a.i - b.i)
   // Fewer pesos left than contributors: each takes at most one.
   for (let k = 0; rest > 0; k++, rest--) order[k]!.s.amount++
   return shares.filter((s) => s.amount > 0).map(({ playerId, amount: a }) => ({ playerId, amount: a }))
@@ -288,7 +364,7 @@ export function bucketLabel(key: string, settings: TournamentSettings): Msg {
   if (key === 'pool') return say('unassigned.pool')
   if (key === 'calcutta') return label(settings.modules.auction.label)
   if (key.startsWith('game:')) return label(settings.games.find((g) => g.id === key.slice(5))?.label ?? key.slice(5))
-  return label(settings.modules[key as keyof TournamentSettings['modules']]?.label ?? key)
+  return label((settings.modules as Partial<Record<string, { label: string }>>)[key]?.label ?? key)
 }
 
 const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0)
@@ -307,7 +383,9 @@ export function applyAdjustments(
   held: HeldMoney[] = [],
 ): UnassignedState {
   const calls = new Map<string, MoneyAdjustment[]>()
-  for (const a of [...adjustments].filter((x) => !x.voidedAt).sort((x, y) => cmp(x.createdAt, y.createdAt) || cmp(x.callId, y.callId) || cmp(x.id, y.id))) {
+  for (const a of [...adjustments]
+    .filter((x) => !x.voidedAt)
+    .sort((x, y) => cmp(x.createdAt, y.createdAt) || cmp(x.callId, y.callId) || cmp(x.id, y.id))) {
     const list = calls.get(a.callId) ?? []
     list.push(a)
     calls.set(a.callId, list)
@@ -321,7 +399,16 @@ export function applyAdjustments(
     const first = rows[0]!
     const bucket = byKey.get(first.sourceKey)
     const total = rows.reduce((s, r) => s + r.amount, 0)
-    const base = { id: first.id, callId: first.callId, sourceKey: first.sourceKey, label: bucket?.label ?? labelOf(first.sourceKey), rows, total, reason: first.reason, createdAt: first.createdAt }
+    const base = {
+      id: first.id,
+      callId: first.callId,
+      sourceKey: first.sourceKey,
+      label: bucket?.label ?? labelOf(first.sourceKey),
+      rows,
+      total,
+      reason: first.reason,
+      createdAt: first.createdAt,
+    }
     if (!closing) {
       assignments.push({ ...base, status: 'waiting' })
       continue
@@ -351,14 +438,31 @@ export function applyAdjustments(
         playerId: r.toPlayerId,
         amount: r.amount,
         final: true,
-        why: { title: msg('amount', { amount: r.amount }), steps: [msg('unassigned.from', { label: bucket.label, amount: bucket.amount }), msg('unassigned.decided', { reason: r.reason || null })] },
+        why: {
+          title: msg('amount', { amount: r.amount }),
+          steps: [
+            msg('unassigned.from', { label: bucket.label, amount: bucket.amount }),
+            msg('unassigned.decided', { reason: r.reason || null }),
+          ],
+        },
         adjustmentId: r.id,
         sourceKey: r.sourceKey,
       })
     }
   }
   const listed = buckets.filter((b) => b.remaining > 0)
-  return { closing, openDays: null, buckets: listed, total: listed.reduce((s, b) => s + b.remaining, 0), held, heldTotal: held.reduce((s, h) => s + h.amount, 0), assignments, awards, toHouse, warnings }
+  return {
+    closing,
+    openDays: null,
+    buckets: listed,
+    total: listed.reduce((s, b) => s + b.remaining, 0),
+    held,
+    heldTotal: held.reduce((s, h) => s + h.amount, 0),
+    assignments,
+    awards,
+    toHouse,
+    warnings,
+  }
 }
 
 /** The planned days still open or never created (none: play is over, when at least one day exists). */

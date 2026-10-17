@@ -10,7 +10,16 @@ import { t } from '../../i18n/es-MX'
 import { Sheet } from '../../components/ui'
 import { Wordmark } from '../../components/primitives'
 import { IconChevronRight } from '../../components/icons'
-import { badges, records, recapYears, yearRecap, type AchRound, type AchTournament, type Badge, type PersonalRecord } from '../../engine/profile/achievements'
+import {
+  badges,
+  records,
+  recapYears,
+  yearRecap,
+  type AchRound,
+  type AchTournament,
+  type Badge,
+  type PersonalRecord,
+} from '../../engine/profile/achievements'
 import { shareCard } from '../../components/shareAction'
 import styles from './Profile.module.css'
 
@@ -24,7 +33,10 @@ export function BadgesSection({ rounds, tournaments }: { rounds: AchRound[]; tou
   const [open, setOpen] = useState<Badge | null>(null)
   const earned = list.filter((b) => b.earned)
   // Earned first (newest first), then the ones still to get in catalog order.
-  const shown = [...earned.sort((a, b) => (b.unlockedAt ?? '').localeCompare(a.unlockedAt ?? '')), ...list.filter((b) => !b.earned)]
+  const shown = [
+    ...earned.sort((a, b) => (b.unlockedAt ?? '').localeCompare(a.unlockedAt ?? '')),
+    ...list.filter((b) => !b.earned),
+  ]
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
@@ -33,7 +45,12 @@ export function BadgesSection({ rounds, tournaments }: { rounds: AchRound[]; tou
       </div>
       <div className={styles.awards}>
         {shown.map((b) => (
-          <button key={b.id} type="button" className={`${styles.award} ${b.earned ? styles.awardOn : ''}`} onClick={() => setOpen(b)}>
+          <button
+            key={b.id}
+            type="button"
+            className={`${styles.award} ${b.earned ? styles.awardOn : ''}`}
+            onClick={() => setOpen(b)}
+          >
             {A.badge[b.id]!.name}
           </button>
         ))}
@@ -42,7 +59,9 @@ export function BadgesSection({ rounds, tournaments }: { rounds: AchRound[]; tou
         {open && (
           <div className="stack">
             <p>{A.badge[open.id]!.how}</p>
-            <p className={styles.help}>{open.earned ? (open.unlockedAt ? A.earnedOn(fmtDate(open.unlockedAt)!) : A.earned) : A.locked}</p>
+            <p className={styles.help}>
+              {open.earned ? (open.unlockedAt ? A.earnedOn(fmtDate(open.unlockedAt)!) : A.earned) : A.locked}
+            </p>
             {open.earned && open.slug && (
               <Link className="btn btn--secondary" to={`/t/${open.slug}`}>
                 {t.profile.tournaments}
@@ -68,7 +87,15 @@ function recordValue(r: PersonalRecord): string {
   }
 }
 
-export function RecordsSection({ rounds, tournaments, onRound }: { rounds: AchRound[]; tournaments: AchTournament[]; onRound: (roundId: string) => void }) {
+export function RecordsSection({
+  rounds,
+  tournaments,
+  onRound,
+}: {
+  rounds: AchRound[]
+  tournaments: AchTournament[]
+  onRound: (roundId: string) => void
+}) {
   const list = useMemo(() => records(rounds, tournaments), [rounds, tournaments])
   return (
     <section className={styles.section}>
@@ -107,7 +134,19 @@ export function RecordsSection({ rounds, tournaments, onRound }: { rounds: AchRo
 }
 
 /** "Compartir mi 2026": a share image of the year; offered to the owner. */
-export function RecapButton({ name, handle, rounds, tournaments, now = new Date() }: { name: string; handle: string; rounds: AchRound[]; tournaments: AchTournament[]; now?: Date }) {
+export function RecapButton({
+  name,
+  handle,
+  rounds,
+  tournaments,
+  now = new Date(),
+}: {
+  name: string
+  handle: string
+  rounds: AchRound[]
+  tournaments: AchTournament[]
+  now?: Date
+}) {
   const years = useMemo(() => recapYears(rounds, tournaments), [rounds, tournaments])
   const year = years.includes(now.getFullYear()) ? now.getFullYear() : years[0]
   const recap = useMemo(() => (year ? yearRecap(rounds, tournaments, year) : null), [rounds, tournaments, year])
@@ -176,7 +215,14 @@ export function RecapCard({ name, recap }: { name: string; recap: ReturnType<typ
         ))}
       </div>
       {(recap.favoriteCourse || recap.courses > 0) && (
-        <p className={styles.help}>{[recap.courses > 0 ? `${A.recapCourses}: ${recap.courses}` : null, recap.favoriteCourse ? A.recapFavorite(recap.favoriteCourse) : null].filter(Boolean).join('. ')}</p>
+        <p className={styles.help}>
+          {[
+            recap.courses > 0 ? `${A.recapCourses}: ${recap.courses}` : null,
+            recap.favoriteCourse ? A.recapFavorite(recap.favoriteCourse) : null,
+          ]
+            .filter(Boolean)
+            .join('. ')}
+        </p>
       )}
       {recap.badges.length > 0 && (
         <div className="stack">

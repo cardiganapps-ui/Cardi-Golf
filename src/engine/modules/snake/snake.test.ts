@@ -9,7 +9,12 @@ const S = FIRST_TOURNAMENT_SETTINGS
 /** 4 players, 1 round, one group; every hole entered with `putts` per player per hole. */
 function groupRound(startHole = 1, puttsFor: (pid: string, hole: number) => number = () => 2): Snapshot {
   const players = ['A', 'B', 'C', 'D'].map((n, i) => makePlayer(i + 1, { id: n, displayName: n }))
-  const snap = makeSnapshot({ players, rounds: 1, settings: S, groups: [makeGroup('r1', 1, ['A', 'B', 'C', 'D'], startHole)] })
+  const snap = makeSnapshot({
+    players,
+    rounds: 1,
+    settings: S,
+    groups: [makeGroup('r1', 1, ['A', 'B', 'C', 'D'], startHole)],
+  })
   for (const p of players) {
     for (let h = 1; h <= 18; h++) {
       snap.scores.push(score('r1', p.id, h, 5, puttsFor(p.id, h)))
@@ -62,7 +67,9 @@ describe('La Víbora', () => {
     expect(g.pendingHole).toBe(7)
     expect(g.holderId).toBeNull()
     expect(g.payouts).toEqual({})
-    expect(state.flags.pendingSnakeTiebreaks).toEqual([{ roundId: 'r1', groupId: 'r1g1', hole: 7, candidates: ['C', 'D'] }])
+    expect(state.flags.pendingSnakeTiebreaks).toEqual([
+      { roundId: 'r1', groupId: 'r1g1', hole: 7, candidates: ['C', 'D'] },
+    ])
     expect(state.prizes.filter((p) => p.moduleId === 'snake')).toHaveLength(0)
   })
 

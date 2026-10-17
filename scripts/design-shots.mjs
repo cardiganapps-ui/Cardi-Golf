@@ -41,8 +41,14 @@ async function newPage(viewport, { relay = false, storage = {} } = {}) {
       try {
         const headers = { ...req.headers() }
         delete headers['content-length']
-        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer() })
+        const data = req.postDataBuffer()
+        const res = await fetch(req.url(), {
+          method: req.method(),
+          headers,
+          body: ['GET', 'HEAD'].includes(req.method()) || !data ? undefined : new Uint8Array(data),
+        })
         const body = Buffer.from(await res.arrayBuffer())
+        /** @type {Record<string, string>} */
         const h = {}
         res.headers.forEach((v, k) => {
           if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k)) h[k] = v
@@ -71,15 +77,44 @@ async function shot(p, name, { full = true } = {}) {
   const file = `${name}.jpg`
   await settle(p)
   // Full page, but capped so 60-player lists do not produce 10,000-px images.
-  const height = full ? Math.min(await p.evaluate(() => document.documentElement.scrollHeight), MAX_H) : p.viewportSize().height
-  await p.screenshot({ path: path.join(out, file), fullPage: full, clip: { x: 0, y: 0, width: p.viewportSize().width, height }, type: 'jpeg', quality: 75 })
+  const height = full
+    ? Math.min(await p.evaluate(() => document.documentElement.scrollHeight), MAX_H)
+    : p.viewportSize().height
+  await p.screenshot({
+    path: path.join(out, file),
+    fullPage: full,
+    clip: { x: 0, y: 0, width: p.viewportSize().width, height },
+    type: 'jpeg',
+    quality: 75,
+  })
   index.push(file)
   console.log('  ', file)
 }
 
-const FIXTURES = ['minimal4-setup', 'minimal4-live', 'full12-live', 'full12-finished', 'pairs8', 'friends8', 'large60', 'longnames']
+const FIXTURES = [
+  'minimal4-setup',
+  'minimal4-live',
+  'full12-live',
+  'full12-finished',
+  'pairs8',
+  'friends8',
+  'large60',
+  'longnames',
+]
 const ADMIN_ON = ['full12-live', 'friends8', 'large60', 'longnames']
-const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps', 'scores', 'calcutta', 'parejas', 'juegos', 'datos']
+const ADMIN = [
+  'torneo',
+  'jugadores',
+  'campos',
+  'rondas',
+  'grupos',
+  'handicaps',
+  'scores',
+  'calcutta',
+  'parejas',
+  'juegos',
+  'datos',
+]
 
 // ---- Fixture screens (phone) ----
 {
@@ -229,7 +264,10 @@ if (!process.env.SKIP_REAL) {
   await p.context().close()
 
   // Home with a remembered tournament.
-  const p2 = await newPage(PHONE, { relay: true, storage: { 'cardi-golf:last-tournament': JSON.stringify({ slug: 'ensayo', name: 'Ensayo, Nacho Invitational' }) } })
+  const p2 = await newPage(PHONE, {
+    relay: true,
+    storage: { 'cardi-golf:last-tournament': JSON.stringify({ slug: 'ensayo', name: 'Ensayo, Nacho Invitational' }) },
+  })
   await p2.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
   await p2.waitForTimeout(1200)
   await shot(p2, `home--returning`)

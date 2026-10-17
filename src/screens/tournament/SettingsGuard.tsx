@@ -33,7 +33,6 @@ export function OutdatedNotice({ detail, body = t.outdated.body }: { detail?: st
       </h1>
       <p>{body}</p>
       <Button
-       
         variant="primary"
         disabled={busy}
         aria-busy={busy || undefined}

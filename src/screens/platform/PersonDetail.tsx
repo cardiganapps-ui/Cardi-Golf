@@ -59,19 +59,47 @@ export function PersonDetail() {
       {H.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
-  if (asking) return <>{back}<ViewReasonForm kind="person" onOpen={load} /></>
+  if (error)
+    return (
+      <>
+        {back}
+        <ErrorBox error={error} onRetry={() => void load()} />
+      </>
+    )
+  if (asking)
+    return (
+      <>
+        {back}
+        <ViewReasonForm kind="person" onOpen={load} />
+      </>
+    )
   if (p === undefined) return <Spinner rows={6} />
-  if (p === null) return <>{back}<p className={s.help}>{H.notFound}</p></>
+  if (p === null)
+    return (
+      <>
+        {back}
+        <p className={s.help}>{H.notFound}</p>
+      </>
+    )
 
-  const name = p.anonymous ? H.phone : personName({ displayName: p.profile?.displayName ?? null, email: p.email, devicePlayer: null })
+  const name = p.anonymous
+    ? H.phone
+    : personName({ displayName: p.profile?.displayName ?? null, email: p.email, devicePlayer: null })
   const locked = !!p.deviceLock || p.playerLocks.length > 0
   const actionable = !p.isSelf && !p.isAdmin
   const pr = p.profile
   // «Lo que hizo el admin»: the person's own steps (his download, 0070) share the log but are not the admin's.
   const adminActivity = p.activity.filter((x) => !x.action.startsWith('self_'))
   const profileLine = pr
-    ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(formatIndex(pr.index)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(', ')
+    ? [
+        pr.fullName !== pr.displayName ? pr.fullName : null,
+        pr.homeClub,
+        pr.city,
+        pr.index != null ? H.index(formatIndex(pr.index)) : null,
+        pr.discoverable ? null : H.hidden,
+      ]
+        .filter(Boolean)
+        .join(', ')
     : ''
 
   return (
@@ -82,7 +110,9 @@ export function PersonDetail() {
           <Avatar name={name} url={p.profile?.avatarUrl} size="lg" />
           <div className={s.rowText}>
             <h2>{name}</h2>
-            <span className={s.help}>{[p.profile ? `@${p.profile.handle}` : null, p.profile ? p.email : null].filter(Boolean).join(', ')}</span>
+            <span className={s.help}>
+              {[p.profile ? `@${p.profile.handle}` : null, p.profile ? p.email : null].filter(Boolean).join(', ')}
+            </span>
           </div>
         </div>
         <span className={s.chips}>
@@ -92,7 +122,11 @@ export function PersonDetail() {
           {p.isSelf && <span className={s.flag}>{H.chips.you}</span>}
         </span>
         <span className={s.help}>
-          {[H.joined(relTime(p.createdAt)), p.lastSignInAt ? H.lastSeen(relTime(p.lastSignInAt)) : H.neverSeen, !p.anonymous && !p.confirmedAt ? H.unconfirmed : null]
+          {[
+            H.joined(relTime(p.createdAt)),
+            p.lastSignInAt ? H.lastSeen(relTime(p.lastSignInAt)) : H.neverSeen,
+            !p.anonymous && !p.confirmedAt ? H.unconfirmed : null,
+          ]
             .filter(Boolean)
             .join(', ')}
         </span>
@@ -128,12 +162,22 @@ export function PersonDetail() {
                   <span className={s.rowText}>
                     <span className={s.rowTitle}>{x.name}</span>
                     <span className={s.rowSub}>
-                      {H.tournamentLine(x.role ? H.role[x.role]! : null, x.link ? H.link[x.link]! : null, x.playerName) || t.platform.status[x.status]}
+                      {H.tournamentLine(
+                        x.role ? H.role[x.role]! : null,
+                        x.link ? H.link[x.link]! : null,
+                        x.playerName,
+                      ) || t.platform.status[x.status]}
                     </span>
                   </span>
                 </Link>
                 {(x.link === 'confirmed' || x.link === 'pending') && x.playerId && (
-                  <Button variant="danger" size="sm" onClick={() => setPending({ kind: 'unlink', playerId: x.playerId!, label: H.playerIn(x.playerName, x.name) })}>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() =>
+                      setPending({ kind: 'unlink', playerId: x.playerId!, label: H.playerIn(x.playerName, x.name) })
+                    }
+                  >
                     {H.unlink}
                   </Button>
                 )}
@@ -176,7 +220,12 @@ export function PersonDetail() {
             {p.deviceLock && (
               <div className={s.row}>
                 <span className={s.rowText}>
-                  <span className={s.rowTitle}>{H.deviceLock(p.deviceLock.failed, p.deviceLock.lockedUntil ? clock(p.deviceLock.lockedUntil) : null)}</span>
+                  <span className={s.rowTitle}>
+                    {H.deviceLock(
+                      p.deviceLock.failed,
+                      p.deviceLock.lockedUntil ? clock(p.deviceLock.lockedUntil) : null,
+                    )}
+                  </span>
                 </span>
                 <Button size="sm" onClick={() => setPending({ kind: 'lock', userId: p.id })}>
                   {H.clearLock}
@@ -186,7 +235,9 @@ export function PersonDetail() {
             {p.playerLocks.map((l) => (
               <div key={l.playerId} className={s.row}>
                 <span className={s.rowText}>
-                  <span className={s.rowTitle}>{H.playerLock(l.name, l.tournament, l.lockedUntil ? clock(l.lockedUntil) : null)}</span>
+                  <span className={s.rowTitle}>
+                    {H.playerLock(l.name, l.tournament, l.lockedUntil ? clock(l.lockedUntil) : null)}
+                  </span>
                 </span>
                 <Button size="sm" onClick={() => setPending({ kind: 'lock', playerId: l.playerId })}>
                   {H.clearLock}
@@ -206,9 +257,7 @@ export function PersonDetail() {
         ) : (
           <div className={s.actions}>
             {p.blocked ? (
-              <Button onClick={() => setPending({ kind: 'unblock' })}>
-                {H.unblock}
-              </Button>
+              <Button onClick={() => setPending({ kind: 'unblock' })}>{H.unblock}</Button>
             ) : (
               <Button variant="danger" onClick={() => setPending({ kind: 'block' })}>
                 {H.block}
@@ -287,11 +336,13 @@ export function PersonDetail() {
         confirmLabel={H.unlink}
         busy={busy}
         onClose={() => setPending(null)}
-        onConfirm={async () => {
-          if (pending?.kind !== 'unlink') return
-          const playerId = pending.playerId
-          if (await run(() => api.unlinkPlayer(playerId), { done: H.unlinked })) setPending(null)
-        }}
+        onConfirm={() =>
+          void (async () => {
+            if (pending?.kind !== 'unlink') return
+            const playerId = pending.playerId
+            if (await run(() => api.unlinkPlayer(playerId), { done: H.unlinked })) setPending(null)
+          })()
+        }
       />
       <DeleteAccountSheet
         open={pending?.kind === 'delete'}
@@ -313,7 +364,19 @@ export function PersonDetail() {
  * Delete, the Cardigan way: say exactly what goes, make them type the
  * email (a phone: BORRAR), ask why, and offer blocking as the way out.
  */
-function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }: { open: boolean; person: Person; onClose: () => void; onBlockInstead: () => void; onDeleted: () => void }) {
+function DeleteAccountSheet({
+  open,
+  person,
+  onClose,
+  onBlockInstead,
+  onDeleted,
+}: {
+  open: boolean
+  person: Person
+  onClose: () => void
+  onBlockInstead: () => void
+  onDeleted: () => void
+}) {
   const api = usePlatformApi()
   const [preview, setPreview] = useState<DeletePreview | null>(null)
   const [confirm, setConfirm] = useState('')
@@ -326,11 +389,13 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
     setReason('')
     setError(null)
     setPreview(null)
-    api.deletePreview(person.id).then(setPreview, (e) => setError(humanError(e)))
+    api.deletePreview(person.id).then(setPreview, (e: unknown) => setError(humanError(e)))
   }, [open, api, person.id])
 
   const word = person.email ?? 'BORRAR'
-  const matches = person.email ? confirm.trim().toLowerCase() === person.email.toLowerCase() : confirm.trim().toUpperCase() === 'BORRAR'
+  const matches = person.email
+    ? confirm.trim().toLowerCase() === person.email.toLowerCase()
+    : confirm.trim().toUpperCase() === 'BORRAR'
   const ready = matches && reason.trim().length >= 3 && !!preview
 
   async function go() {
@@ -351,8 +416,12 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
     ? [
         preview.orphaned.length ? H.deleteOrphaned(t.common.andList(preview.orphaned.map((x) => x.name))) : null,
         preview.organizerOf > preview.orphaned.length ? H.deleteOrganizer(preview.organizerOf) : null,
-        preview.anonymizedPlayers ? H.deleteAnonymized(preview.anonymizedPlayers, t.common.andList(preview.anonymizedIn ?? [])) : null,
-        preview.linkedPlayers - (preview.anonymizedPlayers ?? 0) > 0 ? H.deletePlayers(preview.linkedPlayers - (preview.anonymizedPlayers ?? 0)) : null,
+        preview.anonymizedPlayers
+          ? H.deleteAnonymized(preview.anonymizedPlayers, t.common.andList(preview.anonymizedIn ?? []))
+          : null,
+        preview.linkedPlayers - (preview.anonymizedPlayers ?? 0) > 0
+          ? H.deletePlayers(preview.linkedPlayers - (preview.anonymizedPlayers ?? 0))
+          : null,
         preview.crewsHanded.length ? H.deleteCrewsHanded(t.common.andList(preview.crewsHanded)) : null,
         preview.crewsDeleted.length ? H.deleteCrewsDeleted(t.common.andList(preview.crewsDeleted)) : null,
         preview.friendships || preview.rivalries ? H.deleteSocial(preview.friendships, preview.rivalries) : null,
@@ -374,16 +443,25 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
           </ul>
         )}
         <Field label={person.email ? H.deleteConfirmEmail(word) : H.deleteConfirmWord}>
-          <Input value={confirm} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={(e) => setConfirm(e.target.value)} />
+          <Input
+            value={confirm}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
         </Field>
         <Field label={t.platform.reason} error={error}>
-          <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+          <Input
+            value={reason}
+            maxLength={200}
+            placeholder={t.platform.reasonPlaceholder}
+            onChange={(e) => setReason(e.target.value)}
+          />
         </Field>
         <div className={s.actions}>
           {!person.blocked && (
             <Button
-              
-             
               disabled={busy}
               onClick={() => {
                 onClose()

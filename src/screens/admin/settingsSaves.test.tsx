@@ -14,7 +14,10 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const net = vi.hoisted(() => ({ client: null as SupabaseClient | null }))
-vi.mock('../../lib/supabase', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/supabase')>()), supabase: () => net.client! }))
+vi.mock('../../lib/supabase', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/supabase')>()),
+  supabase: () => net.client!,
+}))
 
 import { updateSettings } from '../../data/api'
 import type { Row } from '../../data/mappers'
@@ -42,21 +45,50 @@ function world(name: string, edit: (s: Snapshot) => void = () => undefined) {
   edit(snap)
   const tr = snap.tournament
   server = fakeSupabase({})
-  server.seed('tournaments', [{ id: tr.id, slug: tr.slug, name: tr.name, tagline: tr.tagline ?? null, accent_color: tr.accentColor ?? null, join_code: 'ENSAYO', status: tr.status, settings: structuredClone(tr.settings) }])
+  server.seed('tournaments', [
+    {
+      id: tr.id,
+      slug: tr.slug,
+      name: tr.name,
+      tagline: tr.tagline ?? null,
+      accent_color: tr.accentColor ?? null,
+      join_code: 'ENSAYO',
+      status: tr.status,
+      settings: structuredClone(tr.settings),
+    },
+  ])
   server.seed('tournament_organizers', [{ tournament_id: tr.id, auth_user_id: 'uid-org', role: 'owner' }])
   net.client = createClient(server.url, server.anonKey, {
     // A key of its own per world: one GoTrue client per storage key.
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `settings-saves-${++worlds}` },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: `settings-saves-${++worlds}`,
+    },
     global: { fetch: server.fetch, headers: { Authorization: `Bearer ${server.auth.sessionFor('uid-org')}` } },
   })
   // What a fetch brings: the tournament's row as the server holds it.
   const reload = vi.fn(async () => {
     const r = row()
     const next = structuredClone(useTournament.getState().data!.base)
-    next.tournament = { ...next.tournament, name: r.name as string, tagline: (r.tagline as string | null) ?? null, accentColor: (r.accent_color as string | null) ?? null, settings: structuredClone(r.settings) }
+    next.tournament = {
+      ...next.tournament,
+      name: r.name as string,
+      tagline: (r.tagline as string | null) ?? null,
+      accentColor: (r.accent_color as string | null) ?? null,
+      settings: structuredClone(r.settings),
+    }
     useTournament.setState({ data: dataFromSnapshot(next) })
   })
-  useTournament.setState({ tournamentId: tr.id, data: dataFromSnapshot(structuredClone(snap)), reload, loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: tr.id,
+    data: dataFromSnapshot(structuredClone(snap)),
+    reload,
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   return { fx, reload }
 }
 const row = (): Row => server.tables.tournaments!.find((r) => r.id === snap.tournament.id)!
@@ -73,7 +105,16 @@ const stored = () => row().settings as Stored
 function mount(fx: ReturnType<typeof world>['fx'], screenEl: React.ReactNode) {
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: snap.tournament.slug,
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         {screenEl}
         <Toaster />
       </TournamentContext.Provider>
@@ -87,7 +128,12 @@ const saveButton = () => screen.getByRole('button', { name: t.common.save }) as 
 /** Another phone of the Comité saves, from the row as it is now. */
 async function otherPhone(set: { settings?: Record<string, unknown>; name?: string }) {
   const r = row()
-  const seen = { ...(set.settings ? { settings: Object.fromEntries(Object.keys(set.settings).map((k) => [k, stored()[k] ?? null])) } : {}), ...(set.name ? { name: r.name as string } : {}) }
+  const seen = {
+    ...(set.settings
+      ? { settings: Object.fromEntries(Object.keys(set.settings).map((k) => [k, stored()[k] ?? null])) }
+      : {}),
+    ...(set.name ? { name: r.name as string } : {}),
+  }
   await updateSettings(snap.tournament.id, seen, set)
 }
 
@@ -200,7 +246,7 @@ describe('the prize check never assumes a field of 12 (ARCH-13, UX-16)', () => {
 
 describe('Juegos writes only the games (ARCH-13)', () => {
   /** A game's card on Juegos, by its title. */
-  const section = (label: string) => screen.getByText(label).closest('section') as HTMLElement
+  const section = (label: string) => screen.getByText(label).closest('section')!
 
   it('an entry changed on another phone stays when a game changes here', async () => {
     const { fx, reload } = world('friends8')

@@ -36,10 +36,25 @@ function tarjeta(edit?: (s: Snapshot) => void) {
   const fx = getFixture('stroke8')!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:stroke8', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:stroke8',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/stroke8', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/stroke8',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -47,7 +62,16 @@ function tarjeta(edit?: (s: Snapshot) => void) {
 }
 const gross = (s: Snapshot) => {
   const st = s.tournament.settings as TournamentSettings
-  s.tournament.settings = { ...st, modules: { ...st.modules, individual: { ...st.modules.individual, formatOptions: { ...st.modules.individual.formatOptions, scoring: 'gross' } } } }
+  s.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      individual: {
+        ...st.modules.individual,
+        formatOptions: { ...st.modules.individual.formatOptions, scoring: 'gross' },
+      },
+    },
+  }
 }
 /** A player's line on the hole: what the hole is called, and whether it is highlighted. */
 function holeLine(player: string) {
@@ -67,7 +91,9 @@ function showGrid() {
   const players = Array.from(rows[0]!.children).map((c) => c.textContent)
   /** A player's cell in the row for a hole («5») or a subtotal («Ida»): its big figure and the small one beside it. */
   const cell = (row: string, player: string) => {
-    const tr = rows.find((r) => (/^\d+$/.test(row) ? r.firstElementChild?.textContent === row : r.firstElementChild?.textContent?.startsWith(row)))!
+    const tr = rows.find((r) =>
+      /^\d+$/.test(row) ? r.firstElementChild?.textContent === row : r.firstElementChild?.textContent?.startsWith(row),
+    )!
     const box = tr.children[players.indexOf(player)]!.querySelector('[class*="_cell_"]')!
     return [visible(box.firstElementChild!), visible(box.querySelector('[class*="cellPts"]')!)]
   }

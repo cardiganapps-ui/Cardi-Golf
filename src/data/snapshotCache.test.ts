@@ -7,12 +7,25 @@
 import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture, type Fixture } from '../dev/fixtures'
-import { clearCached, clearCachedSlug, clearPinEntriesExcept, hasCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
+import {
+  clearCached,
+  clearCachedSlug,
+  clearPinEntriesExcept,
+  hasCached,
+  readCached,
+  saveEntry,
+  saveSnapshot,
+} from './snapshotCache'
 import { dataFromSnapshot } from './tournamentStore'
 
 const live = getFixture('full12-live')!
 const small = getFixture('minimal4-live')!
-const entryOf = (fx: Fixture) => ({ slug: fx.snapshot.tournament.slug, tournamentId: fx.snapshot.tournament.id, lookup: fx.lookup, me: fx.me })
+const entryOf = (fx: Fixture) => ({
+  slug: fx.snapshot.tournament.slug,
+  tournamentId: fx.snapshot.tournament.id,
+  lookup: fx.lookup,
+  me: fx.me,
+})
 const at = (ms: number) => vi.spyOn(Date, 'now').mockReturnValue(ms)
 
 afterEach(() => {
@@ -63,7 +76,9 @@ describe('the copy on the phone (audit P0-5)', () => {
       await saveSnapshot(fx.snapshot.tournament.id, fx.snapshot)
     }
     expect((await readCached(live.snapshot.tournament.slug))!.snapshot.tournament.id).toBe(live.snapshot.tournament.id)
-    expect((await readCached(small.snapshot.tournament.slug))!.snapshot.tournament.id).toBe(small.snapshot.tournament.id)
+    expect((await readCached(small.snapshot.tournament.slug))!.snapshot.tournament.id).toBe(
+      small.snapshot.tournament.id,
+    )
   })
 
   it('nothing to show for a slug never opened, or opened but never loaded', async () => {
@@ -126,7 +141,9 @@ describe('the copy on the phone (audit P0-5)', () => {
     await expect(saveSnapshot(small.snapshot.tournament.id, newer)).resolves.toBeUndefined()
     await expect(saveEntry({ ...entryOf(small), slug: 'tampoco' })).resolves.toBeUndefined()
     vi.restoreAllMocks()
-    expect((await readCached(small.snapshot.tournament.slug))!.snapshot.tournament.name).toBe(small.snapshot.tournament.name)
+    expect((await readCached(small.snapshot.tournament.slug))!.snapshot.tournament.name).toBe(
+      small.snapshot.tournament.name,
+    )
   })
 
   it('a storage that fails to read gives nothing to show instead of an error', async () => {
@@ -156,7 +173,12 @@ describe('a PIN taken for another player forgets the tournaments held only by PI
       tournamentId,
       me: { ...small.me, via, isOrganizer },
     })
-    const entries = [as('por-pin', 't-por-pin', 'device'), as('por-cuenta', 't-por-cuenta', 'profile'), as('comite', 't-comite', 'device', true), as('aqui', 't-aqui', 'device')]
+    const entries = [
+      as('por-pin', 't-por-pin', 'device'),
+      as('por-cuenta', 't-por-cuenta', 'profile'),
+      as('comite', 't-comite', 'device', true),
+      as('aqui', 't-aqui', 'device'),
+    ]
     for (const e of entries) {
       await saveEntry(e)
       await saveSnapshot(e.tournamentId, small.snapshot)

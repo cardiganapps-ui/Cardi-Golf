@@ -21,10 +21,25 @@ function matchBoard(edit?: (s: Snapshot) => void) {
   const fx = getFixture('match8')!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:match8', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:match8',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/match8', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/match8',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <GamesScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -32,12 +47,22 @@ function matchBoard(edit?: (s: Snapshot) => void) {
   fireEvent.click(screen.getByRole('button', { name: /^Match play/ }))
 }
 /** The day line under a player's row on the board. */
-const dayOf = (name: string) => within(screen.getByRole('button', { name: new RegExp(`, ${name}, `) })).getByText(/^Día 1 /).textContent
+const dayOf = (name: string) =>
+  within(screen.getByRole('button', { name: new RegExp(`, ${name}, `) })).getByText(/^Día 1 /).textContent
 
 /** Match play without handicaps: club against club. */
 const gross = (s: Snapshot) => {
   const st = s.tournament.settings as TournamentSettings
-  s.tournament.settings = { ...st, modules: { ...st.modules, individual: { ...st.modules.individual, formatOptions: { ...st.modules.individual.formatOptions, scoring: 'gross' } } } }
+  s.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      individual: {
+        ...st.modules.individual,
+        formatOptions: { ...st.modules.individual.formatOptions, scoring: 'gross' },
+      },
+    },
+  }
 }
 const PARS = PAR_72.map(([par]) => par)
 /** One player's whole card: his gross on each hole. */
@@ -60,9 +85,18 @@ describe('Juegos under match play (STRAT-03)', () => {
     // Gross: Gael H. and Julián halve every hole until Gael H. bogeys the 18th.
     matchBoard((s) => {
       gross(s)
-      s.groups = [makeGroup('r1', 1, ['p1', 'p2'], 1), makeGroup('r1', 2, ['p3', 'p6'], 1), makeGroup('r1', 3, ['p4', 'p5'], 1), makeGroup('r1', 4, ['p7', 'p8'], 1)]
+      s.groups = [
+        makeGroup('r1', 1, ['p1', 'p2'], 1),
+        makeGroup('r1', 2, ['p3', 'p6'], 1),
+        makeGroup('r1', 3, ['p4', 'p5'], 1),
+        makeGroup('r1', 4, ['p7', 'p8'], 1),
+      ]
       card(s, 'p6', PARS)
-      card(s, 'p3', PARS.map((par, i) => (i === 17 ? par + 1 : par)))
+      card(
+        s,
+        'p3',
+        PARS.map((par, i) => (i === 17 ? par + 1 : par)),
+      )
     })
     expect(dayOf('Julián')).toBe('Día 1 ganó 1 arriba')
     expect(dayOf('Gael H.')).toBe('Día 1 perdió 1 abajo')
@@ -82,8 +116,16 @@ describe('a match off the 10th tee (a bug older than STRAT-03)', () => {
     // Gross, Gael H. against Hugo I. off the 10th: Gael H. wins the 10th to the 18th and the 1st, Hugo I. the 2nd to the 9th.
     matchBoard((s) => {
       gross(s)
-      card(s, 'p3', PARS.map((par, i) => (i >= 1 && i <= 8 ? par + 1 : par)))
-      card(s, 'p4', PARS.map((par, i) => (i >= 1 && i <= 8 ? par : par + 1)))
+      card(
+        s,
+        'p3',
+        PARS.map((par, i) => (i >= 1 && i <= 8 ? par + 1 : par)),
+      )
+      card(
+        s,
+        'p4',
+        PARS.map((par, i) => (i >= 1 && i <= 8 ? par : par + 1)),
+      )
     })
     expect(dayOf('Gael H.')).toBe('Día 1 ganó 10&8')
   })

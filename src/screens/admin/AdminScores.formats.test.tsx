@@ -23,10 +23,25 @@ function adminCard(edit?: (s: Snapshot) => void) {
   const fx = getFixture('stroke8')!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:stroke8', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:stroke8',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/stroke8', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/stroke8',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminScores />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -34,12 +49,24 @@ function adminCard(edit?: (s: Snapshot) => void) {
   return {
     summary: document.querySelector('[class*="_summary_"] [class*="rowTitle"]')?.textContent,
     /** Each hole tile's first small line: its points or its par. */
-    tiles: Array.from(document.querySelectorAll('[class*="_holes_"] button')).map((b) => b.querySelector('[class*="holeSub"]')?.textContent),
+    tiles: Array.from(document.querySelectorAll('[class*="_holes_"] button')).map(
+      (b) => b.querySelector('[class*="holeSub"]')?.textContent,
+    ),
   }
 }
 function playAs(s: Snapshot, format: Individual['format'], options: Partial<Individual['formatOptions']> = {}) {
   const st = s.tournament.settings as TournamentSettings
-  s.tournament.settings = { ...st, modules: { ...st.modules, individual: { ...st.modules.individual, format, formatOptions: { ...st.modules.individual.formatOptions, ...options } } } }
+  s.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      individual: {
+        ...st.modules.individual,
+        format,
+        formatOptions: { ...st.modules.individual.formatOptions, ...options },
+      },
+    },
+  }
 }
 
 afterEach(() => cleanup())

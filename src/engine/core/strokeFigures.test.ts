@@ -21,13 +21,30 @@ const PARS = PAR_72.map(([p]) => p)
 function strokeSettings(scoring: 'net' | 'gross', rounds = 1): TournamentSettings {
   const s = structuredClone(DEFAULT_SETTINGS)
   s.rounds = rounds
-  s.modules.individual = { ...s.modules.individual, format: 'strokePlay', label: 'Golpes', formatOptions: { ...s.modules.individual.formatOptions, scoring } }
+  s.modules.individual = {
+    ...s.modules.individual,
+    format: 'strokePlay',
+    label: 'Golpes',
+    formatOptions: { ...s.modules.individual.formatOptions, scoring },
+  }
   return parseSettings(s)
 }
 function snapOf(settings: TournamentSettings, hcps: number[], rounds = 1, finished = true): Snapshot {
   const players = hcps.map((h, i) => makePlayer(i + 1, { baseHcp: h }))
-  const snap = makeSnapshot({ players, rounds: Array.from({ length: rounds }, (_, i) => makeRound(i + 1, { status: finished ? 'finished' : 'live' })), settings, status: finished ? 'finished' : 'live' })
-  for (let r = 1; r <= rounds; r++) snap.groups.push(makeGroup(`r${r}`, 1, players.map((p) => p.id)))
+  const snap = makeSnapshot({
+    players,
+    rounds: Array.from({ length: rounds }, (_, i) => makeRound(i + 1, { status: finished ? 'finished' : 'live' })),
+    settings,
+    status: finished ? 'finished' : 'live',
+  })
+  for (let r = 1; r <= rounds; r++)
+    snap.groups.push(
+      makeGroup(
+        `r${r}`,
+        1,
+        players.map((p) => p.id),
+      ),
+    )
   return snap
 }
 /** Save one card's holes (gross by hole number; null = pick-up; undefined = not played), stamping each save in order. */
@@ -40,7 +57,8 @@ function save(snap: Snapshot, roundId: string, pid: string, holes: Array<[hole: 
     snap.scores.push(s)
   }
 }
-const card = (f: (par: number, i: number) => number | null) => PARS.map((p, i) => [i + 1, f(p, i)] as [number, number | null])
+const card = (f: (par: number, i: number) => number | null) =>
+  PARS.map((p, i) => [i + 1, f(p, i)] as [number, number | null])
 const name = (id: string) => id.toUpperCase()
 
 describe('the close of a stroke-play tournament (computeTournament)', () => {
@@ -66,12 +84,22 @@ describe('the close of a stroke-play tournament (computeTournament)', () => {
     expect(feedText(state.feed[0]!, name)).not.toMatch(/P1 toma la punta/)
   })
 
-  it('N3: the close names the champion with the board\'s figure («−2»), not his strokes', () => {
+  it("N3: the close names the champion with the board's figure («−2»), not his strokes", () => {
     const settings = strokeSettings('net')
     const snap = snapOf(settings, [0, 0])
     // p2 leads the replay at −3 but misses the 18th: the close ranks his incomplete card last.
-    save(snap, 'r1', 'p1', card((p, i) => (i === 0 || i === 1 ? p - 1 : p)))
-    save(snap, 'r1', 'p2', card((p, i) => (i === 17 ? null : i < 3 ? p - 1 : p)).filter(([h]) => h !== 18))
+    save(
+      snap,
+      'r1',
+      'p1',
+      card((p, i) => (i === 0 || i === 1 ? p - 1 : p)),
+    )
+    save(
+      snap,
+      'r1',
+      'p2',
+      card((p, i) => (i === 17 ? null : i < 3 ? p - 1 : p)).filter(([h]) => h !== 18),
+    )
     const state = computeTournament(snap, settings)
     expect(state.modules.individual!.rows[0]!.playerId).toBe('p1')
     expect(state.feed[0]).toMatchObject({ kind: 'leadChange', playerId: 'p1', figure: '−2' })
@@ -81,11 +109,24 @@ describe('the close of a stroke-play tournament (computeTournament)', () => {
   it('N4: when the replay already named the champion, the close adds nothing', () => {
     const settings = strokeSettings('net')
     const snap = snapOf(settings, [0, 0])
-    save(snap, 'r1', 'p2', card((p) => p))
-    save(snap, 'r1', 'p1', card((p, i) => (i === 0 ? p - 1 : p)))
+    save(
+      snap,
+      'r1',
+      'p2',
+      card((p) => p),
+    )
+    save(
+      snap,
+      'r1',
+      'p1',
+      card((p, i) => (i === 0 ? p - 1 : p)),
+    )
     const state = computeTournament(snap, settings)
     const core = computeCore(snap, settings)
-    const replay = computeFeed(snap, core, state.modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
+    const replay = computeFeed(snap, core, state.modules.snake, {
+      scoring: mainScoring(settings),
+      leaders: ranksPlayersByTotal(settings),
+    })
     expect(state.feed).toEqual(replay)
   })
 })
@@ -98,7 +139,10 @@ describe('lead changes in the feed (round 3)', () => {
     save(snap, 'r1', 'p2', [[1, PARS[0]!]])
     save(snap, 'r1', 'p1', [[1, PARS[0]! - 1]])
     save(snap, 'r1', 'p2', [[2, PARS[1]! - 1]])
-    save(snap, 'r1', 'p1', [[2, PARS[1]!], [3, PARS[2]! - 1]])
+    save(snap, 'r1', 'p1', [
+      [2, PARS[1]!],
+      [3, PARS[2]! - 1],
+    ])
     const leads = computeTournament(snap, settings).feed.filter((e) => e.kind === 'leadChange')
     expect(leads.map((e) => e.playerId)).toEqual(['p1'])
   })
@@ -107,29 +151,70 @@ describe('lead changes in the feed (round 3)', () => {
     const settings = strokeSettings('net')
     const snap = snapOf(settings, [0, 0])
     // p2 leaves the 9th blank: at the close his card ranks after p1's complete one (MONEY-02).
-    save(snap, 'r1', 'p2', card((p) => p).filter(([h]) => h !== 9 && h < 17))
+    save(
+      snap,
+      'r1',
+      'p2',
+      card((p) => p).filter(([h]) => h !== 9 && h < 17),
+    )
     save(snap, 'r1', 'p1', card((p) => p).slice(0, 17))
     // p1 takes the lead alone on the 18th; p2 birdies the 17th and 18th and leads the replay.
     save(snap, 'r1', 'p1', [[18, PARS[17]! - 1]])
-    save(snap, 'r1', 'p2', [[17, PARS[16]! - 1], [18, PARS[17]! - 1]])
+    save(snap, 'r1', 'p2', [
+      [17, PARS[16]! - 1],
+      [18, PARS[17]! - 1],
+    ])
     const state = computeTournament(snap, settings)
     expect(state.modules.individual!.rows[0]!.playerId).toBe('p1')
     const leads = state.feed.filter((e) => e.kind === 'leadChange')
-    expect(leads.map((e) => [e.playerId, e.hole, e.kind === 'leadChange' && !!e.close])).toEqual([['p1', 18, true], ['p2', 18, false], ['p1', 18, false]])
+    expect(leads.map((e) => [e.playerId, e.hole, e.kind === 'leadChange' && !!e.close])).toEqual([
+      ['p1', 18, true],
+      ['p2', 18, false],
+      ['p1', 18, false],
+    ])
     const keys = state.feed.map(feedKey)
     expect(new Set(keys).size).toBe(keys.length)
   })
 
   it('a leader who takes the lead again on the same hole is another line, with its own key', () => {
     // Two lead changes to p1 on the 5th: the first his own save, the second after someone else's bogey there.
-    const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', figure: '−2', scoring: 'gross' as const })
-    expect(feedKey({ ...lead('2027-04-09T18:00:01+00:00'), by: 'p1' })).not.toBe(feedKey({ ...lead('2027-04-09T18:05:00+00:00'), by: 'p3' }))
+    const lead = (at: string) => ({
+      kind: 'leadChange' as const,
+      at,
+      roundNumber: 1,
+      hole: 5,
+      playerId: 'p1',
+      figure: '−2',
+      scoring: 'gross' as const,
+    })
+    expect(feedKey({ ...lead('2027-04-09T18:00:01+00:00'), by: 'p1' })).not.toBe(
+      feedKey({ ...lead('2027-04-09T18:05:00+00:00'), by: 'p3' }),
+    )
   })
 
   it('a line keeps its key when its save syncs: the phone’s time becomes the server’s (#91 round 5)', () => {
-    const birdie = (at: string) => ({ kind: 'birdie' as const, at, roundNumber: 1, hole: 10, playerId: 'p1', points: 3, grossUnder: 1, under: 1, scoring: 'gross' as const })
+    const birdie = (at: string) => ({
+      kind: 'birdie' as const,
+      at,
+      roundNumber: 1,
+      hole: 10,
+      playerId: 'p1',
+      points: 3,
+      grossUnder: 1,
+      under: 1,
+      scoring: 'gross' as const,
+    })
     expect(feedKey(birdie('2027-04-09T18:00:01.123Z'))).toBe(feedKey(birdie('2027-04-09T18:00:01.456789+00:00')))
-    const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', by: 'p1', figure: '−2', scoring: 'gross' as const })
+    const lead = (at: string) => ({
+      kind: 'leadChange' as const,
+      at,
+      roundNumber: 1,
+      hole: 5,
+      playerId: 'p1',
+      by: 'p1',
+      figure: '−2',
+      scoring: 'gross' as const,
+    })
     expect(feedKey(lead('2027-04-09T18:00:01.123Z'))).toBe(feedKey(lead('2027-04-09T18:00:01.456789+00:00')))
   })
 })
@@ -138,11 +223,31 @@ describe('stats under gross stroke play (stats.ts)', () => {
   const settings = strokeSettings('gross')
   const snap = snapOf(settings, [18, 18, 0, 0])
   // p1: gross bogey everywhere with a stroke a hole (net par). p2: gross double everywhere (net bogey).
-  save(snap, 'r1', 'p1', card((p) => p + 1))
-  save(snap, 'r1', 'p2', card((p) => p + 2))
+  save(
+    snap,
+    'r1',
+    'p1',
+    card((p) => p + 1),
+  )
+  save(
+    snap,
+    'r1',
+    'p2',
+    card((p) => p + 2),
+  )
   // p3: a pick-up on the 1st, pars after. p4: a birdie on the 1st, pars after.
-  save(snap, 'r1', 'p3', card((p, i) => (i === 0 ? null : p)))
-  save(snap, 'r1', 'p4', card((p, i) => (i === 0 ? p - 1 : p)))
+  save(
+    snap,
+    'r1',
+    'p3',
+    card((p, i) => (i === 0 ? null : p)),
+  )
+  save(
+    snap,
+    'r1',
+    'p4',
+    card((p, i) => (i === 0 ? p - 1 : p)),
+  )
   const stats = computeTournament(snap, settings).stats
 
   it('N9: pars and bogeys are read on the gross score the event counts', () => {
@@ -165,9 +270,24 @@ describe('El Resucitado under strokes (stats.ts)', () => {
     const snap = snapOf(settings, [0, 0], 2)
     // p1: day 1 only the front nine, all bogeys (+9); day 2 all pars. p2: day 1 +4, day 2 all pars.
     save(snap, 'r1', 'p1', card((p) => p + 1).slice(0, 9))
-    save(snap, 'r1', 'p2', card((p, i) => (i < 4 ? p + 1 : p)))
-    save(snap, 'r2', 'p1', card((p) => p))
-    save(snap, 'r2', 'p2', card((p) => p))
+    save(
+      snap,
+      'r1',
+      'p2',
+      card((p, i) => (i < 4 ? p + 1 : p)),
+    )
+    save(
+      snap,
+      'r2',
+      'p1',
+      card((p) => p),
+    )
+    save(
+      snap,
+      'r2',
+      'p2',
+      card((p) => p),
+    )
     const award = computeTournament(snap, settings).stats.awards.find((a) => a.id === 'biggestGain')
     expect(award?.playerIds).toEqual(['p2'])
   })
@@ -180,7 +300,7 @@ describe('figure text (figureText.ts)', () => {
   save(snap, 'r1', 'p1', card((p) => p + 2).slice(0, 3))
   const pr = computeTournament(snap, settings).core.rounds.r1!.p1!
 
-  it('N16: a team player\'s own day is over par when he is over par', () => {
+  it("N16: a team player's own day is over par when he is over par", () => {
     expect(ownDayText(pr, 'net')).toBe('+3 neto')
   })
   it('N17: under gross, his own day is his gross score', () => {

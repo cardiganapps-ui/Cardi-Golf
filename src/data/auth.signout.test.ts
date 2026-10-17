@@ -83,7 +83,9 @@ describe('signOut', () => {
   })
 
   it('no signal and an expired token: auth-js keeps the session, so it is not done and nothing reads as a deliberate sign-out', async () => {
-    sb.signOut = async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+    sb.signOut = async () => ({
+      error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }),
+    })
     expect(await signOut()).toBe(false)
     expect(storage.has(KEY)).toBe(true)
     expect(signedOutOnPurpose()).toBe(false)
@@ -121,7 +123,9 @@ describe('signOut', () => {
 describe('the sign-outs asked for', () => {
   it('count up by one with each, whatever its outcome', async () => {
     const before = signOutsAsked()
-    sb.signOut = async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+    sb.signOut = async () => ({
+      error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }),
+    })
     expect(await signOut()).toBe(false)
     expect(signOutsAsked()).toBe(before + 1)
     sb.signOut = async () => {
@@ -147,7 +151,9 @@ describe('what ends a deliberate sign-out', () => {
     return seen
   }
   const account = { user: { id: 'uid-cuenta' }, access_token: 'nuevo' }
-  beforeEach(() => storage.set(KEY, JSON.stringify({ access_token: 'a', refresh_token: 'r', user: { id: 'uid-cuenta' } })))
+  beforeEach(() =>
+    storage.set(KEY, JSON.stringify({ access_token: 'a', refresh_token: 'r', user: { id: 'uid-cuenta' } })),
+  )
 
   it('a token refresh, then the sign-out, inside signOut: the identity going away is still on purpose', async () => {
     const seen = signsOutAfter(() => sb.listener?.('TOKEN_REFRESHED', account))
@@ -192,13 +198,15 @@ describe('a sign-out that takes a while', () => {
             sb.listener?.('SIGNED_OUT', null)
             if (seen) seen.onPurpose = signedOutOnPurpose()
           }
-          resolve({ error: ends ? null : Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+          resolve({
+            error: ends ? null : Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }),
+          })
         }, ms),
       )
   }
   const fake = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
 
-  it('is waited for past the logout request\'s own deadline: on lie-fi auth-js ends a valid session at 12 s, and the sign-out is done', async () => {
+  it("is waited for past the logout request's own deadline: on lie-fi auth-js ends a valid session at 12 s, and the sign-out is done", async () => {
     fake()
     try {
       answersAfter(12_000, true)
@@ -234,7 +242,7 @@ describe('a sign-out that takes a while', () => {
     }
   })
 
-  it('a second tap while auth-js still works on the first: the first one\'s late answer leaves the second alone', async () => {
+  it("a second tap while auth-js still works on the first: the first one's late answer leaves the second alone", async () => {
     fake()
     try {
       const answers: Array<(r: { error: unknown }) => void> = []

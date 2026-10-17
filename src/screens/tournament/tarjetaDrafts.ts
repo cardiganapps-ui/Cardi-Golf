@@ -81,7 +81,8 @@ export function readKept(holeKey: string): KeptDraft | null {
 
 export function writeKept(holeKey: string, players: KeptDraft['players']) {
   try {
-    if (Object.keys(players).length) localStorage.setItem(draftKey(holeKey), JSON.stringify({ at: Date.now(), players }))
+    if (Object.keys(players).length)
+      localStorage.setItem(draftKey(holeKey), JSON.stringify({ at: Date.now(), players }))
     else localStorage.removeItem(draftKey(holeKey))
   } catch {
     // Private mode or full storage: the draft lives in memory only, as before.

@@ -28,7 +28,7 @@ function Form() {
   )
 }
 const isOpen = () => screen.getByTestId('open').textContent === 'true'
-const backdrop = () => document.querySelector('[role="presentation"]') as HTMLElement
+const backdrop = () => document.querySelector('[role="presentation"]')!
 const ask = () => screen.queryByRole('dialog', { name: t.common.discardTitle })
 
 afterEach(cleanup)

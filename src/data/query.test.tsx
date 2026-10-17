@@ -47,7 +47,12 @@ describe('withDeadline', () => {
   it('the caller’s cancel reaches the job too', async () => {
     const outer = new AbortController()
     let seen: AbortSignal | undefined
-    const p = withDeadline((s) => ((seen = s), new Promise<never>(() => undefined)), outer.signal, 60_000, 'crews').catch((e: unknown) => e)
+    const p = withDeadline(
+      (s) => ((seen = s), new Promise<never>(() => undefined)),
+      outer.signal,
+      60_000,
+      'crews',
+    ).catch((e: unknown) => e)
     outer.abort(new Error('se fue la pantalla'))
     expect(await p).toEqual(new Error('se fue la pantalla'))
     expect(seen?.aborted).toBe(true)
@@ -111,7 +116,12 @@ describe('what one person read is not the next one’s', () => {
     render(<Reads fn={fn} />)
     await screen.findByText('crews de Ana')
     act(() => useAuth.setState({ user: { id: 'uid-beto' } as never }))
-    expect(queryClient.getQueryCache().findAll().every((q) => q.queryKey[0] === 'uid-beto')).toBe(true)
+    expect(
+      queryClient
+        .getQueryCache()
+        .findAll()
+        .every((q) => q.queryKey[0] === 'uid-beto'),
+    ).toBe(true)
     expect(await screen.findByText('crews de Beto')).toBeTruthy()
     expect(screen.queryByText('crews de Ana')).toBeNull()
   })
@@ -144,7 +154,9 @@ function staticImports(file: string): string[] {
       continue
     }
     const base = resolve(dirname(file), spec)
-    const hit = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'].map((x) => base + x).find((p) => existsSync(p) && /\.tsx?$/.test(p))
+    const hit = ['', '.ts', '.tsx', '/index.ts', '/index.tsx']
+      .map((x) => base + x)
+      .find((p) => existsSync(p) && /\.tsx?$/.test(p))
     if (hit) out.push(hit)
   }
   return out
@@ -168,7 +180,10 @@ function reaches(root: string, target: (spec: string) => boolean): string[] | nu
 }
 
 describe('Query is not in the first load (ARCH-18)', () => {
-  const isQuery = (spec: string) => spec.startsWith('@tanstack/') || /\/src\/data\/query\.ts$/.test(spec) || /\/src\/components\/useServerMutation\.ts$/.test(spec)
+  const isQuery = (spec: string) =>
+    spec.startsWith('@tanstack/') ||
+    /\/src\/data\/query\.ts$/.test(spec) ||
+    /\/src\/components\/useServerMutation\.ts$/.test(spec)
   const src = (p: string) => join(process.cwd(), 'src', p)
   it.each([
     ['the shell (index.html’s entry)', 'main.tsx'],

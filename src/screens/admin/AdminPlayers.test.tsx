@@ -15,19 +15,42 @@ import { t } from '../../i18n/es-MX'
 import { TournamentContext } from '../tournament/tournamentContext'
 import { completePlayer, type PlayerDraft } from './playerDraft'
 
-const api = vi.hoisted(() => ({ upsertPlayer: vi.fn(async () => undefined), playersWithPin: vi.fn(async () => new Set<string>()) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), upsertPlayer: api.upsertPlayer, playersWithPin: api.playersWithPin }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+const api = vi.hoisted(() => ({
+  upsertPlayer: vi.fn(async () => undefined),
+  playersWithPin: vi.fn(async () => new Set<string>()),
+}))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  upsertPlayer: api.upsertPlayer,
+  playersWithPin: api.playersWithPin,
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 const { AdminPlayers } = await import('./AdminPlayers')
 
 const P = t.admin.players
 
 function mount() {
   const fx = getFixture('full12-live')!
-  useTournament.setState({ tournamentId: 't-players', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-players',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-players', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-players',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -57,7 +80,10 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
     expect(save().disabled).toBe(false)
     expect(within(sheet()).queryByText(P.hcpMissing.manual)).toBeNull()
     await act(async () => fireEvent.click(save()))
-    expect(api.upsertPlayer).toHaveBeenCalledWith('t-players', expect.objectContaining({ full_name: 'Camilo Duarte', base_hcp: 12, handicap_source: 'manual' }))
+    expect(api.upsertPlayer).toHaveBeenCalledWith(
+      't-players',
+      expect.objectContaining({ full_name: 'Camilo Duarte', base_hcp: 12, handicap_source: 'manual' }),
+    )
   })
 
   it('«Índice» with nothing typed never saves a scratch golfer', async () => {
@@ -68,7 +94,10 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
     await type(within(sheet()).getByLabelText(P.index), '8.4')
     expect(save().disabled).toBe(false)
     await act(async () => fireEvent.click(save()))
-    expect(api.upsertPlayer).toHaveBeenCalledWith('t-players', expect.objectContaining({ handicap_source: 'index', handicap_index: 8.4, base_hcp: 8.4 }))
+    expect(api.upsertPlayer).toHaveBeenCalledWith(
+      't-players',
+      expect.objectContaining({ handicap_source: 'index', handicap_index: 8.4, base_hcp: 8.4 }),
+    )
   })
 
   it('the estimate starts with no scores: all three before it saves', async () => {
@@ -84,7 +113,10 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
     await type(gross[2]!, '95')
     expect(save().disabled).toBe(false)
     await act(async () => fireEvent.click(save()))
-    const [, saved] = api.upsertPlayer.mock.calls[0] as unknown as [string, { estimate_inputs: Array<{ gross: number }>; base_hcp: number }]
+    const [, saved] = api.upsertPlayer.mock.calls[0] as unknown as [
+      string,
+      { estimate_inputs: Array<{ gross: number }>; base_hcp: number },
+    ]
     expect(saved.estimate_inputs.map((r) => r.gross)).toEqual([80, 88, 95])
     expect(saved.base_hcp).toBeGreaterThan(0)
   })
@@ -92,7 +124,9 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
   it('a player already saved opens with his handicap, ready to save', async () => {
     mount()
     const first = useTournament.getState().data!.snapshot.players[0]!
-    await act(async () => fireEvent.click(screen.getAllByRole('button').find((b) => b.textContent?.includes(first.fullName))!))
+    await act(async () =>
+      fireEvent.click(screen.getAllByRole('button').find((b) => b.textContent?.includes(first.fullName))!),
+    )
     const form = screen.getByRole('dialog', { name: t.common.edit })
     expect(Number((within(form).getByLabelText(P.baseHcp) as HTMLInputElement).value)).toBe(first.baseHcp)
     expect((within(form).getByRole('button', { name: t.common.save }) as HTMLButtonElement).disabled).toBe(false)
@@ -124,18 +158,29 @@ describe('completePlayer', () => {
     form_guide: null,
     sort_order: 0,
   }
-  const scores = (...g: Array<number | null>) => g.map((gross) => ({ gross, rating: null, slope: null, par: null })) as PlayerDraft['estimate_inputs']
+  const scores = (...g: Array<number | null>) =>
+    g.map((gross) => ({ gross, rating: null, slope: null, par: null })) as PlayerDraft['estimate_inputs']
 
   it('is nothing until the chosen method has its number', () => {
     expect(completePlayer(base)).toBeNull()
     expect(completePlayer({ ...base, handicap_source: 'index' })).toBeNull()
     expect(completePlayer({ ...base, handicap_source: 'estimate', estimate_inputs: scores(80, null, 95) })).toBeNull()
     expect(completePlayer({ ...base, base_hcp: 0 })).toMatchObject({ base_hcp: 0 })
-    expect(completePlayer({ ...base, handicap_source: 'index', handicap_index: -1.2 })).toMatchObject({ handicap_index: -1.2 })
+    expect(completePlayer({ ...base, handicap_source: 'index', handicap_index: -1.2 })).toMatchObject({
+      handicap_index: -1.2,
+    })
   })
 
   it('keeps three typed scores; a half-typed estimate behind another method is dropped, not saved with gaps', () => {
-    expect(completePlayer({ ...base, handicap_source: 'estimate', estimate_inputs: scores(80, 88, 95) })?.estimate_inputs?.map((r) => r.gross)).toEqual([80, 88, 95])
-    expect(completePlayer({ ...base, base_hcp: 14, estimate_inputs: scores(80, null, null) })?.estimate_inputs).toBeNull()
+    expect(
+      completePlayer({
+        ...base,
+        handicap_source: 'estimate',
+        estimate_inputs: scores(80, 88, 95),
+      })?.estimate_inputs?.map((r) => r.gross),
+    ).toEqual([80, 88, 95])
+    expect(
+      completePlayer({ ...base, base_hcp: 14, estimate_inputs: scores(80, null, null) })?.estimate_inputs,
+    ).toBeNull()
   })
 })

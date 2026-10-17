@@ -11,12 +11,46 @@ import { SettingsGuard } from '../tournament/SettingsGuard'
 
 export const spectatorChildren = [
   {
-    element: <Lazy><TournamentShell /></Lazy>,
+    element: (
+      <Lazy>
+        <TournamentShell />
+      </Lazy>
+    ),
     children: [
-      { index: true, element: <Lazy skeleton="board"><LiveScreen /></Lazy> },
-      { path: 'juegos', element: <Lazy skeleton="board"><GamesScreen /></Lazy> },
-      { path: 'dinero', element: <Lazy><SpectatorMoney /></Lazy> },
+      {
+        index: true,
+        element: (
+          <Lazy skeleton="board">
+            <LiveScreen />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'juegos',
+        element: (
+          <Lazy skeleton="board">
+            <GamesScreen />
+          </Lazy>
+        ),
+      },
+      {
+        path: 'dinero',
+        element: (
+          <Lazy>
+            <SpectatorMoney />
+          </Lazy>
+        ),
+      },
     ],
   },
-  { path: 'tv', element: <SettingsGuard><Lazy><TvScreen /></Lazy></SettingsGuard> },
+  {
+    path: 'tv',
+    element: (
+      <SettingsGuard>
+        <Lazy>
+          <TvScreen />
+        </Lazy>
+      </SettingsGuard>
+    ),
+  },
 ]

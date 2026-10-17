@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { badges, noDoubles, parStreak, records, recapYears, yearRecap, type AchRound, type AchTournament, type HoleDetail } from './achievements'
+import {
+  badges,
+  noDoubles,
+  parStreak,
+  records,
+  recapYears,
+  yearRecap,
+  type AchRound,
+  type AchTournament,
+  type HoleDetail,
+} from './achievements'
 
 // Par 72: 4s everywhere except par 3s on 3, 8, 12, 17 and par 5s on 5, 9, 13, 18.
 const PARS = [4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5]
 /** A card from gross per hole (null = picked up) and 2 putts unless given. */
-const card = (strokes: Array<number | null>, putts: Array<number | null> = strokes.map(() => 2)): HoleDetail[] => strokes.map((s, i) => [i + 1, PARS[i]!, i + 1, s, putts[i] ?? null, s == null])
+const card = (strokes: Array<number | null>, putts: Array<number | null> = strokes.map(() => 2)): HoleDetail[] =>
+  strokes.map((s, i) => [i + 1, PARS[i]!, i + 1, s, putts[i] ?? null, s == null])
 const bogeyGolf = () => card(PARS.map((p) => p + 1)) // 90
 
 let n = 0
@@ -29,7 +40,17 @@ const round = (playedOn: string, detail: HoleDetail[], extra: Partial<AchRound> 
     ...extra,
   }
 }
-const tourney = (startsOn: string, rank: number | null, extra: Partial<AchTournament> = {}): AchTournament => ({ tournamentId: `t${++n}`, slug: `t${n}`, name: `Copa ${n}`, practice: false, status: 'finished', rank, field: 8, startsOn, ...extra })
+const tourney = (startsOn: string, rank: number | null, extra: Partial<AchTournament> = {}): AchTournament => ({
+  tournamentId: `t${++n}`,
+  slug: `t${n}`,
+  name: `Copa ${n}`,
+  practice: false,
+  status: 'finished',
+  rank,
+  field: 8,
+  startsOn,
+  ...extra,
+})
 
 describe('hole helpers', () => {
   it('par streaks run in hole order and a pick-up breaks them', () => {
@@ -104,11 +125,27 @@ describe('yearRecap', () => {
       round('2026-04-01', card(PARS.map((p, i) => (i < 2 ? p - 1 : p + 1))), { course: 'Bosque Real' }), // 2 birdies (−2), 16 bogeys (+16): 86
       round('2026-05-01', card(PARS.map((p) => p - 1)), { practice: true }),
     ]
-    const tournaments = [tourney('2026-04-01', 1), tourney('2026-08-01', 3), tourney('2026-09-01', 5, { practice: true })]
+    const tournaments = [
+      tourney('2026-04-01', 1),
+      tourney('2026-08-01', 3),
+      tourney('2026-09-01', 5, { practice: true }),
+    ]
     expect(recapYears(rounds, tournaments)).toEqual([2026, 2025])
     const y = yearRecap(rounds, tournaments, 2026)
     // Average of 90 and 86 = 88.0; best differential 86 − 72 = 14; two courses, one round each: no favorite.
-    expect(y).toMatchObject({ rounds: 2, tournaments: 2, wins: 1, podiums: 2, birdies: 2, eagles: 0, bestGross: 86, avgGross: 88, bestDifferential: 14, courses: 2, favoriteCourse: null })
+    expect(y).toMatchObject({
+      rounds: 2,
+      tournaments: 2,
+      wins: 1,
+      podiums: 2,
+      birdies: 2,
+      eagles: 0,
+      bestGross: 86,
+      avgGross: 88,
+      bestDifferential: 14,
+      courses: 2,
+      favoriteCourse: null,
+    })
     expect(y.badges).toContain('firstBirdie')
     expect(y.badges).not.toContain('firstRound') // earned in 2025
     // A second round at Bosque Real makes it the favorite.

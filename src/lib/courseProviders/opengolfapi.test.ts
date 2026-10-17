@@ -3,7 +3,16 @@ import { mapCourse, mapSearchHit, OPENGOLF_ATTRIBUTION } from './opengolfapi'
 import { mergeHits } from './types'
 import { mapSearchHit as gcaHit } from './golfcourseapi'
 
-const searchRow = { id: '79fb43c9', name: 'Solmar Golf Links', course_name: 'Solmar Golf Links', city: 'Cabo San Lucas', latitude: 22.88, longitude: -109.93, par: 72, website: 'https://solmar.com' }
+const searchRow = {
+  id: '79fb43c9',
+  name: 'Solmar Golf Links',
+  course_name: 'Solmar Golf Links',
+  city: 'Cabo San Lucas',
+  latitude: 22.88,
+  longitude: -109.93,
+  par: 72,
+  website: 'https://solmar.com',
+}
 
 describe('OpenGolfAPI adapter', () => {
   it('maps a search hit with unknown card availability', () => {
@@ -31,10 +40,33 @@ describe('OpenGolfAPI adapter', () => {
       ...searchRow,
       _attribution: 'custom attribution',
       tees: [
-        { tee_key: 'blue', tee_name: 'Blue', tee_color: 'Blue', gender: 'male', course_rating: 71.2, slope: 128, par: 72, yardage: 6500 },
-        { tee_key: 'red', tee_name: 'Red', tee_color: 'Red', gender: 'female', course_rating: 68, slope: 115, par: 72, yardage: 5400 },
+        {
+          tee_key: 'blue',
+          tee_name: 'Blue',
+          tee_color: 'Blue',
+          gender: 'male',
+          course_rating: 71.2,
+          slope: 128,
+          par: 72,
+          yardage: 6500,
+        },
+        {
+          tee_key: 'red',
+          tee_name: 'Red',
+          tee_color: 'Red',
+          gender: 'female',
+          course_rating: 68,
+          slope: 115,
+          par: 72,
+          yardage: 5400,
+        },
       ],
-      holes_data: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, handicap_index: 18 - i, yardages: { blue: 400 + i, red: 300 + i } })),
+      holes_data: Array.from({ length: 18 }, (_, i) => ({
+        number: i + 1,
+        par: 4,
+        handicap_index: 18 - i,
+        yardages: { blue: 400 + i, red: 300 + i },
+      })),
     })
     expect(c.attribution).toBe('custom attribution')
     expect(c.tees).toHaveLength(2)
@@ -45,17 +77,36 @@ describe('OpenGolfAPI adapter', () => {
   })
 
   it('says when it filled in a par or the stroke indexes (STRAT-14)', () => {
-    const holes = (f: (i: number) => Record<string, unknown>) => Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, handicap_index: 18 - i, ...f(i) }))
+    const holes = (f: (i: number) => Record<string, unknown>) =>
+      Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, handicap_index: 18 - i, ...f(i) }))
     const tee = { tee_key: 'blue', tee_name: 'Blue', course_rating: 71.2, slope: 128 }
-    expect(mapCourse({ ...searchRow, tees: [tee], holes_data: holes((i) => (i === 3 ? { par: null } : {})) }).tees[0]!.assumed).toBe(true)
-    expect(mapCourse({ ...searchRow, tees: [tee], holes_data: holes(() => ({ handicap_index: 1 })) }).tees[0]!.assumed).toBe(true)
+    expect(
+      mapCourse({ ...searchRow, tees: [tee], holes_data: holes((i) => (i === 3 ? { par: null } : {})) }).tees[0]!
+        .assumed,
+    ).toBe(true)
+    expect(
+      mapCourse({ ...searchRow, tees: [tee], holes_data: holes(() => ({ handicap_index: 1 })) }).tees[0]!.assumed,
+    ).toBe(true)
   })
 })
 
 describe('mergeHits', () => {
   it('merges the same course from two providers and prefers the one with a card', () => {
-    const g = gcaHit({ id: 'mz9', club_name: 'Quivira Golf Club', course_name: 'Quivira Los Cabos', location: { city: 'Cabo San Lucas' }, tees: { male: 5, female: 0 } })
-    const o = mapSearchHit({ id: '7166', name: 'Quivira Golf Club', course_name: 'Quivira Golf Club', city: 'Cabo San Lucas', latitude: 22.9, longitude: -109.9 })
+    const g = gcaHit({
+      id: 'mz9',
+      club_name: 'Quivira Golf Club',
+      course_name: 'Quivira Los Cabos',
+      location: { city: 'Cabo San Lucas' },
+      tees: { male: 5, female: 0 },
+    })
+    const o = mapSearchHit({
+      id: '7166',
+      name: 'Quivira Golf Club',
+      course_name: 'Quivira Golf Club',
+      city: 'Cabo San Lucas',
+      latitude: 22.9,
+      longitude: -109.9,
+    })
     const solmar = mapSearchHit(searchRow)
     const merged = mergeHits([[g], [o, solmar]])
     expect(merged).toHaveLength(2)
@@ -64,8 +115,22 @@ describe('mergeHits', () => {
     expect(merged[1]!.name).toBe('Solmar Golf Links')
   })
   it('keeps two same-named courses apart when they are far from each other', () => {
-    const a = mapSearchHit({ id: '1', name: 'Country Club', course_name: 'Country Club', city: 'A', latitude: 20, longitude: -100 })
-    const b = mapSearchHit({ id: '2', name: 'Country Club', course_name: 'Country Club', city: 'B', latitude: 25, longitude: -100 })
+    const a = mapSearchHit({
+      id: '1',
+      name: 'Country Club',
+      course_name: 'Country Club',
+      city: 'A',
+      latitude: 20,
+      longitude: -100,
+    })
+    const b = mapSearchHit({
+      id: '2',
+      name: 'Country Club',
+      course_name: 'Country Club',
+      city: 'B',
+      latitude: 25,
+      longitude: -100,
+    })
     expect(mergeHits([[a], [b]])).toHaveLength(2)
   })
 })

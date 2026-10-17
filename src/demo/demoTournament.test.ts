@@ -20,7 +20,8 @@ describe('the example tournament (STRAT-17)', () => {
     expect(data.snapshot.players).toHaveLength(12)
     expect(data.snapshot.rounds.map((r) => r.status)).toEqual(['finished', 'finished'])
     expect(state.tournamentFinal).toBe(true)
-    for (const p of data.snapshot.players) for (const rid of state.core.roundIds) expect(state.core.rounds[rid]![p.id]!.complete).toBe(true)
+    for (const p of data.snapshot.players)
+      for (const rid of state.core.roundIds) expect(state.core.rounds[rid]![p.id]!.complete).toBe(true)
   })
 
   it('plays every game of the first tournament', () => {

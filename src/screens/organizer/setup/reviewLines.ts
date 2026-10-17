@@ -50,7 +50,9 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
         key: 'total',
         label: W.reviewPrizes,
         value: formatMoney(check.prizesTotal, cur),
-        detail: check.balanced ? W.reviewBalanced(formatMoney(check.entryPot, cur)) : t.admin.tournament.notBalanced(formatMoney(Math.abs(check.difference), cur)),
+        detail: check.balanced
+          ? W.reviewBalanced(formatMoney(check.entryPot, cur))
+          : t.admin.tournament.notBalanced(formatMoney(Math.abs(check.difference), cur)),
       })
     }
   } else {
@@ -60,11 +62,25 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
     }
   }
   if (m.auction.enabled) {
-    const slots = settings.auction.payout.map((s) => t.rules.slot(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, s.share, settings.labels.lastPlace))
+    const slots = settings.auction.payout.map((s) =>
+      t.rules.slot(
+        s.slot,
+        'place' in s ? s.place : undefined,
+        'tier' in s ? s.tier : undefined,
+        s.share,
+        settings.labels.lastPlace,
+      ),
+    )
     out.push({ key: 'auction', label: m.auction.label, value: W.reviewAuctionPot, detail: W.reviewAuction(slots) })
   }
   for (const p of check?.sidePots ?? []) {
-    out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot, cur), detail: W.reviewSidePot(words(p.detail)), warn: unreachable.get(`game:${p.gameId}`) })
+    out.push({
+      key: `side:${p.gameId}`,
+      label: p.label,
+      value: formatMoney(p.pot, cur),
+      detail: W.reviewSidePot(words(p.detail)),
+      warn: unreachable.get(`game:${p.gameId}`),
+    })
   }
   for (const b of check?.bets ?? []) {
     out.push({ key: `bet:${b.gameId}`, label: b.label, value: W.reviewBet, detail: words(b.detail) })
@@ -72,7 +88,8 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
   // A game for the glory is in no statement; a game the check already wrote is not repeated.
   const listed = new Set(out.map((l) => l.key.replace(/^(side|bet):/, 'game:')))
   for (const g of settings.games) {
-    if (g.enabled && !listed.has(`game:${g.id}`)) out.push({ key: `game:${g.id}`, label: g.label, value: W.reviewNoPrize })
+    if (g.enabled && !listed.has(`game:${g.id}`))
+      out.push({ key: `game:${g.id}`, label: g.label, value: W.reviewNoPrize })
   }
   return out
 }

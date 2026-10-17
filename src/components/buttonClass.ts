@@ -16,6 +16,11 @@ export interface ButtonLook {
   flush?: boolean
 }
 
-export function buttonClass({ variant = 'secondary', size = 'md', block, flush }: ButtonLook = {}, extra?: string): string {
-  return ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm', block && 'btn--block', flush && 'btn--flush', extra].filter(Boolean).join(' ')
+export function buttonClass(
+  { variant = 'secondary', size = 'md', block, flush }: ButtonLook = {},
+  extra?: string,
+): string {
+  return ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm', block && 'btn--block', flush && 'btn--flush', extra]
+    .filter(Boolean)
+    .join(' ')
 }

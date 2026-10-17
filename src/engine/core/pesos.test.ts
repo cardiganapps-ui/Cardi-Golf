@@ -16,6 +16,13 @@ describe('pesos', () => {
     expect([pesos(10000), pesos(0), pesos(-1200), pesos(587.5)]).toEqual(['$10,000', '$0', '−$1,200', '$588'])
   })
   it('centavos only when there are some', () => {
-    expect([cents(6462.5), cents(587.5), cents(6600), cents(1615.625), cents(0.05), cents(-0.5)]).toEqual(['$6,462.50', '$587.50', '$6,600', '$1,615.63', '$0.05', '−$0.50'])
+    expect([cents(6462.5), cents(587.5), cents(6600), cents(1615.625), cents(0.05), cents(-0.5)]).toEqual([
+      '$6,462.50',
+      '$587.50',
+      '$6,600',
+      '$1,615.63',
+      '$0.05',
+      '−$0.50',
+    ])
   })
 })

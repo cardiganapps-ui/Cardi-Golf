@@ -15,7 +15,15 @@
 import { useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import { IconRefresh } from '../../components/icons'
 import { anySheetOpen } from '../../components/sheetHistory'
-import { PULL_REST_PX, PULL_THRESHOLD_PX, pullArmed, pullIntent, pullMayStart, pullOffset, type PullIntent } from './pull'
+import {
+  PULL_REST_PX,
+  PULL_THRESHOLD_PX,
+  pullArmed,
+  pullIntent,
+  pullMayStart,
+  pullOffset,
+  type PullIntent,
+} from './pull'
 import styles from './PullToRefresh.module.css'
 
 type Phase = 'idle' | 'pulling' | 'armed' | 'waiting'
@@ -25,11 +33,22 @@ const pageTop = () => Math.max(window.scrollY || 0, document.scrollingElement?.s
 
 /** A box between the finger and the board that is scrolled down on its own: the drag scrolls it back first. */
 function boxScrolled(from: EventTarget | null, board: HTMLElement): boolean {
-  for (let el = from instanceof Element ? from : null; el && el !== board; el = el.parentElement) if (el.scrollTop > 0) return true
+  for (let el = from instanceof Element ? from : null; el && el !== board; el = el.parentElement)
+    if (el.scrollTop > 0) return true
   return false
 }
 
-export function PullToRefresh({ enabled, refreshing, onRefresh, children }: { enabled: boolean; refreshing: boolean; onRefresh: () => Promise<void>; children: ReactNode }) {
+export function PullToRefresh({
+  enabled,
+  refreshing,
+  onRefresh,
+  children,
+}: {
+  enabled: boolean
+  refreshing: boolean
+  onRefresh: () => Promise<void>
+  children: ReactNode
+}) {
   const board = useRef<HTMLDivElement>(null)
   const mark = useRef<HTMLDivElement>(null)
   const finger = useRef<{ x: number; y: number; intent: PullIntent; offset: number } | null>(null)
@@ -74,7 +93,10 @@ export function PullToRefresh({ enabled, refreshing, onRefresh, children }: { en
     if (f.intent === 'other') return void (finger.current = null)
     if (f.intent !== 'pull') return
     // The page moved under the finger (back up after the pull, then on down): it is scrolling now, not pulling.
-    if (pageTop() > 0) return settle()
+    if (pageTop() > 0) {
+      settle()
+      return
+    }
     f.offset = pullOffset(dy)
     place(f.offset)
     setPhase(pullArmed(f.offset) ? 'armed' : 'pulling')
@@ -82,16 +104,26 @@ export function PullToRefresh({ enabled, refreshing, onRefresh, children }: { en
 
   function end() {
     const f = finger.current
-    if (!f || f.intent !== 'pull') return void (finger.current = null)
+    if (f?.intent !== 'pull') return void (finger.current = null)
     finger.current = null
-    if (!pullArmed(f.offset) || refreshing) return settle()
+    if (!pullArmed(f.offset) || refreshing) {
+      settle()
+      return
+    }
     place(PULL_REST_PX)
     setPhase('waiting')
     void onRefresh().finally(settle)
   }
 
   return (
-    <div ref={board} className={styles.board} onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={() => finger.current && settle()}>
+    <div
+      ref={board}
+      className={styles.board}
+      onTouchStart={start}
+      onTouchMove={move}
+      onTouchEnd={end}
+      onTouchCancel={() => finger.current && settle()}
+    >
       {enabled && (
         <div ref={mark} className={`${styles.mark} ${styles[phase]}`} data-pull={phase} aria-hidden="true">
           <IconRefresh size={22} />

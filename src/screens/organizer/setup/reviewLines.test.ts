@@ -18,7 +18,7 @@ const lines = (id: string, players?: number) => {
   return reviewGameLines(s, checkPrizePool(s, { players: players ?? p.players }))
 }
 
-describe('the review\'s game lines (UX-04)', () => {
+describe("the review's game lines (UX-04)", () => {
   it('the Calcutta template: every module with its prize, the total, and the Calcutta as a pot of its own', () => {
     const out = lines('calcutta')
     expect(out.map((l) => [l.label, l.value])).toEqual([
@@ -30,7 +30,9 @@ describe('the review\'s game lines (UX-04)', () => {
       [W.reviewPrizes, '$30,000'],
       ['La Calcutta', W.reviewAuctionPot],
     ])
-    expect(out.at(-1)!.detail).toBe(W.reviewAuction(['Campeón 55%', 'Subcampeón 20%', 'Mejor C 10%', 'Mejor D 10%', 'La Cuchara de Palo 5%']))
+    expect(out.at(-1)!.detail).toBe(
+      W.reviewAuction(['Campeón 55%', 'Subcampeón 20%', 'Mejor C 10%', 'Mejor D 10%', 'La Cuchara de Palo 5%']),
+    )
   })
 
   it('side pots, direct bets and games for the glory each get a line, and none twice', () => {
@@ -49,7 +51,7 @@ describe('the review\'s game lines (UX-04)', () => {
     ])
   })
 
-  it('a pool that doesn\'t balance says by how much; a place nobody can take says why', () => {
+  it("a pool that doesn't balance says by how much; a place nobody can take says why", () => {
     const s = structuredClone(DEFAULT_SETTINGS)
     s.entryFee = 100
     s.prizes.stableford = [300, 200, 100]
@@ -58,8 +60,15 @@ describe('the review\'s game lines (UX-04)', () => {
     expect(out.find((l) => l.key === 'individual')!.warn).toBe('3 lugares con premio y 2 jugadores')
   })
 
-  it('settings that don\'t parse still name what is on', () => {
+  it("settings that don't parse still name what is on", () => {
     const s = preset('calcutta').build()
-    expect(reviewGameLines(s, null).map((l) => l.label)).toEqual(['Individual', 'Los Matrimonios', 'Mejor ronda', 'La Víbora', 'Menos putts', 'La Calcutta'])
+    expect(reviewGameLines(s, null).map((l) => l.label)).toEqual([
+      'Individual',
+      'Los Matrimonios',
+      'Mejor ronda',
+      'La Víbora',
+      'Menos putts',
+      'La Calcutta',
+    ])
   })
 })

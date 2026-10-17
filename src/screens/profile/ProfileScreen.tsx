@@ -14,7 +14,14 @@ import { toast } from '../../components/toast'
 import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { TournamentLogo } from '../../components/TournamentLogo'
-import { friendBlock, friendRemove, friendRequest, friendRespond, friendshipWith, type Friendship } from '../../data/social'
+import {
+  friendBlock,
+  friendRemove,
+  friendRequest,
+  friendRespond,
+  friendshipWith,
+  type Friendship,
+} from '../../data/social'
 import { IconChevronRight, IconSettings } from '../../components/icons'
 import { sessionIfAny, useAuth } from '../../data/auth'
 import {
@@ -57,7 +64,17 @@ const when = (r: RoundResult) => (r.playedOn ? dayMonth.format(new Date(`${r.pla
 export type FriendAction = 'add' | 'accept' | 'remove' | 'block'
 
 /** What a visitor with an account can do: befriend, answer, unfriend, block. */
-function FriendBar({ name, friendship, busy, onAction }: { name: string; friendship: Friendship; busy: boolean; onAction: (a: FriendAction) => void }) {
+function FriendBar({
+  name,
+  friendship,
+  busy,
+  onAction,
+}: {
+  name: string
+  friendship: Friendship
+  busy: boolean
+  onAction: (a: FriendAction) => void
+}) {
   const [confirm, setConfirm] = useState<'remove' | 'block' | null>(null)
   const S = t.social
   return (
@@ -93,7 +110,12 @@ function FriendBar({ name, friendship, busy, onAction }: { name: string; friends
       {friendship !== 'blocked' && (
         <div className={styles.quiet}>
           {friendship === 'friends' && (
-            <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setConfirm('remove')}>
+            <button
+              className="btn btn--ghost btn--sm"
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirm('remove')}
+            >
               {S.removeFriend}
             </button>
           )}
@@ -147,7 +169,11 @@ export function ProfileView({
   const strip = useMemo(() => {
     if (!rounds?.length) return null
     const grosses = rounds.filter((r) => r.complete && r.holes === 18 && r.gross != null).map((r) => r.gross!)
-    return { rounds: rounds.length, bestGross: grosses.length ? Math.min(...grosses) : null, birdies: rounds.reduce((s, r) => s + r.birdies + r.eagles, 0) }
+    return {
+      rounds: rounds.length,
+      bestGross: grosses.length ? Math.min(...grosses) : null,
+      birdies: rounds.reduce((s, r) => s + r.birdies + r.eagles, 0),
+    }
   }, [rounds])
   const totals = useMemo(() => {
     const m = new Map<string, number>()
@@ -180,7 +206,9 @@ export function ProfileView({
       <div className={styles.stat}>
         <div className={styles.statText}>
           <span className="label">{card.indexSource === 'manual' ? P.indexManual : P.index}</span>
-          <span className={styles.help}>{card.indexSource === 'manual' ? P.manualNote : hasIndex ? P.rounds(card.indexRounds) : P.noIndex}</span>
+          <span className={styles.help}>
+            {card.indexSource === 'manual' ? P.manualNote : hasIndex ? P.rounds(card.indexRounds) : P.noIndex}
+          </span>
           {card.indexSource === 'polo' && breakdown && (
             <button type="button" className={`btn btn--ghost btn--sm ${styles.how}`} onClick={() => setHowOpen(true)}>
               {t.money.howCalculated}
@@ -189,7 +217,9 @@ export function ProfileView({
         </div>
         {hasIndex && <span className={styles.statFigure}>{formatIndex(card.index)}</span>}
       </div>
-      {!hasIndex && card.indexSource === 'polo' && card.isMe && !breakdown?.considered.length && <p className={styles.help}>{P.noIndexHint}</p>}
+      {!hasIndex && card.indexSource === 'polo' && card.isMe && !breakdown?.considered.length && (
+        <p className={styles.help}>{P.noIndexHint}</p>
+      )}
 
       {strip && (
         <div className={styles.strip}>
@@ -210,12 +240,16 @@ export function ProfileView({
 
       {card.bio && <p className={styles.bio}>{card.bio}</p>}
 
-      {!card.isMe && friendship && onFriend && <FriendBar name={card.displayName} friendship={friendship} busy={friendBusy} onAction={onFriend} />}
+      {!card.isMe && friendship && onFriend && (
+        <FriendBar name={card.displayName} friendship={friendship} busy={friendBusy} onAction={onFriend} />
+      )}
       {!card.isMe && card.related && friendship !== 'blocked' && (
         <Link to={`/p/${card.handle}/vs`} className={`${styles.row} ${styles.rowLink}`}>
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>{t.social.versus}</span>
-            <span className={styles.rowSub}>{t.social.versusTitle(card.displayName.split(/\s+/)[0] ?? card.displayName)}</span>
+            <span className={styles.rowSub}>
+              {t.social.versusTitle(card.displayName.split(/\s+/)[0] ?? card.displayName)}
+            </span>
           </span>
           <span className={styles.rowEnd}>
             <IconChevronRight size={20} />
@@ -264,16 +298,28 @@ export function ProfileView({
                   <span className={styles.rowText}>
                     <span className={styles.rowTitle}>{r.course ?? r.tournament}</span>
                     <span className={styles.rowSub}>
-                      {[when(r), r.complete ? P.roundLine(r.gross, r.ags) : P.incomplete, r.practice ? P.practice : null].filter(Boolean).join(', ')}
+                      {[
+                        when(r),
+                        r.complete ? P.roundLine(r.gross, r.ags) : P.incomplete,
+                        r.practice ? P.practice : null,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
                     </span>
                   </span>
-                  <span className={styles.rowEnd}>{r.differential != null && <span className={styles.rowFig}>{tenths(r.differential)}</span>}</span>
+                  <span className={styles.rowEnd}>
+                    {r.differential != null && <span className={styles.rowFig}>{tenths(r.differential)}</span>}
+                  </span>
                 </button>
               ))}
             </div>
           )}
           {!allRounds && rounds.length > HISTORY_SHOWN && (
-            <button type="button" className={`btn btn--ghost btn--sm ${styles.start}`} onClick={() => setAllRounds(true)}>
+            <button
+              type="button"
+              className={`btn btn--ghost btn--sm ${styles.start}`}
+              onClick={() => setAllRounds(true)}
+            >
               {P.seeAll(rounds.length)}
             </button>
           )}
@@ -283,7 +329,11 @@ export function ProfileView({
       {rounds && tournaments && (
         <>
           <BadgesSection rounds={rounds} tournaments={tournaments} />
-          <RecordsSection rounds={rounds} tournaments={tournaments} onRound={(id) => setRound(rounds.find((r) => r.roundId === id) ?? null)} />
+          <RecordsSection
+            rounds={rounds}
+            tournaments={tournaments}
+            onRound={(id) => setRound(rounds.find((r) => r.roundId === id) ?? null)}
+          />
         </>
       )}
 
@@ -331,13 +381,19 @@ export function ProfileView({
             </Link>
           </>
         )}
-        {card.isMe && rounds && tournaments && <RecapButton name={card.displayName} handle={card.handle} rounds={rounds} tournaments={tournaments} />}
+        {card.isMe && rounds && tournaments && (
+          <RecapButton name={card.displayName} handle={card.handle} rounds={rounds} tournaments={tournaments} />
+        )}
         <CopyButton text={url} label={P.copyLink} />
         <ShareButton text={P.shareText(card.displayName)} url={url} title={card.displayName} />
       </div>
       <p className={styles.foot}>{P.memberSince(monthYear.format(new Date(card.memberSince)))}</p>
 
-      <Sheet open={howOpen} onClose={() => setHowOpen(false)} title={hasIndex ? P.indexTitle(formatIndex(card.index)) : P.index}>
+      <Sheet
+        open={howOpen}
+        onClose={() => setHowOpen(false)}
+        title={hasIndex ? P.indexTitle(formatIndex(card.index)) : P.index}
+      >
         {breakdown && (
           <div className="stack">
             {breakdown.index10 == null ? (
@@ -354,7 +410,9 @@ export function ProfileView({
                 <div key={r.roundId} className={`${styles.row} ${used ? styles.rowUsed : ''}`}>
                   <span className={styles.rowText}>
                     <span className={styles.rowTitle}>{r.course ?? r.tournament}</span>
-                    <span className={styles.rowSub}>{[when(r), used ? P.counts : null].filter(Boolean).join(', ')}</span>
+                    <span className={styles.rowSub}>
+                      {[when(r), used ? P.counts : null].filter(Boolean).join(', ')}
+                    </span>
                   </span>
                   <span className={styles.rowFig}>{tenths(r.differential!)}</span>
                 </div>
@@ -364,12 +422,25 @@ export function ProfileView({
         )}
       </Sheet>
 
-      <Sheet open={!!round} onClose={() => setRound(null)} title={round ? P.roundTitle(round.tournament, round.roundNumber) : undefined}>
+      <Sheet
+        open={!!round}
+        onClose={() => setRound(null)}
+        title={round ? P.roundTitle(round.tournament, round.roundNumber) : undefined}
+      >
         {round && (
           <div className="stack">
-            <p className={styles.help}>{[round.course, P.roundFacts(round.tee, round.courseHcp), when(round)].filter(Boolean).join(', ')}</p>
+            <p className={styles.help}>
+              {[round.course, P.roundFacts(round.tee, round.courseHcp), when(round)].filter(Boolean).join(', ')}
+            </p>
             <ScorecardGrid
-              holes={round.detail.map(([n, par, si, strokes, putts, pickedUp]) => ({ n, par, si, gross: strokes, putts, pickedUp }))}
+              holes={round.detail.map(([n, par, si, strokes, putts, pickedUp]) => ({
+                n,
+                par,
+                si,
+                gross: strokes,
+                putts,
+                pickedUp,
+              }))}
               playerLabel={card.displayName}
               showPutts
             />
@@ -377,7 +448,9 @@ export function ProfileView({
               <div className={styles.row}>
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{P.roundLine(round.gross, round.ags)}</span>
-                  {round.rating != null && round.slope != null && <span className={styles.rowSub}>{`Rating ${round.rating}, slope ${round.slope}`}</span>}
+                  {round.rating != null && round.slope != null && (
+                    <span className={styles.rowSub}>{`Rating ${round.rating}, slope ${round.slope}`}</span>
+                  )}
                 </span>
                 {round.differential != null && (
                   <span className={styles.rowEnd}>
@@ -417,7 +490,10 @@ function ProfilePage({ handle }: { handle: string }) {
     async () => {
       // No session on this browser: nobody to show a card to, and no anonymous user is started for it (TRUST-05).
       if (!(await sessionIfAny())) return { card: null, friendship: undefined }
-      const [c, f] = await Promise.all([profileCard(handle), account ? friendshipWith(handle) : Promise.resolve(undefined)])
+      const [c, f] = await Promise.all([
+        profileCard(handle),
+        account ? friendshipWith(handle) : Promise.resolve(undefined),
+      ])
       return { card: c, friendship: c && !c.isMe ? f : undefined }
     },
     { enabled: ready },
@@ -428,12 +504,17 @@ function ProfilePage({ handle }: { handle: string }) {
   const more = useServerQuery(
     ['profile', 'history', handle, !!card?.isMe],
     async () => {
-      const [tournaments, rounds, money] = await Promise.all([profileTournaments(handle), profileRounds(handle), card?.isMe ? myMoney() : Promise.resolve(undefined)])
+      const [tournaments, rounds, money] = await Promise.all([
+        profileTournaments(handle),
+        profileRounds(handle),
+        card?.isMe ? myMoney() : Promise.resolve(undefined),
+      ])
       return { tournaments, rounds, money }
     },
     { enabled: !!card?.related },
   )
-  const extra: { tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] } = (card?.related && more.data) || {}
+  const extra: { tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] } =
+    (card?.related && more.data) || {}
   // Either read failing with nothing to show is the screen's error, as when they were one.
   const error = (top.error && !top.data) || (more.error && !more.data) ? (top.error ?? more.error) : null
   const friend = useServerMutation({ invalidates: [['profile'], ['friends']] })
@@ -443,7 +524,13 @@ function ProfilePage({ handle }: { handle: string }) {
     await friend.run(async () => {
       if (a === 'add') {
         const r = await friendRequest(handle)
-        toast(r === 'accepted' ? t.social.nowFriends(card.displayName) : r === 'not_found' ? t.social.notFound : t.social.sent)
+        toast(
+          r === 'accepted'
+            ? t.social.nowFriends(card.displayName)
+            : r === 'not_found'
+              ? t.social.notFound
+              : t.social.sent,
+        )
       } else if (a === 'accept') {
         await friendRespond(handle, true)
         toast(t.social.nowFriends(card.displayName))
@@ -476,5 +563,15 @@ function ProfilePage({ handle }: { handle: string }) {
       </div>
     )
   }
-  return <ProfileView card={card} tournaments={extra.tournaments} rounds={extra.rounds} money={extra.money} friendship={friendship} friendBusy={friendBusy} onFriend={(a) => void onFriend(a)} />
+  return (
+    <ProfileView
+      card={card}
+      tournaments={extra.tournaments}
+      rounds={extra.rounds}
+      money={extra.money}
+      friendship={friendship}
+      friendBusy={friendBusy}
+      onFriend={(a) => void onFriend(a)}
+    />
+  )
 }

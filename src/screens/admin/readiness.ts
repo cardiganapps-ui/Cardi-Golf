@@ -14,7 +14,19 @@ import { handicapsLocked } from '../../engine/core/handicapLock'
 import { t } from '../../i18n/es-MX'
 import { renderMsg } from '../../i18n/explain'
 
-export type ReadinessId = 'players' | 'pins' | 'handicaps' | 'rounds' | 'roundSetup' | 'card' | 'foreignTees' | 'teams' | 'pairs' | 'bracket' | 'tees' | 'groups'
+export type ReadinessId =
+  | 'players'
+  | 'pins'
+  | 'handicaps'
+  | 'rounds'
+  | 'roundSetup'
+  | 'card'
+  | 'foreignTees'
+  | 'teams'
+  | 'pairs'
+  | 'bracket'
+  | 'tees'
+  | 'groups'
 
 export interface ReadinessItem {
   id: ReadinessId
@@ -44,7 +56,9 @@ const numbers = (rounds: Round[]) => rounds.map((r) => r.number)
 
 /** The rounds still to play, in order; the first is the one «Para empezar» prepares. */
 export function nextRound(snapshot: Snapshot): Round | undefined {
-  return [...snapshot.rounds].sort((a, b) => a.number - b.number).find((r) => r.status === 'scheduled' || r.status === 'live')
+  return [...snapshot.rounds]
+    .sort((a, b) => a.number - b.number)
+    .find((r) => r.status === 'scheduled' || r.status === 'live')
 }
 
 /** How the main game plays in teams: a team format in teams, fourball match play in pairs. Both are drawn in Equipos. */
@@ -67,7 +81,12 @@ export function hrefOf(slug: string, item: ReadinessItem): string {
  * for that day: the engine plays that one, or par 4 everywhere when its
  * course isn't loaded.
  */
-function teesPlayed(snapshot: Snapshot, round: Round, course: Course, loaded: Map<string, Tee>): { tees: Array<Tee | null>; foreign: number } {
+function teesPlayed(
+  snapshot: Snapshot,
+  round: Round,
+  course: Course,
+  loaded: Map<string, Tee>,
+): { tees: Array<Tee | null>; foreign: number } {
   const tees = new Set<Tee | null>()
   let foreign = 0
   for (const p of snapshot.players) {
@@ -89,7 +108,8 @@ type CardProblem = 'missing' | 'nine' | 'blank' | 'noIndex' | null
 function cardProblem(tees: Array<Tee | null>, round: Round): CardProblem {
   if (tees.some((tee) => !tee || tee.holes.length === 0)) return 'missing'
   const loaded = tees as Tee[]
-  if (loaded.some((tee) => tee.holes.length < round.holes)) return loaded.every((tee) => tee.holes.length === 9) && round.holes === 18 ? 'nine' : 'missing'
+  if (loaded.some((tee) => tee.holes.length < round.holes))
+    return loaded.every((tee) => tee.holes.length === 9) && round.holes === 18 ? 'nine' : 'missing'
   if (loaded.some((tee) => indexUntouched(tee) && parsUntouched(tee))) return 'blank'
   if (loaded.some(indexUntouched)) return 'noIndex'
   return null
@@ -99,7 +119,12 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   const R = t.admin.ready
   const items: ReadinessItem[] = []
   const players = snapshot.players
-  items.push({ id: 'players', done: players.length >= 2, text: players.length >= 2 ? R.players(players.length) : R.playersMissing, to: 'jugadores' })
+  items.push({
+    id: 'players',
+    done: players.length >= 2,
+    text: players.length >= 2 ? R.players(players.length) : R.playersMissing,
+    to: 'jugadores',
+  })
   if (entry.pins && players.length) {
     const missing = players.filter((p) => !entry.pins!.has(p.id) && !entry.linked?.has(p.id)).length
     items.push({ id: 'pins', done: missing === 0, text: missing ? R.pinsMissing(missing) : R.pins, to: 'jugadores' })
@@ -122,19 +147,35 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   const extra = rounds.length - Math.max(settings.rounds, needed)
   if (short > 0) items.push({ id: 'rounds', done: false, text: R.roundsMissing(short), to: 'rondas' })
   else if (!rounds.length) items.push({ id: 'rounds', done: false, text: R.roundsCancelled(all.length), to: 'rondas' })
-  else if (extra > 0) items.push({ id: 'rounds', done: false, text: R.roundsExtra(rounds.length, settings.rounds, extra), to: 'torneo', tab: 'reglas' })
+  else if (extra > 0)
+    items.push({
+      id: 'rounds',
+      done: false,
+      text: R.roundsExtra(rounds.length, settings.rounds, extra),
+      to: 'torneo',
+      tab: 'reglas',
+    })
   else items.push({ id: 'rounds', done: true, text: R.rounds(all.length), to: 'rondas' })
   if (!rounds.length) return items
 
   const unset = rounds.filter((r) => !r.courseId || !r.date)
-  items.push({ id: 'roundSetup', done: !unset.length, text: unset.length ? R.roundSetupMissing(days(unset)) : R.roundSetup, to: 'rondas', days: numbers(unset) })
+  items.push({
+    id: 'roundSetup',
+    done: !unset.length,
+    text: unset.length ? R.roundSetupMissing(days(unset)) : R.roundSetup,
+    to: 'rondas',
+    days: numbers(unset),
+  })
 
   // Each round's card, on the tees its players will play; a tee of another course is its own line.
   const courses = new Map(snapshot.courses.map((c) => [c.id, c]))
   const loaded = teeById(snapshot)
   const withCourse = rounds.filter((r) => r.courseId && courses.has(r.courseId))
   if (withCourse.length) {
-    const read = withCourse.map((round) => ({ round, ...teesPlayed(snapshot, round, courses.get(round.courseId!)!, loaded) }))
+    const read = withCourse.map((round) => ({
+      round,
+      ...teesPlayed(snapshot, round, courses.get(round.courseId!)!, loaded),
+    }))
     const of = (k: CardProblem) => read.filter((x) => cardProblem(x.tees, x.round) === k).map((x) => x.round)
     const lines: Array<[Round[], (d: string) => string, ReadinessItem['to']]> = [
       [of('missing'), R.cardMissing, 'campos'],
@@ -143,15 +184,28 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
       [of('noIndex'), R.cardNoIndex, 'campos'],
     ]
     const open = lines.find(([rs]) => rs.length)
-    items.push(open ? { id: 'card', done: false, text: open[1](days(open[0])), to: open[2], days: numbers(open[0]) } : { id: 'card', done: true, text: R.card, to: 'campos' })
+    items.push(
+      open
+        ? { id: 'card', done: false, text: open[1](days(open[0])), to: open[2], days: numbers(open[0]) }
+        : { id: 'card', done: true, text: R.card, to: 'campos' },
+    )
     const foreign = read.filter((x) => x.foreign).map((x) => x.round)
-    if (foreign.length) items.push({ id: 'foreignTees', done: false, text: R.teesForeign(days(foreign)), to: 'rondas', days: numbers(foreign) })
+    if (foreign.length)
+      items.push({
+        id: 'foreignTees',
+        done: false,
+        text: R.teesForeign(days(foreign)),
+        to: 'rondas',
+        days: numbers(foreign),
+      })
   }
 
   // Teams, when the main game plays as teams: drawn in Equipos (older tournaments used their pairs, and so does the engine).
   const kind = settings.modules.individual.enabled ? teamPlay(settings) : null
   if (kind) {
-    const teams = snapshot.teams.length ? snapshot.teams.map((x) => x.playerIds) : snapshot.pairs.map((p) => [p.player1Id, p.player2Id])
+    const teams = snapshot.teams.length
+      ? snapshot.teams.map((x) => x.playerIds)
+      : snapshot.pairs.map((p) => [p.player1Id, p.player2Id])
     const inTeam = new Set(teams.flat())
     const loose = players.filter((p) => !inTeam.has(p.id)).length
     const pairs = kind === 'pairs'
@@ -180,7 +234,14 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   }
 
   // The days are in Torneo › Reglas: the knockout can't be played out in fewer.
-  if (needed > settings.rounds) items.push({ id: 'bracket', done: false, text: R.bracketDays(needed, settings.rounds), to: 'torneo', tab: 'reglas' })
+  if (needed > settings.rounds)
+    items.push({
+      id: 'bracket',
+      done: false,
+      text: R.bracketDays(needed, settings.rounds),
+      to: 'torneo',
+      tab: 'reglas',
+    })
 
   // The next round to play: everyone on a tee of its course, and in a group.
   const next = nextRound(snapshot)
@@ -190,15 +251,39 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   if (course && course.tees.length > 1) {
     const onCourse = (teeId: string | null) => !!teeId && course.tees.some((tee) => tee.id === teeId)
     // A tee chosen for the day is played (one of another course is the line above); without one, the default on this course, else the first tee.
-    const noTee = players.filter((p) => !snapshot.roundTees.some((x) => x.roundId === next.id && x.playerId === p.id) && !onCourse(p.defaultTeeId)).length
-    items.push({ id: 'tees', done: !noTee, text: noTee ? R.teesMissing(noTee, next.number, course.tees[0]!.name) : R.tees(next.number), to: 'rondas', days: [next.number] })
+    const noTee = players.filter(
+      (p) => !snapshot.roundTees.some((x) => x.roundId === next.id && x.playerId === p.id) && !onCourse(p.defaultTeeId),
+    ).length
+    items.push({
+      id: 'tees',
+      done: !noTee,
+      text: noTee ? R.teesMissing(noTee, next.number, course.tees[0]!.name) : R.tees(next.number),
+      to: 'rondas',
+      days: [next.number],
+    })
   }
 
   const grouped = new Set(snapshot.groups.filter((g) => g.roundId === next.id).flatMap((g) => g.playerIds))
-  const groupsLine = (done: boolean, text: string): ReadinessItem => ({ id: 'groups', done, text, to: 'grupos', roundId: next.id, days: [next.number] })
+  const groupsLine = (done: boolean, text: string): ReadinessItem => ({
+    id: 'groups',
+    done,
+    text,
+    to: 'grupos',
+    roundId: next.id,
+    days: [next.number],
+  })
   if (!bracket) {
     const out = players.filter((p) => !grouped.has(p.id)).length
-    items.push(groupsLine(!out, out === players.length ? R.groupsMissing(next.number) : out ? R.groupsPartial(out, next.number) : R.groups(next.number)))
+    items.push(
+      groupsLine(
+        !out,
+        out === players.length
+          ? R.groupsMissing(next.number)
+          : out
+            ? R.groupsPartial(out, next.number)
+            : R.groups(next.number),
+      ),
+    )
     return items
   }
 
@@ -209,7 +294,12 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
     const last = bracket.rounds.at(-1)
     const undecided = last && !bracket.champion ? last.matches.filter((m) => m.sides[1] && !m.winner).length : 0
     // Whoever the Comité sends through, it groups by hand: once the day has groups, the decision is made.
-    if (last && undecided) items.push(grouped.size ? groupsLine(true, R.groups(next.number)) : groupsLine(false, R.bracketUndecided(renderMsg(last.name, settings.currency), undecided, next.number)))
+    if (last && undecided)
+      items.push(
+        grouped.size
+          ? groupsLine(true, R.groups(next.number))
+          : groupsLine(false, R.bracketUndecided(renderMsg(last.name, settings.currency), undecided, next.number)),
+      )
     return items
   }
   const real = b.matches.filter((m) => m.sides[1])
@@ -225,7 +315,13 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   items.push(
     groupsLine(
       !pending && !byesOut,
-      none ? R.groupsMissing(next.number) : pending ? R.groupsMatches(pending, next.number) : byesOut ? R.groupsPartial(byesOut, next.number) : R.groups(next.number),
+      none
+        ? R.groupsMissing(next.number)
+        : pending
+          ? R.groupsMatches(pending, next.number)
+          : byesOut
+            ? R.groupsPartial(byesOut, next.number)
+            : R.groups(next.number),
     ),
   )
   return items
@@ -247,7 +343,8 @@ export function checkedText(items: ReadinessItem[]): string {
 export function coveredByChecklist(warning: Msg, items: ReadinessItem[]): boolean {
   const open = items.filter((i) => !i.done)
   // By the warning's code and its day (ARCH-05): it used to match the warning's Spanish.
-  const about = (ids: ReadinessId[], day: number | null) => open.some((i) => ids.includes(i.id) && day != null && !!i.days?.includes(day))
+  const about = (ids: ReadinessId[], day: number | null) =>
+    open.some((i) => ids.includes(i.id) && day != null && !!i.days?.includes(day))
   switch (warning.code) {
     case 'core.noCourse':
       return about(['roundSetup', 'card', 'foreignTees'], warning.params.day)
@@ -264,5 +361,7 @@ export function coveredByChecklist(warning: Msg, items: ReadinessItem[]): boolea
 
 /** The Torneo tab's count while the tournament is set up: the open lines plus what else the engine warns about. */
 export function setupBadge(items: ReadinessItem[], warnings: readonly Msg[], missingModules: number): number {
-  return items.filter((i) => !i.done).length + warnings.filter((w) => !coveredByChecklist(w, items)).length + missingModules
+  return (
+    items.filter((i) => !i.done).length + warnings.filter((w) => !coveredByChecklist(w, items)).length + missingModules
+  )
 }

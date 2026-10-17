@@ -24,10 +24,28 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Snapshot } from '../engine/types'
 import type { Row } from './mappers'
-import { enterAs, holeAward, holeScore, installFakePhone, isAwardCall, isWrite, settle, snakeAnswer } from './testing/fakePhone'
+import {
+  enterAs,
+  holeAward,
+  holeScore,
+  installFakePhone,
+  isAwardCall,
+  isWrite,
+  settle,
+  snakeAnswer,
+} from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, overlayPending, startOutbox, useOutbox } = await import('./outbox')
+const {
+  _outboxTest,
+  enqueueAward,
+  enqueueScore,
+  enqueueSignature,
+  enqueueTiebreak,
+  overlayPending,
+  startOutbox,
+  useOutbox,
+} = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
 const { t } = await import('../i18n/es-MX')
 
@@ -44,7 +62,15 @@ beforeEach(async () => {
 })
 afterEach(() => _outboxTest.reset())
 
-const award = (o: Record<string, unknown>) => ({ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1', ...o })
+const award = (o: Record<string, unknown>) => ({
+  round_id: 'r1',
+  group_id: 'g1',
+  hole: 5,
+  game_id: 'closest',
+  player_id: 'p3',
+  decided_by: 'p1',
+  ...o,
+})
 const rejected = () => useOutbox.getState().rejected.map((r) => r.key)
 /** A second group in the round, g9. */
 function secondGroup() {
@@ -53,13 +79,21 @@ function secondGroup() {
 /** p9, a player of the tournament who plays in g9. */
 function playerInSecondGroup() {
   secondGroup()
-  server.tables.players!.push({ id: 'p9', tournament_id: 't1', full_name: 'Nueve', display_name: 'Nueve', is_admin: false })
+  server.tables.players!.push({
+    id: 'p9',
+    tournament_id: 't1',
+    full_name: 'Nueve',
+    display_name: 'Nueve',
+    is_admin: false,
+  })
   server.tables.group_members!.push({ group_id: 'g9', player_id: 'p9' })
 }
 /** The Comité moves `player` from this phone's foursome to g9 while the phone still has him. */
 function moveToSecondGroup(player: string) {
   secondGroup()
-  server.tables.group_members = server.tables.group_members!.map((m) => (m.player_id === player ? { ...m, group_id: 'g9' } : m))
+  server.tables.group_members = server.tables.group_members!.map((m) =>
+    m.player_id === player ? { ...m, group_id: 'g9' } : m,
+  )
 }
 /** The writes are saved in this order with no signal; the signal comes back, and one pass sends them. */
 async function savedThenSent(...writes: Array<() => Promise<void>>) {
@@ -70,14 +104,23 @@ async function savedThenSent(...writes: Array<() => Promise<void>>) {
 }
 /** The boards as the server sent them, with these winners. */
 const boards = (holeAwards: Array<{ groupId: string; hole: number; gameId: string; playerId: string }>) =>
-  ({ tournament: { id: 't1' }, scores: [], snakeTiebreaks: [], cardSignatures: [], holeAwards: holeAwards.map((a) => ({ roundId: 'r1', ...a })) }) as unknown as Snapshot
+  ({
+    tournament: { id: 't1' },
+    scores: [],
+    snakeTiebreaks: [],
+    cardSignatures: [],
+    holeAwards: holeAwards.map((a) => ({ roundId: 'r1', ...a })),
+  }) as unknown as Snapshot
 
 describe('a write the server refuses goes to «rechazados», and the one queued behind it lands', () => {
   describe('refused by the row-level security', () => {
     it('a card signature in a round that closed meanwhile; behind it, a hole of the next round', async () => {
       // Day 1 closed while the signature waited on the phone; the foursome plays day 2 together.
       const [r1] = server.tables.rounds as [Row]
-      server.tables.rounds = [{ ...r1, status: 'finished' }, { ...r1, id: 'r2', number: 2, status: 'live' }]
+      server.tables.rounds = [
+        { ...r1, status: 'finished' },
+        { ...r1, id: 'r2', number: 2, status: 'live' },
+      ]
       server.tables.groups!.push({ id: 'g2', round_id: 'r2', number: 1, tee_time: null, start_hole: 1 })
       server.tables.group_members!.push(...['p1', 'p2', 'p3', 'p4'].map((player_id) => ({ group_id: 'g2', player_id })))
       await savedThenSent(
@@ -127,7 +170,15 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
       // answer is the one PostgREST gives for one, and the outbox must still read it as a refusal (X04).
       server.decide = (req) =>
         isWrite(req) && (req.body as { hole: number }).hole === 7
-          ? { status: 409, body: { code: '23503', details: null, hint: null, message: 'insert or update on table "scores" violates foreign key constraint "scores_entered_by_fkey"' } }
+          ? {
+              status: 409,
+              body: {
+                code: '23503',
+                details: null,
+                hint: null,
+                message: 'insert or update on table "scores" violates foreign key constraint "scores_entered_by_fkey"',
+              },
+            }
           : 'answer'
       await savedThenSent(
         () => enqueueScore('t1', holeScore('p2', 7, 5)),
@@ -160,7 +211,9 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
         () => enqueueScore('t1', bad),
         () => enqueueScore('t1', holeScore('p2', 6, 4)),
       )
-      expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: `score:r1:p1:${bad.hole}`, message: t.sync.errDenied })])
+      expect(useOutbox.getState().rejected).toEqual([
+        expect.objectContaining({ key: `score:r1:p1:${bad.hole}`, message: t.sync.errDenied }),
+      ])
       expect(server.score('p2', 6)).toMatchObject({ strokes: 4 })
       expect(useOutbox.getState()).toMatchObject({ pending: 0, lastError: null })
     })
@@ -168,13 +221,23 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
     it('22001, a value too long for its column', async () => {
       server.decide = (req) =>
         isWrite(req) && (req.body as { hole: number }).hole === 7
-          ? { status: 400, body: { code: '22001', details: null, hint: null, message: 'value too long for type character varying(32)' } }
+          ? {
+              status: 400,
+              body: {
+                code: '22001',
+                details: null,
+                hint: null,
+                message: 'value too long for type character varying(32)',
+              },
+            }
           : 'answer'
       await savedThenSent(
         () => enqueueScore('t1', holeScore('p1', 7, 5)),
         () => enqueueScore('t1', holeScore('p2', 6, 4)),
       )
-      expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:7', message: t.sync.errDenied })])
+      expect(useOutbox.getState().rejected).toEqual([
+        expect.objectContaining({ key: 'score:r1:p1:7', message: t.sync.errDenied }),
+      ])
       expect(server.score('p2', 6)).toMatchObject({ strokes: 4 })
     })
   })
@@ -194,7 +257,10 @@ describe('a hole’s winners, and «nadie»', () => {
     server.seed('hole_awards', [award({ game_id: 'longest', player_id: 'p4' })])
     await enqueueAward('t1', holeAward(5, ['p2']))
     await settle(useOutbox)
-    expect(server.tables.hole_awards!.map((a) => `${a.game_id}:${a.player_id}`).sort()).toEqual(['closest:p2', 'longest:p4'])
+    expect(server.tables.hole_awards!.map((a) => `${a.game_id}:${a.player_id}`).sort()).toEqual([
+      'closest:p2',
+      'longest:p4',
+    ])
   })
 
   it('leaves the group’s winners of that contest on other holes', async () => {
@@ -233,6 +299,10 @@ describe('a hole’s winners, and «nadie»', () => {
       { groupId: 'g1', hole: 5, gameId: 'closest', playerId: 'p3' },
     ])
     overlayPending(shown)
-    expect(shown.holeAwards!.map((a) => `${a.gameId}:${a.hole}:${a.playerId}`).sort()).toEqual(['closest:5:p2', 'closest:6:p3', 'longest:5:p4'])
+    expect(shown.holeAwards.map((a) => `${a.gameId}:${a.hole}:${a.playerId}`).sort()).toEqual([
+      'closest:5:p2',
+      'closest:6:p3',
+      'longest:5:p4',
+    ])
   })
 })

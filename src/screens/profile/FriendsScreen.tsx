@@ -10,7 +10,14 @@ import { Avatar, ErrorBox, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { IconChevronLeft, IconChevronRight, IconSearch } from '../../components/icons'
 import { formatIndex, searchProfiles, type ProfileHit } from '../../data/profiles'
-import { friendRemove, friendRequest, friendRespond, myFriends, type FriendCard, type MyFriends } from '../../data/social'
+import {
+  friendRemove,
+  friendRequest,
+  friendRespond,
+  myFriends,
+  type FriendCard,
+  type MyFriends,
+} from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 import { useServerQuery } from '../../data/query'
@@ -20,7 +27,15 @@ import { useDebounced } from '../../lib/useDebounced'
 const S = t.social
 const NO_HITS: ProfileHit[] = []
 
-function Person({ p, sub, children }: { p: Pick<FriendCard, 'handle' | 'displayName' | 'avatarUrl'>; sub?: string | null; children?: ReactNode }) {
+function Person({
+  p,
+  sub,
+  children,
+}: {
+  p: Pick<FriendCard, 'handle' | 'displayName' | 'avatarUrl'>
+  sub?: string | null
+  children?: ReactNode
+}) {
   return (
     <div className={styles.row}>
       <Link to={`/p/${p.handle}`} className={styles.personLink}>
@@ -35,7 +50,10 @@ function Person({ p, sub, children }: { p: Pick<FriendCard, 'handle' | 'displayN
   )
 }
 
-const subOf = (f: FriendCard) => [f.homeClub, f.index != null ? `${t.profile.indexManual} ${formatIndex(f.index)}` : null].filter(Boolean).join(', ') || `@${f.handle}`
+const subOf = (f: FriendCard) =>
+  [f.homeClub, f.index != null ? `${t.profile.indexManual} ${formatIndex(f.index)}` : null]
+    .filter(Boolean)
+    .join(', ') || `@${f.handle}`
 
 export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
   const ok = useRequireAccount('/amigos', !!fixture)
@@ -46,7 +64,10 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
   const clean = q.trim().replace(/^@/, '')
   const asked = useDebounced(clean, 250)
   const searching = !fixture && clean.length >= 2
-  const search = useServerQuery(['friends', 'search', asked], () => searchProfiles(asked), { enabled: searching && asked.length >= 2, keepPrevious: true })
+  const search = useServerQuery(['friends', 'search', asked], () => searchProfiles(asked), {
+    enabled: searching && asked.length >= 2,
+    keepPrevious: true,
+  })
   // A search that can't be read shows no one, as before; the friends' list is the screen's error.
   const hits: ProfileHit[] | null = !searching ? null : (search.data ?? (search.isError ? NO_HITS : null))
   /** The person being acted on: their buttons wait. */
@@ -83,7 +104,15 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
       <label className={styles.search}>
         <IconSearch size={20} />
         <span className="sr-only">{S.searchLabel}</span>
-        <input className="input" type="search" placeholder={S.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" autoCapitalize="none" />
+        <input
+          className="input"
+          type="search"
+          placeholder={S.searchPlaceholder}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="none"
+        />
       </label>
       {hits && (
         <section className={styles.section}>
@@ -96,7 +125,12 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
                   {known.has(h.handle) ? (
                     <IconChevronRight size={20} />
                   ) : (
-                    <button className="btn btn--secondary btn--sm" type="button" disabled={busy === h.handle} onClick={() => void add(h)}>
+                    <button
+                      className="btn btn--secondary btn--sm"
+                      type="button"
+                      disabled={busy === h.handle}
+                      onClick={() => void add(h)}
+                    >
                       {S.add}
                     </button>
                   )}
@@ -113,10 +147,20 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
           <div className={styles.rows}>
             {data.incoming.map((f) => (
               <Person key={f.handle} p={f} sub={subOf(f)}>
-                <button className="btn btn--primary btn--sm" type="button" disabled={busy === f.handle} onClick={() => void act(f.handle, () => friendRespond(f.handle, true), S.nowFriends(f.displayName))}>
+                <button
+                  className="btn btn--primary btn--sm"
+                  type="button"
+                  disabled={busy === f.handle}
+                  onClick={() => void act(f.handle, () => friendRespond(f.handle, true), S.nowFriends(f.displayName))}
+                >
                   {S.accept}
                 </button>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={busy === f.handle} onClick={() => void act(f.handle, () => friendRespond(f.handle, false))}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={busy === f.handle}
+                  onClick={() => void act(f.handle, () => friendRespond(f.handle, false))}
+                >
                   {S.decline}
                 </button>
               </Person>
@@ -151,7 +195,12 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
           <div className={styles.rows}>
             {data.suggestions.map((f) => (
               <Person key={f.handle} p={f} sub={f.shared ? S.sharedTournaments(f.shared) : subOf(f)}>
-                <button className="btn btn--secondary btn--sm" type="button" disabled={busy === f.handle} onClick={() => void add(f)}>
+                <button
+                  className="btn btn--secondary btn--sm"
+                  type="button"
+                  disabled={busy === f.handle}
+                  onClick={() => void add(f)}
+                >
                   {S.add}
                 </button>
               </Person>
@@ -166,7 +215,12 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
           <div className={styles.rows}>
             {data.outgoing.map((f) => (
               <Person key={f.handle} p={f} sub={subOf(f)}>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={busy === f.handle} onClick={() => void act(f.handle, () => friendRemove(f.handle))}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={busy === f.handle}
+                  onClick={() => void act(f.handle, () => friendRemove(f.handle))}
+                >
                   {S.cancel}
                 </button>
               </Person>

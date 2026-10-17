@@ -32,16 +32,43 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
-const { _outboxTest, adoptQueuedWrites, flush, hasUnsentWrites, queuedFor, unsentBeforeClaim, unsentWrites, useOutbox } = await import('./outbox')
+const {
+  _outboxTest,
+  adoptQueuedWrites,
+  flush,
+  hasUnsentWrites,
+  queuedFor,
+  unsentBeforeClaim,
+  unsentWrites,
+  useOutbox,
+} = await import('./outbox')
 
 const score = (hole: number, player = 'p1') => ({
   key: `score:r1:${player}:${hole}`,
   kind: 'score' as const,
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: player, hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  payload: {
+    round_id: 'r1',
+    player_id: player,
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'x',
+  },
   attempts: 0,
   createdAt: Date.now(),
 })
@@ -97,7 +124,8 @@ describe('outbox across a change of identity', () => {
     const pushed: Array<{ key: string; as: string | null | undefined }> = []
     _outboxTest.setPush(async (item) => {
       // Before the PIN, under a new anonymous session, the server would refuse it.
-      if (uid !== 'uid-c' || !item.actingUid) throw new Error('new row violates row-level security policy for table "scores"')
+      if (uid !== 'uid-c' || !item.actingUid)
+        throw new Error('new row violates row-level security policy for table "scores"')
       pushed.push({ key: item.key, as: item.actingUid })
     })
     // Opened from the saved boards with no signal: nobody confirmed yet.
@@ -119,7 +147,7 @@ describe('outbox across a change of identity', () => {
     expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0, writes: 0 })
   })
 
-  it('the held count follows the device\'s identity, not only the queue', async () => {
+  it("the held count follows the device's identity, not only the queue", async () => {
     _outboxTest.setPush(async () => {
       throw new Error('TypeError: Failed to fetch')
     })
@@ -156,9 +184,23 @@ describe('what still has to go out before the phone changes who it is', () => {
   })
 
   it('counts a card signature, a snake answer or a hole award, not only score holes («Cambiar de jugador»)', async () => {
-    await _outboxTest.enqueue({ key: 'signature:r1:pair1', kind: 'signature', tournamentId: 't1', payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    await _outboxTest.enqueue({
+      key: 'signature:r1:pair1',
+      kind: 'signature',
+      tournamentId: 't1',
+      payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' },
+      attempts: 0,
+      createdAt: Date.now(),
+    })
     expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0, writes: 1 })
-    await _outboxTest.enqueue({ key: 'tiebreak:r1:g1:7', kind: 'tiebreak', tournamentId: 't1', payload: { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p2', decided_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    await _outboxTest.enqueue({
+      key: 'tiebreak:r1:g1:7',
+      kind: 'tiebreak',
+      tournamentId: 't1',
+      payload: { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p2', decided_by: 'p1' },
+      attempts: 0,
+      createdAt: Date.now(),
+    })
     expect(queuedFor('t1').writes).toBe(2)
     expect(queuedFor('t-otro').writes).toBe(0)
   })
@@ -176,7 +218,7 @@ describe('what still has to go out before the phone changes who it is', () => {
     expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'pin', name: null })
   })
 
-  it('«PIN» is said of the tournament it names: another tournament\'s held writes do not make this one wait for a PIN', async () => {
+  it("«PIN» is said of the tournament it names: another tournament's held writes do not make this one wait for a PIN", async () => {
     // This tournament's hole waits only for signal (written as the phone's own identity)...
     await _outboxTest.enqueue({ ...score(3), tournamentId: 't-primero' })
     // ...while another tournament's was written under an identity the phone no longer has.
@@ -214,7 +256,7 @@ describe('what still has to go out before the phone enters another tournament wi
     uid = 'uid-a'
   })
 
-  it('another tournament\'s writes, written as this phone, named by the name they were queued under', async () => {
+  it("another tournament's writes, written as this phone, named by the name they were queued under", async () => {
     expect(unsentBeforeClaim('t-nuevo')).toBeNull()
     await _outboxTest.enqueue({ ...score(3), tournamentId: 't-ensayo', tournamentName: 'Ensayo' })
     expect(unsentBeforeClaim('t-nuevo')).toEqual({ tournamentId: 't-ensayo', name: 'Ensayo' })
@@ -233,9 +275,14 @@ describe('what still has to go out before the phone enters another tournament wi
     expect(unsentBeforeClaim('t-nuevo')).toBeNull()
   })
 
-  it('not writes held for a PIN elsewhere (they wait for it there either way), nor a newer build\'s', async () => {
+  it("not writes held for a PIN elsewhere (they wait for it there either way), nor a newer build's", async () => {
     await _outboxTest.enqueue({ ...score(3), tournamentId: 't-ensayo', actingUid: 'uid-viejo' })
-    await _outboxTest.enqueue({ ...score(9), tournamentId: 't-ensayo', key: 'photo:r1:p1:9', kind: 'photo' as unknown as 'score' })
+    await _outboxTest.enqueue({
+      ...score(9),
+      tournamentId: 't-ensayo',
+      key: 'photo:r1:p1:9',
+      kind: 'photo' as unknown as 'score',
+    })
     expect(unsentBeforeClaim('t-nuevo')).toBeNull()
     // Sign-out and the account switches still count the held one.
     expect(unsentWrites()).toMatchObject({ tournamentId: 't-ensayo', waitsFor: 'pin' })

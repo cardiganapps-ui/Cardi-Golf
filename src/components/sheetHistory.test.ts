@@ -171,7 +171,7 @@ describe('one entry for «a sheet is open»', () => {
     expect(h.state).toEqual({ route: 'page', key: 'k1' })
   })
 
-  it('leaveSheetHistory gives the entry back first, so a replace lands on the page\'s own entry', async () => {
+  it("leaveSheetHistory gives the entry back first, so a replace lands on the page's own entry", async () => {
     sheetOpened('a', vi.fn())
     const left = leaveSheetHistory()
     vi.runAllTimers()

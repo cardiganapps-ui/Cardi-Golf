@@ -57,14 +57,34 @@ export function UnassignedMoney() {
   const players = useMemo(() => [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder), [snapshot.players])
   if (u.buckets.length === 0 && u.held.length === 0 && u.assignments.length === 0) return null
   const name = (id: string | null) => (id ? (players.find((p) => p.id === id)?.displayName ?? '?') : U.toHouse)
-  const who = (a: Assignment) => t.common.andList(a.rows.map((r) => (a.rows.length > 1 ? `${name(r.toPlayerId)} ${formatMoney(r.amount, cur)}` : name(r.toPlayerId))))
-  const statusNote = (a: Assignment) => (a.status === 'over' ? U.statusOver : a.status === 'orphan' ? U.statusOrphan : a.status === 'waiting' ? U.statusWaiting : null)
+  const who = (a: Assignment) =>
+    t.common.andList(
+      a.rows.map((r) =>
+        a.rows.length > 1 ? `${name(r.toPlayerId)} ${formatMoney(r.amount, cur)}` : name(r.toPlayerId),
+      ),
+    )
+  const statusNote = (a: Assignment) =>
+    a.status === 'over'
+      ? U.statusOver
+      : a.status === 'orphan'
+        ? U.statusOrphan
+        : a.status === 'waiting'
+          ? U.statusWaiting
+          : null
 
   return (
     <section className={styles.section} aria-label={U.heading}>
       <h3>{U.heading}</h3>
       {/* On a link to watch (STRAT-05) nothing says where in the Comité's screens to act: it is not a Comité's to read. */}
-      <span className="help">{u.closing ? U.intro : u.openDays ? (spectator ? U.finalOpenVerdict : U.finalOpen(u.openDays.open, u.openDays.missing)) : U.waitingIntro}</span>
+      <span className="help">
+        {u.closing
+          ? U.intro
+          : u.openDays
+            ? spectator
+              ? U.finalOpenVerdict
+              : U.finalOpen(u.openDays.open, u.openDays.missing)
+            : U.waitingIntro}
+      </span>
       {u.buckets.length > 0 && (
         <div className={styles.transfers}>
           {u.buckets.map((b) => (
@@ -77,7 +97,11 @@ export function UnassignedMoney() {
               <span className={styles.amount}>{formatMoney(b.remaining, cur)}</span>
               {me.isComite && (
                 <span className={styles.action}>
-                  <Button size="sm" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, cur)}`}>
+                  <Button
+                    size="sm"
+                    onClick={() => setDeciding(b.key)}
+                    aria-label={`${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, cur)}`}
+                  >
                     {U.decide}
                   </Button>
                 </span>
@@ -122,7 +146,12 @@ export function UnassignedMoney() {
                   <span className={styles.amount}>{formatMoney(a.total, cur)}</span>
                   {me.isComite && (
                     <span className={styles.action}>
-                      <Button variant="ghost" size="sm" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(words(a.label), formatMoney(a.total, cur), a.reason)}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setVoiding(a)}
+                        aria-label={`${U.void}: ${U.rowWhat(words(a.label), formatMoney(a.total, cur), a.reason)}`}
+                      >
                         {U.void}
                       </Button>
                     </span>
@@ -133,12 +162,24 @@ export function UnassignedMoney() {
           </div>
         </>
       )}
-      {me.isComite && <AssignSheet bucketKey={deciding} players={players} tournamentId={tournamentId} onClose={() => setDeciding(null)} onDone={reload} />}
+      {me.isComite && (
+        <AssignSheet
+          bucketKey={deciding}
+          players={players}
+          tournamentId={tournamentId}
+          onClose={() => setDeciding(null)}
+          onDone={reload}
+        />
+      )}
       {me.isComite && (
         <ReasonSheet
           open={!!voiding}
           title={U.voidTitle}
-          body={voiding ? `${U.rowWhat(words(voiding.label), formatMoney(voiding.total, cur), voiding.reason)}. ${U.voidBody}` : undefined}
+          body={
+            voiding
+              ? `${U.rowWhat(words(voiding.label), formatMoney(voiding.total, cur), voiding.reason)}. ${U.voidBody}`
+              : undefined
+          }
           confirmLabel={U.void}
           danger
           onConfirm={async (reason) => {
@@ -156,11 +197,25 @@ export function UnassignedMoney() {
 type Mode = 'give' | 'refund' | 'house'
 
 /** One decision on one line: to whom and how much, with a reason. Never more than the line holds. */
-function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bucketKey: string | null; players: Player[]; tournamentId: string; onClose: () => void; onDone: () => Promise<unknown> }) {
+function AssignSheet({
+  bucketKey,
+  players,
+  tournamentId,
+  onClose,
+  onDone,
+}: {
+  bucketKey: string | null
+  players: Player[]
+  tournamentId: string
+  onClose: () => void
+  onDone: () => Promise<unknown>
+}) {
   const cur = useCurrency()
   const words = useWords()
   // The line as the boards hold it now, not as it was when the sheet opened.
-  const bucket = useTournament((s) => (bucketKey ? (s.data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey) ?? null) : null))
+  const bucket = useTournament((s) =>
+    bucketKey ? (s.data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey) ?? null) : null,
+  )
   const remaining = bucket?.remaining ?? 0
   const [mode, setMode] = useState<Mode>('give')
   const [amounts, setAmounts] = useState<Record<string, number>>({})
@@ -180,12 +235,17 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
     // Only when another line opens: a line that changes under the sheet is caught on «Asignar» (`U.stale`).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bucketKey])
-  const refund = useMemo(() => (bucket?.contributors?.length ? proRata(remaining, bucket.contributors) : []), [bucket, remaining])
+  const refund = useMemo(
+    () => (bucket?.contributors?.length ? proRata(remaining, bucket.contributors) : []),
+    [bucket, remaining],
+  )
   const nameOf = (id: string) => players.find((p) => p.id === id)?.displayName ?? '?'
 
   const entries: AssignEntry[] =
     mode === 'give'
-      ? players.filter((p) => (amounts[p.id] ?? 0) > 0).map((p) => ({ kind: 'award', to_player_id: p.id, amount: amounts[p.id]! }))
+      ? players
+          .filter((p) => (amounts[p.id] ?? 0) > 0)
+          .map((p) => ({ kind: 'award', to_player_id: p.id, amount: amounts[p.id]! }))
       : mode === 'refund'
         ? refund.map((c) => ({ kind: 'refund', to_player_id: c.playerId, amount: c.amount }))
         : house > 0
@@ -203,20 +263,41 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
 
   async function confirm() {
     if (!bucketKey) return
-    if (!bucket) return setError(U.gone)
+    if (!bucket) {
+      setError(U.gone)
+      return
+    }
     // Another phone's decision came over the channel while the sheet was open: its amounts were chosen against another line.
-    if (remaining !== opened) return changed(remaining)
-    if (!entries.length) return setError(U.nothing)
-    if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining, cur)))
-    if (reason.trim().length < 3) return setError(U.reasonShort)
+    if (remaining !== opened) {
+      changed(remaining)
+      return
+    }
+    if (!entries.length) {
+      setError(U.nothing)
+      return
+    }
+    if (sum > remaining) {
+      setError(U.tooMuch(formatMoney(remaining, cur)))
+      return
+    }
+    if (reason.trim().length < 3) {
+      setError(U.reasonShort)
+      return
+    }
     setBusy(true)
     setError(null)
     try {
       // A decision another phone just sent may still be on its way over the channel: read the line again first.
       await onDone()
       const now = useTournament.getState().data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey)
-      if (!now) return setError(U.gone)
-      if (now.remaining !== opened) return changed(now.remaining)
+      if (!now) {
+        setError(U.gone)
+        return
+      }
+      if (now.remaining !== opened) {
+        changed(now.remaining)
+        return
+      }
       await assignUnassigned(tournamentId, bucketKey, entries, reason.trim())
       await onDone()
       toast(U.assigned)
@@ -229,7 +310,15 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
   }
 
   return (
-    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(words(bucket.label)) : ''} body={U.available(formatMoney(remaining, cur))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
+    <ConfirmSheet
+      open={!!bucketKey}
+      title={bucket ? U.decideTitle(words(bucket.label)) : ''}
+      body={U.available(formatMoney(remaining, cur))}
+      confirmLabel={U.confirm}
+      busy={busy}
+      onConfirm={() => void confirm()}
+      onClose={onClose}
+    >
       <Segmented
         value={mode}
         label={U.decide}
@@ -243,13 +332,22 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
           setError(null)
         }}
       />
-      <span className="help">{mode === 'give' ? U.giveHint : mode === 'refund' ? (refund.length ? U.refundHint : U.refundNone) : U.houseHint}</span>
+      <span className="help">
+        {mode === 'give' ? U.giveHint : mode === 'refund' ? (refund.length ? U.refundHint : U.refundNone) : U.houseHint}
+      </span>
       {mode === 'give' && (
         <div className={styles.breakdown}>
           {players.map((p) => (
             <div key={p.id} className={styles.line}>
               <span>{p.displayName}</span>
-              <NumberField value={amounts[p.id] ?? 0} min={0} max={remaining} prefix="$" label={U.amountFor(p.displayName)} onChange={(v) => setAmounts((x) => ({ ...x, [p.id]: v }))} />
+              <NumberField
+                value={amounts[p.id] ?? 0}
+                min={0}
+                max={remaining}
+                prefix="$"
+                label={U.amountFor(p.displayName)}
+                onChange={(v) => setAmounts((x) => ({ ...x, [p.id]: v }))}
+              />
             </div>
           ))}
         </div>
@@ -270,7 +368,9 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
         </Field>
       )}
       <p className="help" role="status">
-        {sum > remaining ? U.tooMuch(formatMoney(remaining, cur)) : U.assigning(formatMoney(sum, cur), formatMoney(remaining - sum, cur))}
+        {sum > remaining
+          ? U.tooMuch(formatMoney(remaining, cur))
+          : U.assigning(formatMoney(sum, cur), formatMoney(remaining - sum, cur))}
       </p>
       <Field label={U.reason} hint={U.reasonHint} error={error}>
         <Input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />

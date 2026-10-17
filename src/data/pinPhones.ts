@@ -21,7 +21,6 @@ export interface PinPhone {
   of: number
 }
 
-
 /** The phones holding each player now, or null on a database without them. */
 export async function playerPhones(tournamentId: string): Promise<PinPhone[] | null> {
   try {

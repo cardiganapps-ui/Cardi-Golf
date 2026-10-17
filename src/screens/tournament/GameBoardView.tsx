@@ -50,13 +50,21 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
             {prizes.map((p, i) => (
               <div key={i} className={styles.rowLine}>
                 <span className={styles.rowText}>
-                  <strong>{p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}</strong>
+                  <strong>
+                    {p.payerId
+                      ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId)))
+                      : name(p.playerId)}
+                  </strong>
                   <span className={styles.rowSub}>
                     {words(p.label)}
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
                   </span>
                 </span>
-                <HowCalculated why={p.why} label={formatMoney(p.amount, cur)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${words(p.label)}`} />
+                <HowCalculated
+                  why={p.why}
+                  label={formatMoney(p.amount, cur)}
+                  about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${words(p.label)}`}
+                />
               </div>
             ))}
           </div>
@@ -66,10 +74,20 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
   )
 }
 
-function LeaderLine({ row, name, onOpen }: { row: GameResultState['board']['sections'][number]['rows'][number]; name: (id: string) => string; onOpen: (id: string) => void }) {
+function LeaderLine({
+  row,
+  name,
+  onOpen,
+}: {
+  row: GameResultState['board']['sections'][number]['rows'][number]
+  name: (id: string) => string
+  onOpen: (id: string) => void
+}) {
   const words = useWords()
   const names = t.common.andList(row.playerIds.map(name))
-  const sub = [row.title ? names : null, row.label ? words(row.label) : null, row.sub ? words(row.sub) : null].filter(Boolean).join(', ')
+  const sub = [row.title ? names : null, row.label ? words(row.label) : null, row.sub ? words(row.sub) : null]
+    .filter(Boolean)
+    .join(', ')
   return (
     <button type="button" className={styles.gameRow} onClick={() => row.playerIds[0] && onOpen(row.playerIds[0])}>
       <span className={styles.gameText}>

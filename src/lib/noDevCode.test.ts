@@ -7,14 +7,33 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEV_ONLY, devModulesIn, noDevCode } from './noDevCode'
 
 const R = '/home/user/Cardi-Golf'
-const chunk = (modules: Record<string, number>) => ({ type: 'chunk', modules: Object.fromEntries(Object.entries(modules).map(([id, n]) => [id, { renderedLength: n }])) })
+const chunk = (modules: Record<string, number>) => ({
+  type: 'chunk',
+  modules: Object.fromEntries(Object.entries(modules).map(([id, n]) => [id, { renderedLength: n }])),
+})
 
 describe('what is dev-only', () => {
   it('the fixtures, the style guide and any testing folder', () => {
-    for (const id of ['src/dev/fixtures.ts', 'src/dev/profileFixtures.ts', 'src/design/DesignScreen.tsx', 'src/design/DesignScreen.module.css', 'src/engine/testing/fixtures.ts', 'src/data/testing/fakeSupabase.ts']) expect(DEV_ONLY.test(`${R}/${id}`), id).toBe(true)
+    for (const id of [
+      'src/dev/fixtures.ts',
+      'src/dev/profileFixtures.ts',
+      'src/design/DesignScreen.tsx',
+      'src/design/DesignScreen.module.css',
+      'src/engine/testing/fixtures.ts',
+      'src/data/testing/fakeSupabase.ts',
+    ])
+      expect(DEV_ONLY.test(`${R}/${id}`), id).toBe(true)
   })
   it('never what the app uses: the design system’s tokens, its motion, its mark, a screen', () => {
-    for (const id of ['src/design/accents.ts', 'src/design/motion.ts', 'src/design/logoMark.json', 'src/screens/profile/ProfileScreen.tsx', 'src/lib/telemetry.ts', 'src/app/devRoutes.tsx']) expect(DEV_ONLY.test(`${R}/${id}`), id).toBe(false)
+    for (const id of [
+      'src/design/accents.ts',
+      'src/design/motion.ts',
+      'src/design/logoMark.json',
+      'src/screens/profile/ProfileScreen.tsx',
+      'src/lib/telemetry.ts',
+      'src/app/devRoutes.tsx',
+    ])
+      expect(DEV_ONLY.test(`${R}/${id}`), id).toBe(false)
   })
 })
 
@@ -31,13 +50,16 @@ describe('a build’s chunks', () => {
 
 describe('the plugin', () => {
   const run = (env: Record<string, unknown>, bundle: object) => {
-    const plugin = noDevCode() as unknown as { configResolved: (c: { env: Record<string, unknown> }) => void; generateBundle: (this: { error: (m: string) => never }, o: unknown, b: object) => void }
+    const plugin = noDevCode() as unknown as {
+      configResolved: (c: { env: Record<string, unknown> }) => void
+      generateBundle: (this: { error: (m: string) => never }, o: unknown, b: object) => void
+    }
     plugin.configResolved({ env })
     const error = vi.fn((m: string) => {
       throw new Error(m)
     })
     try {
-      plugin.generateBundle.call({ error } as never, {}, bundle)
+      plugin.generateBundle.call({ error }, {}, bundle)
     } catch {
       // The build stops here.
     }

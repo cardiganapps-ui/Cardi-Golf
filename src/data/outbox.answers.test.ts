@@ -19,7 +19,8 @@ vi.mock('./tournamentStore', () => ({
       tournamentId: 't1',
       patch: () => undefined,
       refresh: () => undefined,
-      landChanges: (_tid: string, changes: unknown[], _since: number, _at: number, opts?: { fetch?: boolean }) => void landed.calls.push({ changes, opts }),
+      landChanges: (_tid: string, changes: unknown[], _since: number, _at: number, opts?: { fetch?: boolean }) =>
+        void landed.calls.push({ changes, opts }),
       pushesDone: () => undefined,
       reload: async () => undefined,
     }),
@@ -33,8 +34,15 @@ const { useAuth } = await import('./auth')
 const { t } = await import('../i18n/es-MX')
 useAuth.setState({ user: { id: 'uid-phone' } as never })
 
-const hole = (n: number, entries: Array<{ player_id: string; fields: Record<string, unknown>; base?: Record<string, unknown>; auto?: boolean }>) =>
-  enqueueHole('t1', { round_id: 'r1', hole: n, entered_by: 'p1', entries: entries.map((e) => ({ base: {}, ...e })) })
+const hole = (
+  n: number,
+  entries: Array<{
+    player_id: string
+    fields: Record<string, unknown>
+    base?: Record<string, unknown>
+    auto?: boolean
+  }>,
+) => enqueueHole('t1', { round_id: 'r1', hole: n, entered_by: 'p1', entries: entries.map((e) => ({ base: {}, ...e })) })
 /** Answer every call with `answer`, recording what was sent. */
 function answering(answer: (item: OutboxItem) => HoleAnswer) {
   const sent: OutboxItem[] = []
@@ -67,7 +75,10 @@ describe('what each refusal says', () => {
       ],
       unchanged: [],
     }))
-    await hole(4, ['p1', 'p2', 'p3', 'p4'].map((player_id) => ({ player_id, fields: { strokes: 5, putts: 2 } })))
+    await hole(
+      4,
+      ['p1', 'p2', 'p3', 'p4'].map((player_id) => ({ player_id, fields: { strokes: 5, putts: 2 } })),
+    )
     await flush()
     expect(useOutbox.getState().rejected.map((r) => [r.key, r.message])).toEqual([
       ['score:r1:p1:4', t.sync.errSigned],
@@ -82,11 +93,19 @@ describe('what each refusal says', () => {
 
 describe('when a landing asks one more fetch', () => {
   it('a conflict over a row that is gone: nothing to land for it, and a fetch says what stands', async () => {
-    answering(() => ({ status: 'conflict', rows: [], conflicts: [{ player_id: 'p2', fields: ['strokes'], server: null }], rejected: [], unchanged: [] }))
+    answering(() => ({
+      status: 'conflict',
+      rows: [],
+      conflicts: [{ player_id: 'p2', fields: ['strokes'], server: null }],
+      rejected: [],
+      unchanged: [],
+    }))
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 }, base: { strokes: 4, putts: 2, picked_up: false } }])
     await flush()
     expect(landed.calls).toEqual([{ changes: [], opts: expect.objectContaining({ fetch: true }) }])
-    expect(useOutbox.getState().conflicts).toMatchObject([{ player_id: 'p2', hole: 4, server: null, clash: ['strokes'] }])
+    expect(useOutbox.getState().conflicts).toMatchObject([
+      { player_id: 'p2', hole: 4, server: null, clash: ['strokes'] },
+    ])
   })
 
   it('a replayed answer lands its rows, and a fetch follows: the hole may have moved on since', async () => {
@@ -94,7 +113,12 @@ describe('when a landing asks one more fetch', () => {
     answering(() => ({ status: 'ok', rows: [row], conflicts: [], rejected: [], unchanged: [], replayed: true }))
     await hole(4, [{ player_id: 'p1', fields: { strokes: 5, putts: 2 } }])
     await flush()
-    expect(landed.calls).toEqual([{ changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], opts: expect.objectContaining({ fetch: true }) }])
+    expect(landed.calls).toEqual([
+      {
+        changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }],
+        opts: expect.objectContaining({ fetch: true }),
+      },
+    ])
   })
 
   it('an answer that says only its status lands nothing, keeps nothing, and settles the hole', async () => {
@@ -137,9 +161,17 @@ describe('with no IndexedDB, the queue in memory', () => {
     setOutboxBlocked(true)
     const sent = answering(() => ({ status: 'ok', rows: [], conflicts: [], rejected: [], unchanged: [] }))
     await hole(4, [{ player_id: 'p1', fields: { strokes: 5, putts: 2 } }])
-    await hole(4, [{ player_id: 'p1', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } }, { player_id: 'p2', fields: { strokes: 6, putts: 2 }, auto: true }])
+    await hole(4, [
+      { player_id: 'p1', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } },
+      { player_id: 'p2', fields: { strokes: 6, putts: 2 }, auto: true },
+    ])
     // Another round's hole 4 is another hole.
-    await enqueueHole('t1', { round_id: 'r2', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p1', fields: { strokes: 3 }, base: {} }] })
+    await enqueueHole('t1', {
+      round_id: 'r2',
+      hole: 4,
+      entered_by: 'p1',
+      entries: [{ player_id: 'p1', fields: { strokes: 3 }, base: {} }],
+    })
     expect(_outboxTest.queue()).toHaveLength(2)
     const [first] = _outboxTest.queue()
     expect(first?.kind === 'hole' && first.payload.entries).toEqual([
@@ -160,13 +192,18 @@ describe('with no IndexedDB, the queue in memory', () => {
     ])
     expect(_outboxTest.queue()).toHaveLength(1)
     const [only] = _outboxTest.queue()
-    expect(only?.kind === 'hole' && only.payload.entries.map((e) => [e.player_id, e.fields])).toEqual([['p1', { strokes: 5, putts: 1 }]])
+    expect(only?.kind === 'hole' && only.payload.entries.map((e) => [e.player_id, e.fields])).toEqual([
+      ['p1', { strokes: 5, putts: 1 }],
+    ])
     setOutboxBlocked(false)
   })
 
   it('an older hole keeps its players the newer one leaves out; a hole queued under another identity is not merged into', async () => {
     setOutboxBlocked(true)
-    await hole(4, [{ player_id: 'p1', fields: { strokes: 5, putts: 2 } }, { player_id: 'p2', fields: { strokes: 4, putts: 2 } }])
+    await hole(4, [
+      { player_id: 'p1', fields: { strokes: 5, putts: 2 } },
+      { player_id: 'p2', fields: { strokes: 4, putts: 2 } },
+    ])
     await hole(4, [{ player_id: 'p2', fields: { putts: 1 } }])
     const [only] = _outboxTest.queue()
     expect(only?.kind === 'hole' && only.payload.entries.map((e) => [e.player_id, e.fields])).toEqual([
@@ -192,14 +229,22 @@ describe('with no IndexedDB, the queue in memory', () => {
 
 describe('«Guardar el mío»', () => {
   it('over a row that is gone, it goes as a phone that saw none, with the whole hole it saw; a conflict already settled does nothing', async () => {
-    answering(() => ({ status: 'conflict', rows: [], conflicts: [{ player_id: 'p2', fields: ['strokes'], server: null }], rejected: [], unchanged: [] }))
+    answering(() => ({
+      status: 'conflict',
+      rows: [],
+      conflicts: [{ player_id: 'p2', fields: ['strokes'], server: null }],
+      rejected: [],
+      unchanged: [],
+    }))
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 }, base: { strokes: 4, putts: 2, picked_up: false } }])
     await flush()
     const [c] = useOutbox.getState().conflicts
     setOutboxBlocked(true)
     await sendMineAgain(c!.key, 'p1')
     // The putts only its base carried go too: the row they were on is gone (round 3).
-    expect(_outboxTest.queue().map((x) => x.kind === 'hole' && x.payload.entries)).toEqual([[{ player_id: 'p2', fields: { strokes: 5, putts: 2, picked_up: false }, base: {} }]])
+    expect(_outboxTest.queue().map((x) => x.kind === 'hole' && x.payload.entries)).toEqual([
+      [{ player_id: 'p2', fields: { strokes: 5, putts: 2, picked_up: false }, base: {} }],
+    ])
     expect(useOutbox.getState().conflicts).toEqual([])
     await sendMineAgain(c!.key, 'p1')
     expect(_outboxTest.queue()).toHaveLength(1)

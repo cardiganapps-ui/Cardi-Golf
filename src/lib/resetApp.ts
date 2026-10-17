@@ -32,7 +32,8 @@ export async function resetApp(deps: ResetDeps = browserDeps()): Promise<void> {
 
 function browserDeps(): ResetDeps {
   return {
-    serviceWorker: typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker : undefined,
+    serviceWorker:
+      typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker : undefined,
     caches: typeof caches !== 'undefined' ? caches : undefined,
     replace: (url) => window.location.replace(url),
     now: () => Date.now(),

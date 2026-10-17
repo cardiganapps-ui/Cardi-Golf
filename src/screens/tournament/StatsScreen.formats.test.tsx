@@ -22,10 +22,25 @@ function stats(edit?: (s: Snapshot) => void) {
   const fx = getFixture('stroke8')!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:stroke8', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:stroke8',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/stroke8', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/stroke8',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <StatsScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -57,12 +72,47 @@ describe('the race charts under stroke play (STRAT-03)', () => {
     // Fore! is Elías (33 points) and Matías (36): 69 at the 18th.
     stats((s) => {
       const st = s.tournament.settings as TournamentSettings
-      s.tournament.settings = { ...st, modules: { ...st.modules, pairs: { ...st.modules.pairs, enabled: true, label: 'Parejas' } } }
+      s.tournament.settings = {
+        ...st,
+        modules: { ...st.modules, pairs: { ...st.modules.pairs, enabled: true, label: 'Parejas' } },
+      }
       s.pairs = [
-        { id: 'pr1', name: 'Fore!', player1Id: 'p1', player2Id: 'p8', kind: null, pickedByHonoree: false, drawnAt: null },
-        { id: 'pr2', name: 'Los Bogey', player1Id: 'p2', player2Id: 'p7', kind: null, pickedByHonoree: false, drawnAt: null },
-        { id: 'pr3', name: 'Los Cuñados', player1Id: 'p3', player2Id: 'p6', kind: null, pickedByHonoree: false, drawnAt: null },
-        { id: 'pr4', name: 'Par y Medio', player1Id: 'p4', player2Id: 'p5', kind: null, pickedByHonoree: false, drawnAt: null },
+        {
+          id: 'pr1',
+          name: 'Fore!',
+          player1Id: 'p1',
+          player2Id: 'p8',
+          kind: null,
+          pickedByHonoree: false,
+          drawnAt: null,
+        },
+        {
+          id: 'pr2',
+          name: 'Los Bogey',
+          player1Id: 'p2',
+          player2Id: 'p7',
+          kind: null,
+          pickedByHonoree: false,
+          drawnAt: null,
+        },
+        {
+          id: 'pr3',
+          name: 'Los Cuñados',
+          player1Id: 'p3',
+          player2Id: 'p6',
+          kind: null,
+          pickedByHonoree: false,
+          drawnAt: null,
+        },
+        {
+          id: 'pr4',
+          name: 'Par y Medio',
+          player1Id: 'p4',
+          player2Id: 'p5',
+          kind: null,
+          pickedByHonoree: false,
+          drawnAt: null,
+        },
       ]
     })
     fireEvent.click(screen.getByRole('radio', { name: 'Parejas' }))

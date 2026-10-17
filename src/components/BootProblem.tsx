@@ -43,7 +43,11 @@ export function BootProblem({ kind, saved }: { kind: 'timeout' | 'error' | 'cras
             {busy ? B.retrying : B.retry}
           </button>
         )}
-        <button className={buttonClass({ variant: kind === 'crash' ? 'primary' : 'secondary', block: true })} type="button" onClick={() => void resetApp()}>
+        <button
+          className={buttonClass({ variant: kind === 'crash' ? 'primary' : 'secondary', block: true })}
+          type="button"
+          onClick={() => void resetApp()}
+        >
           {B.reset}
         </button>
       </div>

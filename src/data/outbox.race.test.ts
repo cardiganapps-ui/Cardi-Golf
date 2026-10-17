@@ -13,7 +13,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, flush, useOutbox } = await import('./outbox')
@@ -25,7 +34,16 @@ const hole5 = (strokes: number) => ({
   key: 'score:r1:p1:5',
   kind: 'score' as const,
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: 'p1', hole: 5, strokes, putts: 2, picked_up: false, entered_by: 'p1', client_ts: String(strokes) },
+  payload: {
+    round_id: 'r1',
+    player_id: 'p1',
+    hole: 5,
+    strokes,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: String(strokes),
+  },
   attempts: 0,
   createdAt: Date.now(),
 })
@@ -95,7 +113,10 @@ describe('outbox: a newer write to the same hole is never lost', () => {
 
   it('does not record a refusal of a version the player already replaced', async () => {
     const server: number[] = []
-    const { release, inFlight } = gatedPush(server, new Error('new row violates row-level security policy for table "scores"'))
+    const { release, inFlight } = gatedPush(
+      server,
+      new Error('new row violates row-level security policy for table "scores"'),
+    )
     const saving = _outboxTest.enqueue(hole5(5))
     await inFlight
     await _outboxTest.enqueue(hole5(6))

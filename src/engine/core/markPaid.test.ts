@@ -14,7 +14,15 @@ import { computeTournament } from '../computeTournament'
 import { getFixture } from '../../dev/fixtures'
 import { parseSettings } from '../settings/schema'
 import type { Id, PaymentKind, Snapshot } from '../types'
-import { applyPaidWrites, markPaidWrites, restorePaidWrites, unmarkPaidWrites, type Account, type MoneyState, type PaidWrite } from './money'
+import {
+  applyPaidWrites,
+  markPaidWrites,
+  restorePaidWrites,
+  unmarkPaidWrites,
+  type Account,
+  type MoneyState,
+  type PaidWrite,
+} from './money'
 
 /** One row per (kind, from, to): the upsert replaces amount, paid and note. A buyback is `update ... set paid where lot_id`. */
 function server(snap: Snapshot, writes: PaidWrite[]) {
@@ -28,7 +36,16 @@ function server(snap: Snapshot, writes: PaidWrite[]) {
       row.amount = w.amount
       row.paid = w.paid
       row.note = null
-    } else snap.payments.push({ id: `srv${snap.payments.length + 1}`, kind: w.kind, fromPlayerId: w.from, toPlayerId: w.to, amount: w.amount, paid: w.paid, note: null })
+    } else
+      snap.payments.push({
+        id: `srv${snap.payments.length + 1}`,
+        kind: w.kind,
+        fromPlayerId: w.from,
+        toPlayerId: w.to,
+        amount: w.amount,
+        paid: w.paid,
+        note: null,
+      })
   }
 }
 
@@ -38,14 +55,16 @@ function setup(name: 'full12-live' | 'full12-finished') {
   return { snap, money: (): MoneyState => computeTournament(snap, settings).money }
 }
 
-const account = (m: MoneyState, kind: PaymentKind, from: Id | null, to: Id | null = null) => m.accounts.find((a) => a.kind === kind && a.from === from && a.to === to)!
+const account = (m: MoneyState, kind: PaymentKind, from: Id | null, to: Id | null = null) =>
+  m.accounts.find((a) => a.kind === kind && a.from === from && a.to === to)!
 /** The rows a write may not touch: every payment on another key, and every buyback on another lot. */
 const others = (snap: Snapshot, a: Account) => ({
   payments: snap.payments.filter((p) => !(p.kind === a.kind && p.fromPlayerId === a.from && p.toPlayerId === a.to)),
   buybacks: snap.calcuttaBuybacks.filter((b) => b.lotId !== a.lotId),
 })
 /** What Dinero lists: «Quién debe qué» (still due) and «Ya pagaron» (something recorded). */
-const owedList = (m: MoneyState) => m.accounts.filter((a) => a.due > 0 && a.from !== null).map((a) => `${a.kind}|${a.from}|${a.to}`)
+const owedList = (m: MoneyState) =>
+  m.accounts.filter((a) => a.due > 0 && a.from !== null).map((a) => `${a.kind}|${a.from}|${a.to}`)
 const paidList = (m: MoneyState) => m.accounts.filter((a) => a.paid > 0).map((a) => `${a.kind}|${a.from}|${a.to}`)
 
 describe('«Marcar pagado», then «Pagado» tapped off in «Ya pagaron» (UX-21)', () => {
@@ -152,7 +171,9 @@ describe('«Deshacer» puts back exactly what the tap changed', () => {
     const before = money()
     const paid = before.accounts.find((a) => a.kind === 'buyback' && a.paid > 0)!
     server(snap, unmarkPaidWrites([paid]))
-    expect(money().accounts.find((a) => a.kind === 'buyback' && a.from === paid.from && a.to === paid.to)!.due).toBe(paid.owed)
+    expect(money().accounts.find((a) => a.kind === 'buyback' && a.from === paid.from && a.to === paid.to)!.due).toBe(
+      paid.owed,
+    )
     server(snap, restorePaidWrites([paid]))
     expect(money()).toEqual(before)
   })
@@ -161,7 +182,7 @@ describe('«Deshacer» puts back exactly what the tap changed', () => {
 describe('what Dinero shows before the reload is what the server will hold', () => {
   it('applyPaidWrites leaves the snapshot the server leaves, over random marks, un-marks and undos', () => {
     let seed = 7
-    const r = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31)
+    const r = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31
     const a = setup('full12-finished')
     const b = setup('full12-finished')
     for (let step = 0; step < 200; step++) {

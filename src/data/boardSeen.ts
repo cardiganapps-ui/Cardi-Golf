@@ -38,11 +38,20 @@ function storage(): Storage | null {
 export function readBoard(raw: unknown): SeenBoard | null {
   if (!raw || typeof raw !== 'object') return null
   const { round, rows } = raw as { round?: unknown; rows?: unknown }
-  if ((round !== null && typeof round !== 'string') || !rows || typeof rows !== 'object' || Array.isArray(rows)) return null
+  if ((round !== null && typeof round !== 'string') || !rows || typeof rows !== 'object' || Array.isArray(rows))
+    return null
   const out: Record<string, SeenRow> = {}
   for (const [id, r] of Object.entries(rows as Record<string, unknown>)) {
     const row = r as { place?: unknown; figure?: unknown; today?: unknown } | null
-    if (!row || typeof row.place !== 'number' || !Number.isInteger(row.place) || row.place < 1 || typeof row.figure !== 'string' || typeof row.today !== 'string') return null
+    if (
+      !row ||
+      typeof row.place !== 'number' ||
+      !Number.isInteger(row.place) ||
+      row.place < 1 ||
+      typeof row.figure !== 'string' ||
+      typeof row.today !== 'string'
+    )
+      return null
     out[id] = { place: row.place, figure: row.figure, today: row.today }
   }
   return { round, rows: out }

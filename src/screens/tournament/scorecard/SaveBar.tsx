@@ -18,7 +18,13 @@ export const SESSION_RECHECK_MS = 2000
  * what this phone's writes are doing. It listens to the outbox itself, so a count changing renders this line
  * and nothing else of the card.
  */
-export const SaveStatus = memo(function SaveStatus({ savedNote, onUndo }: { savedNote: SavedNote | null; onUndo: () => void }) {
+export const SaveStatus = memo(function SaveStatus({
+  savedNote,
+  onUndo,
+}: {
+  savedNote: SavedNote | null
+  onUndo: () => void
+}) {
   const pending = useOutbox((s) => s.pending)
   const pendingHoles = useOutbox((s) => s.pendingHoles)
   const heldHoles = useOutbox((s) => s.heldHoles)
@@ -34,13 +40,26 @@ export const SaveStatus = memo(function SaveStatus({ savedNote, onUndo }: { save
     const id = setInterval(() => recheck((n) => n + 1), SESSION_RECHECK_MS)
     return () => clearInterval(id)
   }, [signedOut, heldHoles])
-  const sync = syncWords({ pending, pendingHoles, heldHoles, lastError, rejected, signedOut, online, storedSession: hasStoredSession() })
+  const sync = syncWords({
+    pending,
+    pendingHoles,
+    heldHoles,
+    lastError,
+    rejected,
+    signedOut,
+    online,
+    storedSession: hasStoredSession(),
+  })
   /*
    * What a screen reader is told as it happens (A11Y-14), in a region that is always mounted so a change in it is
    * heard: only what needs the player, a write the server refused or holes waiting for the PIN. Not «1 hoyo por
    * subir» after every save (the card already says the hole was saved), nor an error the outbox retries by itself.
    */
-  const said = rejected ? t.sync.rejectedSaid(rejected) : heldHoles > 0 && signedOut && !hasStoredSession() ? t.sync.heldForPin(heldHoles) : ''
+  const said = rejected
+    ? t.sync.rejectedSaid(rejected)
+    : heldHoles > 0 && signedOut && !hasStoredSession()
+      ? t.sync.heldForPin(heldHoles)
+      : ''
   const region = (
     <span className="sr-only" role="status">
       {said}
@@ -57,7 +76,13 @@ export const SaveStatus = memo(function SaveStatus({ savedNote, onUndo }: { save
     <>
       {region}
       <span className={styles.savedLine}>
-        <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : savedNote.corrected !== undefined ? S.correctedHole(savedNote.hole, savedNote.corrected) : S.savedHole(savedNote.hole)}</span>
+        <span>
+          {savedNote.restored
+            ? S.restoredHole(savedNote.hole)
+            : savedNote.corrected !== undefined
+              ? S.correctedHole(savedNote.hole, savedNote.corrected)
+              : S.savedHole(savedNote.hole)}
+        </span>
         {!savedNote.restored && (
           <button type="button" className={styles.savedAction} onClick={onUndo}>
             {savedNote.canUndo ? t.common.undo : S.correct}
@@ -84,7 +109,15 @@ export const SaveBar = memo(function SaveBar(p: {
 }) {
   return (
     <div className={styles.saveBar}>
-      <button className={buttonClass({ variant: 'primary', block: true }, `${styles.saveBtn} ${p.justSaved ? styles.saveBtnDone : ''}`)} type="button" disabled={p.disabled} onClick={() => p.onSave()}>
+      <button
+        className={buttonClass(
+          { variant: 'primary', block: true },
+          `${styles.saveBtn} ${p.justSaved ? styles.saveBtnDone : ''}`,
+        )}
+        type="button"
+        disabled={p.disabled}
+        onClick={() => p.onSave()}
+      >
         <span className={styles.saveLabel}>{p.busy ? t.common.saving : p.label}</span>
         {p.justSaved && (
           <span className={styles.saveCheck} aria-hidden="true">
@@ -93,7 +126,11 @@ export const SaveBar = memo(function SaveBar(p: {
           </span>
         )}
       </button>
-      {p.locked == null ? <SaveStatus savedNote={p.savedNote} onUndo={p.onUndo} /> : <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{p.locked}</span>}
+      {p.locked == null ? (
+        <SaveStatus savedNote={p.savedNote} onUndo={p.onUndo} />
+      ) : (
+        <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{p.locked}</span>
+      )}
     </div>
   )
 })

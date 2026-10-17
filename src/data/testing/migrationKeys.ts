@@ -25,8 +25,8 @@ export function primaryKeys(sql = migrationsSql()): Map<string, string[]> {
   const created = /create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi
   const altered = /alter table (?:only )?public\.([a-z_]+)\s+add constraint [a-z_]+ primary key\s*\(([^)]+)\)/gi
   // Statements in the order they run: a key declared later replaces the one before it.
-  const found = [...sql.matchAll(created)].map((m) => ({ at: m.index!, table: m[1]!, body: m[2]!, alter: false }))
-  found.push(...[...sql.matchAll(altered)].map((m) => ({ at: m.index!, table: m[1]!, body: m[2]!, alter: true })))
+  const found = [...sql.matchAll(created)].map((m) => ({ at: m.index, table: m[1]!, body: m[2]!, alter: false }))
+  found.push(...[...sql.matchAll(altered)].map((m) => ({ at: m.index, table: m[1]!, body: m[2]!, alter: true })))
   for (const { table, body, alter } of found.sort((a, b) => a.at - b.at)) {
     if (alter) {
       keys.set(table, cols(body))

@@ -82,10 +82,13 @@ export const BACKUP_TABLES: Record<string, string> = {
 export const NOT_BACKED_UP: Record<string, string> = {
   client_events: 'telemetry, kept 30 days (STRAT-02)',
   device_status: 'telemetry, kept 90 days (STRAT-02)',
-  spectator_links: 'a key to the boards: a restore must not bring back one the Comité changed or switched off (STRAT-05)',
-  player_pins: 'the PIN hashes: four digits fall to a guess offline; a restored player gets his PIN from the Comité again (TRUST-10)',
+  spectator_links:
+    'a key to the boards: a restore must not bring back one the Comité changed or switched off (STRAT-05)',
+  player_pins:
+    'the PIN hashes: four digits fall to a guess offline; a restored player gets his PIN from the Comité again (TRUST-10)',
   profile_link_tokens: 'one-time sign-in tokens, good for 15 minutes (TRUST-10)',
-  push_subscriptions: 'a browser\'s push address and keys: with the VAPID pair they notify that phone; it turns notices on again (TRUST-10)',
+  push_subscriptions:
+    "a browser's push address and keys: with the VAPID pair they notify that phone; it turns notices on again (TRUST-10)",
   pin_push_subscriptions: 'as push_subscriptions, for the PIN phones (TRUST-10)',
 }
 
@@ -95,7 +98,15 @@ export const NOT_BACKED_UP: Record<string, string> = {
  * that hold them are left out above; this is the second lock, for a column
  * or an image no one thought of (the history of a table that once had one).
  */
-export const SECRET_KEYS: ReadonlySet<string> = new Set(['pin_hash', 'token_hash', 'token', 'p256dh', 'auth', 'endpoint', 'encrypted_password'])
+export const SECRET_KEYS: ReadonlySet<string> = new Set([
+  'pin_hash',
+  'token_hash',
+  'token',
+  'p256dh',
+  'auth',
+  'endpoint',
+  'encrypted_password',
+])
 
 /** `value` with every SECRET_KEYS key taken out, at any depth; arrays and scalars as they are. */
 export function withoutSecrets<T>(value: T): T {

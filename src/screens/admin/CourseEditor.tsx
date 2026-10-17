@@ -23,7 +23,8 @@ function parsePaste(text: string, holes: number): { par: number[]; si: number[];
     )
     .filter((l) => l.length >= holes)
   if (lines.length < 2) return null
-  const pick = (l: number[]) => (l.length === holes + 1 || l.length === holes + 2 || l.length === holes + 3 ? l.slice(0, holes) : l.slice(0, holes))
+  const pick = (l: number[]) =>
+    l.length === holes + 1 || l.length === holes + 2 || l.length === holes + 3 ? l.slice(0, holes) : l.slice(0, holes)
   const par = pick(lines[0]!)
   const si = pick(lines[1]!)
   const yards = lines[2] ? pick(lines[2]) : null
@@ -33,7 +34,23 @@ function parsePaste(text: string, holes: number): { par: number[]; si: number[];
 }
 
 /** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
-export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onPasting }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; onEdit?: (d: CourseDraft) => void; onPasting?: (pending: boolean) => void }) {
+export function CourseEditor({
+  draft,
+  notes,
+  busy,
+  onSave,
+  onCancel,
+  onEdit,
+  onPasting,
+}: {
+  draft: CourseDraft
+  notes: string[]
+  busy: boolean
+  onSave: (d: CourseDraft) => void
+  onCancel: () => void
+  onEdit?: (d: CourseDraft) => void
+  onPasting?: (pending: boolean) => void
+}) {
   const [d, setDraftHere] = useState<CourseDraft>(draft)
   /** Every edit, and the caller hears of it (`onEdit`): its sheet asks before a stray tap discards the card (UX-15). */
   const setD = (next: CourseDraft) => {
@@ -68,7 +85,14 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
       return
     }
     setPasteErr(null)
-    setTee({ holes: tee.holes.map((h, i) => ({ ...h, par: r.par[i]!, strokeIndex: r.si[i]!, yards: r.yards ? (r.yards[i] ?? null) : h.yards })) })
+    setTee({
+      holes: tee.holes.map((h, i) => ({
+        ...h,
+        par: r.par[i]!,
+        strokeIndex: r.si[i]!,
+        yards: r.yards ? (r.yards[i] ?? null) : h.yards,
+      })),
+    })
     setPaste('')
   }
   function removeTee() {
@@ -109,13 +133,22 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
           <input className="input" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
         </Field>
         <Field label={C.location}>
-          <input className="input" value={d.location ?? ''} onChange={(e) => setD({ ...d, location: e.target.value || null })} />
+          <input
+            className="input"
+            value={d.location ?? ''}
+            onChange={(e) => setD({ ...d, location: e.target.value || null })}
+          />
         </Field>
       </div>
 
       <div className="row row--between">
         <div className="grow">
-          <Segmented value={String(teeIdx)} options={d.tees.map((x, i) => ({ value: String(i), label: x.name || `Tee ${i + 1}` }))} onChange={(v) => setTeeIdx(Number(v))} label={t.common.whichTee} />
+          <Segmented
+            value={String(teeIdx)}
+            options={d.tees.map((x, i) => ({ value: String(i), label: x.name || `Tee ${i + 1}` }))}
+            onChange={(v) => setTeeIdx(Number(v))}
+            label={t.common.whichTee}
+          />
         </div>
         <button className="btn btn--ghost btn--sm" type="button" onClick={addTee}>
           + {C.addTee}
@@ -127,10 +160,19 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
           <input className="input input--sm" value={tee.name} onChange={(e) => setTee({ name: e.target.value })} />
         </Field>
         <Field label={C.color}>
-          <input className="input input--sm" value={tee.color ?? ''} onChange={(e) => setTee({ color: e.target.value || null })} />
+          <input
+            className="input input--sm"
+            value={tee.color ?? ''}
+            onChange={(e) => setTee({ color: e.target.value || null })}
+          />
         </Field>
         <Field label={C.rating}>
-          <OptionalNumberField inputClassName="input--sm" decimals={1} value={tee.rating} onChange={(v) => setTee({ rating: v })} />
+          <OptionalNumberField
+            inputClassName="input--sm"
+            decimals={1}
+            value={tee.rating}
+            onChange={(v) => setTee({ rating: v })}
+          />
         </Field>
         <Field label={C.slope}>
           <OptionalNumberField inputClassName="input--sm" value={tee.slope} onChange={(v) => setTee({ slope: v })} />
@@ -140,7 +182,12 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
       <details className={styles.paste}>
         <summary>{C.paste}</summary>
         <p className="help">{C.pasteHint}</p>
-        <textarea className="textarea" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'4 4 3 5 4 4 3 4 5 4 3 4 5 4 4 3 4 5\n7 11 17 3 1 13 15 9 5 8 18 2 12 4 10 16 6 14'} />
+        <textarea
+          className="textarea"
+          value={paste}
+          onChange={(e) => setPaste(e.target.value)}
+          placeholder={'4 4 3 5 4 4 3 4 5 4 3 4 5 4 4 3 4 5\n7 11 17 3 1 13 15 9 5 8 18 2 12 4 10 16 6 14'}
+        />
         {pasteErr && <p className="error">{pasteErr}</p>}
         <button className="btn btn--secondary btn--sm" type="button" onClick={applyPaste}>
           {C.pasteApply}
@@ -164,13 +211,32 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
               <tr key={h.number}>
                 <td className="num">{h.number}</td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.parOf(h.number)} min={3} max={6} value={h.par === NOT_TYPED ? null : h.par} onChange={(v) => setHole(i, { par: v ?? NOT_TYPED })} />
+                  <OptionalNumberField
+                    inputClassName="input--sm"
+                    label={C.parOf(h.number)}
+                    min={3}
+                    max={6}
+                    value={h.par === NOT_TYPED ? null : h.par}
+                    onChange={(v) => setHole(i, { par: v ?? NOT_TYPED })}
+                  />
                 </td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.siOf(h.number)} min={1} max={18} value={h.strokeIndex === NOT_TYPED ? null : h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v ?? NOT_TYPED })} />
+                  <OptionalNumberField
+                    inputClassName="input--sm"
+                    label={C.siOf(h.number)}
+                    min={1}
+                    max={18}
+                    value={h.strokeIndex === NOT_TYPED ? null : h.strokeIndex}
+                    onChange={(v) => setHole(i, { strokeIndex: v ?? NOT_TYPED })}
+                  />
                 </td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.yardsOf(h.number)} value={h.yards} onChange={(v) => setHole(i, { yards: v })} />
+                  <OptionalNumberField
+                    inputClassName="input--sm"
+                    label={C.yardsOf(h.number)}
+                    value={h.yards}
+                    onChange={(v) => setHole(i, { yards: v })}
+                  />
                 </td>
               </tr>
             ))}
@@ -205,7 +271,12 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
         <button className="btn btn--secondary" type="button" onClick={onCancel}>
           {t.common.cancel}
         </button>
-        <button className="btn btn--primary grow" type="button" disabled={busy || !d.name.trim() || issues.length > 0} onClick={() => onSave(d)}>
+        <button
+          className="btn btn--primary grow"
+          type="button"
+          disabled={busy || !d.name.trim() || issues.length > 0}
+          onClick={() => onSave(d)}
+        >
           {busy ? t.common.saving : t.common.save}
         </button>
       </div>

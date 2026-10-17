@@ -20,11 +20,11 @@ const CORS = { 'access-control-allow-origin': '*' }
 
 /** The file and the fields of a Storage upload (supabase-js sends a Blob as multipart). */
 function upload(req: Request): { path: string; type: string; bytes: Buffer; cacheControl: string } {
-  const boundary = /boundary=(.+)$/.exec(req.headers()['content-type'] ?? '')![1]!
+  const boundary = /boundary=(.+)$/.exec(req.headers()['content-type'] ?? '')![1]
   const body = req.postDataBuffer()!
   const sep = Buffer.from(`--${boundary}`)
   const parts: Buffer[] = []
-  for (let at = body.indexOf(sep); at >= 0; ) {
+  for (let at = body.indexOf(sep); at >= 0;) {
     const next = body.indexOf(sep, at + sep.length)
     if (next < 0) break
     parts.push(body.subarray(at + sep.length + 2, next - 2))
@@ -65,9 +65,14 @@ function decode(page: Page, bytes: Buffer, type: string) {
 
 async function pageChecks(page: Page, pageErrors: string[]) {
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(
+    axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.help}`),
+  ).toEqual([])
 }
 
 const PATCH = new URL('../../assets/nacho-logo.png', import.meta.url)
@@ -81,27 +86,40 @@ async function storage(page: Page) {
     const u = upload(r.request())
     uploads.push(u)
     stored.set(u.path, u.type === 'image/heic' ? { type: 'image/png', bytes: patch } : u)
-    await r.fulfill({ status: 200, headers: CORS, json: { Key: `tournament-assets/${u.path}`, Id: String(uploads.length) } })
+    await r.fulfill({
+      status: 200,
+      headers: CORS,
+      json: { Key: `tournament-assets/${u.path}`, Id: String(uploads.length) },
+    })
   })
   await page.route(/\/storage\/v1\/object\/public\/tournament-assets\//, async (r) => {
     const path = decodeURIComponent(new URL(r.request().url()).pathname.replace(/^.*\/public\/tournament-assets\//, ''))
     const file = stored.get(path)
-    await (file ? r.fulfill({ status: 200, headers: CORS, contentType: file.type, body: file.bytes }) : r.fulfill({ status: 404, headers: CORS, body: '' }))
+    await (file
+      ? r.fulfill({ status: 200, headers: CORS, contentType: file.type, body: file.bytes })
+      : r.fulfill({ status: 404, headers: CORS, body: '' }))
   })
   return uploads
 }
 
 for (const width of [375, 393]) {
-  test(`at ${width} px, a transparent PNG logo goes up as a small rendition that stays transparent, and an old one can be optimized`, async ({ page, pageErrors }) => {
+  test(`at ${width} px, a transparent PNG logo goes up as a small rendition that stays transparent, and an old one can be optimized`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width, height: 852 })
     const uploads = await storage(page)
     await open(page, '/t/_/full12-live/admin/torneo')
     const input = page.locator('input[type="file"]')
 
     // 1. A file this browser can't draw goes up as it came, with no size: the logo «stored whole».
-    await input.setInputFiles({ name: 'logo.heic', mimeType: 'image/heic', buffer: Buffer.from('not an image the browser can draw') })
+    await input.setInputFiles({
+      name: 'logo.heic',
+      mimeType: 'image/heic',
+      buffer: Buffer.from('not an image the browser can draw'),
+    })
     await expect.poll(() => uploads.length).toBe(1)
-    expect(uploads[0]!.path).toMatch(/\/logo-\d+\.jpg$/)
+    expect(uploads[0].path).toMatch(/\/logo-\d+\.jpg$/)
     const optimize = page.getByRole('button', { name: t.admin.tournament.optimizeLogo })
     await expect(optimize).toBeVisible()
     await expect(page.getByText(t.admin.tournament.logoHeavy)).toBeVisible()
@@ -110,7 +128,7 @@ for (const width of [375, 393]) {
     // 2. «Optimizar logo» reads it back (here: the 889 KB patch) and stores its rendition.
     await optimize.click()
     await expect.poll(() => uploads.length).toBe(2)
-    const r = uploads[1]!
+    const r = uploads[1]
     expect(r.type, 'Chromium encodes WebP').toBe('image/webp')
     expect(r.bytes.length, 'bytes').toBeLessThanOrEqual(40_000)
     expect(r.path).toMatch(/\/logo-222x240-\d+\.webp$/)
@@ -130,7 +148,9 @@ for (const width of [375, 393]) {
     const header = page.locator('header img').first()
     await expect(header).toHaveAttribute('width', '222')
     await expect(header).toHaveAttribute('height', '240')
-    expect(await header.evaluate((img) => [img.getBoundingClientRect().width, img.getBoundingClientRect().height])).toEqual([28, 28])
+    expect(
+      await header.evaluate((img) => [img.getBoundingClientRect().width, img.getBoundingClientRect().height]),
+    ).toEqual([28, 28])
     await pageChecks(page, pageErrors)
 
     // 4. A share card inlines the WebP rendition (a CORS read), not the empty pixel it uses for a file it can't read.
@@ -140,30 +160,39 @@ for (const width of [375, 393]) {
       new MutationObserver((ms) => {
         for (const m of ms) {
           const img = m.target as HTMLImageElement
-          if (img.tagName === 'IMG' && img.closest('[data-share-card]')) seen.push(img.getAttribute('src')!.slice(0, 22))
+          if (img.tagName === 'IMG' && img.closest('[data-share-card]'))
+            seen.push(img.getAttribute('src')!.slice(0, 22))
         }
       }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['src'] })
     })
-    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: t.share.leaderboard }).first().click()])
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: t.share.leaderboard }).first().click(),
+    ])
     expect(await download.path()).toBeTruthy()
-    expect(await page.evaluate(() => (window as unknown as { __logoSrcs: string[] }).__logoSrcs)).toContain('data:image/webp;base64')
+    expect(await page.evaluate(() => (window as unknown as { __logoSrcs: string[] }).__logoSrcs)).toContain(
+      'data:image/webp;base64',
+    )
     expect(pageErrors).toEqual([])
   })
 }
 
-test('where the browser cannot encode WebP (Safari gives a PNG), the logo is a PNG that keeps its transparency, made smaller toward its budget', async ({ page, pageErrors }) => {
+test('where the browser cannot encode WebP (Safari gives a PNG), the logo is a PNG that keeps its transparency, made smaller toward its budget', async ({
+  page,
+  pageErrors,
+}) => {
   // Safari's canvas: asked for WebP, it hands back a PNG.
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.toBlob
     HTMLCanvasElement.prototype.toBlob = function (cb, type, quality) {
-      return original.call(this, cb, type === 'image/webp' ? 'image/png' : type, quality)
+      original.call(this, cb, type === 'image/webp' ? 'image/png' : type, quality)
     }
   })
   const uploads = await storage(page)
   await open(page, '/t/_/full12-live/admin/torneo')
   await page.locator('input[type="file"]').setInputFiles(PATCH.pathname)
   await expect.poll(() => uploads.length).toBe(1)
-  const r = uploads[0]!
+  const r = uploads[0]
   expect(r.type).toBe('image/png')
   const out = await decode(page, r.bytes, r.type)
   const longer = Math.max(out.width, out.height)

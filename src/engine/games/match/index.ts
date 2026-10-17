@@ -63,7 +63,13 @@ export interface MatchState {
   invalid: string[]
 }
 
-function sideScore(ctx: GameContext<Cfg>, rid: Id, side: Id[], hole: number, final: boolean): { ready: boolean; v: number | null } {
+function sideScore(
+  ctx: GameContext<Cfg>,
+  rid: Id,
+  side: Id[],
+  hole: number,
+  final: boolean,
+): { ready: boolean; v: number | null } {
   const { basis, pairScoring } = ctx.config.options
   const hs = side.map((id) => holeOf(ctx, rid, id, hole))
   const ready = final || hs.every((h) => h?.played)
@@ -81,9 +87,13 @@ function sideScore(ctx: GameContext<Cfg>, rid: Id, side: Id[], hole: number, fin
   return { ready, v: vals.length ? Math.min(...vals) : null }
 }
 
-function segmentsFor(holes: number, format: Cfg['options']['format']): Array<{ key: MatchSegment['key']; label: Msg; holes: number[] }> {
+function segmentsFor(
+  holes: number,
+  format: Cfg['options']['format'],
+): Array<{ key: MatchSegment['key']; label: Msg; holes: number[] }> {
   const all = Array.from({ length: holes }, (_, i) => i + 1)
-  if (format === 'match' || holes < 18) return [{ key: 'total', label: msg('match.segment', { key: 'match', holes }), holes: all }]
+  if (format === 'match' || holes < 18)
+    return [{ key: 'total', label: msg('match.segment', { key: 'match', holes }), holes: all }]
   return [
     { key: 'front', label: msg('match.segment', { key: 'front', holes }), holes: all.slice(0, 9) },
     { key: 'back', label: msg('match.segment', { key: 'back', holes }), holes: all.slice(9) },
@@ -165,13 +175,25 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
             const payer = lose[i]!
             const k = `${payer}|${w}`
             owed.set(k, (owed.get(k) ?? 0) + stake)
-            const line = msg('match.bet', { day: multi ? mr.roundNumber : null, segment: seg.label, press: bet.press, from: bet.fromHole, side: win.map(name), up: Math.abs(bet.up), decided: bet.decided, stake })
+            const line = msg('match.bet', {
+              day: multi ? mr.roundNumber : null,
+              segment: seg.label,
+              press: bet.press,
+              from: bet.fromHole,
+              side: win.map(name),
+              up: Math.abs(bet.up),
+              decided: bet.decided,
+              stake,
+            })
             lines.set(k, [...(lines.get(k) ?? []), line])
           })
         }
       }
     }
-    return netBets(ctx, owed, (payer, winner) => lines.get(`${payer}|${winner}`) ?? [], name).map((p) => ({ ...p, final: ctx.final && state.rounds.every((mr) => mr.segments.every((s) => s.bets.every((b) => b.decided))) }))
+    return netBets(ctx, owed, (payer, winner) => lines.get(`${payer}|${winner}`) ?? [], name).map((p) => ({
+      ...p,
+      final: ctx.final && state.rounds.every((mr) => mr.segments.every((s) => s.bets.every((b) => b.decided))),
+    }))
   },
   board(state, ctx) {
     const name = namer(ctx)
@@ -186,15 +208,30 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
           playerIds: leaders,
           pos: null,
           figure: statusText(seg.bets[0]!, leaders.length > 1),
-          sub: msg('board.matchThru', { thru: seg.thru, presses: seg.bets.slice(1).map((b) => ({ from: b.fromHole, status: pressText(b, mr, name) })) }),
+          sub: msg('board.matchThru', {
+            thru: seg.thru,
+            presses: seg.bets.slice(1).map((b) => ({ from: b.fromHole, status: pressText(b, mr, name) })),
+          }),
         }
       })
       const aSum = sum(mr.a, money)
-      if (aSum !== 0) rows.push({ title: say('board.matchMoney'), playerIds: aSum > 0 ? mr.a : mr.b, pos: null, figure: msg('board.signedMoney', { amount: Math.abs(aSum) }), sub: msg('board.matchPays', { side: (aSum > 0 ? mr.b : mr.a).map(name) }) })
-      return { title: msg('board.matchTitle', { day: multi ? mr.roundNumber : null, a: mr.a.map(name), b: mr.b.map(name) }), rows }
+      if (aSum !== 0)
+        rows.push({
+          title: say('board.matchMoney'),
+          playerIds: aSum > 0 ? mr.a : mr.b,
+          pos: null,
+          figure: msg('board.signedMoney', { amount: Math.abs(aSum) }),
+          sub: msg('board.matchPays', { side: (aSum > 0 ? mr.b : mr.a).map(name) }),
+        })
+      return {
+        title: msg('board.matchTitle', { day: multi ? mr.roundNumber : null, a: mr.a.map(name), b: mr.b.map(name) }),
+        rows,
+      }
     })
     const o = ctx.config.options
-    const notes: Msg[] = [msg('board.matchRule', { nassau: o.format === 'nassau', net: o.basis === 'net', stake: ctx.config.money.stake })]
+    const notes: Msg[] = [
+      msg('board.matchRule', { nassau: o.format === 'nassau', net: o.basis === 'net', stake: ctx.config.money.stake }),
+    ]
     if (o.pressAt > 0) notes.push(msg('board.matchPressRule', { at: o.pressAt, max: o.maxPresses }))
     if (!o.matches.length) notes.push(say('board.noMatches'))
     return { sections, notes }
@@ -211,7 +248,12 @@ function statusText(bet: MatchBet, plural = false): Msg {
 
 /** A press's standing, led by the side that is up. */
 function pressText(bet: MatchBet, mr: MatchRound, name: (id: Id) => string): Msg {
-  return msg('board.matchPress', { side: bet.up === 0 ? null : (bet.up > 0 ? mr.a : mr.b).map(name), up: bet.up, decided: bet.decided, remaining: bet.remaining })
+  return msg('board.matchPress', {
+    side: bet.up === 0 ? null : (bet.up > 0 ? mr.a : mr.b).map(name),
+    up: bet.up,
+    decided: bet.decided,
+    remaining: bet.remaining,
+  })
 }
 
 function sum(ids: Id[], money: Map<Id, number>): number {

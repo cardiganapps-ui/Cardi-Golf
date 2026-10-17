@@ -18,7 +18,13 @@ import styles from './Setup.module.css'
 const W = t.organizer.wizard
 const ORDER: FormatId[] = ['stableford', 'strokePlay', 'matchPlay', 'team']
 
-export function FormatPicker({ value, onChange }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void }) {
+export function FormatPicker({
+  value,
+  onChange,
+}: {
+  value: TournamentSettings
+  onChange: (v: TournamentSettings) => void
+}) {
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
@@ -36,11 +42,21 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
             const on = current === id
             return (
               <div key={id} className={`${styles.choice} ${on ? styles.choiceOn : ''}`}>
-                <button type="button" role="radio" aria-checked={on} className={styles.choiceMain} onClick={() => set((d) => (d.modules.individual.format = id))}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  className={styles.choiceMain}
+                  onClick={() => set((d) => (d.modules.individual.format = id))}
+                >
                   <span className={styles.choiceTitle}>{copy.name}</span>
                   <span className={styles.choiceBlurb}>{copy.blurb}</span>
                 </button>
-                <InfoButton why={ALL_FORMATS[id].describe(value)} label={W.formatInfo(copy.name)} title={W.formatInfoTitle} />
+                <InfoButton
+                  why={ALL_FORMATS[id].describe(value)}
+                  label={W.formatInfo(copy.name)}
+                  title={W.formatInfoTitle}
+                />
               </div>
             )
           })}
@@ -55,7 +71,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
               { value: 'singles', label: W.matchSingles },
               { value: 'fourball', label: W.matchFourball },
             ]}
-            onChange={(v) => set((d) => (d.modules.individual.formatOptions.matchMode = v as 'singles' | 'fourball'))}
+            onChange={(v) => set((d) => (d.modules.individual.formatOptions.matchMode = v))}
           />
         </Group>
       )}
@@ -70,7 +86,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
                 { value: 'bestBall', label: W.teamBestBall },
                 { value: 'shamble', label: W.teamShamble },
               ]}
-              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamMode = v as 'scramble' | 'bestBall' | 'shamble'))}
+              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamMode = v))}
             />
           </Group>
           <Group label={W.teamScoring}>
@@ -80,7 +96,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
                 { value: 'strokes', label: W.teamStrokes },
                 { value: 'stableford', label: W.teamPoints },
               ]}
-              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamScoring = v as 'strokes' | 'stableford'))}
+              onChange={(v) => set((d) => (d.modules.individual.formatOptions.teamScoring = v))}
             />
           </Group>
         </>
@@ -95,7 +111,7 @@ export function FormatPicker({ value, onChange }: { value: TournamentSettings; o
               { value: 'net', label: W.scoringNet },
               { value: 'gross', label: W.scoringGross },
             ]}
-            onChange={(v) => set((d) => (d.modules.individual.formatOptions.scoring = v as 'net' | 'gross'))}
+            onChange={(v) => set((d) => (d.modules.individual.formatOptions.scoring = v))}
           />
         </Group>
       )}

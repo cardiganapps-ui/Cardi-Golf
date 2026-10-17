@@ -16,7 +16,17 @@ import { Button } from '../../../components/primitives'
 const W = t.organizer.wizard
 const ALLOWANCES = ['1', '0.9', '0.8', '0'] as const
 
-export function FormatEditor({ value, onChange, players, onPlayers }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void; players?: number; onPlayers?: (n: number) => void }) {
+export function FormatEditor({
+  value,
+  onChange,
+  players,
+  onPlayers,
+}: {
+  value: TournamentSettings
+  onChange: (v: TournamentSettings) => void
+  players?: number
+  onPlayers?: (n: number) => void
+}) {
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
@@ -39,15 +49,26 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
         </Field>
       )}
       <Group label={W.rounds}>
-        <Segmented value={String(value.rounds)} options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))} onChange={(v) => set((d) => (d.rounds = Number(v)))} />
+        <Segmented
+          value={String(value.rounds)}
+          options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))}
+          onChange={(v) => set((d) => (d.rounds = Number(v)))}
+        />
       </Group>
       <Group label={W.groupSize}>
-        <Segmented value={String(value.groupSize)} options={['2', '3', '4'].map((n) => ({ value: n, label: n }))} onChange={(v) => set((d) => (d.groupSize = Number(v)))} />
+        <Segmented
+          value={String(value.groupSize)}
+          options={['2', '3', '4'].map((n) => ({ value: n, label: n }))}
+          onChange={(v) => set((d) => (d.groupSize = Number(v)))}
+        />
       </Group>
       <Group label={W.handicap} hint={W.handicapHint}>
         <Segmented
           value={allowance}
-          options={ALLOWANCES.map((a) => ({ value: a, label: a === '0' ? W.noHandicap : `${Math.round(Number(a) * 100)}%` }))}
+          options={ALLOWANCES.map((a) => ({
+            value: a,
+            label: a === '0' ? W.noHandicap : `${Math.round(Number(a) * 100)}%`,
+          }))}
           onChange={(v) => set((d) => (d.handicap.allowance = Number(v)))}
         />
       </Group>
@@ -67,15 +88,33 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
           {value.tiers.map((tier) => (
             <span key={tier} className={styles.tier}>
               {tier}
-              <button type="button" aria-label={`${t.setup.remove} ${tier}`} onClick={() => set((d) => {
-                d.tiers = d.tiers.filter((x) => x !== tier)
-                scrubTiers(d)
-              })}>
+              <button
+                type="button"
+                aria-label={`${t.setup.remove} ${tier}`}
+                onClick={() =>
+                  set((d) => {
+                    d.tiers = d.tiers.filter((x) => x !== tier)
+                    scrubTiers(d)
+                  })
+                }
+              >
                 ×
               </button>
             </span>
           ))}
-          <input className="input input--sm" style={{ width: '8em' }} value={newTier} placeholder={W.tierName} aria-label={W.tierName} onChange={(e) => setNewTier(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTier())} />
+          <input
+            className="input input--sm"
+            style={{ width: '8em' }}
+            value={newTier}
+            placeholder={W.tierName}
+            aria-label={W.tierName}
+            onChange={(e) => setNewTier(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              addTier()
+            }}
+          />
           <Button size="sm" onClick={addTier}>
             {W.tierAdd}
           </Button>

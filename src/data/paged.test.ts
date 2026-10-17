@@ -13,7 +13,11 @@ function table(n: number, opts: { failAt?: number } = {}) {
   const rows = Array.from({ length: n }, (_, i) => ({ id: i }))
   const build = (from: number, to: number) => {
     requests.push([from, to])
-    if (opts.failAt === requests.length) return Promise.resolve({ data: null, error: { message: 'canceling statement due to statement timeout', code: '57014' } })
+    if (opts.failAt === requests.length)
+      return Promise.resolve({
+        data: null,
+        error: { message: 'canceling statement due to statement timeout', code: '57014' },
+      })
     return Promise.resolve({ data: rows.slice(from, Math.min(to + 1, from + 1000)), error: null })
   }
   return { requests, build }
@@ -23,9 +27,28 @@ describe('fetchAll pages past the 1,000-row cap (audit P0-12)', () => {
   it.each<[number, Array<[number, number]>]>([
     [0, [[0, 999]]],
     [999, [[0, 999]]],
-    [1000, [[0, 999], [1000, 1999]]],
-    [1001, [[0, 999], [1000, 1999]]],
-    [2500, [[0, 999], [1000, 1999], [2000, 2999]]],
+    [
+      1000,
+      [
+        [0, 999],
+        [1000, 1999],
+      ],
+    ],
+    [
+      1001,
+      [
+        [0, 999],
+        [1000, 1999],
+      ],
+    ],
+    [
+      2500,
+      [
+        [0, 999],
+        [1000, 1999],
+        [2000, 2999],
+      ],
+    ],
   ])('%i rows: every row once, in order, in the pages shown', async (n, pages) => {
     const t = table(n)
     const rows = await fetchAll(t.build)
@@ -46,7 +69,10 @@ describe('fetchAll pages past the 1,000-row cap (audit P0-12)', () => {
     const t = table(2500, { failAt: 2 })
     const err = await fetchAll(t.build).catch((e: unknown) => e)
     expect(err).toBeInstanceOf(ApiError)
-    expect([(err as ApiError).message, (err as ApiError).code]).toEqual(['canceling statement due to statement timeout', '57014'])
+    expect([(err as ApiError).message, (err as ApiError).code]).toEqual([
+      'canceling statement due to statement timeout',
+      '57014',
+    ])
     expect(t.requests).toEqual([
       [0, 999],
       [1000, 1999],

@@ -28,7 +28,15 @@ function splitKey(s: TournamentSettings): string {
   return Object.entries(SPLITS).find(([, v]) => v.join() === s.prizes.stableford.join())?.[0] ?? 'custom'
 }
 
-export function MoneyEditor({ value, onChange, field }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void; field: FieldShape }) {
+export function MoneyEditor({
+  value,
+  onChange,
+  field,
+}: {
+  value: TournamentSettings
+  onChange: (v: TournamentSettings) => void
+  field: FieldShape
+}) {
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
@@ -45,7 +53,12 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
     <div className={styles.section}>
       <h3>{U.mainPot}</h3>
       <Field label={U.entryFee}>
-        <NumberField label={U.entryFee} prefix="$" value={value.entryFee} onChange={(v) => set((d) => (d.entryFee = v))} />
+        <NumberField
+          label={U.entryFee}
+          prefix="$"
+          value={value.entryFee}
+          onChange={(v) => set((d) => (d.entryFee = v))}
+        />
       </Field>
 
       {m.individual.enabled && (
@@ -58,7 +71,10 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
                 set((d) => {
                   if (k === 'amounts') {
                     // Keep today's pesos so switching does not break the balance.
-                    d.prizes.stableford = d.prizes.stablefordMode === 'percent' ? percentPlaces(indivLine?.amount ?? 0, d.prizes.stableford) : d.prizes.stableford
+                    d.prizes.stableford =
+                      d.prizes.stablefordMode === 'percent'
+                        ? percentPlaces(indivLine?.amount ?? 0, d.prizes.stableford)
+                        : d.prizes.stableford
                     d.prizes.stablefordMode = 'amount'
                   } else {
                     d.prizes.stableford = [...SPLITS[k]!]
@@ -70,7 +86,11 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
             <PlacesEditor
               values={value.prizes.stableford}
               mode={value.prizes.stablefordMode}
-              pesos={value.prizes.stablefordMode === 'percent' ? percentPlaces(indivLine?.amount ?? 0, value.prizes.stableford) : undefined}
+              pesos={
+                value.prizes.stablefordMode === 'percent'
+                  ? percentPlaces(indivLine?.amount ?? 0, value.prizes.stableford)
+                  : undefined
+              }
               currency={cur}
               onChange={(vals) => set((d) => (d.prizes.stableford = vals))}
             />
@@ -83,59 +103,138 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
           <span className="label">{U.modulePrizes}</span>
           {m.pairs.enabled && (
             <Group label={m.pairs.label}>
-              <PlacesEditor values={value.prizes.pairs} mode="amount" currency={cur} onChange={(vals) => set((d) => (d.prizes.pairs = vals))} />
+              <PlacesEditor
+                values={value.prizes.pairs}
+                mode="amount"
+                currency={cur}
+                onChange={(vals) => set((d) => (d.prizes.pairs = vals))}
+              />
             </Group>
           )}
           {m.bestRound.enabled && (
             <Field label={m.bestRound.label}>
-              <NumberField label={m.bestRound.label} prefix="$" suffix={U.perDay} value={value.prizes.bestRoundPerDay} onChange={(v) => set((d) => (d.prizes.bestRoundPerDay = v))} />
+              <NumberField
+                label={m.bestRound.label}
+                prefix="$"
+                suffix={U.perDay}
+                value={value.prizes.bestRoundPerDay}
+                onChange={(v) => set((d) => (d.prizes.bestRoundPerDay = v))}
+              />
             </Field>
           )}
           {m.snake.enabled && (
             <Field label={m.snake.label}>
-              <NumberField label={m.snake.label} prefix="$" suffix={U.perSurvivor(m.snake.label)} value={value.prizes.snakePerSurvivor} onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))} />
+              <NumberField
+                label={m.snake.label}
+                prefix="$"
+                suffix={U.perSurvivor(m.snake.label)}
+                value={value.prizes.snakePerSurvivor}
+                onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))}
+              />
             </Field>
           )}
           {m.fewestPutts.enabled && (
             <Field label={m.fewestPutts.label}>
-              <NumberField label={m.fewestPutts.label} prefix="$" value={value.prizes.fewestPutts} onChange={(v) => set((d) => (d.prizes.fewestPutts = v))} />
+              <NumberField
+                label={m.fewestPutts.label}
+                prefix="$"
+                value={value.prizes.fewestPutts}
+                onChange={(v) => set((d) => (d.prizes.fewestPutts = v))}
+              />
             </Field>
           )}
         </div>
       )}
 
       <Field label={U.houseCut} hint={U.houseCutHint}>
-        <NumberField label={U.houseCut} prefix="$" value={value.houseCut} onChange={(v) => set((d) => (d.houseCut = v))} />
+        <NumberField
+          label={U.houseCut}
+          prefix="$"
+          value={value.houseCut}
+          onChange={(v) => set((d) => (d.houseCut = v))}
+        />
       </Field>
 
       {value.games.length > 0 && (
         <>
           <h3>{U.sidePotsTitle}</h3>
           {value.games.map((g) => (
-            <GameMoneyCard key={g.id} game={g} currency={cur} onChange={(fn) => set((d) => fn(d.games.find((x) => x.id === g.id)!))} />
+            <GameMoneyCard
+              key={g.id}
+              game={g}
+              currency={cur}
+              onChange={(fn) => set((d) => fn(d.games.find((x) => x.id === g.id)!))}
+            />
           ))}
         </>
       )}
 
-      <PrizeSummary check={check} players={field.players} currency={cur} issues={parsed.success ? undefined : parsed.error.issues.map((i) => issueWords(i, cur))} />
+      <PrizeSummary
+        check={check}
+        players={field.players}
+        currency={cur}
+        issues={parsed.success ? undefined : parsed.error.issues.map((i) => issueWords(i, cur))}
+      />
     </div>
   )
 }
 
-function GameMoneyCard({ game: g, currency, onChange }: { game: GameConfig; currency: string; onChange: (fn: (g: GameConfig) => void) => void }) {
-  const sources = GAME_SOURCES[g.type].filter((s) => !(g.type === 'eventPot' && g.options.event === 'threePutt' && (s === 'side' || s === 'main')))
+function GameMoneyCard({
+  game: g,
+  currency,
+  onChange,
+}: {
+  game: GameConfig
+  currency: string
+  onChange: (fn: (g: GameConfig) => void) => void
+}) {
+  const sources = GAME_SOURCES[g.type].filter(
+    (s) => !(g.type === 'eventPot' && g.options.event === 'threePutt' && (s === 'side' || s === 'main')),
+  )
   const src = g.money.source
   return (
     <div className={styles.card}>
       <span className={styles.cardTitle}>{g.label}</span>
-      <Segmented value={src} options={sources.map((s) => ({ value: s, label: U.source[s]! }))} onChange={(v) => onChange((x) => (x.money.source = v))} label={U.choose.money(g.label)} />
+      <Segmented
+        value={src}
+        options={sources.map((s) => ({ value: s, label: U.source[s]! }))}
+        onChange={(v) => onChange((x) => (x.money.source = v))}
+        label={U.choose.money(g.label)}
+      />
       <span className="help">{U.sourceHint[src]}</span>
-      {src === 'side' && <NumberField label={U.buyIn} prefix="$" value={g.money.buyIn} onChange={(v) => onChange((x) => (x.money.buyIn = v))} />}
-      {src === 'main' && <NumberField label={U.amount} prefix="$" value={g.money.amount} onChange={(v) => onChange((x) => (x.money.amount = v))} />}
-      {src === 'direct' && <NumberField label={U.stake(U.unit[g.type] ?? '')} prefix="$" suffix={U.stake(U.unit[g.type] ?? '').toLowerCase()} value={g.money.stake} onChange={(v) => onChange((x) => (x.money.stake = v))} />}
+      {src === 'side' && (
+        <NumberField
+          label={U.buyIn}
+          prefix="$"
+          value={g.money.buyIn}
+          onChange={(v) => onChange((x) => (x.money.buyIn = v))}
+        />
+      )}
+      {src === 'main' && (
+        <NumberField
+          label={U.amount}
+          prefix="$"
+          value={g.money.amount}
+          onChange={(v) => onChange((x) => (x.money.amount = v))}
+        />
+      )}
+      {src === 'direct' && (
+        <NumberField
+          label={U.stake(U.unit[g.type] ?? '')}
+          prefix="$"
+          suffix={U.stake(U.unit[g.type] ?? '').toLowerCase()}
+          value={g.money.stake}
+          onChange={(v) => onChange((x) => (x.money.stake = v))}
+        />
+      )}
       {PAYS_BY_PLACE[g.type] && (src === 'side' || src === 'main') && (
         <Group label={U.placesSplit}>
-          <PlacesEditor values={g.money.split} mode="percent" currency={currency} onChange={(vals) => onChange((x) => (x.money.split = vals))} />
+          <PlacesEditor
+            values={g.money.split}
+            mode="percent"
+            currency={currency}
+            onChange={(vals) => onChange((x) => (x.money.split = vals))}
+          />
         </Group>
       )}
     </div>
@@ -143,7 +242,19 @@ function GameMoneyCard({ game: g, currency, onChange }: { game: GameConfig; curr
 }
 
 /** One box per place, in pesos or percent, with add / remove at the end. */
-function PlacesEditor({ values, mode, pesos, currency, onChange }: { values: number[]; mode: 'amount' | 'percent'; pesos?: number[]; currency: string; onChange: (v: number[]) => void }) {
+function PlacesEditor({
+  values,
+  mode,
+  pesos,
+  currency,
+  onChange,
+}: {
+  values: number[]
+  mode: 'amount' | 'percent'
+  pesos?: number[]
+  currency: string
+  onChange: (v: number[]) => void
+}) {
   const sum = values.reduce((s, x) => s + x, 0)
   return (
     <div className="stack">
@@ -151,7 +262,14 @@ function PlacesEditor({ values, mode, pesos, currency, onChange }: { values: num
         {values.map((v, i) => (
           <div key={i} className={styles.place}>
             <span>{U.place(i + 1)}</span>
-            <NumberField label={U.place(i + 1)} prefix={mode === 'amount' ? '$' : undefined} suffix={mode === 'percent' ? '%' : undefined} max={mode === 'percent' ? 100 : undefined} value={v} onChange={(n) => onChange(values.map((x, j) => (j === i ? n : x)))} />
+            <NumberField
+              label={U.place(i + 1)}
+              prefix={mode === 'amount' ? '$' : undefined}
+              suffix={mode === 'percent' ? '%' : undefined}
+              max={mode === 'percent' ? 100 : undefined}
+              value={v}
+              onChange={(n) => onChange(values.map((x, j) => (j === i ? n : x)))}
+            />
             {pesos && <span>{formatMoney(pesos[i] ?? 0, currency)}</span>}
           </div>
         ))}
@@ -193,7 +311,9 @@ export function MoneyBar({ value, field }: { value: TournamentSettings; field: F
       {!check ? (
         <span className={styles.barOff}>{t.admin.tournament.invalid}</span>
       ) : diff !== 0 ? (
-        <span className={styles.barOff}>{diff > 0 ? U.bar.over(formatMoney(diff, cur)) : U.bar.off(formatMoney(-diff, cur))}</span>
+        <span className={styles.barOff}>
+          {diff > 0 ? U.bar.over(formatMoney(diff, cur)) : U.bar.off(formatMoney(-diff, cur))}
+        </span>
       ) : check.unreachable.length ? (
         <span className={styles.barOff}>{U.bar.unreachable}</span>
       ) : sense.length ? (

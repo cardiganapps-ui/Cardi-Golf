@@ -4,7 +4,7 @@
  * becomes the account in place, so nothing it holds is lost; Google appears
  * only when the project has it on and the OAuth return can land in this app.
  */
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -13,7 +13,17 @@ import { Input } from '../../components/primitives'
 import { IconGoogle } from '../../components/icons'
 import { useAuth } from '../../data/auth'
 import { useServerMutation } from '../../components/useServerMutation'
-import { accountError, confirmProfileCode, continueWithGoogle, finishProfileSignIn, googleAvailable, resendProfileCode, safeNext, sendProfileCode, type CodeMode } from '../../data/account'
+import {
+  accountError,
+  confirmProfileCode,
+  continueWithGoogle,
+  finishProfileSignIn,
+  googleAvailable,
+  resendProfileCode,
+  safeNext,
+  sendProfileCode,
+  type CodeMode,
+} from '../../data/account'
 import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
 import styles from './Profile.module.css'
@@ -66,7 +76,7 @@ export function EntrarScreen() {
         sb.from('players').select('display_name').eq('id', claim.playerId).maybeSingle(),
         sb.from('tournaments').select('name').eq('id', claim.tournamentId).maybeSingle(),
       ])
-      if (live && p && tr) setClaimed({ name: p.display_name as string, tournament: tr.name as string })
+      if (live && p && tr) setClaimed({ name: p.display_name, tournament: tr.name })
     })()
     return () => {
       live = false
@@ -78,7 +88,7 @@ export function EntrarScreen() {
     return write.run(action)
   }
 
-  function send(e: FormEvent) {
+  function send(e: SubmitEvent) {
     e.preventDefault()
     // Every way in stays in reach (and in the keyboard's order); without the check it says what is missing.
     if (!adult) {
@@ -92,7 +102,7 @@ export function EntrarScreen() {
     })
   }
 
-  function confirm(e: FormEvent) {
+  function confirm(e: SubmitEvent) {
     e.preventDefault()
     if (!mode) return
     void attempt(async () => {
@@ -104,7 +114,9 @@ export function EntrarScreen() {
         throw err
       }
       const done = await finishProfileSignIn()
-      navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, { replace: true })
+      navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, {
+        replace: true,
+      })
     })
   }
 
@@ -124,7 +136,15 @@ export function EntrarScreen() {
             {info ?? t.account.codeSent(email.trim())}
           </p>
           <Field label={t.auth.code} hint={t.auth.codeHint}>
-            <Input code value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" autoComplete="one-time-code" autoFocus required />
+            <Input
+              code
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+            />
           </Field>
           {error && (
             <p className="error" role="alert">
@@ -199,7 +219,15 @@ export function EntrarScreen() {
           )}
           <form className={styles.form} onSubmit={send}>
             <Field label={t.account.email}>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" required />
+              <input
+                className="input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
+                required
+              />
             </Field>
             {error && (
               <p className="error" role="alert">

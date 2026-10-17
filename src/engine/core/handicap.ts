@@ -86,7 +86,8 @@ export function estimateIndex(
   scores: [EstimateScore, EstimateScore, EstimateScore],
   h: HandicapSettings,
 ): EstimateResult {
-  let assumed = false
+  // Written inside the map below, so declared wide: TypeScript would read it as always false.
+  let assumed = false as boolean
   const diffs = scores.map((s) => {
     const par = s.par ?? 72
     const rating = s.rating ?? par

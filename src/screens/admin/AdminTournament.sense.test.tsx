@@ -10,8 +10,13 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const api = vi.hoisted(() => ({ updateSettings: vi.fn(async () => ({ settings: {}, name: 'x', tagline: null, accent_color: null })) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), updateSettings: api.updateSettings }))
+const api = vi.hoisted(() => ({
+  updateSettings: vi.fn(async () => ({ settings: {}, name: 'x', tagline: null, accent_color: null })),
+}))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  updateSettings: api.updateSettings,
+}))
 vi.mock('./entryInfo', () => ({ useEntryInfo: () => null }))
 
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -29,10 +34,26 @@ function mount(edit: (s: TournamentSettings) => void) {
   const fx = getFixture('full12-live')!
   const snap: Snapshot = structuredClone(fx.snapshot)
   edit(snap.tournament.settings as TournamentSettings)
-  useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), reload: async () => undefined, loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: snap.tournament.id,
+    data: dataFromSnapshot(snap),
+    reload: async () => undefined,
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: snap.tournament.slug,
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminTournament />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -64,7 +85,13 @@ describe('Torneo refuses settings that make no sense (MONEY-13)', () => {
   })
 
   it('a Calcutta that pays a place nobody can take holds the save, named with the field', async () => {
-    mount((s) => (s.auction.payout = [{ slot: 'place', place: 1, share: 0.5 }, { slot: 'place', place: 40, share: 0.5 }]))
+    mount(
+      (s) =>
+        (s.auction.payout = [
+          { slot: 'place', place: 1, share: 0.5 },
+          { slot: 'place', place: 40, share: 0.5 },
+        ]),
+    )
     expect(screen.getByText(S.placeUnreachable('40.º', '12 jugadores'))).toBeTruthy()
   })
 

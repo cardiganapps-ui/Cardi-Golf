@@ -20,9 +20,14 @@ for (const path of ['/t/_/large60', '/t/_/full12-live/dinero', '/t/_/full12-live
         const r = el.getBoundingClientRect()
         // Out of the viewport sideways (a horizontal scroller's far item) or with no box: not this test's case.
         if (r.width === 0 || r.height === 0 || r.right <= 0 || r.left >= innerWidth) return null
-        const at = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), r.top + r.height / 2)
+        const at = document.elementFromPoint(
+          Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)),
+          r.top + r.height / 2,
+        )
         const ok = !!at && (at === el || el.contains(at) || at.contains(el))
-        return ok ? null : `${el.tagName.toLowerCase()} «${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}» under ${at ? `${at.tagName.toLowerCase()}.${String(at.className).slice(0, 40)}` : 'nothing'}`
+        return ok
+          ? null
+          : `${el.tagName.toLowerCase()} «${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}» under ${at ? `${at.tagName.toLowerCase()}.${String(at.className).slice(0, 40)}` : 'nothing'}`
       })
       if (hit) covered.push(hit)
     }

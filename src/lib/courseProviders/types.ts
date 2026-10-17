@@ -74,7 +74,9 @@ function km(a: ProviderSearchHit, b: ProviderSearchHit): number | null {
   const R = 6371
   const dLat = ((b.latitude - a.latitude) * Math.PI) / 180
   const dLon = ((b.longitude - a.longitude) * Math.PI) / 180
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos((a.latitude * Math.PI) / 180) * Math.cos((b.latitude * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.latitude * Math.PI) / 180) * Math.cos((b.latitude * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
   return 2 * R * Math.asin(Math.sqrt(x))
 }
 
@@ -99,7 +101,8 @@ export function mergeHits(lists: ProviderSearchHit[][]): ProviderSearchHit[] {
       else {
         const cur = out[idx]!
         if (cur.hasCard !== true && hit.hasCard === true) out[idx] = { ...hit, location: hit.location ?? cur.location }
-        else if (cur.latitude == null && hit.latitude != null) out[idx] = { ...cur, latitude: hit.latitude, longitude: hit.longitude }
+        else if (cur.latitude == null && hit.latitude != null)
+          out[idx] = { ...cur, latitude: hit.latitude, longitude: hit.longitude }
       }
     }
   }

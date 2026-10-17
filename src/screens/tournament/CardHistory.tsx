@@ -16,7 +16,12 @@ import { Button } from '../../components/primitives'
 
 const H = t.card.history
 
-type Shown = { kind: 'idle' } | { kind: 'loading' } | { kind: 'shown'; trails: HoleTrail[] } | { kind: 'unavailable' } | { kind: 'failed'; said: string }
+type Shown =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'shown'; trails: HoleTrail[] }
+  | { kind: 'unavailable' }
+  | { kind: 'failed'; said: string }
 
 /** What a step left on the hole, in words: its strokes and putts, a pick-up, or nothing (the Comité deleted it). */
 function what(s: CardStep): string {
@@ -30,7 +35,15 @@ function who(s: CardStep): string {
   return s.comite || !s.by ? H.comite : s.by
 }
 
-export function CardHistory({ tournamentId, playerId, timeZone }: { tournamentId: string; playerId: string; timeZone: string }) {
+export function CardHistory({
+  tournamentId,
+  playerId,
+  timeZone,
+}: {
+  tournamentId: string
+  playerId: string
+  timeZone: string
+}) {
   const [shown, setShown] = useState<Shown>({ kind: 'idle' })
   const heading = useRef<HTMLHeadingElement>(null)
   // The button that asked goes with the view: the person lands on the history's heading, never on the page.
@@ -83,7 +96,9 @@ export function CardHistory({ tournamentId, playerId, timeZone }: { tournamentId
                   <strong>{t.round.hole(h.hole)}</strong>
                   <ol className={styles.historySteps}>
                     {h.steps.map((s, i) => (
-                      <li key={`${s.at}:${i}`}>{H.step(localWhen(s.at, timeZone), who(s), what(s), s.comite ? historyWhy(s.reason) : null)}</li>
+                      <li key={`${s.at}:${i}`}>
+                        {H.step(localWhen(s.at, timeZone), who(s), what(s), s.comite ? historyWhy(s.reason) : null)}
+                      </li>
                     ))}
                   </ol>
                 </li>

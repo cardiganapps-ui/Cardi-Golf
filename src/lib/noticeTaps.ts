@@ -27,7 +27,7 @@ export function listenForNoticeTaps(go: (path: string) => void): () => void {
   if (!sw) return () => undefined
   const onMessage = (e: MessageEvent) => {
     const msg = e.data as { type?: unknown; url?: unknown } | null
-    if (!msg || msg.type !== 'navigate') return
+    if (msg?.type !== 'navigate') return
     const path = inAppPath(msg.url, window.location.origin)
     if (path != null && `${window.location.pathname}${window.location.search}${window.location.hash}` !== path) go(path)
     e.ports[0]?.postMessage({ ok: path != null })

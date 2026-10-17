@@ -19,7 +19,8 @@ let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { useTournament, registerOverlay } = await import('./tournamentStore')
-const { _outboxTest, overlayPending, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } = await import('./outbox')
+const { _outboxTest, overlayPending, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } =
+  await import('./outbox')
 const { useAuth } = await import('./auth')
 useAuth.setState({ user: { id: 'uid-A' } as never })
 registerOverlay(overlayPending)
@@ -36,16 +37,31 @@ const P = group.playerIds[0]!
 const A = group.playerIds[1]!
 const B = group.playerIds[2]!
 const HOLE = 16
-const key = (x: { roundId: string; playerId: string; hole: number }) => x.roundId === round.id && x.playerId === P && x.hole === HOLE
+const key = (x: { roundId: string; playerId: string; hole: number }) =>
+  x.roundId === round.id && x.playerId === P && x.hole === HOLE
 const shown = () => store().data!.snapshot.scores.find(key)
 const inBase = () => store().data!.base.scores.find(key)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-const save = (strokes: number) => enqueueScore(TID, { round_id: round.id, player_id: P, hole: HOLE, strokes, putts: 2, picked_up: false, entered_by: A, client_ts: '2027-04-09T12:00:00.000Z' })
+const save = (strokes: number) =>
+  enqueueScore(TID, {
+    round_id: round.id,
+    player_id: P,
+    hole: HOLE,
+    strokes,
+    putts: 2,
+    picked_up: false,
+    entered_by: A,
+    client_ts: '2027-04-09T12:00:00.000Z',
+  })
 /** The boards as the phone keeps them (what opens with no signal). */
 async function keptCopy() {
   const db = new Dexie('cardi-golf-cache')
   db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })
-  const kept = (await db.table('snapshots').get(TID)) as { snapshot: { scores: Array<{ id?: string; roundId: string; playerId: string; hole: number; strokes: number | null }> } }
+  const kept = (await db.table('snapshots').get(TID)) as {
+    snapshot: {
+      scores: Array<{ id?: string; roundId: string; playerId: string; hole: number; strokes: number | null }>
+    }
+  }
   db.close()
   return kept.snapshot
 }
@@ -55,7 +71,21 @@ function serverWrite(fields: Record<string, unknown>) {
   const rows = server.tables.scores!
   let row = rows.find((r) => r.round_id === round.id && r.player_id === P && r.hole === HOLE)
   if (!row) {
-    row = { id: 'srv-row', round_id: round.id, player_id: P, hole: HOLE, strokes: null, putts: null, picked_up: false, entered_by: null, client_ts: null, updated_at: null, disputed: false, previous: null, reason: null }
+    row = {
+      id: 'srv-row',
+      round_id: round.id,
+      player_id: P,
+      hole: HOLE,
+      strokes: null,
+      putts: null,
+      picked_up: false,
+      entered_by: null,
+      client_ts: null,
+      updated_at: null,
+      disputed: false,
+      previous: null,
+      reason: null,
+    }
     rows.push(row)
   }
   Object.assign(row, fields)
@@ -73,7 +103,9 @@ function gatedPush(fail?: string) {
   let release!: (rows: Array<Record<string, unknown>>) => void
   let lose!: () => void
   let started!: () => void
-  const gate = new Promise<Array<Record<string, unknown>>>((ok, no) => ((release = ok), (lose = () => no(new Error('TypeError: Failed to fetch')))))
+  const gate = new Promise<Array<Record<string, unknown>>>(
+    (ok, no) => ((release = ok), (lose = () => no(new Error('TypeError: Failed to fetch')))),
+  )
   const inFlight = new Promise<void>((r) => (started = r))
   waiting.push(lose)
   _outboxTest.setPush(async () => {
@@ -97,7 +129,16 @@ afterEach(async () => {
   for (const lose of waiting.splice(0)) lose()
   await vi.waitFor(() => expect(useOutbox.getState().syncing).toBe(false))
   store().unsubscribe()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 describe('another phone saves the same hole while this one’s save is out', () => {
@@ -112,7 +153,14 @@ describe('another phone saves the same hole while this one’s save is out', () 
     // Another phone's write lands after it (the server's final value), flagged.
     emit('scores', {
       eventType: 'UPDATE',
-      new: serverWrite({ strokes: 7, putts: 2, entered_by: B, updated_at: '2027-04-09T18:00:02.000000+00:00', disputed: true, previous: { strokes: 5, putts: 2, picked_up: false, entered_by: A } }),
+      new: serverWrite({
+        strokes: 7,
+        putts: 2,
+        entered_by: B,
+        updated_at: '2027-04-09T18:00:02.000000+00:00',
+        disputed: true,
+        previous: { strokes: 5, putts: 2, picked_up: false, entered_by: A },
+      }),
       old: {},
     })
     await sleep(60)
@@ -131,7 +179,14 @@ describe('another phone saves the same hole while this one’s save is out', () 
     const { release, inFlight } = gatedPush()
     const saving = save(5)
     await inFlight
-    const ours = serverWrite({ strokes: 5, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:01.000000+00:00', disputed: true, previous: { strokes: 6, putts: 2, picked_up: false, entered_by: B } })
+    const ours = serverWrite({
+      strokes: 5,
+      putts: 2,
+      entered_by: A,
+      updated_at: '2027-04-09T18:00:01.000000+00:00',
+      disputed: true,
+      previous: { strokes: 6, putts: 2, picked_up: false, entered_by: B },
+    })
     emit('scores', { eventType: 'UPDATE', new: ours, old: {} })
     await sleep(60)
     release([ours])
@@ -161,7 +216,11 @@ describe('a write taken before its echo is back', () => {
     expect(inBase()).toMatchObject({ strokes: 8 })
     // With the id and time the server gave it, before its echo comes.
     expect(inBase()).toMatchObject({ id: 'srv-row', strokes: 8, updatedAt: '2027-04-09T18:00:03.000000+00:00' })
-    emit('scores', { eventType: 'UPDATE', new: serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' }), old: {} })
+    emit('scores', {
+      eventType: 'UPDATE',
+      new: serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' }),
+      old: {},
+    })
     await sleep(80)
     expect(inBase()).toMatchObject({ id: 'srv-row', strokes: 8, updatedAt: '2027-04-09T18:00:03.000000+00:00' })
   })
@@ -197,13 +256,24 @@ describe('what is not the server’s stays off the server’s rows', () => {
   it('a card signature and a snake answer waiting to go out show on the boards, and neither is in the server’s rows', async () => {
     gatedPush()
     const base = () => store().data!.base
-    const pair = fx.snapshot.pairs.find((p) => (p.player1Id === P || p.player2Id === P) && !base().cardSignatures.some((c) => c.roundId === round.id && c.pairId === p.id))!
-    const hole = [...Array(18).keys()].map((i) => i + 1).find((h) => !base().snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === h))!
+    const pair = fx.snapshot.pairs.find(
+      (p) =>
+        (p.player1Id === P || p.player2Id === P) &&
+        !base().cardSignatures.some((c) => c.roundId === round.id && c.pairId === p.id),
+    )!
+    const hole = [...Array(18).keys()]
+      .map((i) => i + 1)
+      .find(
+        (h) => !base().snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === h),
+      )!
     const signed = (s: Snapshot) => s.cardSignatures.some((c) => c.roundId === round.id && c.pairId === pair.id)
-    const answered = (s: Snapshot) => s.snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === hole)
+    const answered = (s: Snapshot) =>
+      s.snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === hole)
     void enqueueSignature(TID, { round_id: round.id, pair_id: pair.id, signed_by: A })
     void enqueueTiebreak(TID, { round_id: round.id, group_id: group.id, hole, last_holed_player_id: P, decided_by: A })
-    await vi.waitFor(() => expect([signed(store().data!.snapshot), answered(store().data!.snapshot)]).toEqual([true, true]))
+    await vi.waitFor(() =>
+      expect([signed(store().data!.snapshot), answered(store().data!.snapshot)]).toEqual([true, true]),
+    )
     expect([signed(base()), answered(base())]).toEqual([false, false])
   })
 
@@ -238,7 +308,23 @@ describe('what is not the server’s stays off the server’s rows', () => {
 describe('the queue read after the boards went up (a restart)', () => {
   it('its holes show on the boards the phone opened with', async () => {
     gatedPush()
-    await _outboxTest.enqueue({ key: `score:${round.id}:${P}:${HOLE}`, kind: 'score', tournamentId: TID, payload: { round_id: round.id, player_id: P, hole: HOLE, strokes: 10, putts: 3, picked_up: false, entered_by: A, client_ts: '2027-04-09T12:00:00.000Z' }, attempts: 0, createdAt: Date.now() } as never)
+    await _outboxTest.enqueue({
+      key: `score:${round.id}:${P}:${HOLE}`,
+      kind: 'score',
+      tournamentId: TID,
+      payload: {
+        round_id: round.id,
+        player_id: P,
+        hole: HOLE,
+        strokes: 10,
+        putts: 3,
+        picked_up: false,
+        entered_by: A,
+        client_ts: '2027-04-09T12:00:00.000Z',
+      },
+      attempts: 0,
+      createdAt: Date.now(),
+    } as never)
     // The app restarts: the queue is only in IndexedDB, and the boards go up from the phone's copy first.
     const copy = structuredClone(store().data!.base)
     store().unsubscribe()

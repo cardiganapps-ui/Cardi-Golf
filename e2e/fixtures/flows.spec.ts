@@ -14,7 +14,9 @@ test('Comité: a player sheet keeps every character typed at 100 ms a key (UX-01
   await expect(name).toHaveValue('Camilo Duarte')
 })
 
-test('Tarjeta: a double tap on «Guardar hoyo» saves one hole, and nothing covers the button (UX-02, PWA-01)', async ({ page }) => {
+test('Tarjeta: a double tap on «Guardar hoyo» saves one hole, and nothing covers the button (UX-02, PWA-01)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const hole = page.locator('[class*="holeNum"]').first()
   const before = Number(await hole.textContent())
@@ -32,7 +34,10 @@ test('Tarjeta: a double tap on «Guardar hoyo» saves one hole, and nothing cove
   // The saved note sits under the button: the button has not moved and is what a thumb hits.
   const after = (await save.boundingBox())!
   expect(Math.round(after.y - box.y)).toBe(0)
-  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? null, centre)
+  const hit = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? null,
+    centre,
+  )
   expect(hit).toMatch(new RegExp(`^(${t.card.save}|${t.card.saveLast})$`))
 })
 
@@ -54,15 +59,25 @@ test('Más names the build the phone runs (PWA-03)', async ({ page }) => {
 test('Tarjeta: every control names its player, and the hole is a heading (A11Y-01)', async ({ page }) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const tree = await page.locator('body').ariaSnapshot()
-  const buttons = [...tree.matchAll(/- button "([^"]+)"/g)].map((m) => m[1]!)
+  const buttons = [...tree.matchAll(/- button "([^"]+)"/g)].map((m) => m[1])
   const dupes = buttons.filter((b, i) => buttons.indexOf(b) !== i)
   expect(dupes, 'buttons sharing a name').toEqual([])
   // Each of the four rows is a group named after its player, holding his five controls.
-  const rows = page.getByRole('group').filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) })
+  const rows = page
+    .getByRole('group')
+    .filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) })
   await expect(rows).toHaveCount(4)
   for (const row of await rows.all()) {
-    const name = (await row.getAttribute('aria-labelledby').then((id) => page.locator(`[id="${id}"]`).textContent()))!.trim()
-    for (const label of [`Golpes de ${name}: menos`, `Golpes de ${name}: más`, `Putts de ${name}: menos`, `Putts de ${name}: más`, `${t.card.pickedUp}, ${name}`]) {
+    const name = (await row
+      .getAttribute('aria-labelledby')
+      .then((id) => page.locator(`[id="${id}"]`).textContent()))!.trim()
+    for (const label of [
+      `Golpes de ${name}: menos`,
+      `Golpes de ${name}: más`,
+      `Putts de ${name}: menos`,
+      `Putts de ${name}: más`,
+      `${t.card.pickedUp}, ${name}`,
+    ]) {
       await expect(row.getByRole('button', { name: label, exact: true })).toHaveCount(1)
     }
   }

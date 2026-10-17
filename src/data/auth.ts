@@ -32,13 +32,17 @@ interface AuthState {
    * page when the token refresh stalled on a phone's 4G.
    */
   bootError: 'timeout' | 'error' | null
-  init(): Promise<void>
+  init: () => Promise<void>
 }
 
 let inited = false
 let unsubscribe: (() => void) | null = null
 
-const fromSession = (session: Session | null) => ({ session, user: session?.user ?? null, isAnonymous: !!session?.user?.is_anonymous })
+const fromSession = (session: Session | null) => ({
+  session,
+  user: session?.user ?? null,
+  isAnonymous: !!session?.user?.is_anonymous,
+})
 
 export const useAuth = create<AuthState>((set) => ({
   ready: !supabaseConfigured,
@@ -198,7 +202,11 @@ export async function verifyEmailCode(email: string, token: string, type: 'signu
 /** Sends the code again: the sign-up confirmation, or a fresh sign-in code. */
 export async function resendEmailCode(email: string, type: 'signup' | 'email') {
   if (type === 'email') return signInWithMagicLink(email)
-  const { error } = await supabase().auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${window.location.origin}/organizer` } })
+  const { error } = await supabase().auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: `${window.location.origin}/organizer` },
+  })
   if (error) throw error
 }
 export async function requestPasswordReset(email: string) {

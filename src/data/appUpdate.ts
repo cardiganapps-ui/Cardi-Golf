@@ -60,7 +60,10 @@ export async function applyUpdate() {
   const { applyWaiting } = useAppUpdate.getState()
   if (applyWaiting) {
     // Nothing waiting any more (another tab of the app took the update): this page has the new worker already.
-    if (registration && !registration.waiting) return reloadPage()
+    if (registration && !registration.waiting) {
+      reloadPage()
+      return
+    }
     reloadOnNewWorker()
     return applyWaiting()
   }

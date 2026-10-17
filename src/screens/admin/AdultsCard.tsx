@@ -18,7 +18,15 @@ import a from './Admin.module.css'
 
 const M = t.money.adults
 
-export function AdultsCard({ tournamentId, settings, timeZone }: { tournamentId: string; settings: TournamentSettings | null; timeZone: string }) {
+export function AdultsCard({
+  tournamentId,
+  settings,
+  timeZone,
+}: {
+  tournamentId: string
+  settings: TournamentSettings | null
+  timeZone: string
+}) {
   const [at, setAt] = useState<string | null | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const read = useCallback(() => {

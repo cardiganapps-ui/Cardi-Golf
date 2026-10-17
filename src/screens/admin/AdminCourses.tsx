@@ -14,7 +14,15 @@ import { toast } from '../../components/toast'
 import { Button, EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { NoticeNote } from '../../components/LegalLinks'
-import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, verifyCourse, type CatalogCourse, type CourseDraft } from '../../data/api'
+import {
+  deleteCourse,
+  loadCourseDraft,
+  saveCourse,
+  uploadAsset,
+  verifyCourse,
+  type CatalogCourse,
+  type CourseDraft,
+} from '../../data/api'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { VerifiedBadge } from '../../components/VerifiedBadge'
 import { TournamentContext } from '../tournament/tournamentContext'
@@ -39,9 +47,13 @@ const fold = (s: string) =>
 
 /** The catalog's courses a search names, by every word of it in the name or the place; at most five. */
 function catalogMatches(courses: CatalogCourse[], q: string): CatalogCourse[] {
-  const words = fold(q).split(/[^a-z0-9]+/).filter((w) => w.length >= 2)
+  const words = fold(q)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2)
   if (!words.length) return []
-  return courses.filter((c) => c.tees > 0 && words.every((w) => fold(`${c.name} ${c.location ?? ''}`).includes(w))).slice(0, 5)
+  return courses
+    .filter((c) => c.tees > 0 && words.every((w) => fold(`${c.name} ${c.location ?? ''}`).includes(w)))
+    .slice(0, 5)
 }
 
 export function AdminCourses() {
@@ -52,7 +64,12 @@ export function AdminCourses() {
   const data = useTournament((s) => s.data)
   const loadedId = useTournament((s) => s.tournamentId)
   const here = ctx && data && loadedId === ctx.tournamentId ? data.snapshot : null
-  const mayVerify = !!here && !!ctx?.me.isComite && here.tournament.status === 'finished' && !here.tournament.quick && here.tournament.countsForStats
+  const mayVerify =
+    !!here &&
+    !!ctx?.me.isComite &&
+    here.tournament.status === 'finished' &&
+    !here.tournament.quick &&
+    here.tournament.countsForStats
   const played = useMemo(() => new Set((here?.rounds ?? []).map((r) => r.courseId).filter(Boolean)), [here])
   const [verifying, setVerifying] = useState<CatalogCourse | null>(null)
   const uid = useAuth((s) => s.user?.id ?? null)
@@ -148,7 +165,9 @@ export function AdminCourses() {
     openDraft(
       provenance(
         provider,
-        provider.tees.filter((_, i) => pick.has(i)).map((tee) => ({ name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes })),
+        provider.tees
+          .filter((_, i) => pick.has(i))
+          .map((tee) => ({ name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes })),
       ),
       true,
     )
@@ -162,7 +181,9 @@ export function AdminCourses() {
     try {
       const isPdf = file.type === 'application/pdf'
       // Flattened on white: a transparent screenshot of a card would otherwise reach the reader on black. So it is a JPEG.
-      const { blob, type } = isPdf ? { blob: file, type: 'application/pdf' } : await prepareImage(file, { maxWidth: 2000, maxHeight: 2000, quality: 0.9, background: 'white' })
+      const { blob, type } = isPdf
+        ? { blob: file, type: 'application/pdf' }
+        : await prepareImage(file, { maxWidth: 2000, maxHeight: 2000, quality: 0.9, background: 'white' })
       const b64 = await blobToBase64(blob)
       const r = await extractScorecard(b64, type)
       const issues: string[] = []
@@ -174,7 +195,9 @@ export function AdminCourses() {
       const base = pendingCourseId.current ? await loadCourseDraft(pendingCourseId.current) : null
       pendingCourseId.current = null
       // The card came from the photo, whatever gave the course its name and place (the funnel counts how cards arrive, STRAT-14).
-      const d: CourseDraft = base ? { ...base, tees, source: 'scorecard_photo' } : { name: r.courseName, source: 'scorecard_photo', tees }
+      const d: CourseDraft = base
+        ? { ...base, tees, source: 'scorecard_photo' }
+        : { name: r.courseName, source: 'scorecard_photo', tees }
       openDraft(d, true)
       setNotes(issues)
       // Keep the photo for later re-checks (saved once the course exists).
@@ -194,7 +217,11 @@ export function AdminCourses() {
       if (pendingPhoto.current) {
         try {
           const ext = extensionFor(pendingPhoto.current.type)
-          const url = await uploadAsset(`courses/${id}/scorecard-${Date.now()}.${ext}`, pendingPhoto.current.blob, pendingPhoto.current.type)
+          const url = await uploadAsset(
+            `courses/${id}/scorecard-${Date.now()}.${ext}`,
+            pendingPhoto.current.blob,
+            pendingPhoto.current.type,
+          )
           const { supabase } = await import('../../lib/supabase')
           await supabase().from('course_documents').insert({ course_id: id, kind: 'scorecard', url })
         } catch {
@@ -263,10 +290,16 @@ export function AdminCourses() {
         <Button size="sm" onClick={() => fileRef.current?.click()} disabled={reading} aria-describedby={photoNoteId}>
           {C.photo}
         </Button>
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" hidden onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,application/pdf"
+          hidden
+          onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])}
+        />
         <Button
           size="sm"
-         
+
           onClick={() => {
             pendingPhoto.current = null
             pendingCourseId.current = null
@@ -332,7 +365,16 @@ export function AdminCourses() {
         }}
       />
 
-      <ConfirmSheet open={!!askDelete} title={t.common.delete} body={t.common.confirmDelete} danger busy={busy} confirmLabel={t.common.delete} onConfirm={() => askDelete && void remove(askDelete)} onClose={() => setAskDelete(null)} />
+      <ConfirmSheet
+        open={!!askDelete}
+        title={t.common.delete}
+        body={t.common.confirmDelete}
+        danger
+        busy={busy}
+        confirmLabel={t.common.delete}
+        onConfirm={() => askDelete && void remove(askDelete)}
+        onClose={() => setAskDelete(null)}
+      />
 
       <Sheet open={mode === 'search'} onClose={() => setMode('none')} title={C.search}>
         <div className="stack">
@@ -343,7 +385,13 @@ export function AdminCourses() {
               void doSearch()
             }}
           >
-            <input className="input grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={C.searchPlaceholder} autoFocus />
+            <input
+              className="input grow"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={C.searchPlaceholder}
+              autoFocus
+            />
             <Button variant="primary" type="submit" disabled={busy || q.trim().length < 2}>
               {t.common.search}
             </Button>
@@ -371,7 +419,9 @@ export function AdminCourses() {
                     <span className={a.rowText}>
                       <span className={a.rowTitle}>{c.name}</span>
                       {c.verifiedAt && <VerifiedBadge />}
-                      <span className={a.rowSub}>{[c.location, `${c.tees} ${C.tees.toLowerCase()}`].filter(Boolean).join(', ')}</span>
+                      <span className={a.rowSub}>
+                        {[c.location, `${c.tees} ${C.tees.toLowerCase()}`].filter(Boolean).join(', ')}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -382,11 +432,19 @@ export function AdminCourses() {
           {hits && hits.length > 0 && (
             <div className={a.rows}>
               {hits.map((h) => (
-                <button key={hitRef(h)} type="button" className={`${a.row} ${a.rowBtn}`} onClick={() => void chooseHit(h)} disabled={busy}>
+                <button
+                  key={hitRef(h)}
+                  type="button"
+                  className={`${a.row} ${a.rowBtn}`}
+                  onClick={() => void chooseHit(h)}
+                  disabled={busy}
+                >
                   <span className={a.rowText}>
                     <span className={a.rowTitle}>{h.name}</span>
                     <span className={a.rowSub}>{[h.clubName, h.location].filter(Boolean).join(', ')}</span>
-                    <span className={h.hasCard === false ? a.warn : a.rowSub}>{h.hasCard === true ? C.fullCard : h.hasCard === false ? C.locationOnly : C.cardUnknown}</span>
+                    <span className={h.hasCard === false ? a.warn : a.rowSub}>
+                      {h.hasCard === true ? C.fullCard : h.hasCard === false ? C.locationOnly : C.cardUnknown}
+                    </span>
                   </span>
                 </button>
               ))}
@@ -428,8 +486,24 @@ export function AdminCourses() {
         )}
       </Sheet>
 
-      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide dirty={!!draft && (pasting || JSON.stringify(edited ?? draft) !== draftFrom)}>
-        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} onEdit={setEdited} onPasting={setPasting} />}
+      <Sheet
+        open={!!draft}
+        onClose={closeDraft}
+        title={draft?.id ? t.common.edit : C.review}
+        wide
+        dirty={!!draft && (pasting || JSON.stringify(edited ?? draft) !== draftFrom)}
+      >
+        {draft && (
+          <CourseEditor
+            draft={draft}
+            notes={notes}
+            busy={busy}
+            onCancel={closeDraft}
+            onSave={(d) => void save(d)}
+            onEdit={setEdited}
+            onPasting={setPasting}
+          />
+        )}
       </Sheet>
     </div>
   )

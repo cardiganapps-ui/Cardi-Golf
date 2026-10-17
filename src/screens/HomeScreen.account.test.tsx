@@ -12,7 +12,9 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const auth = vi.hoisted(() => ({ state: { ready: true, user: { id: 'u-account' } as unknown, isAnonymous: false, bootError: null as 'timeout' | 'error' | null } }))
+const auth = vi.hoisted(() => ({
+  state: { ready: true, user: { id: 'u-account' }, isAnonymous: false, bootError: null as 'timeout' | 'error' | null },
+}))
 vi.mock('../data/auth', () => ({
   useAuth: () => auth.state,
   hasStoredSession: () => true,
@@ -25,16 +27,29 @@ vi.mock('../data/profiles', async (orig) => {
   const { create } = await import('zustand')
   return {
     ...(await orig<typeof import('../data/profiles')>()),
-    useMyProfile: create(() => ({ profile: null as unknown, links: [] as unknown[], loading: true, error: null as string | null, load: async () => undefined })),
+    useMyProfile: create(() => ({
+      profile: null,
+      links: [] as unknown[],
+      loading: true,
+      error: null as string | null,
+      load: async () => undefined,
+    })),
   }
 })
-vi.mock('../data/api', async (orig) => ({ ...(await orig<typeof import('../data/api')>()), listMyTournaments: () => new Promise(() => undefined) }))
+vi.mock('../data/api', async (orig) => ({
+  ...(await orig<typeof import('../data/api')>()),
+  listMyTournaments: () => new Promise(() => undefined),
+}))
 vi.mock('../data/social', async (orig) => ({
   ...(await orig<typeof import('../data/social')>()),
   friendsFeed: () => new Promise(() => undefined),
-  useUnread: (sel: (s: { count: number; refresh: () => Promise<void> }) => unknown) => sel({ count: 0, refresh: async () => undefined }),
+  useUnread: (sel: (s: { count: number; refresh: () => Promise<void> }) => unknown) =>
+    sel({ count: 0, refresh: async () => undefined }),
 }))
-vi.mock('../data/crews', async (orig) => ({ ...(await orig<typeof import('../data/crews')>()), myCrews: () => new Promise(() => undefined) }))
+vi.mock('../data/crews', async (orig) => ({
+  ...(await orig<typeof import('../data/crews')>()),
+  myCrews: () => new Promise(() => undefined),
+}))
 
 import { getFixture } from '../dev/fixtures'
 import { useMyProfile } from '../data/profiles'
@@ -72,8 +87,21 @@ const PROFILE = {
   updatedAt: '2027-01-02T00:00:00Z',
 }
 /** The account's link to the saved tournament (it plays there). */
-const LINK = { playerId: 'p1', displayName: 'Iván J.', linkStatus: 'confirmed', tournamentId: id, slug, name, tournamentStatus: 'live', logoUrl: null }
-const profileArrives = (links: unknown[]) => act(() => useMyProfile.setState({ profile: PROFILE as never, links: links as never, loading: false, error: null }))
+const LINK = {
+  playerId: 'p1',
+  displayName: 'Iván J.',
+  linkStatus: 'confirmed',
+  tournamentId: id,
+  slug,
+  name,
+  tournamentStatus: 'live',
+  logoUrl: null,
+}
+const profileArrives = async (links: unknown[]) => {
+  act(() => {
+    useMyProfile.setState({ profile: PROFILE as never, links: links as never, loading: false, error: null })
+  })
+}
 
 beforeEach(async () => {
   await clearAllCached()

@@ -23,7 +23,7 @@ describe('savedWhen', () => {
     expect(savedWhen(at(8, 9, 5), now)).toMatch(/^hoy, 9:05/)
     expect(savedWhen(at(7, 18, 40), now)).toMatch(/^ayer, 6:40/)
   })
-  it('a board from days ago never reads like today\'s', () => {
+  it("a board from days ago never reads like today's", () => {
     expect(savedWhen(at(6, 10, 42), now)).toBe('hace 2 días')
     expect(savedWhen(at(1, 10, 42), now)).toBe('el 1 de abril')
     expect(savedWhen(now - 2 * 86_400_000, now)).not.toMatch(/min|^hoy|10:42$/)

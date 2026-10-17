@@ -42,10 +42,25 @@ const row = (id: string) => within(screen.getByRole('group', { name: nameOf(id) 
 beforeEach(() => {
   useOutbox.setState({ queueRead: true })
   vi.spyOn(performance, 'now').mockImplementation(() => 100_000)
-  useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(snap)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:minimal4-live',
+    data: dataFromSnapshot(structuredClone(snap)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -67,19 +82,27 @@ describe('a player nobody has changed reads «Sin capturar» (COPY-10)', () => {
     }
     const saved = holeOf('p2')
     expect(saved.played).toBe(true)
-    expect(row('p2').getByText(S.ptsLine(saved.points, saved.points > 0 ? netScoreName(saved.points) : null), { exact: false })).toBeTruthy()
+    expect(
+      row('p2').getByText(S.ptsLine(saved.points, saved.points > 0 ? netScoreName(saved.points) : null), {
+        exact: false,
+      }),
+    ).toBeTruthy()
     expect(screen.getAllByText(S.notCaptured, { exact: false })).toHaveLength(3)
   })
 
   it('a change scores him; back to the default, he is uncaptured again', () => {
     const h = holeOf('p1')
     const up = screen.getByRole('button', { name: `${S.strokesOf(nameOf('p1'))}: ${t.common.stepUp}` })
-    act(() => fireEvent.click(up))
+    act(() => {
+      fireEvent.click(up)
+    })
     const pts = stablefordPoints(h.par, h.strokesReceived, h.par + 1, false)
     expect(row('p1').getByText(S.ptsLine(pts, pts > 0 ? netScoreName(pts) : null), { exact: false })).toBeTruthy()
     expect(row('p1').queryByText(S.notCaptured, { exact: false })).toBeNull()
     const down = screen.getByRole('button', { name: `${S.strokesOf(nameOf('p1'))}: ${t.common.stepDown}` })
-    act(() => fireEvent.click(down))
+    act(() => {
+      fireEvent.click(down)
+    })
     expect(row('p1').getByText(S.notCaptured, { exact: false })).toBeTruthy()
   })
 })

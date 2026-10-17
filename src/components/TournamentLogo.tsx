@@ -9,7 +9,25 @@
  */
 import { logoSize } from '../lib/logo'
 
-export function TournamentLogo({ url, className, crossOrigin }: { url: string; className?: string; crossOrigin?: 'anonymous' }) {
+export function TournamentLogo({
+  url,
+  className,
+  crossOrigin,
+}: {
+  url: string
+  className?: string
+  crossOrigin?: 'anonymous'
+}) {
   const size = logoSize(url)
-  return <img src={url} alt="" className={className ? `tournament-logo ${className}` : 'tournament-logo'} width={size?.width} height={size?.height} decoding="async" crossOrigin={crossOrigin} />
+  return (
+    <img
+      src={url}
+      alt=""
+      className={className ? `tournament-logo ${className}` : 'tournament-logo'}
+      width={size?.width}
+      height={size?.height}
+      decoding="async"
+      crossOrigin={crossOrigin}
+    />
+  )
 }

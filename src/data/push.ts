@@ -47,7 +47,11 @@ async function registration(): Promise<ServiceWorkerRegistration | null> {
 /** The account has this address saved (its own rows only, RLS); a doubt reads as yes. */
 async function accountHas(endpoint: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase().from('push_subscriptions').select('endpoint').eq('endpoint', endpoint).maybeSingle()
+    const { data, error } = await supabase()
+      .from('push_subscriptions')
+      .select('endpoint')
+      .eq('endpoint', endpoint)
+      .maybeSingle()
     return !!error || !!data
   } catch {
     return true
@@ -76,7 +80,8 @@ export async function pushState(target: PushTarget = ACCOUNT): Promise<PushState
   // The browser has an address; whether it is saved for this target is the server's to say (a phone that took
   // another player lost it there, and an account's switch can't be on with only a PIN phone's row). With no
   // signal, what the browser holds.
-  const saved = target.kind === 'player' ? await playerHas(target.tournamentId, sub.endpoint) : await accountHas(sub.endpoint)
+  const saved =
+    target.kind === 'player' ? await playerHas(target.tournamentId, sub.endpoint) : await accountHas(sub.endpoint)
   return saved ? 'on' : 'off'
 }
 
@@ -91,9 +96,19 @@ export async function enablePush(target: PushTarget = ACCOUNT): Promise<PushStat
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off'
   const reg = (await registration()) ?? (await navigator.serviceWorker.ready)
-  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) as BufferSource }))
+  const sub =
+    (await reg.pushManager.getSubscription()) ??
+    (await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key) as BufferSource,
+    }))
   const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } }
-  const address = { p_endpoint: json.endpoint, p_p256dh: json.keys.p256dh, p_auth: json.keys.auth, p_user_agent: navigator.userAgent }
+  const address = {
+    p_endpoint: json.endpoint,
+    p_p256dh: json.keys.p256dh,
+    p_auth: json.keys.auth,
+    p_user_agent: navigator.userAgent,
+  }
   const { error } =
     target.kind === 'player'
       ? await supabase().rpc('save_pin_push', { p_tournament_id: target.tournamentId, ...address })
@@ -141,7 +156,10 @@ export function unsupportedHelp(): string {
 /** The icon's count: the inbox's unread notices, or none. */
 export function setAppBadge(count: number) {
   if (typeof navigator === 'undefined') return
-  const n = navigator as Navigator & { setAppBadge?: (count?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+  const n = navigator as Navigator & {
+    setAppBadge?: (count?: number) => Promise<void>
+    clearAppBadge?: () => Promise<void>
+  }
   const done = count > 0 ? n.setAppBadge?.(count) : n.clearAppBadge?.()
   void done?.catch(() => undefined)
 }
@@ -166,7 +184,10 @@ export function startBadgeSync() {
   }
   const refresh = async () => {
     if (!useAuth.getState().ready) return
-    if (!account()) return setAppBadge(0)
+    if (!account()) {
+      setAppBadge(0)
+      return
+    }
     await useUnread.getState().refresh()
     setAppBadge(useUnread.getState().count)
   }

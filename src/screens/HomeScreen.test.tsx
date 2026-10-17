@@ -11,7 +11,9 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const auth = vi.hoisted(() => ({ state: { ready: false, user: null, isAnonymous: false, bootError: null as 'timeout' | 'error' | null } }))
+const auth = vi.hoisted(() => ({
+  state: { ready: false, user: null, isAnonymous: false, bootError: null as 'timeout' | 'error' | null },
+}))
 vi.mock('../data/auth', () => ({
   useAuth: () => auth.state,
   hasStoredSession: () => true,

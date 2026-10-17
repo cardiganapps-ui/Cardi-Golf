@@ -47,18 +47,31 @@ describe('the launch scope', () => {
   it('names every route the router declares, and no route that is gone', () => {
     const declared = routePaths()
     expect(declared.size).toBeGreaterThan(40)
-    expect([...declared].filter((p) => !(p in scope.routes)), 'add these routes to docs/strategy/launch-scope.json with their area').toEqual([])
-    expect(Object.keys(scope.routes).filter((p) => !declared.has(p)), 'these routes are gone: take them out of the list').toEqual([])
+    expect(
+      [...declared].filter((p) => !(p in scope.routes)),
+      'add these routes to docs/strategy/launch-scope.json with their area',
+    ).toEqual([])
+    expect(
+      Object.keys(scope.routes).filter((p) => !declared.has(p)),
+      'these routes are gone: take them out of the list',
+    ).toEqual([])
   })
 
   it('names every migration, and no migration that is gone', () => {
-    expect(migrations.filter((f) => !(f in scope.migrations)), 'add these migrations to docs/strategy/launch-scope.json with their area').toEqual([])
+    expect(
+      migrations.filter((f) => !(f in scope.migrations)),
+      'add these migrations to docs/strategy/launch-scope.json with their area',
+    ).toEqual([])
     expect(Object.keys(scope.migrations).filter((f) => !migrations.includes(f))).toEqual([])
   })
 
   it('files each one under an area it defines', () => {
     const lines = [...Object.entries(scope.routes), ...Object.entries(scope.migrations)]
-    const unknown = lines.flatMap(([k, v]) => areasOf(v).filter((a) => !(a in scope.areas)).map((a) => `${k}: ${a}`))
+    const unknown = lines.flatMap(([k, v]) =>
+      areasOf(v)
+        .filter((a) => !(a in scope.areas))
+        .map((a) => `${k}: ${a}`),
+    )
     expect(unknown).toEqual([])
     for (const [name, a] of Object.entries(scope.areas)) {
       expect([true, false, 'partial'], name).toContain(a.launch)
@@ -68,7 +81,10 @@ describe('the launch scope', () => {
 
   it('keeps the trip path inside the launch', () => {
     for (const p of ['t/:slug', 'tarjeta', 'dinero', 'tv', 'ceremonia', 'v/:token', 'organizer/new', 'calcutta']) {
-      expect(areasOf(scope.routes[p]!).some((a) => scope.areas[a]!.launch === true), p).toBe(true)
+      expect(
+        areasOf(scope.routes[p]!).some((a) => scope.areas[a]!.launch === true),
+        p,
+      ).toBe(true)
     }
   })
 })

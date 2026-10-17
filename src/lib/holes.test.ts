@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { currentHole, lastPlayedHole } from './holes'
 import { t } from '../i18n/es-MX'
 
-const holes = (played: number[]) => Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, played: played.includes(i + 1) }))
+const holes = (played: number[]) =>
+  Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, played: played.includes(i + 1) }))
 
 describe('holes in play order', () => {
   it('start hole 10: hole 2 comes after hole 18', () => {

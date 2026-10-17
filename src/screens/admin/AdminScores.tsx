@@ -43,7 +43,13 @@ export function AdminScores() {
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
   const [roundId, setRoundId] = useState<string>(snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
   const [playerId, setPlayerId] = useState<string>(snapshot.players[0]?.id ?? '')
-  const [edit, setEdit] = useState<{ hole: number; strokes: number; putts: number; pickedUp: boolean; reason: string } | null>(null)
+  const [edit, setEdit] = useState<{
+    hole: number
+    strokes: number
+    putts: number
+    pickedUp: boolean
+    reason: string
+  } | null>(null)
   const [busy, setBusy] = useState(false)
   const [askUnsign, setAskUnsign] = useState(false)
   const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
@@ -53,15 +59,27 @@ export function AdminScores() {
   const pair = snapshot.pairs.find((p) => p.player1Id === playerId || p.player2Id === playerId)
   // His pair's signature, or his own (a marker's, 0054): either locks his card.
   const ownSignature = playerSignature(snapshot.cardSignatures, roundId, playerId)
-  const signed = ownSignature ?? (pair ? snapshot.cardSignatures.find((s) => s.roundId === roundId && s.pairId === pair.id) : undefined)
-  const { pendingSnakeTiebreaks: pending, discrepancies: disputes, unsignedCards, incompleteRounds, missingPutts } = state.flags
-  const inboxCount = pending.length + disputes.length + missingPutts.length + unsignedCards.length + incompleteRounds.length
+  const signed =
+    ownSignature ??
+    (pair ? snapshot.cardSignatures.find((s) => s.roundId === roundId && s.pairId === pair.id) : undefined)
+  const {
+    pendingSnakeTiebreaks: pending,
+    discrepancies: disputes,
+    unsignedCards,
+    incompleteRounds,
+    missingPutts,
+  } = state.flags
+  const inboxCount =
+    pending.length + disputes.length + missingPutts.length + unsignedCards.length + incompleteRounds.length
 
   // Players grouped by their group in the selected round, unassigned last.
   const groupedPlayers = useMemo(() => {
     const groups = snapshot.groups.filter((g) => g.roundId === roundId).sort((x, y) => x.number - y.number)
     const seen = new Set<string>()
-    const out = groups.map((g) => ({ label: SC.groupOf(g.number), players: g.playerIds.map((id) => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p) }))
+    const out = groups.map((g) => ({
+      label: SC.groupOf(g.number),
+      players: g.playerIds.map((id) => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p),
+    }))
     for (const g of out) for (const p of g.players) seen.add(p.id)
     const rest = snapshot.players.filter((p) => !seen.has(p.id))
     if (rest.length) out.push({ label: groups.length ? SC.noGroup : SC.player, players: rest })
@@ -71,8 +89,15 @@ export function AdminScores() {
   /** Same rails as the Tarjeta (§9.3): strokes 1–15, putts 0–strokes. */
   const editError = (() => {
     if (!edit) return null
-    if (!edit.pickedUp && (!Number.isInteger(edit.strokes) || edit.strokes < 1 || edit.strokes > 15)) return SC.invalidStrokes
-    if (!Number.isInteger(edit.putts) || edit.putts < 0 || edit.putts > 15 || (!edit.pickedUp && edit.putts > edit.strokes)) return SC.invalidPutts
+    if (!edit.pickedUp && (!Number.isInteger(edit.strokes) || edit.strokes < 1 || edit.strokes > 15))
+      return SC.invalidStrokes
+    if (
+      !Number.isInteger(edit.putts) ||
+      edit.putts < 0 ||
+      edit.putts > 15 ||
+      (!edit.pickedUp && edit.putts > edit.strokes)
+    )
+      return SC.invalidPutts
     if (signed && edit.reason.trim().length < 3) return SC.reasonHint
     return null
   })()
@@ -82,7 +107,14 @@ export function AdminScores() {
     setBusy(true)
     try {
       await adminSaveScore(
-        { round_id: roundId, player_id: playerId, hole: edit.hole, strokes: edit.pickedUp ? null : edit.strokes, putts: edit.putts, picked_up: edit.pickedUp },
+        {
+          round_id: roundId,
+          player_id: playerId,
+          hole: edit.hole,
+          strokes: edit.pickedUp ? null : edit.strokes,
+          putts: edit.putts,
+          picked_up: edit.pickedUp,
+        },
         edit.reason.trim() || null,
       )
       await reload()
@@ -98,7 +130,13 @@ export function AdminScores() {
   async function answer(q: (typeof pending)[number], pid: string) {
     setBusy(true)
     try {
-      await answerTiebreak({ round_id: q.roundId, group_id: q.groupId, hole: q.hole, last_holed_player_id: pid, decided_by: me.playerId })
+      await answerTiebreak({
+        round_id: q.roundId,
+        group_id: q.groupId,
+        hole: q.hole,
+        last_holed_player_id: pid,
+        decided_by: me.playerId,
+      })
       await reload()
       toast(t.common.saved)
     } catch (e) {
@@ -160,7 +198,11 @@ export function AdminScores() {
                 <span className={a.inboxText}>
                   <span className={a.inboxTitle}>
                     <span className={`${a.inboxMark} ${a.inboxMarkHot}`} aria-hidden="true" />
-                    {IB.tiebreak(snapshot.groups.find((g) => g.id === q.groupId)?.number ?? 0, q.hole, settings.modules.snake.label)}
+                    {IB.tiebreak(
+                      snapshot.groups.find((g) => g.id === q.groupId)?.number ?? 0,
+                      q.hole,
+                      settings.modules.snake.label,
+                    )}
                   </span>
                   <span className={a.inboxSub}>
                     {dayOf(q.roundId)}. {t.card.whoHoledLast}
@@ -168,7 +210,13 @@ export function AdminScores() {
                 </span>
                 <span className={a.inboxActions}>
                   {q.candidates.map((pid) => (
-                    <button key={pid} className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void answer(q, pid)}>
+                    <button
+                      key={pid}
+                      className="btn btn--secondary btn--sm"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void answer(q, pid)}
+                    >
                       {name(pid)}
                     </button>
                   ))}
@@ -176,7 +224,9 @@ export function AdminScores() {
               </div>
             ))}
             {disputes.map((d) => {
-              const s = snapshot.scores.find((x) => x.roundId === d.roundId && x.playerId === d.playerId && x.hole === d.hole)!
+              const s = snapshot.scores.find(
+                (x) => x.roundId === d.roundId && x.playerId === d.playerId && x.hole === d.hole,
+              )!
               const who = (id: string | null | undefined) => (id ? name(id) : null)
               return (
                 <div key={`d${d.roundId}${d.playerId}${d.hole}`} className={a.inboxRow}>
@@ -186,15 +236,33 @@ export function AdminScores() {
                       {IB.dispute(name(d.playerId), d.hole)}
                     </span>
                     <span className={a.inboxSub}>
-                      {dayOf(d.roundId)}. {SC.disputeNow(IB.scoreValue(s.strokes, s.putts, s.pickedUp), who(s.enteredBy))}{' '}
-                      {SC.disputeBefore(IB.scoreValue(s.previous?.strokes ?? null, s.previous?.putts ?? null, s.previous?.picked_up ?? false), who(s.previous?.entered_by))}
+                      {dayOf(d.roundId)}.{' '}
+                      {SC.disputeNow(IB.scoreValue(s.strokes, s.putts, s.pickedUp), who(s.enteredBy))}{' '}
+                      {SC.disputeBefore(
+                        IB.scoreValue(
+                          s.previous?.strokes ?? null,
+                          s.previous?.putts ?? null,
+                          s.previous?.picked_up ?? false,
+                        ),
+                        who(s.previous?.entered_by),
+                      )}
                     </span>
                   </span>
                   <span className={a.inboxActions}>
-                    <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void resolve(d, true)}>
+                    <button
+                      className="btn btn--secondary btn--sm"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void resolve(d, true)}
+                    >
                       {SC.keepCurrent}
                     </button>
-                    <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void resolve(d, false)}>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void resolve(d, false)}
+                    >
                       {SC.restorePrevious}
                     </button>
                   </span>
@@ -222,7 +290,12 @@ export function AdminScores() {
             {unsignedCards.map((u) => {
               // A marker's rule lists each player's card (UX-23); the pairs' rule, each pair's.
               const pr2 = 'pairId' in u ? snapshot.pairs.find((p) => p.id === u.pairId) : undefined
-              const label = 'playerId' in u ? name(u.playerId) : pr2 ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)])) : '?'
+              const label =
+                'playerId' in u
+                  ? name(u.playerId)
+                  : pr2
+                    ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)]))
+                    : '?'
               const who = 'playerId' in u ? u.playerId : pr2?.player1Id
               return (
                 <div key={`u${u.roundId}${'pairId' in u ? u.pairId : u.playerId}`} className={a.inboxRow}>
@@ -253,7 +326,11 @@ export function AdminScores() {
                   </span>
                 </span>
                 <span className={a.inboxActions}>
-                  <button className="btn btn--ghost btn--sm" type="button" onClick={() => show(r.roundId, r.players[0])}>
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    type="button"
+                    onClick={() => show(r.roundId, r.players[0])}
+                  >
                     {IB.view}
                   </button>
                 </span>
@@ -271,11 +348,23 @@ export function AdminScores() {
 
       <section className={a.section} id="admin-card">
         {rounds.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noRounds} />}
-        {rounds.length > 0 && snapshot.players.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noPlayers} />}
+        {rounds.length > 0 && snapshot.players.length === 0 && (
+          <EmptyState title={t.admin.sections.scores} body={SC.noPlayers} />
+        )}
         {rounds.length > 0 && snapshot.players.length > 0 && (
           <>
-            <Segmented value={roundId} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />
-            <select className="select" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label={SC.player}>
+            <Segmented
+              value={roundId}
+              options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))}
+              onChange={setRoundId}
+              label={t.common.whichDay}
+            />
+            <select
+              className="select"
+              value={playerId}
+              onChange={(e) => setPlayerId(e.target.value)}
+              aria-label={SC.player}
+            >
               {groupedPlayers.map((g) => (
                 <optgroup key={g.label} label={g.label}>
                   {g.players.map((p) => (
@@ -301,7 +390,12 @@ export function AdminScores() {
                     </span>
                   </span>
                   {signed && (
-                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskUnsign(true)} disabled={busy}>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      type="button"
+                      onClick={() => setAskUnsign(true)}
+                      disabled={busy}
+                    >
                       {SC.unsign}
                     </button>
                   )}
@@ -312,13 +406,25 @@ export function AdminScores() {
                       key={h.hole}
                       type="button"
                       className={`${styles.hole} ${!h.played ? styles.empty : ''} ${h.disputed || (puttsCount && puttsMissing(h)) ? styles.disputed : ''}`}
-                      onClick={() => setEdit({ hole: h.hole, strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp, reason: '' })}
+                      onClick={() =>
+                        setEdit({
+                          hole: h.hole,
+                          strokes: h.gross ?? h.par,
+                          putts: h.putts ?? 2,
+                          pickedUp: h.pickedUp,
+                          reason: '',
+                        })
+                      }
                     >
                       <span className={styles.holeNum}>{h.hole}</span>
                       <span className={styles.holeGross}>{h.played ? (h.pickedUp ? 'L' : h.gross) : '–'}</span>
                       {/* Points and putts on two lines: «putts», never «p», does not fit one line six tiles across. */}
-                      <span className={styles.holeSub}>{h.played && showPoints ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}</span>
-                      {h.played && h.putts != null && <span className={styles.holeSub}>{t.games.puttsFigure(h.putts)}</span>}
+                      <span className={styles.holeSub}>
+                        {h.played && showPoints ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}
+                      </span>
+                      {h.played && h.putts != null && (
+                        <span className={styles.holeSub}>{t.games.puttsFigure(h.putts)}</span>
+                      )}
                       {puttsCount && puttsMissing(h) && <span className={styles.holeSub}>{SC.noPutts}</span>}
                     </button>
                   ))}
@@ -329,12 +435,22 @@ export function AdminScores() {
         )}
       </section>
 
-      <Sheet open={!!edit} onClose={() => setEdit(null)} title={edit ? `${name(playerId)}, ${t.round.hole(edit.hole)}` : ''}>
+      <Sheet
+        open={!!edit}
+        onClose={() => setEdit(null)}
+        title={edit ? `${name(playerId)}, ${t.round.hole(edit.hole)}` : ''}
+      >
         {edit && (
           <div className="stack">
             <div className={styles.editGrid}>
               <Field label={t.card.strokes}>
-                <NumberField min={1} max={15} value={edit.strokes} disabled={edit.pickedUp} onChange={(v) => setEdit({ ...edit, strokes: v })} />
+                <NumberField
+                  min={1}
+                  max={15}
+                  value={edit.strokes}
+                  disabled={edit.pickedUp}
+                  onChange={(v) => setEdit({ ...edit, strokes: v })}
+                />
               </Field>
               <Field label={t.card.putts}>
                 <NumberField min={0} max={15} value={edit.putts} onChange={(v) => setEdit({ ...edit, putts: v })} />
@@ -342,22 +458,44 @@ export function AdminScores() {
             </div>
             <label className="toggle">
               <span>{t.card.pickedUp}</span>
-              <input type="checkbox" checked={edit.pickedUp} onChange={(e) => setEdit({ ...edit, pickedUp: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={edit.pickedUp}
+                onChange={(e) => setEdit({ ...edit, pickedUp: e.target.checked })}
+              />
             </label>
             {signed && (
               <Field label={SC.reason} hint={SC.reasonHint}>
-                <input className="input" value={edit.reason} onChange={(e) => setEdit({ ...edit, reason: e.target.value })} autoFocus />
+                <input
+                  className="input"
+                  value={edit.reason}
+                  onChange={(e) => setEdit({ ...edit, reason: e.target.value })}
+                  autoFocus
+                />
               </Field>
             )}
             {editError && editError !== SC.reasonHint && <span className={a.error}>{editError}</span>}
-            <button className="btn btn--primary" type="button" disabled={busy || !!editError} onClick={() => void save()}>
+            <button
+              className="btn btn--primary"
+              type="button"
+              disabled={busy || !!editError}
+              onClick={() => void save()}
+            >
               {busy ? t.common.saving : t.common.save}
             </button>
           </div>
         )}
       </Sheet>
 
-      <ConfirmSheet open={askUnsign} title={SC.unsign} body={SC.unsignConfirm} busy={busy} confirmLabel={SC.unsign} onConfirm={() => void doUnsign()} onClose={() => setAskUnsign(false)} />
+      <ConfirmSheet
+        open={askUnsign}
+        title={SC.unsign}
+        body={SC.unsignConfirm}
+        busy={busy}
+        confirmLabel={SC.unsign}
+        onConfirm={() => void doUnsign()}
+        onClose={() => setAskUnsign(false)}
+      />
     </div>
   )
 }
@@ -376,21 +514,35 @@ function TiebreakAnswers() {
   const [changing, setChanging] = useState<{ roundId: string; groupId: string; hole: number } | null>(null)
   const [busy, setBusy] = useState(false)
   if (!settings.modules.snake.enabled || snapshot.snakeTiebreaks.length === 0) return null
-  const name = (id: string | null | undefined) => (id ? (snapshot.players.find((p) => p.id === id)?.displayName ?? '?') : null)
+  const name = (id: string | null | undefined) =>
+    id ? (snapshot.players.find((p) => p.id === id)?.displayName ?? '?') : null
   const round = (id: string) => snapshot.rounds.find((r) => r.id === id)
   const group = (id: string) => snapshot.groups.find((g) => g.id === id)
   const answers = [...snapshot.snakeTiebreaks]
     .filter((tb) => round(tb.roundId) && group(tb.groupId))
-    .sort((x, y) => round(x.roundId)!.number - round(y.roundId)!.number || group(x.groupId)!.number - group(y.groupId)!.number || x.hole - y.hole)
+    .sort(
+      (x, y) =>
+        round(x.roundId)!.number - round(y.roundId)!.number ||
+        group(x.groupId)!.number - group(y.groupId)!.number ||
+        x.hole - y.hole,
+    )
   if (answers.length === 0) return null
   const threshold = settings.modules.snake.puttsThreshold
   /** Who could have holed out last: the group's players at the threshold on that hole (all of the group if putts were changed since). */
   const candidates = (q: { roundId: string; groupId: string; hole: number }) => {
     const members = group(q.groupId)?.playerIds ?? []
-    const at = members.filter((pid) => (snapshot.scores.find((x) => x.roundId === q.roundId && x.playerId === pid && x.hole === q.hole)?.putts ?? 0) >= threshold)
+    const at = members.filter(
+      (pid) =>
+        (snapshot.scores.find((x) => x.roundId === q.roundId && x.playerId === pid && x.hole === q.hole)?.putts ?? 0) >=
+        threshold,
+    )
     return at.length >= 2 ? at : members
   }
-  const current = changing ? snapshot.snakeTiebreaks.find((tb) => tb.roundId === changing.roundId && tb.groupId === changing.groupId && tb.hole === changing.hole) : undefined
+  const current = changing
+    ? snapshot.snakeTiebreaks.find(
+        (tb) => tb.roundId === changing.roundId && tb.groupId === changing.groupId && tb.hole === changing.hole,
+      )
+    : undefined
 
   async function pick(pid: string) {
     if (!changing) return
@@ -400,7 +552,13 @@ function TiebreakAnswers() {
     }
     setBusy(true)
     try {
-      await answerTiebreak({ round_id: changing.roundId, group_id: changing.groupId, hole: changing.hole, last_holed_player_id: pid, decided_by: me.playerId })
+      await answerTiebreak({
+        round_id: changing.roundId,
+        group_id: changing.groupId,
+        hole: changing.hole,
+        last_holed_player_id: pid,
+        decided_by: me.playerId,
+      })
       await reload()
       toast(t.common.saved)
       setChanging(null)
@@ -422,23 +580,47 @@ function TiebreakAnswers() {
         {answers.map((tb) => (
           <div key={`${tb.roundId}${tb.groupId}${tb.hole}`} className={a.inboxRow}>
             <span className={a.inboxText}>
-              <span className={a.inboxTitle}>{IB.tiebreak(group(tb.groupId)!.number, tb.hole, settings.modules.snake.label)}</span>
-              <span className={a.inboxSub}>{IB.answeredSub(t.round.day(round(tb.roundId)!.number), name(tb.lastHoledPlayerId) ?? '?', name(tb.decidedBy))}</span>
+              <span className={a.inboxTitle}>
+                {IB.tiebreak(group(tb.groupId)!.number, tb.hole, settings.modules.snake.label)}
+              </span>
+              <span className={a.inboxSub}>
+                {IB.answeredSub(
+                  t.round.day(round(tb.roundId)!.number),
+                  name(tb.lastHoledPlayerId) ?? '?',
+                  name(tb.decidedBy),
+                )}
+              </span>
             </span>
             <span className={a.inboxActions}>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setChanging({ roundId: tb.roundId, groupId: tb.groupId, hole: tb.hole })}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                disabled={busy}
+                onClick={() => setChanging({ roundId: tb.roundId, groupId: tb.groupId, hole: tb.hole })}
+              >
                 {IB.change}
               </button>
             </span>
           </div>
         ))}
       </div>
-      <Sheet open={!!changing && !!current} onClose={() => setChanging(null)} title={changing ? IB.changeTitle(group(changing.groupId)?.number ?? 0, changing.hole) : ''}>
+      <Sheet
+        open={!!changing && !!current}
+        onClose={() => setChanging(null)}
+        title={changing ? IB.changeTitle(group(changing.groupId)?.number ?? 0, changing.hole) : ''}
+      >
         {changing && (
           <div className="stack">
             <p className="help">{IB.changeHint(settings.modules.snake.label)}</p>
             {candidates(changing).map((pid) => (
-              <button key={pid} type="button" className="btn btn--secondary btn--block" aria-pressed={current?.lastHoledPlayerId === pid} disabled={busy} onClick={() => void pick(pid)}>
+              <button
+                key={pid}
+                type="button"
+                className="btn btn--secondary btn--block"
+                aria-pressed={current?.lastHoledPlayerId === pid}
+                disabled={busy}
+                onClick={() => void pick(pid)}
+              >
                 {name(pid)}
               </button>
             ))}

@@ -40,7 +40,8 @@ const buried = new Set<string>()
 /** The history state the person was last seen on, to tell which way they came onto an entry left behind. */
 let lastSeen: unknown = null
 
-const field = (state: unknown, key: string) => (state && typeof state === 'object' ? (state as Record<string, unknown>)[key] : undefined)
+const field = (state: unknown, key: string) =>
+  state && typeof state === 'object' ? (state as Record<string, unknown>)[key] : undefined
 const isMark = (state: unknown) => field(state, MARK) === true
 
 function push() {
@@ -68,7 +69,7 @@ const ourBack = (repush: boolean, done?: () => void) => ourMove(-1, repush, done
 
 /** An entry left behind with no sheet open: off it, the way the person was going. */
 function stepOver(prev: unknown) {
-  const here = window.history.state
+  const here: unknown = window.history.state
   // Up from the page under it (the same router entry, not one of ours), with a page beyond it: on to that page.
   const fromBelow = !isMark(prev) && field(prev, 'key') !== undefined && field(prev, 'key') === field(here, 'key')
   const id = field(here, MARK_ID)

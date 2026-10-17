@@ -79,15 +79,27 @@ const isObject = (v: unknown): v is Row => !!v && typeof v === 'object' && !Arra
  * or null when the server would refuse them. Mirrors resolve_rejected_write.
  */
 export function appliedValue(fields: unknown, current: HoleValue | null): HoleValue | null {
-  if (!isObject(fields) || !Object.keys(fields).length || Object.keys(fields).some((k) => !KEYS.includes(k))) return null
+  if (!isObject(fields) || !Object.keys(fields).length || Object.keys(fields).some((k) => !KEYS.includes(k)))
+    return null
   const numOrNull = (v: unknown) => v === null || typeof v === 'number'
-  if (('strokes' in fields && !numOrNull(fields.strokes)) || ('putts' in fields && !numOrNull(fields.putts)) || ('picked_up' in fields && typeof fields.picked_up !== 'boolean')) return null
+  if (
+    ('strokes' in fields && !numOrNull(fields.strokes)) ||
+    ('putts' in fields && !numOrNull(fields.putts)) ||
+    ('picked_up' in fields && typeof fields.picked_up !== 'boolean')
+  )
+    return null
   let strokes = 'strokes' in fields ? (fields.strokes as number | null) : (current?.strokes ?? null)
   const putts = 'putts' in fields ? (fields.putts as number | null) : (current?.putts ?? null)
-  const pickedUp = 'picked_up' in fields ? (fields.picked_up as boolean) : typeof fields.strokes === 'number' ? false : (current?.pickedUp ?? false)
+  const pickedUp =
+    'picked_up' in fields
+      ? (fields.picked_up as boolean)
+      : typeof fields.strokes === 'number'
+        ? false
+        : (current?.pickedUp ?? false)
   if (pickedUp) strokes = null
   if (!pickedUp && (strokes === null || !Number.isInteger(strokes) || strokes < 1 || strokes > 15)) return null
-  if (putts !== null && (!Number.isInteger(putts) || putts < 0 || putts > 15 || (strokes !== null && putts > strokes))) return null
+  if (putts !== null && (!Number.isInteger(putts) || putts < 0 || putts > 15 || (strokes !== null && putts > strokes)))
+    return null
   return { strokes, putts, pickedUp }
 }
 
@@ -95,16 +107,23 @@ export function appliedValue(fields: unknown, current: HoleValue | null): HoleVa
 export function sentValue(item: InboxItem, current: HoleValue | null): HoleValue | null {
   if (item.base === undefined) return appliedValue(item.fields, current)
   const b = isObject(item.base) ? item.base : {}
-  const seen: HoleValue = { strokes: typeof b.strokes === 'number' ? b.strokes : null, putts: typeof b.putts === 'number' ? b.putts : null, pickedUp: b.picked_up === true }
+  const seen: HoleValue = {
+    strokes: typeof b.strokes === 'number' ? b.strokes : null,
+    putts: typeof b.putts === 'number' ? b.putts : null,
+    pickedUp: b.picked_up === true,
+  }
   return appliedValue(item.fields, seen)
 }
 
-export const sameValue = (a: HoleValue | null, b: HoleValue | null) => !!a && !!b && a.strokes === b.strokes && a.putts === b.putts && a.pickedUp === b.pickedUp
+export const sameValue = (a: HoleValue | null, b: HoleValue | null) =>
+  !!a && !!b && a.strokes === b.strokes && a.putts === b.putts && a.pickedUp === b.pickedUp
 
 /** The hole as the Comité's screen shows it, as `resolve_rejected_write` checks it: its three values, `{}` for none. */
-export const seenHole = (current: HoleValue | null): SeenHole => (current ? { strokes: current.strokes, putts: current.putts, picked_up: current.pickedUp } : {})
+export const seenHole = (current: HoleValue | null): SeenHole =>
+  current ? { strokes: current.strokes, putts: current.putts, picked_up: current.pickedUp } : {}
 
-const refusal = (e: unknown, text: RegExp) => (e as { code?: unknown } | null)?.code === '22023' && text.test(e instanceof Error ? e.message : '')
+const refusal = (e: unknown, text: RegExp) =>
+  (e as { code?: unknown } | null)?.code === '22023' && text.test(e instanceof Error ? e.message : '')
 /** The server's refusal of an apply whose hole changed since the Comité looked (0028): the boards are read again. */
 export const isStaleHole = (e: unknown) => refusal(e, /^El hoyo cambió/)
 /** Another Comité phone answered it first (0028): for a bulk dismissal, that one is done. */
@@ -119,7 +138,13 @@ interface InboxState {
   fixture: boolean
 }
 
-export const useRejectedInbox = create<InboxState>(() => ({ tournamentId: null, items: [], status: 'idle', error: null, fixture: false }))
+export const useRejectedInbox = create<InboxState>(() => ({
+  tournamentId: null,
+  items: [],
+  status: 'idle',
+  error: null,
+  fixture: false,
+}))
 
 let generation = 0
 
@@ -129,7 +154,13 @@ export async function loadRejectedInbox(tournamentId: string): Promise<void> {
   if (s.fixture && s.tournamentId === tournamentId) return
   const mine = ++generation
   const same = s.tournamentId === tournamentId
-  useRejectedInbox.setState({ tournamentId, status: 'loading', error: null, items: same ? s.items : [], fixture: false })
+  useRejectedInbox.setState({
+    tournamentId,
+    status: 'loading',
+    error: null,
+    items: same ? s.items : [],
+    fixture: false,
+  })
   try {
     const items = await listOpenRejected(tournamentId)
     if (mine !== generation) return
@@ -143,7 +174,8 @@ export async function loadRejectedInbox(tournamentId: string): Promise<void> {
 /** The rows the server answered for leave the list at once (the read after says the rest). */
 function drop(tournamentId: string, ids: string[]) {
   const s = useRejectedInbox.getState()
-  if (s.tournamentId === tournamentId && ids.length) useRejectedInbox.setState({ items: s.items.filter((x) => !ids.includes(x.id)) })
+  if (s.tournamentId === tournamentId && ids.length)
+    useRejectedInbox.setState({ items: s.items.filter((x) => !ids.includes(x.id)) })
 }
 
 /**
@@ -152,7 +184,13 @@ function drop(tournamentId: string, ids: string[]) {
  * Comité phone first shows as it is, after the read). To apply, `seen` is
  * the hole as the screen showed it.
  */
-export async function resolveInboxItem(tournamentId: string, id: string, action: 'apply' | 'dismiss', reason: string, seen?: SeenHole): Promise<void> {
+export async function resolveInboxItem(
+  tournamentId: string,
+  id: string,
+  action: 'apply' | 'dismiss',
+  reason: string,
+  seen?: SeenHole,
+): Promise<void> {
   try {
     await resolveRejectedWrite(id, action, reason, seen)
     drop(tournamentId, [id])
@@ -168,7 +206,11 @@ export async function resolveInboxItem(tournamentId: string, id: string, action:
  * another Comité phone resolved meanwhile is done too. Answers how many went
  * and the first refusal of the rest (null: all of them went).
  */
-export async function dismissInboxItems(tournamentId: string, rows: Array<{ id: string; seen: SeenHole }>, reason: string): Promise<{ done: number; failed: unknown }> {
+export async function dismissInboxItems(
+  tournamentId: string,
+  rows: Array<{ id: string; seen: SeenHole }>,
+  reason: string,
+): Promise<{ done: number; failed: unknown }> {
   let failed: unknown = null
   const done: string[] = []
   try {
@@ -217,7 +259,7 @@ export function inboxChanged(c: InboxChange | null): void {
   // A design fixture's list is read by nothing (`loadRejectedInbox`).
   if (!tid) return
   if (c?.eventType === 'DELETE') {
-    const id = c.old?.id
+    const id = c.old?.id as string | number | undefined
     if (s.status !== 'loading' && (id == null || !s.items.some((x) => x.id === String(id)))) return
   } else if (c && c.new?.tournament_id !== tid) return
   // Armed for the list the Comité held before (a change heard just before it moved here): that one

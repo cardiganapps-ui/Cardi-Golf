@@ -34,7 +34,16 @@ afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
   vi.unstubAllGlobals()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 /** The seconds since `t0` at which a fetch began, over `seconds`. */

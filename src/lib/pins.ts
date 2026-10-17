@@ -8,7 +8,7 @@
 /** PINs a person would guess first: one digit four times, and a run up or down («1234», «9876»). */
 export function weakPin(pin: string): boolean {
   if (!/^\d{4}$/.test(pin)) return true
-  const d = [...pin].map(Number)
+  const d = Array.from(pin, Number)
   if (d.every((x) => x === d[0])) return true
   const up = d.every((x, i) => i === 0 || x === d[i - 1]! + 1)
   const down = d.every((x, i) => i === 0 || x === d[i - 1]! - 1)

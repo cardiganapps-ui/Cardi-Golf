@@ -13,7 +13,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { enterAs, installFakePhone, settle, until, type Outcome } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, useOutbox } =
+  await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 
@@ -33,7 +34,8 @@ beforeEach(async () => {
 afterEach(() => _outboxTest.reset())
 
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
-const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') => enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
+const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') =>
+  enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /**
  * Calls `rejectGoneRounds` with signal (no `online` event, so no flush), and
@@ -48,7 +50,12 @@ async function looks(tid: string): Promise<{ moved: number; asked: number }> {
   phone.online = true
   try {
     const moved = await rejectGoneRounds(tid)
-    return { moved, asked: server.wire.slice(before).filter((r) => r.method === 'GET' && (r.target === 'rounds' || r.target === 'tournaments')).length }
+    return {
+      moved,
+      asked: server.wire
+        .slice(before)
+        .filter((r) => r.method === 'GET' && (r.target === 'rounds' || r.target === 'tournaments')).length,
+    }
   } finally {
     server.reachable = reachable
     phone.online = online

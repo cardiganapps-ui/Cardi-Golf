@@ -35,7 +35,9 @@ describe.skipIf(!process.env.POLO_ENGINE_BUDGET)('the engine’s budget (PERF-14
   it(`a 60-player tournament recomputes in ${BUDGET_MS} ms or less`, () => {
     const large = median('large60')
     const small = median('full12-live')
-    console.log(`computeTournament median: large60 ${large.toFixed(2)} ms, full12-live ${small.toFixed(2)} ms (budget ${BUDGET_MS} ms)`)
+    console.log(
+      `computeTournament median: large60 ${large.toFixed(2)} ms, full12-live ${small.toFixed(2)} ms (budget ${BUDGET_MS} ms)`,
+    )
     expect(large).toBeLessThanOrEqual(BUDGET_MS)
   })
 })

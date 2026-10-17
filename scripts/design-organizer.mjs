@@ -42,7 +42,12 @@ if (remove) {
 
 if (!user) {
   password ??= randomBytes(12).toString('base64url')
-  const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: 'Diseño (pruebas)' } })
+  const { data, error } = await sb.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: 'Diseño (pruebas)' },
+  })
   if (error) {
     console.error(error.message)
     process.exit(1)
@@ -57,7 +62,12 @@ if (!user) {
 
 const { data: ens } = await sb.from('tournaments').select('id').eq('slug', 'ensayo').single()
 if (ens) {
-  const { error } = await sb.from('tournament_organizers').upsert({ tournament_id: ens.id, auth_user_id: user.id, role: 'admin' }, { onConflict: 'tournament_id,auth_user_id' })
+  const { error } = await sb
+    .from('tournament_organizers')
+    .upsert(
+      { tournament_id: ens.id, auth_user_id: user.id, role: 'admin' },
+      { onConflict: 'tournament_id,auth_user_id' },
+    )
   if (error) console.error('organizer row:', error.message)
   else console.log('admin of ensayo')
 }

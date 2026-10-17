@@ -52,7 +52,12 @@ const uuid = (s) => {
 async function account(tag, name) {
   const email = `e2e-plat-${tag}-${rand}@cardi-golf.test`
   const password = `Pw-${rand}-${tag}!`
-  const { data, error } = await service.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: name } })
+  const { data, error } = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: name },
+  })
   if (error) throw error
   created.users.push(data.user.id)
   const sb = client()
@@ -68,13 +73,39 @@ try {
   const ADM = await account('adm', 'Ada Admin')
   await query(`insert into public.platform_admins (auth_user_id, note) values ('${uuid(ADM.id)}', 'e2e-platform')`)
   const ORG = await account('org', 'Oscar Organiza')
-  const { data: t, error: tErr } = await ORG.sb.rpc('create_tournament', { p_name: `E2E Plat ${rand}`, p_settings: settings })
+  const { data: t, error: tErr } = await ORG.sb.rpc('create_tournament', {
+    p_name: `E2E Plat ${rand}`,
+    p_settings: settings,
+  })
   if (tErr) throw tErr
   created.tournaments.push(t.id)
-  const { data: p } = await ORG.sb.from('players').insert({ tournament_id: t.id, full_name: 'Pablo Prueba', display_name: 'Pablo', sort_order: 0 }).select('id').single()
-  const { data: r } = await ORG.sb.from('rounds').insert({ tournament_id: t.id, number: 1, holes: 18 }).select('id').single()
-  await ORG.sb.rpc('admin_save_score', { p_round_id: r.id, p_player_id: p.id, p_hole: 1, p_strokes: 6, p_putts: 2, p_picked_up: false })
-  const { error: fixErr } = await ADM.sb.rpc('admin_save_score', { p_round_id: r.id, p_player_id: p.id, p_hole: 1, p_strokes: 5, p_putts: 2, p_picked_up: false, p_reason: 'Lo reportó el grupo' })
+  const { data: p } = await ORG.sb
+    .from('players')
+    .insert({ tournament_id: t.id, full_name: 'Pablo Prueba', display_name: 'Pablo', sort_order: 0 })
+    .select('id')
+    .single()
+  const { data: r } = await ORG.sb
+    .from('rounds')
+    .insert({ tournament_id: t.id, number: 1, holes: 18 })
+    .select('id')
+    .single()
+  await ORG.sb.rpc('admin_save_score', {
+    p_round_id: r.id,
+    p_player_id: p.id,
+    p_hole: 1,
+    p_strokes: 6,
+    p_putts: 2,
+    p_picked_up: false,
+  })
+  const { error: fixErr } = await ADM.sb.rpc('admin_save_score', {
+    p_round_id: r.id,
+    p_player_id: p.id,
+    p_hole: 1,
+    p_strokes: 5,
+    p_putts: 2,
+    p_picked_up: false,
+    p_reason: 'Lo reportó el grupo',
+  })
   if (fixErr) throw fixErr
   const VIC = await account('vic', 'Victor Borrable')
 
@@ -85,8 +116,14 @@ try {
       try {
         const headers = { ...req.headers() }
         delete headers['content-length']
-        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer() })
+        const data = req.postDataBuffer()
+        const res = await fetch(req.url(), {
+          method: req.method(),
+          headers,
+          body: ['GET', 'HEAD'].includes(req.method()) || !data ? undefined : new Uint8Array(data),
+        })
         const body = Buffer.from(await res.arrayBuffer())
+        /** @type {Record<string, string>} */
         const h = {}
         res.headers.forEach((v, k) => {
           if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k)) h[k] = v
@@ -112,7 +149,7 @@ try {
   check(Number(accounts.replace(/,/g, '')) >= 3, 'the shield on Mi Polo opens Resumen with real numbers', accounts)
   await page.screenshot({ path: `${out}/platform-resumen.jpg`, type: 'jpeg', quality: 80, fullPage: true })
 
-  console.log('Torneos → another organizer\'s Comité:')
+  console.log("Torneos → another organizer's Comité:")
   await page.getByRole('link', { name: 'Torneos' }).click()
   await page.getByPlaceholder('Nombre, código o correo del organizador').fill(ORG.email)
   await page.getByRole('link', { name: new RegExp(`E2E Plat ${rand}`) }).click({ timeout: T })
@@ -120,7 +157,7 @@ try {
   await page.getByPlaceholder('Qué pasó y quién lo pidió').fill('Prueba e2e del panel')
   await page.getByRole('button', { name: 'Abrir', exact: true }).click()
   await page.getByText(ORG.email).waitFor({ timeout: T })
-  check(true, 'search by the organizer\'s email opens the tournament with its Comité')
+  check(true, "search by the organizer's email opens the tournament with its Comité")
   await page.screenshot({ path: `${out}/platform-torneo.jpg`, type: 'jpeg', quality: 80, fullPage: true })
   await page.getByRole('link', { name: 'Abrir su Comité' }).click()
   await page.getByText('Estás en un torneo de otro organizador', { exact: false }).waitFor({ timeout: T })
@@ -128,7 +165,11 @@ try {
   await page.getByRole('link', { name: 'Historial' }).click()
   await page.getByText('Pablo, hoyo 1: de 6 a 5').waitFor({ timeout: T })
   const marked = await page.locator(`text=Pablo, hoyo 1: de 6 a 5 >> xpath=ancestor::button[1]`).innerText()
-  check(/Admin de Polo/.test(marked) && /Lo reportó el grupo/.test(marked), 'Historial shows the correction, marked Admin de Polo, with its reason', marked)
+  check(
+    /Admin de Polo/.test(marked) && /Lo reportó el grupo/.test(marked),
+    'Historial shows the correction, marked Admin de Polo, with its reason',
+    marked,
+  )
   await page.screenshot({ path: `${out}/platform-historial.jpg`, type: 'jpeg', quality: 80, fullPage: true })
 
   console.log('Personas → block, unblock, delete:')
@@ -160,10 +201,12 @@ try {
   await del.click()
   await page.waitForURL(/\/admin\/personas$/, { timeout: T })
   const { data: gone } = await service.auth.admin.getUserById(VIC.id)
-  check(disabledBefore && !gone?.user, 'deleting waits for the email and a reason, then the account is gone', { disabledBefore })
+  check(disabledBefore && !gone?.user, 'deleting waits for the email and a reason, then the account is gone', {
+    disabledBefore,
+  })
 
   check(errors.length === 0, 'no page errors', errors)
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {

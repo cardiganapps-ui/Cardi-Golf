@@ -41,7 +41,9 @@ describe('the iPhone launch images (PWA-14)', () => {
   })
 
   it('no file in public/splash that no screen uses', () => {
-    const files = readdirSync(new URL('../../public/splash', import.meta.url)).map((f) => `/splash/${f}`).sort()
+    const files = readdirSync(new URL('../../public/splash', import.meta.url))
+      .map((f) => `/splash/${f}`)
+      .sort()
     expect(files).toEqual(LAUNCH_SCREENS.map(launchImagePath).sort())
   })
 })

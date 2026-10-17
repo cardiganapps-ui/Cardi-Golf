@@ -6,7 +6,11 @@
 import { spawnSync } from 'node:child_process'
 
 function psql(input, args = []) {
-  const r = spawnSync('psql', ['-X', '-q', '-v', 'ON_ERROR_STOP=1', ...args], { input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const r = spawnSync('psql', ['-X', '-q', '-v', 'ON_ERROR_STOP=1', ...args], {
+    input,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  })
   if (r.error) throw r.error
   if (r.status !== 0) throw new Error((r.stderr || r.stdout || `psql exited ${r.status}`).trim().slice(0, 4000))
   return r.stdout

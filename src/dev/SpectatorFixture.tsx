@@ -35,7 +35,19 @@ export function SpectatorFixture({ money = false }: { money?: boolean }) {
 
   const base = `/v/${money ? '_dinero' : '_'}/${name}`
   const value = useMemo(
-    () => (snapshot ? { tournamentId: id, slug: '', base, lookup: spectatorLookup(snapshot), me: SPECTATOR_ME, spectator: { money, url: `${window.location.origin}${base}` }, refresh: noop, leave: noop } : null),
+    () =>
+      snapshot
+        ? {
+            tournamentId: id,
+            slug: '',
+            base,
+            lookup: spectatorLookup(snapshot),
+            me: SPECTATOR_ME,
+            spectator: { money, url: `${window.location.origin}${base}` },
+            refresh: noop,
+            leave: noop,
+          }
+        : null,
     [snapshot, id, base, money],
   )
   if (!snapshot) return <FixtureIndex />

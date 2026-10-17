@@ -21,13 +21,14 @@ import { expect, open, test } from './base'
 async function dynamicType(page: Page, px: number) {
   await page.addInitScript((bodyPx) => {
     const supports = CSS.supports.bind(CSS)
-    CSS.supports = ((a: string, b?: string) => (a === 'font' && b === '-apple-system-body' ? true : b === undefined ? supports(a) : supports(a, b))) as typeof CSS.supports
+    CSS.supports = (a: string, b?: string) =>
+      a === 'font' && b === '-apple-system-body' ? true : b === undefined ? supports(a) : supports(a, b)
     const style = window.getComputedStyle.bind(window)
-    window.getComputedStyle = ((el: Element, pseudo?: string | null) => {
+    window.getComputedStyle = (el: Element, pseudo?: string | null) => {
       const real = style(el, pseudo)
       if (!(el instanceof HTMLElement) || el.dataset.textProbe === undefined) return real
       return new Proxy(real, { get: (target, key) => (key === 'fontSize' ? `${bodyPx}px` : Reflect.get(target, key)) })
-    }) as typeof window.getComputedStyle
+    }
   }, px)
 }
 
@@ -36,7 +37,8 @@ function breaks(page: Page) {
   return page.evaluate(() => {
     const vw = document.documentElement.clientWidth
     const out: string[] = []
-    if (document.documentElement.scrollWidth > vw) out.push(`the page scrolls sideways: ${document.documentElement.scrollWidth} px in ${vw}`)
+    if (document.documentElement.scrollWidth > vw)
+      out.push(`the page scrolls sideways: ${document.documentElement.scrollWidth} px in ${vw}`)
     const what = (el: Element) => `${el.tagName.toLowerCase()} «${(el.textContent ?? '').trim().slice(0, 40)}»`
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('body *'))) {
       const r = el.getBoundingClientRect()
@@ -45,13 +47,16 @@ function breaks(page: Page) {
       if (cs.visibility === 'hidden') continue
       // Inside a box that scrolls sideways (the card's grid, Juegos' games) the rest is a swipe away, not lost.
       let inScroller = false
-      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) if (/auto|scroll/.test(getComputedStyle(p).overflowX)) inScroller = true
-      if (!inScroller && r.right > vw + 1) out.push(`${what(el)} ends at ${Math.round(r.right)} px, past the ${vw} px screen`)
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement)
+        if (/auto|scroll/.test(getComputedStyle(p).overflowX)) inScroller = true
+      if (!inScroller && r.right > vw + 1)
+        out.push(`${what(el)} ends at ${Math.round(r.right)} px, past the ${vw} px screen`)
       // A figure cut off in its box: a box that clips, holding a digit, narrower than what it holds. A choice of values
       // is no such box: its last rules fall under its own edge on purpose (primitives.module.css).
       const clips = cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)
       const choice = el.matches('[role="radiogroup"], [role="tablist"]')
-      if (clips && !choice && /\d/.test(el.textContent ?? '') && el.scrollWidth > el.clientWidth + 1) out.push(`${what(el)} is cut: ${el.clientWidth} px for ${el.scrollWidth}`)
+      if (clips && !choice && /\d/.test(el.textContent ?? '') && el.scrollWidth > el.clientWidth + 1)
+        out.push(`${what(el)} is cut: ${el.clientWidth} px for ${el.scrollWidth}`)
     }
     return out
   })
@@ -64,7 +69,11 @@ const SCREENS: Array<{ name: string; path: string; then?: (page: Page) => Promis
   { name: 'En vivo, 60 players', path: '/t/_/large60' },
   { name: 'En vivo, long names', path: '/t/_/longnames' },
   { name: 'Tarjeta', path: `${LIVE}/tarjeta` },
-  { name: 'Tarjeta, the whole card', path: `${LIVE}/tarjeta`, then: (p) => p.getByRole('button', { name: /^Ver tarjeta$/ }).click() },
+  {
+    name: 'Tarjeta, the whole card',
+    path: `${LIVE}/tarjeta`,
+    then: (p) => p.getByRole('button', { name: /^Ver tarjeta$/ }).click(),
+  },
   { name: 'Juegos', path: `${LIVE}/juegos` },
   ...['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction'].map((game) => ({
     name: `Juegos, ${game}`,
@@ -72,8 +81,16 @@ const SCREENS: Array<{ name: string; path: string; then?: (page: Page) => Promis
     then: (p: Page) => p.locator(`[data-game="${game}"]`).click(),
   })),
   { name: 'Dinero', path: `${LIVE}/dinero` },
-  { name: 'Dinero, por juego', path: `${LIVE}/dinero`, then: (p) => p.getByRole('radio', { name: 'Por juego' }).click() },
-  { name: 'Dinero, liquidación', path: `${LIVE}/dinero`, then: (p) => p.getByRole('radio', { name: 'Liquidación' }).click() },
+  {
+    name: 'Dinero, por juego',
+    path: `${LIVE}/dinero`,
+    then: (p) => p.getByRole('radio', { name: 'Por juego' }).click(),
+  },
+  {
+    name: 'Dinero, liquidación',
+    path: `${LIVE}/dinero`,
+    then: (p) => p.getByRole('radio', { name: 'Liquidación' }).click(),
+  },
   { name: 'Dinero, final', path: '/t/_/full12-final/dinero' },
   { name: 'Más', path: `${LIVE}/mas` },
 ]
@@ -85,10 +102,18 @@ test.describe('at 200 % text, as Dynamic Type sets it (A11Y-07, A11Y-08)', () =>
     await open(page, LIVE)
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('32px')
     // Large, and short for its text on a 393×852 phone: 26.6 rem tall.
-    expect(await page.evaluate(() => [document.documentElement.hasAttribute('data-text-large'), document.documentElement.hasAttribute('data-short')])).toEqual([true, true])
+    expect(
+      await page.evaluate(() => [
+        document.documentElement.hasAttribute('data-text-large'),
+        document.documentElement.hasAttribute('data-short'),
+      ]),
+    ).toEqual([true, true])
   })
 
-  for (const viewport of [{ width: 393, height: 852 }, { width: 375, height: 667 }]) {
+  for (const viewport of [
+    { width: 393, height: 852 },
+    { width: 375, height: 667 },
+  ]) {
     test.describe(`${viewport.width}×${viewport.height}`, () => {
       test.use({ viewport })
       for (const s of SCREENS) {
@@ -107,25 +132,34 @@ test.describe('at 200 % text, as Dynamic Type sets it (A11Y-07, A11Y-08)', () =>
   test('the board keeps each figure under its header: «HOY», «HOYO» and «PUNTOS» stay apart', async ({ page }) => {
     await open(page, LIVE)
     const heads = await page.locator('[class*="boardHead"] > span').evaluateAll((els) =>
-      els.filter((e) => (e.textContent ?? '').trim()).map((e) => {
-        const range = document.createRange()
-        range.selectNodeContents(e)
-        const r = range.getBoundingClientRect()
-        return { text: (e.textContent ?? '').trim(), left: r.left, right: r.right }
-      }),
+      els
+        .filter((e) => (e.textContent ?? '').trim())
+        .map((e) => {
+          const range = document.createRange()
+          range.selectNodeContents(e)
+          const r = range.getBoundingClientRect()
+          return { text: (e.textContent ?? '').trim(), left: r.left, right: r.right }
+        }),
     )
     expect(heads.map((h) => h.text)).toEqual(['Hoy', 'Hoyo', 'Puntos'])
-    for (let i = 1; i < heads.length; i++) expect(heads[i]!.left, `${heads[i - 1]!.text} runs into ${heads[i]!.text}`).toBeGreaterThan(heads[i - 1]!.right + 4)
+    for (let i = 1; i < heads.length; i++)
+      expect(heads[i].left, `${heads[i - 1].text} runs into ${heads[i].text}`).toBeGreaterThan(heads[i - 1].right + 4)
   })
 
   test('the tab bar grows with its words and never covers the Tarjeta’s «Guardar hoyo»', async ({ page }) => {
     await open(page, `${LIVE}/tarjeta`)
     const save = page.getByRole('button', { name: 'Guardar hoyo' })
     await save.scrollIntoViewIfNeeded()
-    const [btn, bar] = await Promise.all([save.boundingBox(), page.getByRole('navigation', { name: 'Secciones' }).boundingBox()])
+    const [btn, bar] = await Promise.all([
+      save.boundingBox(),
+      page.getByRole('navigation', { name: 'Secciones' }).boundingBox(),
+    ])
     expect(btn!.y + btn!.height).toBeLessThanOrEqual(bar!.y + 1)
     // Every tab's word fits on the bar, none cut.
-    const tabs = await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link').evaluateAll((els) => els.map((e) => e.scrollWidth <= e.clientWidth + 1))
+    const tabs = await page
+      .getByRole('navigation', { name: 'Secciones' })
+      .getByRole('link')
+      .evaluateAll((els) => els.map((e) => e.scrollWidth <= e.clientWidth + 1))
     expect(tabs.every(Boolean)).toBe(true)
   })
 
@@ -140,8 +174,13 @@ test.describe('at 200 % text, as Dynamic Type sets it (A11Y-07, A11Y-08)', () =>
           if (!el || el === document.body) return null
           const r = el.getBoundingClientRect()
           if (r.width === 0 || r.height === 0 || r.right <= 0 || r.left >= innerWidth) return null
-          const at = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), r.top + r.height / 2)
-          return at && (at === el || el.contains(at) || at.contains(el)) ? null : `«${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}»`
+          const at = document.elementFromPoint(
+            Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)),
+            r.top + r.height / 2,
+          )
+          return at && (at === el || el.contains(at) || at.contains(el))
+            ? null
+            : `«${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}»`
         })
         if (hit) covered.push(hit)
       }
@@ -158,7 +197,7 @@ test.describe('a 375×667 phone (VIS-20)', () => {
     const m = await page.evaluate(() => {
       const tab = document.querySelector('nav[aria-label="Secciones"]')!.getBoundingClientRect().top
       const rows = Array.from(document.querySelectorAll('[class*="leaderRow"]')).map((r) => r.getBoundingClientRect())
-      return { first: rows[0]!.top, shown: rows.filter((r) => r.top >= 0 && r.bottom <= tab + 0.5).length }
+      return { first: rows[0].top, shown: rows.filter((r) => r.top >= 0 && r.bottom <= tab + 0.5).length }
     })
     expect(m.first).toBeLessThanOrEqual(200)
     expect(m.shown).toBeGreaterThanOrEqual(8)
@@ -169,10 +208,14 @@ test.describe('a 375×667 phone (VIS-20)', () => {
   test('the Tarjeta: the save bar is a solid band down to the tab bar', async ({ page }) => {
     await open(page, `${LIVE}/tarjeta`)
     const m = await page.evaluate(() => {
-      const bar = document.querySelector('[class*="saveBar"]') as HTMLElement
+      const bar = document.querySelector('[class*="saveBar"]')!
       const save = bar.getBoundingClientRect()
       const tab = document.querySelector('nav[aria-label="Secciones"]')!.getBoundingClientRect()
-      return { gap: tab.top - save.bottom, background: getComputedStyle(bar).backgroundColor, page: getComputedStyle(document.body).backgroundColor }
+      return {
+        gap: tab.top - save.bottom,
+        background: getComputedStyle(bar).backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      }
     })
     expect(Math.abs(m.gap)).toBeLessThanOrEqual(1)
     expect(m.background).toBe(m.page)
@@ -189,7 +232,9 @@ test.describe('a 375×667 phone (VIS-20)', () => {
 test.describe('landscape (A11Y-07)', () => {
   test.use({ viewport: { width: 852, height: 393 } })
 
-  test('the Tarjeta: the save bar scrolls with the card and the tab bar gives back its icons’ height', async ({ page }) => {
+  test('the Tarjeta: the save bar scrolls with the card and the tab bar gives back its icons’ height', async ({
+    page,
+  }) => {
     await open(page, `${LIVE}/tarjeta`)
     expect(await page.evaluate(() => document.documentElement.hasAttribute('data-short'))).toBe(true)
     expect(await page.locator('[class*="saveBar"]').evaluate((el) => getComputedStyle(el).position)).toBe('static')
@@ -203,7 +248,9 @@ test.describe('landscape (A11Y-07)', () => {
       await group.scrollIntoViewIfNeeded()
       const clear = await group.evaluate((el) => {
         const r = el.getBoundingClientRect()
-        return [r.top + 4, r.top + r.height / 2, r.bottom - 4].every((y) => el.contains(document.elementFromPoint(r.left + r.width / 2, y)))
+        return [r.top + 4, r.top + r.height / 2, r.bottom - 4].every((y) =>
+          el.contains(document.elementFromPoint(r.left + r.width / 2, y)),
+        )
       })
       expect(clear).toBe(true)
     }

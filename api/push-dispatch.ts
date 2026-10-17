@@ -43,7 +43,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? 'mailto:golf@cardigan.mx', pub, priv)
   const line = noticeLine(body.notice)
   const badge = typeof body.unread === 'number' && Number.isFinite(body.unread) ? Math.max(0, body.unread) : undefined
-  const payload = JSON.stringify({ title: line.title ?? 'Polo', body: line.body ?? line.text, url: line.to, tag: body.notice.id, badge })
+  const payload = JSON.stringify({
+    title: line.title ?? 'Polo',
+    body: line.body ?? line.text,
+    url: line.to,
+    tag: body.notice.id,
+    badge,
+  })
 
   // SEC-03: only a browser push service is called. An endpoint off the list can never be delivered: it is pruned
   // with the gone ones, and nothing is sent to it.
@@ -67,7 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   )
 
   if (dead.length && process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
-    const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+    const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
     await sb.rpc('push_prune', { p_secret: secret, p_endpoints: dead })
   }
   return res.status(200).json({ sent, pruned: dead.length })

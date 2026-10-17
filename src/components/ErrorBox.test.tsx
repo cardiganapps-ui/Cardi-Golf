@@ -31,7 +31,13 @@ describe('ErrorBox', () => {
 
   it('carries its mark, a title, what still works and a retry (VIS-13)', () => {
     const retry = vi.fn()
-    render(<ErrorBox error={new TypeError('Failed to fetch')} onRetry={retry} fallback={<a href="/">{t.errors.backHome}</a>} />)
+    render(
+      <ErrorBox
+        error={new TypeError('Failed to fetch')}
+        onRetry={retry}
+        fallback={<a href="/">{t.errors.backHome}</a>}
+      />,
+    )
     const box = screen.getByRole('alert')
     expect(box.querySelector('svg')).toBeTruthy()
     expect(box.querySelector('strong')!.textContent).toBe(t.common.error)
@@ -47,7 +53,7 @@ describe('loading screens (VIS-13)', () => {
     ['list', 6, 0],
     ['board', 6, 1],
     ['card', 4, 1],
-  ] as const)('a %s skeleton draws its rows in the screen\'s shapes', (kind, rows, heads) => {
+  ] as const)("a %s skeleton draws its rows in the screen's shapes", (kind, rows, heads) => {
     const { container } = render(<Spinner kind={kind} />)
     expect(screen.getByRole('status', { name: t.common.loading })).toBeTruthy()
     expect(container.querySelectorAll('[class*="skRow"]')).toHaveLength(rows)

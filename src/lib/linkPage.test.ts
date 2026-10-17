@@ -24,7 +24,11 @@ const FIXTURE_LINKS = new Set(['v/_/:name', 'v/_dinero/:name'])
 const routerOpensLink = (path: string) =>
   !!matchRoutes(router.routes as RouteObject[], path)?.some((m) => {
     const el = m.route.element as { props?: { children?: { type?: unknown } } } | undefined
-    return el?.props?.children?.type === SpectatorGate || el?.props?.children?.type === DemoGate || FIXTURE_LINKS.has(m.route.path ?? '')
+    return (
+      el?.props?.children?.type === SpectatorGate ||
+      el?.props?.children?.type === DemoGate ||
+      FIXTURE_LINKS.has(m.route.path ?? '')
+    )
   })
 
 const TOKEN = 'AbCdEfGhIjKlMnOpQrStUv12'

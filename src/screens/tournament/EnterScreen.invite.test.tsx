@@ -11,8 +11,14 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), claimPlayer: vi.fn() }))
-vi.mock('../../data/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/auth')>()), ensureSession: vi.fn(async () => ({ user: { id: 'u' } })) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  claimPlayer: vi.fn(),
+}))
+vi.mock('../../data/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/auth')>()),
+  ensureSession: vi.fn(async () => ({ user: { id: 'u' } })),
+}))
 
 import type { LookupResult } from '../../data/api'
 import { t } from '../../i18n/es-MX'
@@ -28,8 +34,24 @@ const lookup: LookupResult = {
   status: 'live',
   joinCode: 'ABC123',
   players: [
-    { id: 'p1', displayName: 'Mauricio', fullName: 'Mauricio Lozano', tier: 'B', avatarUrl: null, isHonoree: false, hasPin: true },
-    { id: 'p2', displayName: 'René', fullName: 'René Nosti', tier: 'C', avatarUrl: null, isHonoree: false, hasPin: true },
+    {
+      id: 'p1',
+      displayName: 'Mauricio',
+      fullName: 'Mauricio Lozano',
+      tier: 'B',
+      avatarUrl: null,
+      isHonoree: false,
+      hasPin: true,
+    },
+    {
+      id: 'p2',
+      displayName: 'René',
+      fullName: 'René Nosti',
+      tier: 'C',
+      avatarUrl: null,
+      isHonoree: false,
+      hasPin: true,
+    },
   ],
 }
 
@@ -69,7 +91,12 @@ describe('the invite opens the player’s face (UX-20)', () => {
   })
 
   it('on an iPhone’s browser it still says to install first', () => {
-    vi.stubGlobal('navigator', { ...navigator, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', maxTouchPoints: 5 })
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      userAgent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+      maxTouchPoints: 5,
+    })
     open('/t/bachelor?soy=p1')
     expect(screen.getByText(t.install.iosFirst, { exact: false })).toBeTruthy()
   })

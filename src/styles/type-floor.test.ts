@@ -18,7 +18,9 @@ function walk(dir: string, out: string[] = []): string[] {
   }
   return out
 }
-const files = walk(ROOT).map((p) => relative(ROOT, p)).filter((f) => !f.startsWith('dev/'))
+const files = walk(ROOT)
+  .map((p) => relative(ROOT, p))
+  .filter((f) => !f.startsWith('dev/'))
 const FLOOR_PX = 12
 
 describe('the type floor (VIS-24)', () => {

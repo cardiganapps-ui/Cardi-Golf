@@ -9,9 +9,10 @@
  * (U+00A0, U+2007, U+202F) and U+FEFF out, so a reason of three of them would
  * have counted as three letters there.
  */
-const SPACE = '[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u180e\\u2000-\\u200b\\u2028\\u2029\\u202f\\u205f\\u2060\\u3000\\ufeff]'
+const SPACE =
+  '[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u180e\\u2000-\\u200b\\u2028\\u2029\\u202f\\u205f\\u2060\\u3000\\ufeff]'
 const ENDS = new RegExp(`^${SPACE}+|${SPACE}+$`, 'g')
 
 export const trimReason = (s: string): string => s.replace(ENDS, '')
 /** Characters (code points), as Postgres's char_length counts them. */
-export const reasonLength = (s: string): number => [...s].length
+export const reasonLength = (s: string): number => Array.from(s).length

@@ -18,11 +18,15 @@ export function cardRules(o: {
   perPlayer?: boolean
 }) {
   const { snapshot, round, isComite } = o
-  const pairSigned = (pairId: string) => snapshot.cardSignatures.some((s) => s.roundId === round.id && s.pairId === pairId)
+  const pairSigned = (pairId: string) =>
+    snapshot.cardSignatures.some((s) => s.roundId === round.id && s.pairId === pairId)
   /** Whether this player's card is signed today: his pair's signature, or his own (a marker's, 0054). */
   const signed = (pid: string) => {
     const pair = snapshot.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)
-    return (!!pair && pairSigned(pair.id)) || snapshot.cardSignatures.some((s) => s.roundId === round.id && !!s.playerId && s.playerId === pid)
+    return (
+      (!!pair && pairSigned(pair.id)) ||
+      snapshot.cardSignatures.some((s) => s.roundId === round.id && !!s.playerId && s.playerId === pid)
+    )
   }
   const anySigned = o.playerIds.some(signed)
   const locksCard = o.perPlayer ? o.playerIds.length > 0 && o.playerIds.every(signed) : anySigned
@@ -48,13 +52,20 @@ export function cardRules(o: {
 
 /** A pair's name, or its two players' short names when it has none. */
 export function pairNameIn(players: ReadonlyArray<{ id: string; displayName: string }>) {
-  return (p: Pick<Pair, 'name' | 'player1Id' | 'player2Id'>) => p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => players.find((x) => x.id === id)?.displayName ?? '?'))
+  return (p: Pick<Pair, 'name' | 'player1Id' | 'player2Id'>) =>
+    p.name ??
+    t.common.andList([p.player1Id, p.player2Id].map((id) => players.find((x) => x.id === id)?.displayName ?? '?'))
 }
 
 /** This phone's pair, and the pair of the group whose card it keeps (tarjeta cruzada, §5.5). */
 export function groupPairs(pairs: readonly Pair[], groupPlayerIds: readonly string[], myPlayerId: string | null) {
   const inGroup = pairs.filter((p) => [p.player1Id, p.player2Id].every((id) => groupPlayerIds.includes(id)))
-  const myPair = myPlayerId ? (pairs.find((p) => p.player1Id === myPlayerId || p.player2Id === myPlayerId) ?? null) : null
-  const rivalPair = myPair ? (pairs.find((p) => p.id !== myPair.id && [p.player1Id, p.player2Id].every((id) => groupPlayerIds.includes(id))) ?? null) : null
+  const myPair = myPlayerId
+    ? (pairs.find((p) => p.player1Id === myPlayerId || p.player2Id === myPlayerId) ?? null)
+    : null
+  const rivalPair = myPair
+    ? (pairs.find((p) => p.id !== myPair.id && [p.player1Id, p.player2Id].every((id) => groupPlayerIds.includes(id))) ??
+      null)
+    : null
   return { inGroup, myPair, rivalPair }
 }

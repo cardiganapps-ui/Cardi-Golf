@@ -25,7 +25,17 @@ const writes: Array<[string, () => Promise<unknown>]> = [
   ['redeem_link_token', () => redeemLinkToken('token')],
   ['comite_unlink_profile (platform)', () => supabasePlatformApi.unlinkPlayer('p1')],
   ['platform_delete_account', () => supabasePlatformApi.deleteAccount('u1', 'BORRAR', 'pidió su baja')],
-  ['restore_tournament', () => restoreBackup('t1', { version: 1, exportedAt: '2027-04-08T00:00:00Z', tournamentId: 't1', slug: 'viaje', tables: {} })],
+  [
+    'restore_tournament',
+    () =>
+      restoreBackup('t1', {
+        version: 1,
+        exportedAt: '2027-04-08T00:00:00Z',
+        tournamentId: 't1',
+        slug: 'viaje',
+        tables: {},
+      }),
+  ],
 ]
 
 let off = () => undefined as void

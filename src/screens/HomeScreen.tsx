@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wordmark } from '../components/Wordmark'
@@ -42,7 +42,7 @@ export function HomeScreen() {
     if (to) navigate(`/t/${to}`, { replace: true })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on the launch
 
-  function onJoin(e: FormEvent) {
+  function onJoin(e: SubmitEvent) {
     e.preventDefault()
     if (target) navigate(`/t/${target}`)
   }
@@ -54,9 +54,11 @@ export function HomeScreen() {
   // Either way the last tournament's boards saved on the phone open at once:
   // they need no session, and the installed app opens here (REL-03).
   if (supabaseConfigured && !ready) return <BootWait last={saved ? last : null} />
-  if (bootError && !user && hasStoredSession()) return <BootProblem kind={bootError} saved={saved ? last?.slug : undefined} />
+  if (bootError && !user && hasStoredSession())
+    return <BootProblem kind={bootError} saved={saved ? last?.slug : undefined} />
   // Mi Polo needs the server for the profile; the saved boards don't (REL-15).
-  if (organizerSignedIn) return <MiPolo saved={saved && last ? { slug: last.slug, card: <LastTournamentCard last={last} /> } : undefined} />
+  if (organizerSignedIn)
+    return <MiPolo saved={saved && last ? { slug: last.slug, card: <LastTournamentCard last={last} /> } : undefined} />
 
   return (
     <div className={styles.home}>

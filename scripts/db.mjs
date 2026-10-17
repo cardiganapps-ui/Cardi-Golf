@@ -37,7 +37,9 @@ if (local) {
   rows = query
 }
 
-const dir = process.env.POLO_MIGRATIONS_DIR ? path.resolve(process.env.POLO_MIGRATIONS_DIR) : path.join(root, 'supabase', 'migrations')
+const dir = process.env.POLO_MIGRATIONS_DIR
+  ? path.resolve(process.env.POLO_MIGRATIONS_DIR)
+  : path.join(root, 'supabase', 'migrations')
 /** A migration's file name: four digits, words; nothing that needs quoting in SQL. */
 const NAME = /^\d{4}_[a-z0-9_]+\.sql$/
 
@@ -48,7 +50,11 @@ async function recordedRuns() {
             exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = '_migrations' and column_name = 'checksum') as sums`,
   )
   if (!have?.ledger) return new Map()
-  const list = await rows(have.sums ? `select name, checksum from public._migrations` : `select name, null::text as checksum from public._migrations`)
+  const list = await rows(
+    have.sums
+      ? `select name, checksum from public._migrations`
+      : `select name, null::text as checksum from public._migrations`,
+  )
   return new Map(list.map((r) => [r.name, r.checksum]))
 }
 
@@ -59,7 +65,13 @@ async function plan() {
   const bad = files.filter((f) => !NAME.test(f))
   if (bad.length) throw new Error(`Not a migration name: ${bad.join(', ')} (expected 0000_words.sql)`)
   const sums = new Map()
-  for (const f of files) sums.set(f, createHash('sha256').update(await readFile(path.join(dir, f))).digest('hex'))
+  for (const f of files)
+    sums.set(
+      f,
+      createHash('sha256')
+        .update(await readFile(path.join(dir, f)))
+        .digest('hex'),
+    )
   const changed = files.filter((f) => recorded.get(f) && recorded.get(f) !== sums.get(f))
   const gone = [...recorded.keys()].filter((f) => !sums.has(f))
   const pending = files.filter((f) => !recorded.has(f))
@@ -69,8 +81,10 @@ async function plan() {
 
 function refuse(p) {
   if (!p.changed.length && !p.gone.length) return false
-  for (const f of p.changed) console.error(`  ✗ ${f} changed after it was applied: write a new migration instead of editing it`)
-  for (const f of p.gone) console.error(`  ✗ ${f} was applied but is not in ${path.relative(root, dir) || dir} any more`)
+  for (const f of p.changed)
+    console.error(`  ✗ ${f} changed after it was applied: write a new migration instead of editing it`)
+  for (const f of p.gone)
+    console.error(`  ✗ ${f} was applied but is not in ${path.relative(root, dir) || dir} any more`)
   console.error('Refusing to migrate: the database and the repo disagree about what already ran (DB-17).')
   return true
 }
@@ -84,7 +98,8 @@ async function migrate() {
      alter table public._migrations add column if not exists checksum text;`,
   )
   // Files applied before checksums were kept: their sum as the repo has them now.
-  for (const f of p.unsummed) await exec(`update public._migrations set checksum = '${p.sums.get(f)}' where name = '${f}' and checksum is null;`)
+  for (const f of p.unsummed)
+    await exec(`update public._migrations set checksum = '${p.sums.get(f)}' where name = '${f}' and checksum is null;`)
   for (const f of p.files) {
     if (!p.pending.includes(f)) {
       console.log('  – already applied', f)
@@ -92,7 +107,9 @@ async function migrate() {
     }
     const sql = await readFile(path.join(dir, f), 'utf8')
     process.stdout.write(`  ▸ applying ${f} … `)
-    await exec(`begin;\n${sql}\ninsert into public._migrations (name, checksum) values ('${f}', '${p.sums.get(f)}');\ncommit;`)
+    await exec(
+      `begin;\n${sql}\ninsert into public._migrations (name, checksum) values ('${f}', '${p.sums.get(f)}');\ncommit;`,
+    )
     console.log('ok')
   }
 }
@@ -113,16 +130,17 @@ try {
     // A migration runs once, through migrate: run again by hand it would put back definitions a later file changed (DB-17).
     const migrationsDir = path.join(root, 'supabase', 'migrations') + path.sep
     if (path.resolve(arg).startsWith(migrationsDir)) {
-      console.error(`Refusing to run ${path.relative(root, path.resolve(arg))} by hand: migrations go through \`db.mjs migrate\`, once (DB-17).`)
+      console.error(
+        `Refusing to run ${path.relative(root, path.resolve(arg))} by hand: migrations go through \`db.mjs migrate\`, once (DB-17).`,
+      )
       process.exit(1)
     }
     console.log(JSON.stringify(await exec(await readFile(arg, 'utf8')), null, 2))
-  }
-  else {
+  } else {
     console.error('usage: db.mjs migrate | check | sql "<sql>" | file <path>')
     process.exit(1)
   }
-} catch (e) {
+} catch (/** @type {any} */ e) {
   console.error(String(e.message ?? e))
   process.exit(1)
 }

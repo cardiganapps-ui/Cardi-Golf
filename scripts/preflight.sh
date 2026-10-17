@@ -18,7 +18,7 @@ has_script() {
   node -e 'process.exit(require("./package.json").scripts?.[process.argv[1]] ? 0 : 1)' "$1"
 }
 
-steps=("typecheck" "lint" "test" "build")
+steps=("typecheck" "lint" "format:check" "test" "build")
 failed=()
 for s in "${steps[@]}"; do
   if ! has_script "$s"; then

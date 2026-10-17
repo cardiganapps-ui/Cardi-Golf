@@ -92,7 +92,12 @@ export function TvScreen() {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
       // A focused control keeps its own keys: Space on «Pausar» presses it once, not twice.
-      if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.closest('button, a, input, select, textarea')) return
+      if (
+        (e.key === ' ' || e.key === 'Enter') &&
+        e.target instanceof Element &&
+        e.target.closest('button, a, input, select, textarea')
+      )
+        return
       if (e.key === ' ') toggleRef.current()
       else if (e.key === 'ArrowRight' || e.key === 'PageDown') setIdx((i) => i + 1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') setIdx((i) => Math.max(0, i - 1))
@@ -124,18 +129,26 @@ export function TvScreen() {
   const boardIn = reduce ? { opacity: 0 } : { opacity: 0, y: 20 }
   const boardOut = reduce ? { opacity: 0 } : { opacity: 0, y: -20 }
   const boardLabel = (b: Board): string =>
-    b === 'individual' ? settings.modules.individual.label
-    : b === 'pairs' ? settings.modules.pairs.label
-    : b === 'snake' ? settings.modules.snake.label
-    : b === 'auction' ? settings.modules.auction.label
-    : b === 'feed' ? t.feed.title
-    : (state.games[b.slice(5)]?.config.label ?? '')
+    b === 'individual'
+      ? settings.modules.individual.label
+      : b === 'pairs'
+        ? settings.modules.pairs.label
+        : b === 'snake'
+          ? settings.modules.snake.label
+          : b === 'auction'
+            ? settings.modules.auction.label
+            : b === 'feed'
+              ? t.feed.title
+              : (state.games[b.slice(5)]?.config.label ?? '')
   // Keep the screen awake while the board is up (re-request after a tab switch).
   useEffect(() => {
     let lock: { release(): Promise<void> } | null = null
     const request = async () => {
       try {
-        lock = (await (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> } }).wakeLock?.request('screen')) ?? null
+        lock =
+          (await (
+            navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> } }
+          ).wakeLock?.request('screen')) ?? null
       } catch {
         lock = null
       }
@@ -164,7 +177,11 @@ export function TvScreen() {
         <div className="grow">
           <h1 className={styles.title}>{snapshot.tournament.name}</h1>
           <span className={styles.sub}>
-            {isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status]}
+            {isAuctionNight
+              ? settings.modules.auction.label
+              : round
+                ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}`
+                : t.status[snapshot.tournament.status]}
             {/* The room can't see a phone's header: with no signal the TV says so, and while the boards may be behind, how old they are (REL-10). */}
             {connection?.kind === 'offline' && `. ${t.sync.offlineShort}`}
             {connection?.mayBeOld && updatedWhen && `. ${t.sync.boardsAge(updatedWhen)}`}
@@ -178,54 +195,95 @@ export function TvScreen() {
       {/* The next board comes in while the last one leaves: the screen is never blank between boards (MOT-01). */}
       <AnimatePresence mode="popLayout" initial={false}>
         {auctionNeedsMoney ? (
-          <motion.section key="auction-no-money" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeBoard}>
+          <motion.section
+            key="auction-no-money"
+            className={styles.board}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={easeBoard}
+          >
             {/* The pairs draw carries no money: once it is made, the room sees it here too. */}
-            {settings.modules.pairs.enabled && snapshot.pairs.length > 0 ? <DrawBoard revealKey={null} /> : <NeedsMoneyBoard />}
+            {settings.modules.pairs.enabled && snapshot.pairs.length > 0 ? (
+              <DrawBoard revealKey={null} />
+            ) : (
+              <NeedsMoneyBoard />
+            )}
           </motion.section>
         ) : isAuctionNight && state.modules.auction ? (
-          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeBoard}>
+          <motion.section
+            key="auction-live"
+            className={styles.board}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={easeBoard}
+          >
             <AuctionBoard />
           </motion.section>
         ) : (
-          <motion.section key={board} className={styles.board} initial={boardIn} animate={{ opacity: 1, y: 0 }} exit={boardOut} transition={easeBoard}>
+          <motion.section
+            key={board}
+            className={styles.board}
+            initial={boardIn}
+            animate={{ opacity: 1, y: 0 }}
+            exit={boardOut}
+            transition={easeBoard}
+          >
             {board === 'individual' && state.modules.individual && (
               <PagedRows
                 title={settings.modules.individual.label}
                 turn={turn}
                 items={indivRows}
-                columns={{ className: styles.rowIndiv, labels: [round ? t.tv.thru : '', round ? t.tv.today : '', t.tv.total] }}
+                columns={{
+                  className: styles.rowIndiv,
+                  labels: [round ? t.tv.thru : '', round ? t.tv.today : '', t.tv.total],
+                }}
                 render={(r) => {
-                    // A team's row is the team; the figures are the format's own (STRAT-03): today's and the total, never Stableford points under strokes.
-                    const team = r.entrant.isTeam
-                    const members = r.entrant.playerIds
-                    const thru = round ? Math.min(...members.map((id) => state.core.rounds[round.id]?.[id]?.thru ?? 0)) : 0
-                    const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
-                    const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
-                    const label = team ? words(r.entrant.name) : name(r.playerId)
-                    // What the room reads from the couch, each under its label (VIS-05): who, where on the course, the day
-                    // in the format's own figure («ganó 4&3» under match play, STRAT-03), the total. The tier is the phone's.
-                    return (
-                      <motion.div key={r.playerId} className={`${styles.row} ${styles.rowIndiv} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId} {...rowMotion}>
-                        <span className={styles.pos}>{r.label}</span>
-                        <Avatar name={label} url={team ? undefined : byId.get(r.playerId)?.avatarUrl} honoree={members.some((id) => byId.get(id)?.isHonoree)} />
-                        <span className={styles.name}>
-                          <span>{label}</span>
-                        </span>
-                        <span className={styles.mid}>
-                          {round && thru > 0 && (
-                            <>
-                              <span aria-hidden="true">{t.round.thru(thru, round.holes)}</span>
-                              <span className="sr-only">{t.round.thruSpoken(thru, round.holes)}</span>
-                            </>
-                          )}
-                        </span>
-                        <span className={`${styles.mid} ${styles.day}`}>{round && thru > 0 && today && !today.empty ? dayFigureText(today) : ''}</span>
-                        {/* The total on the board's plate, the leader's in yellow: the one figure per row the room looks for. */}
-                        <span className={styles.big}>
-                          <Plate value={r.figure.text} leader={r.position === 1} />
-                        </span>
-                      </motion.div>
-                    )
+                  // A team's row is the team; the figures are the format's own (STRAT-03): today's and the total, never Stableford points under strokes.
+                  const team = r.entrant.isTeam
+                  const members = r.entrant.playerIds
+                  const thru = round
+                    ? Math.min(...members.map((id) => state.core.rounds[round.id]?.[id]?.thru ?? 0))
+                    : 0
+                  const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
+                  const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
+                  const label = team ? words(r.entrant.name) : name(r.playerId)
+                  // What the room reads from the couch, each under its label (VIS-05): who, where on the course, the day
+                  // in the format's own figure («ganó 4&3» under match play, STRAT-03), the total. The tier is the phone's.
+                  return (
+                    <motion.div
+                      key={r.playerId}
+                      className={`${styles.row} ${styles.rowIndiv} ${r.position === 1 ? styles.leader : ''}`}
+                      data-player={r.playerId}
+                      {...rowMotion}
+                    >
+                      <span className={styles.pos}>{r.label}</span>
+                      <Avatar
+                        name={label}
+                        url={team ? undefined : byId.get(r.playerId)?.avatarUrl}
+                        honoree={members.some((id) => byId.get(id)?.isHonoree)}
+                      />
+                      <span className={styles.name}>
+                        <span>{label}</span>
+                      </span>
+                      <span className={styles.mid}>
+                        {round && thru > 0 && (
+                          <>
+                            <span aria-hidden="true">{t.round.thru(thru, round.holes)}</span>
+                            <span className="sr-only">{t.round.thruSpoken(thru, round.holes)}</span>
+                          </>
+                        )}
+                      </span>
+                      <span className={`${styles.mid} ${styles.day}`}>
+                        {round && thru > 0 && today && !today.empty ? dayFigureText(today) : ''}
+                      </span>
+                      {/* The total on the board's plate, the leader's in yellow: the one figure per row the room looks for. */}
+                      <span className={styles.big}>
+                        <Plate value={r.figure.text} leader={r.position === 1} />
+                      </span>
+                    </motion.div>
+                  )
                 }}
               />
             )}
@@ -237,11 +295,17 @@ export function TvScreen() {
                 columns={{ className: styles.rowPair, labels: [t.tv.days, t.tv.total] }}
                 render={(r) => (
                   // Its own grid: position, the pair with both partners in full, days, total (VIS-04).
-                  <motion.div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`} {...rowMotion}>
+                  <motion.div
+                    key={r.pairId}
+                    className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`}
+                    {...rowMotion}
+                  >
                     <span className={styles.pos}>{r.label}</span>
                     <span className={styles.name}>
                       <span>{words(r.name)}</span>
-                      <span className={`${styles.small} ${styles.sub}`}>{t.common.andList([name(r.playerIds[0]), name(r.playerIds[1])])}</span>
+                      <span className={`${styles.small} ${styles.sub}`}>
+                        {t.common.andList([name(r.playerIds[0]), name(r.playerIds[1])])}
+                      </span>
                     </span>
                     <span className={`${styles.small} ${styles.figure}`}>{t.common.plusList(r.perRound)}</span>
                     <span className={styles.big}>
@@ -267,7 +331,11 @@ export function TvScreen() {
                         <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
                           {name(pid)}
                           {g.holderId === pid && (
-                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder(settings.modules.snake.label)}>
+                            <span
+                              className={styles.snakeIcon}
+                              role="img"
+                              aria-label={t.games.holder(settings.modules.snake.label)}
+                            >
                               <IconSnake />
                             </span>
                           )}
@@ -298,7 +366,9 @@ export function TvScreen() {
                     <Avatar name={name(pf.ownerId)} url={byId.get(pf.ownerId)?.avatarUrl} />
                     <span className={styles.name}>
                       <span>{name(pf.ownerId)}</span>
-                      <span className={`${styles.small} ${styles.sub}`}>{t.common.andList(pf.holdings.map((h) => name(h.playerId)))}</span>
+                      <span className={`${styles.small} ${styles.sub}`}>
+                        {t.common.andList(pf.holdings.map((h) => name(h.playerId)))}
+                      </span>
                     </span>
                     {/* A11Y-22: each figure with its words, which a label on a bare span never gave. */}
                     <span className={`${styles.small} ${styles.figure}`}>
@@ -319,16 +389,32 @@ export function TvScreen() {
                 turn={turn}
                 items={state.games[board.slice(5)]!.board.sections[0]!.rows}
                 render={(r, i) => (
-                    <div key={i} className={`${styles.row} ${r.pos === '1' ? styles.leader : ''}`}>
-                      <span className={styles.pos}>{r.pos ?? ''}</span>
-                      {r.playerIds.length === 1 ? <Avatar name={name(r.playerIds[0]!)} url={byId.get(r.playerIds[0]!)?.avatarUrl} /> : <span />}
-                      <span className={styles.name}>
-                        <span>{r.title ? words(r.title) : t.common.andList(r.playerIds.map(name))}</span>
-                        {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label ? words(r.label) : null, r.sub ? words(r.sub) : null].filter(Boolean).join(', ')}</span>}
-                      </span>
-                      <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money, cur) : ''}</span>
-                      <span className={styles.big}>{r.figure ? <Plate value={words(r.figure)} leader={r.pos === '1'} /> : null}</span>
-                    </div>
+                  <div key={i} className={`${styles.row} ${r.pos === '1' ? styles.leader : ''}`}>
+                    <span className={styles.pos}>{r.pos ?? ''}</span>
+                    {r.playerIds.length === 1 ? (
+                      <Avatar name={name(r.playerIds[0]!)} url={byId.get(r.playerIds[0]!)?.avatarUrl} />
+                    ) : (
+                      <span />
+                    )}
+                    <span className={styles.name}>
+                      <span>{r.title ? words(r.title) : t.common.andList(r.playerIds.map(name))}</span>
+                      {(r.label || r.sub || r.title) && (
+                        <span className={`${styles.small} ${styles.sub}`}>
+                          {[
+                            r.title ? t.common.andList(r.playerIds.map(name)) : null,
+                            r.label ? words(r.label) : null,
+                            r.sub ? words(r.sub) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money, cur) : ''}</span>
+                    <span className={styles.big}>
+                      {r.figure ? <Plate value={words(r.figure)} leader={r.pos === '1'} /> : null}
+                    </span>
+                  </div>
                 )}
               />
             )}
@@ -372,7 +458,21 @@ export function TvScreen() {
  * labels cost the rows no line of their own. `follow` shows the last page: a
  * reveal adding rows one at a time keeps its newest row on screen.
  */
-function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; columns?: { className: string | undefined; labels: string[] }; follow?: boolean }) {
+function PagedRows<T>({
+  title,
+  turn,
+  items,
+  render,
+  columns,
+  follow,
+}: {
+  title: string
+  turn: number
+  items: T[]
+  render: (item: T, i: number) => ReactNode
+  columns?: { className: string | undefined; labels: string[] }
+  follow?: boolean
+}) {
   const box = useRef<HTMLDivElement>(null)
   // Until measured, everything is laid out once (before paint) so the tallest row can be measured.
   const [fit, setFit] = useState<number | null>(null)
@@ -420,9 +520,14 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
   const page = follow ? pages - 1 : turn % pages
   const shown = items.slice(page * per, page * per + per)
   const heading = (
-    <h2 className={styles.boardTitle} style={columns ? { gridColumnStart: 1, gridColumnEnd: -(columns.labels.length + 1) } : undefined}>
+    <h2
+      className={styles.boardTitle}
+      style={columns ? { gridColumnStart: 1, gridColumnEnd: -(columns.labels.length + 1) } : undefined}
+    >
       {title}
-      {pages > 1 && <span className={styles.range}> {t.tv.range(page * per + 1, page * per + shown.length, items.length)}</span>}
+      {pages > 1 && (
+        <span className={styles.range}> {t.tv.range(page * per + 1, page * per + shown.length, items.length)}</span>
+      )}
     </h2>
   )
   return (
@@ -483,6 +588,8 @@ function AuctionBoard() {
    */
   const [justSold, setJustSold] = useState<string | null>(null)
   const lastOpen = useRef<string | null>(null)
+  // The effect below reads it when a lot sells, so it is declared first.
+  const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
   const soldKey = auction.lots
     .filter((l) => l.status === 'sold')
     .map((l) => l.lotId)
@@ -492,7 +599,11 @@ function AuctionBoard() {
     lastOpen.current = open?.lotId ?? null
     if (was && was !== open?.lotId && auction.lots.find((l) => l.lotId === was)?.status === 'sold') {
       // Several updates in one reload (a dropped connection): the stamp is for the latest sale, not the first one seen.
-      const latest = auction.lots.filter((l) => l.status === 'sold').sort((a, b) => (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber)[0]
+      const latest = auction.lots
+        .filter((l) => l.status === 'sold')
+        .sort(
+          (a, b) => (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber,
+        )[0]
       setJustSold(latest?.lotId ?? was)
     }
     if (open) setJustSold(null)
@@ -508,8 +619,9 @@ function AuctionBoard() {
   const bid = open?.currentBid?.amount ?? settings.auction.openingBid
   const bidder = open?.currentBid?.bidderId ?? open?.playerId
   const ph = lot ? state.core.rounds[state.core.roundIds[0] ?? '']?.[lot.playerId]?.playingHcp : undefined
-  const pair = lot ? snapshot.pairs.find((p) => p.player1Id === lot.playerId || p.player2Id === lot.playerId) : undefined
-  const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
+  const pair = lot
+    ? snapshot.pairs.find((p) => p.player1Id === lot.playerId || p.player2Id === lot.playerId)
+    : undefined
   /*
    * The night's other two moments, on the TV for the room (MOT-05, UX-17): the
    * order out of the hat until the first lot opens, and the pairs draw once the
@@ -537,16 +649,27 @@ function AuctionBoard() {
             <span className={styles.lotMeta}>
               {player.tier && <span className={styles.lotTier}>{t.tv.tier(player.tier)}</span>}
               {(() => {
-                const hcp = ph != null ? `${t.live.playingHcp} ${handicapText(ph)}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`
+                const hcp =
+                  ph != null
+                    ? `${t.live.playingHcp} ${handicapText(ph)}`
+                    : `${t.live.hcp} ${handicapText(player.baseHcp)}`
                 // After the tier the line goes on in lower case: «Categoría C, hándicap de juego 10».
                 return player.tier ? `, ${hcp.charAt(0).toLowerCase()}${hcp.slice(1)}` : hcp
               })()}
-              {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
+              {pair
+                ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}`
+                : ''}
             </span>
             {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
             {open && (
               // Each bid pulses for the board's time: a 150 ms pulse was over before the room looked up (MOT-05).
-              <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeBoard}>
+              <motion.div
+                key={`${bid}-${bidder}`}
+                className={styles.bid}
+                initial={{ scale: 0.85, opacity: 0.4 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={easeBoard}
+              >
                 <span className={styles.bidAmount}>{formatMoney(bid, cur)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
               </motion.div>
@@ -562,7 +685,9 @@ function AuctionBoard() {
                 transition={easeFast}
               >
                 <span className={styles.bidAmount}>{formatMoney(sold.price, cur)}</span>
-                <span className={styles.bidder}>{sold.ownerId === sold.playerId ? t.auction.stampSelf : t.auction.stampTo(name(sold.ownerId ?? ''))}</span>
+                <span className={styles.bidder}>
+                  {sold.ownerId === sold.playerId ? t.auction.stampSelf : t.auction.stampTo(name(sold.ownerId ?? ''))}
+                </span>
               </motion.div>
             )}
           </>
@@ -583,7 +708,14 @@ function AuctionBoard() {
           {/* The engine's pesos, adding up to the pot: never pot × share worked out here (MONEY-16). */}
           {auction.stakes.map(({ slot: s, pesos }, i) => (
             <span key={i} className={styles.stakeRow}>
-              <span>{t.rules.slotName(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, settings.labels.lastPlace)}</span>
+              <span>
+                {t.rules.slotName(
+                  s.slot,
+                  'place' in s ? s.place : undefined,
+                  'tier' in s ? s.tier : undefined,
+                  settings.labels.lastPlace,
+                )}
+              </span>
               <span className="num">{formatMoney(pesos, cur)}</span>
             </span>
           ))}
@@ -595,11 +727,17 @@ function AuctionBoard() {
           {/* Newest first: the sale just made is the one the room looks for; the oldest fall off the bottom (MOT-04). */}
           {auction.lots
             .filter((l) => l.status === 'sold')
-            .sort((a, b) => (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber)
+            .sort(
+              (a, b) =>
+                (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber,
+            )
             .map((l) => (
               <span key={l.lotId} className={styles.soldRow} data-sold-at={soldAt.get(l.lotId) ?? ''}>
                 <span>
-                  {name(l.playerId)} <span className={styles.small}>{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
+                  {name(l.playerId)}{' '}
+                  <span className={styles.small}>
+                    {l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}
+                  </span>
                 </span>
                 <span className="num">{formatMoney(l.price, cur)}</span>
               </span>
@@ -631,9 +769,22 @@ function HatBoard({ revealKey }: { revealKey: string | null }) {
       <h2 className={styles.boardTitle}>
         {settings.modules.auction.label}, {t.tv.hatTitle}
       </h2>
-      <ol className={styles.hatList} key={revealKey ?? 'shown'} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(Math.min(lots.length, HAT_MAX) / cols)}, auto)` }}>
+      <ol
+        className={styles.hatList}
+        key={revealKey ?? 'shown'}
+        style={{
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${Math.ceil(Math.min(lots.length, HAT_MAX) / cols)}, auto)`,
+        }}
+      >
         {lots.slice(0, HAT_MAX).map((l, i) => (
-          <motion.li key={l.lotId} className={styles.hatItem} initial={reveal ? { opacity: 0, y: -drop } : false} animate={{ opacity: 1, y: 0 }} transition={{ ...easeBoard, delay: reveal ? i * HAT_STEP : 0 }}>
+          <motion.li
+            key={l.lotId}
+            className={styles.hatItem}
+            initial={reveal ? { opacity: 0, y: -drop } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...easeBoard, delay: reveal ? i * HAT_STEP : 0 }}
+          >
             <span className={styles.hatNum}>{l.lotNumber}</span>
             <span className={styles.hatName}>{byId.get(l.playerId)?.displayName ?? '?'}</span>
           </motion.li>
@@ -696,19 +847,51 @@ function DrawBoard({ revealKey }: { revealKey: string | null }) {
       render={(p) => {
         const both = t.common.andList([name(p.player1Id), name(p.player2Id)])
         // Named, the pair's second line is who they are; unnamed, their categories. The honoree's pick says so on either.
-        const sub = [p.name ? both : kindText(p.kind), p.pickedByHonoree && honoree ? t.tv.drawPicked(honoree.displayName) : null].filter(Boolean).join(', ')
+        const sub = [
+          p.name ? both : kindText(p.kind),
+          p.pickedByHonoree && honoree ? t.tv.drawPicked(honoree.displayName) : null,
+        ]
+          .filter(Boolean)
+          .join(', ')
         return (
           <div key={p.id} className={`${styles.row} ${styles.rowDraw}`} data-pair={p.id}>
-            <motion.span initial={reveal ? { x: -slide, opacity: 0 } : false} animate={{ x: 0, opacity: 1 }} transition={easeBoard}>
-              <Avatar name={name(p.player1Id)} url={byId.get(p.player1Id)?.avatarUrl} honoree={byId.get(p.player1Id)?.isHonoree} />
+            <motion.span
+              initial={reveal ? { x: -slide, opacity: 0 } : false}
+              animate={{ x: 0, opacity: 1 }}
+              transition={easeBoard}
+            >
+              <Avatar
+                name={name(p.player1Id)}
+                url={byId.get(p.player1Id)?.avatarUrl}
+                honoree={byId.get(p.player1Id)?.isHonoree}
+              />
             </motion.span>
-            <motion.span className={styles.drawRings} aria-hidden="true" initial={reveal ? { scale: 0.3, rotate: -45, opacity: 0 } : false} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.6 : 0 }}>
+            <motion.span
+              className={styles.drawRings}
+              aria-hidden="true"
+              initial={reveal ? { scale: 0.3, rotate: -45, opacity: 0 } : false}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.6 : 0 }}
+            >
               <IconRings />
             </motion.span>
-            <motion.span initial={reveal ? { x: slide, opacity: 0 } : false} animate={{ x: 0, opacity: 1 }} transition={easeBoard}>
-              <Avatar name={name(p.player2Id)} url={byId.get(p.player2Id)?.avatarUrl} honoree={byId.get(p.player2Id)?.isHonoree} />
+            <motion.span
+              initial={reveal ? { x: slide, opacity: 0 } : false}
+              animate={{ x: 0, opacity: 1 }}
+              transition={easeBoard}
+            >
+              <Avatar
+                name={name(p.player2Id)}
+                url={byId.get(p.player2Id)?.avatarUrl}
+                honoree={byId.get(p.player2Id)?.isHonoree}
+              />
             </motion.span>
-            <motion.span className={styles.name} initial={reveal ? { opacity: 0 } : false} animate={{ opacity: 1 }} transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.8 : 0 }}>
+            <motion.span
+              className={styles.name}
+              initial={reveal ? { opacity: 0 } : false}
+              animate={{ opacity: 1 }}
+              transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.8 : 0 }}
+            >
               <span>{p.name ?? both}</span>
               {sub && <span className={`${styles.small} ${styles.sub}`}>{sub}</span>}
             </motion.span>

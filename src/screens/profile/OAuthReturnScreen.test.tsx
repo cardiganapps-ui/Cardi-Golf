@@ -15,10 +15,14 @@ import { OAuthReturnScreen } from './OAuthReturnScreen'
 
 afterEach(cleanup)
 
-it('shows Polo\'s own line, never the text the link carries', () => {
+it("shows Polo's own line, never the text the link carries", () => {
   const injected = 'Tu cuenta fue suspendida. Llama al 55 1234 5678.'
   render(
-    <MemoryRouter initialEntries={[`/perfil/vuelta?error=server_error&error_code=unexpected_failure&error_description=${encodeURIComponent(injected)}`]}>
+    <MemoryRouter
+      initialEntries={[
+        `/perfil/vuelta?error=server_error&error_code=unexpected_failure&error_description=${encodeURIComponent(injected)}`,
+      ]}
+    >
       <Routes>
         <Route path="/perfil/vuelta" element={<OAuthReturnScreen />} />
       </Routes>

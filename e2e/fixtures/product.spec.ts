@@ -17,13 +17,26 @@ import { t } from '../../src/i18n/es-MX'
 import { expect, open, test } from './base'
 
 const PHONES = [375, 393]
-const PAGES = ['/demo', '/demo/juegos', '/demo/dinero', '/t/_/auction12', '/t/_/minimal4-setup', '/t/_/full12-finished', '/t/_/full12-live/admin/jugadores', '/', '/organizer/login']
+const PAGES = [
+  '/demo',
+  '/demo/juegos',
+  '/demo/dinero',
+  '/t/_/auction12',
+  '/t/_/minimal4-setup',
+  '/t/_/full12-finished',
+  '/t/_/full12-live/admin/jugadores',
+  '/',
+  '/organizer/login',
+]
 
 async function seriousViolations(page: import('@playwright/test').Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
-const overflow = (page: import('@playwright/test').Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+const overflow = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 
 for (const path of PAGES) {
   for (const width of PHONES) {
@@ -60,14 +73,20 @@ test.describe('the example tournament (STRAT-17)', () => {
     expect(await seriousViolations(page)).toEqual([])
   })
 
-  test('keeps and sends nothing: no IndexedDB, no key in storage, no request but the app’s switches', async ({ page }) => {
+  test('keeps and sends nothing: no IndexedDB, no key in storage, no request but the app’s switches', async ({
+    page,
+  }) => {
     const asked: string[] = []
     await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => {
       asked.push(new URL(r.request().url()).pathname)
       return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
     })
     for (const path of ['/demo', '/demo/juegos', '/demo/dinero', '/demo/tv']) await open(page, path)
-    const kept = await page.evaluate(async () => ({ databases: (await indexedDB.databases()).map((d) => d.name), local: Object.keys(localStorage), session: Object.keys(sessionStorage) }))
+    const kept = await page.evaluate(async () => ({
+      databases: (await indexedDB.databases()).map((d) => d.name),
+      local: Object.keys(localStorage),
+      session: Object.keys(sessionStorage),
+    }))
     expect(kept.databases).toEqual([])
     expect(kept.local.filter((k) => k.startsWith('cardi-golf'))).toEqual([])
     expect(kept.session.filter((k) => k.startsWith('cardi-golf'))).toEqual([])
@@ -121,8 +140,11 @@ for (const [path, button] of [
 ] as const) {
   test(`the share card from ${path} is no taller than 1.8 times its width (PWA-06)`, async ({ page }) => {
     await open(page, path)
-    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: button, exact: true }).first().click()])
-    const { w, h } = await pngSize((await download.path())!)
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: button, exact: true }).first().click(),
+    ])
+    const { w, h } = await pngSize(await download.path())
     expect(w).toBeGreaterThan(1000)
     expect(h / w, `${w}×${h}`).toBeLessThanOrEqual(1.8)
   })

@@ -15,7 +15,17 @@ export const SPECTATOR_ME: Me = { playerId: null, isOrganizer: false, isComite: 
 /** The few words the frame reads besides the boards: no slug, no join code, no faces to pick. */
 export function spectatorLookup(s: Snapshot): LookupResult {
   const tr = s.tournament
-  return { id: tr.id, slug: '', name: tr.name, tagline: tr.tagline, logoUrl: tr.logoUrl, accentColor: tr.accentColor, status: tr.status, joinCode: '', players: [] }
+  return {
+    id: tr.id,
+    slug: '',
+    name: tr.name,
+    tagline: tr.tagline,
+    logoUrl: tr.logoUrl,
+    accentColor: tr.accentColor,
+    status: tr.status,
+    joinCode: '',
+    players: [],
+  }
 }
 
 /**
@@ -35,5 +45,14 @@ export function useNoIndex() {
 /** The store, once this link's boards are no longer on screen: money it showed does not stay in memory. */
 export function forgetBoards(id: string) {
   if (useTournament.getState().tournamentId !== id) return
-  useTournament.setState({ tournamentId: null, data: null, error: null, loading: false, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    data: null,
+    error: null,
+    loading: false,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 }

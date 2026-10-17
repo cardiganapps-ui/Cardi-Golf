@@ -16,7 +16,9 @@ describe('what a player types or pastes to join (PWA-09)', () => {
   })
 
   it('the whole invitation: its link, or else the code it gives', () => {
-    expect(joinTarget('Nacho’s Bachelor: entra con el código NACHO1 https://golf.cardigan.mx/t/nachos-bachelor')).toBe('nachos-bachelor')
+    expect(joinTarget('Nacho’s Bachelor: entra con el código NACHO1 https://golf.cardigan.mx/t/nachos-bachelor')).toBe(
+      'nachos-bachelor',
+    )
     expect(joinTarget('Nacho’s Bachelor: entra con el código NACHO1')).toBe('NACHO1')
     expect(joinTarget('el codigo es nacho1, nos vemos')).toBe('NACHO1')
   })

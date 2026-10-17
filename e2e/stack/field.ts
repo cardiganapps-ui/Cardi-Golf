@@ -61,18 +61,35 @@ export const GROUP_1 = PLAYERS.filter((p) => p.group === 1).map((p) => p.name)
 export function groupOf(slug: string, name: string): number {
   const i = PLAYERS.findIndex((p) => p.name === name)
   if (i < 0) throw new Error(`not in the field: ${name}`)
-  return TWOSOMES.has(slug) ? Math.floor(i / 2) + 1 : PLAYERS[i]!.group
+  return TWOSOMES.has(slug) ? Math.floor(i / 2) + 1 : PLAYERS[i].group
 }
 /** The players of group `group` in `slug`, in sort order. */
-export const groupNames = (slug: string, group: number) => PLAYERS.filter((p) => groupOf(slug, p.name) === group).map((p) => p.name)
+export const groupNames = (slug: string, group: number) =>
+  PLAYERS.filter((p) => groupOf(slug, p.name) === group).map((p) => p.name)
 
 /** «Campo E2E»: [par, stroke index] for holes 1 to 18 (par 72). */
 export const CARD: Array<[par: number, si: number]> = [
-  [4, 7], [4, 11], [3, 17], [5, 3], [4, 1], [4, 13], [3, 15], [4, 9], [5, 5],
-  [4, 8], [3, 18], [4, 2], [5, 12], [4, 4], [4, 10], [3, 16], [4, 6], [5, 14],
+  [4, 7],
+  [4, 11],
+  [3, 17],
+  [5, 3],
+  [4, 1],
+  [4, 13],
+  [3, 15],
+  [4, 9],
+  [5, 5],
+  [4, 8],
+  [3, 18],
+  [4, 2],
+  [5, 12],
+  [4, 4],
+  [4, 10],
+  [3, 16],
+  [4, 6],
+  [5, 14],
 ]
-export const par = (hole: number) => CARD[hole - 1]![0]
-export const strokeIndex = (hole: number) => CARD[hole - 1]![1]
+export const par = (hole: number) => CARD[hole - 1][0]
+export const strokeIndex = (hole: number) => CARD[hole - 1][1]
 
 /** §5.2: round half up of 80% of min(handicap, 54). Ana 0 → 0, Beto 20 → 16, Caro 10 → 8, Dani 30 → 24. */
 export function playingHcp(name: string): number {
@@ -101,7 +118,12 @@ export interface Entry {
 export type HoleEntry = Record<string, Entry>
 
 const e = (strokes: number, putts = 2): Entry => ({ strokes, putts })
-const four = (ana: Entry, beto: Entry, caro: Entry, dani: Entry): HoleEntry => ({ Ana: ana, Beto: beto, Caro: caro, Dani: dani })
+const four = (ana: Entry, beto: Entry, caro: Entry, dani: Entry): HoleEntry => ({
+  Ana: ana,
+  Beto: beto,
+  Caro: caro,
+  Dani: dani,
+})
 
 /**
  * Hole 1 as the smoke test plays it, worked out by hand (par 4, stroke index 7):
@@ -162,7 +184,7 @@ export function totals(card: Map<number, HoleEntry>, names: string[] = GROUP_1):
   const out: Record<string, number> = {}
   for (const name of names) {
     out[name] = 0
-    for (const [hole, entry] of card) if (entry[name]) out[name] += points(name, hole, entry[name]!.strokes)
+    for (const [hole, entry] of card) if (entry[name]) out[name] += points(name, hole, entry[name].strokes)
   }
   return out
 }

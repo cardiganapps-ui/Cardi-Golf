@@ -26,18 +26,27 @@ export class RouteError extends UserError {
 async function parse<T>(res: Response): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as { error?: unknown; code?: string } & T
   // A platform failure (a 504 page, a body that is not ours) has no line of ours: say what the status means.
-  if (!res.ok) throw new RouteError(typeof body.error === 'string' ? body.error : humanError({ status: res.status }), res.status, body.code ?? null)
+  if (!res.ok)
+    throw new RouteError(
+      typeof body.error === 'string' ? body.error : humanError({ status: res.status }),
+      res.status,
+      body.code ?? null,
+    )
   return body
 }
 
 export async function searchCourses(q: string): Promise<ProviderSearchHit[]> {
-  const body = await parse<{ hits: ProviderSearchHit[] }>(await fetch(`/api/course-search?q=${encodeURIComponent(q)}`, { headers: await authHeaders() }))
+  const body = await parse<{ hits: ProviderSearchHit[] }>(
+    await fetch(`/api/course-search?q=${encodeURIComponent(q)}`, { headers: await authHeaders() }),
+  )
   return body.hits
 }
 
 /** `ref` is "<provider>:<externalId>" (see hitRef). */
 export async function fetchProviderCourse(ref: string): Promise<ProviderCourse> {
-  const body = await parse<{ course: ProviderCourse }>(await fetch(`/api/course-search?id=${encodeURIComponent(ref)}`, { headers: await authHeaders() }))
+  const body = await parse<{ course: ProviderCourse }>(
+    await fetch(`/api/course-search?id=${encodeURIComponent(ref)}`, { headers: await authHeaders() }),
+  )
   return body.course
 }
 
@@ -52,8 +61,12 @@ export interface ExtractedTee {
   issues: string[]
 }
 
-export async function extractScorecard(imageBase64: string, mediaType: string): Promise<{ courseName: string; tees: ExtractedTee[] }> {
-  if (imageBase64.length > MAX_SCORECARD_CHARS) throw new RouteError('La foto pesa más de 3 MB; toma una más ligera o recórtala.', 413, 'too_large')
+export async function extractScorecard(
+  imageBase64: string,
+  mediaType: string,
+): Promise<{ courseName: string; tees: ExtractedTee[] }> {
+  if (imageBase64.length > MAX_SCORECARD_CHARS)
+    throw new RouteError('La foto pesa más de 3 MB; toma una más ligera o recórtala.', 413, 'too_large')
   return parse(
     await fetch('/api/scorecard-extract', {
       method: 'POST',

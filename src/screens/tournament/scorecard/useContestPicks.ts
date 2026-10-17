@@ -16,7 +16,15 @@ export interface HoleContest {
   eligible: Player[]
 }
 
-export function useContestPicks(o: { settings: TournamentSettings; state: TournamentState; holeAwards: Snapshot['holeAwards']; roundId: string; groupId: string; hole: number; players: Player[] }) {
+export function useContestPicks(o: {
+  settings: TournamentSettings
+  state: TournamentState
+  holeAwards: Snapshot['holeAwards']
+  roundId: string
+  groupId: string
+  hole: number
+  players: Player[]
+}) {
   const { settings, state, holeAwards, roundId, groupId, hole, players } = o
   const contests = useMemo(
     () =>
@@ -26,11 +34,16 @@ export function useContestPicks(o: { settings: TournamentSettings; state: Tourna
         const onHole = contestStateOf(gs)?.holes.some((h) => h.roundId === roundId && h.hole === hole)
         if (!gs || !onHole) return []
         const eligible = players.filter((p) => gs.entrants.includes(p.id))
-        return eligible.length ? [{ id: g.id, label: g.label, kind: g.options.kind, single: CONTEST_SINGLE[g.options.kind], eligible }] : []
+        return eligible.length
+          ? [{ id: g.id, label: g.label, kind: g.options.kind, single: CONTEST_SINGLE[g.options.kind], eligible }]
+          : []
       }),
     [settings.games, state.games, roundId, hole, players],
   )
-  const savedPicks = (gameId: string) => holeAwards.filter((a) => a.roundId === roundId && a.gameId === gameId && a.hole === hole && a.groupId === groupId).map((a) => a.playerId)
+  const savedPicks = (gameId: string) =>
+    holeAwards
+      .filter((a) => a.roundId === roundId && a.gameId === gameId && a.hole === hole && a.groupId === groupId)
+      .map((a) => a.playerId)
   const [picks, setPicks] = useState<Record<string, string[] | undefined>>({})
   // With the hole, in the same task (as the drafts): the last hole's picks never stand on this one.
   useLayoutEffect(() => setPicks({}), [hole, roundId, groupId])
@@ -38,7 +51,16 @@ export function useContestPicks(o: { settings: TournamentSettings; state: Tourna
   const togglePick = (c: HoleContest, pid: string | null) =>
     setPicks((cur) => {
       const now = cur[c.id] ?? savedPicks(c.id)
-      const next = pid === null ? [] : c.single ? (now.includes(pid) ? [] : [pid]) : now.includes(pid) ? now.filter((x) => x !== pid) : [...now, pid]
+      const next =
+        pid === null
+          ? []
+          : c.single
+            ? now.includes(pid)
+              ? []
+              : [pid]
+            : now.includes(pid)
+              ? now.filter((x) => x !== pid)
+              : [...now, pid]
       return { ...cur, [c.id]: next }
     })
   /** The winners picked on this hole, contest by contest, as the save sends them. */

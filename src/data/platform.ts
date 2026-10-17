@@ -149,7 +149,14 @@ export interface PlatformTournament {
   crew: { id: string; slug: string; name: string } | null
   unlockedUntil: string | null
   organizers: Array<{ userId: string; role: 'owner' | 'admin'; email: string; name: string; handle: string | null }>
-  rounds: Array<{ id: string; number: number; date: string | null; status: string; course: string | null; scores: number }>
+  rounds: Array<{
+    id: string
+    number: number
+    date: string | null
+    status: string
+    course: string | null
+    scores: number
+  }>
   counts: { players: number; linked: number; devices: number; groups: number; payments: number; disputes: number }
   audit: PlatformAuditEntry[]
 }
@@ -327,8 +334,22 @@ export interface PlatformCrew {
   name: string
   createdAt: string
   ownerId: string
-  members: Array<{ profileId: string; handle: string; displayName: string; avatarUrl: string | null; role: 'owner' | 'member'; joinedAt: string }>
-  outings: Array<{ tournamentId: string; name: string; status: TournamentStatus; quick: boolean; practice: boolean; createdAt: string }>
+  members: Array<{
+    profileId: string
+    handle: string
+    displayName: string
+    avatarUrl: string | null
+    role: 'owner' | 'member'
+    joinedAt: string
+  }>
+  outings: Array<{
+    tournamentId: string
+    name: string
+    status: TournamentStatus
+    quick: boolean
+    practice: boolean
+    createdAt: string
+  }>
   activity: Array<{ id: number; at: string; action: string; reason: string | null }>
 }
 
@@ -345,7 +366,15 @@ export interface Audience {
   push: number
   /** Notices to everyone in the last 24 hours (two allowed). */
   sentToday: number
-  recent: Array<{ id: number; at: string; title: string; body: string; to: string | null; toName: string | null; count: number }>
+  recent: Array<{
+    id: number
+    at: string
+    title: string
+    body: string
+    to: string | null
+    toName: string | null
+    count: number
+  }>
 }
 
 export interface AuditItem {
@@ -382,11 +411,24 @@ export interface AuditDetail {
 
 export interface Health {
   backup: {
-    last: { at: string; ok: boolean; key: string | null; bytes: number | null; tables: number | null; rows: number | null; error: string | null } | null
+    last: {
+      at: string
+      ok: boolean
+      key: string | null
+      bytes: number | null
+      tables: number | null
+      rows: number | null
+      error: string | null
+    } | null
     lastOk: { at: string; key: string | null; bytes: number | null; tables: number | null; rows: number | null } | null
     week: { ok: number; failed: number }
   }
-  push: { configured: boolean | null; subscriptions: number; profiles: number; recent: { total: number; failed: number; since: string | null } | null }
+  push: {
+    configured: boolean | null
+    subscriptions: number
+    profiles: number
+    recent: { total: number; failed: number; since: string | null } | null
+  }
   database: { lastMigration: { name: string; at: string } | null; notifications24h: number }
   people: { blocked: number; deviceLocks: number; playerLocks: number }
   flags: AppFlags
@@ -401,7 +443,17 @@ export interface Health {
 export interface Telemetry {
   since: string
   events: number
-  errors: Array<{ name: string; summary: string; route: string; build: number | null; buildSha: string | null; count: number; devices: number; first_at: string; last_at: string }>
+  errors: Array<{
+    name: string
+    summary: string
+    route: string
+    build: number | null
+    buildSha: string | null
+    count: number
+    devices: number
+    first_at: string
+    last_at: string
+  }>
   sync: Array<{ name: string; count: number; p50: number; p95: number; over2s: number }>
   syncByTournament: Array<{ tournamentId: string; tournament: string; count: number; p50: number; p95: number }>
   vitals: Array<{ name: string; count: number; p75: number }>
@@ -439,11 +491,21 @@ export interface PlatformApi {
   setOrganizer(tournamentId: string, userId: string, role: 'owner' | 'admin' | null, reason: string): Promise<void>
   /** The Comité's own RPC; the admin is Comité everywhere. */
   unlinkPlayer(playerId: string): Promise<void>
-  courses(q: { q?: string; filter?: CourseFilter; limit?: number; offset?: number }): Promise<{ total: number; rows: CourseRow[] }>
+  courses(q: {
+    q?: string
+    filter?: CourseFilter
+    limit?: number
+    offset?: number
+  }): Promise<{ total: number; rows: CourseRow[] }>
   course(id: string): Promise<PlatformCourse | null>
   /** Recompute the finished rounds played on it; returns how many. */
   refreshCourse(id: string): Promise<number>
-  mergeCourses(keepId: string, dropId: string, teeMap: Record<string, string>, reason: string): Promise<{ rounds: number; refreshed: number }>
+  mergeCourses(
+    keepId: string,
+    dropId: string,
+    teeMap: Record<string, string>,
+    reason: string,
+  ): Promise<{ rounds: number; refreshed: number }>
   deleteCourse(id: string, reason: string): Promise<void>
   /** Mark the card verified (compared with the printed one) or take the mark off (0075, STRAT-14). */
   verifyCourse(id: string, on: boolean, reason: string): Promise<void>
@@ -454,12 +516,21 @@ export interface PlatformApi {
   audience(): Promise<Audience>
   /** To everyone (to = null) or one profile; returns how many it reached. */
   broadcast(title: string, body: string, to: string | null, url: string | null): Promise<number>
-  audit(q: { source?: 'all' | 'platform' | 'comite'; before?: string | null; q?: string; limit?: number }): Promise<AuditItem[]>
+  audit(q: {
+    source?: 'all' | 'platform' | 'comite'
+    before?: string | null
+    q?: string
+    limit?: number
+  }): Promise<AuditItem[]>
   auditEntry(source: 'platform' | 'comite', id: number): Promise<AuditDetail | null>
   health(): Promise<Health>
   /** What the phones reported over the last `hours` (1 to 720). */
   telemetry(hours: number): Promise<Telemetry>
-  setFlag(key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner', value: boolean | string | null, reason: string): Promise<AppFlags>
+  setFlag(
+    key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner',
+    value: boolean | string | null,
+    reason: string,
+  ): Promise<AppFlags>
 }
 
 /** The server wants the admin's reason before it opens this (PV001, 0068). */
@@ -473,7 +544,10 @@ const TZ = 'UTC'
 export const supabasePlatformApi: PlatformApi = {
   overview: () => rpc('platform_overview').as<PlatformOverview>(),
   funnel: (days) => rpc('platform_funnel', { p_days: days }).as<PlatformFunnel>(),
-  daily: (days) => rpc('platform_daily', { p_days: days, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ }).as<PlatformDay[]>(),
+  daily: (days) =>
+    rpc('platform_daily', { p_days: days, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ }).as<
+      PlatformDay[]
+    >(),
   tournaments: ({ q, status, kind, limit = 50, offset = 0 }) =>
     rpc('platform_tournaments', {
       p_q: q?.trim() || null,
@@ -482,14 +556,25 @@ export const supabasePlatformApi: PlatformApi = {
       p_limit: limit,
       p_offset: offset,
     }).as<PlatformTournamentList>(),
-  tournament: (id, reason) => rpc('platform_tournament', { p_tournament_id: id, ...(reason ? { p_reason: reason } : {}) }).as<PlatformTournament | null>(),
-  unlock: (tournamentId, reason, minutes = 30) => rpc('platform_unlock', { p_tournament_id: tournamentId, p_reason: reason, p_minutes: minutes }),
+  tournament: (id, reason) =>
+    rpc('platform_tournament', {
+      p_tournament_id: id,
+      ...(reason ? { p_reason: reason } : {}),
+    }).as<PlatformTournament | null>(),
+  unlock: (tournamentId, reason, minutes = 30) =>
+    rpc('platform_unlock', { p_tournament_id: tournamentId, p_reason: reason, p_minutes: minutes }),
   relock: (tournamentId) => rpc('platform_relock', { p_tournament_id: tournamentId }),
   setProtected: (tournamentId, on, reason) =>
     rpc('set_tournament_protected', { p_tournament_id: tournamentId, p_on: on, p_reason: reason ?? null }),
   people: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
-    rpc('platform_people', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }).as<PeopleList>(),
-  person: (id, reason) => rpc('platform_person', { p_user_id: id, ...(reason ? { p_reason: reason } : {}) }).as<Person | null>(),
+    rpc('platform_people', {
+      p_q: q?.trim() || null,
+      p_filter: filter,
+      p_limit: limit,
+      p_offset: offset,
+    }).as<PeopleList>(),
+  person: (id, reason) =>
+    rpc('platform_person', { p_user_id: id, ...(reason ? { p_reason: reason } : {}) }).as<Person | null>(),
   deletePreview: (id) => rpc('platform_delete_preview', { p_user_id: id }).as<DeletePreview>(),
   block: (id, reason) => rpc('platform_block', { p_user_id: id, p_reason: reason }),
   unblock: (id, reason) => rpc('platform_unblock', { p_user_id: id, p_reason: reason }),
@@ -507,26 +592,46 @@ export const supabasePlatformApi: PlatformApi = {
     entryChanged()
   },
   courses: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
-    rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }).as<{ total: number; rows: CourseRow[] }>(),
+    rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }).as<{
+      total: number
+      rows: CourseRow[]
+    }>(),
   course: (id) => rpc('platform_course', { p_course_id: id }).as<PlatformCourse | null>(),
   refreshCourse: (id) => rpc('platform_refresh_course_results', { p_course_id: id }),
-  mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }).as<{ rounds: number; refreshed: number }>(),
+  mergeCourses: (keepId, dropId, teeMap, reason) =>
+    rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }).as<{
+      rounds: number
+      refreshed: number
+    }>(),
   deleteCourse: (id, reason) => rpc('platform_delete_course', { p_course_id: id, p_reason: reason }),
   verifyCourse: async (id, on, reason) => {
     await rpc('platform_verify_course', { p_course_id: id, p_on: on, p_reason: reason })
   },
-  crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }).as<{ total: number; rows: CrewRow[] }>(),
-  crew: (id, reason) => rpc('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }).as<PlatformCrew | null>(),
-  removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }).as<'removed' | 'handed' | 'deleted'>(),
-  deleteCrew: (crewId, confirmName, reason) => rpc('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
+  crews: ({ q, limit = 50, offset = 0 }) =>
+    rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }).as<{
+      total: number
+      rows: CrewRow[]
+    }>(),
+  crew: (id, reason) =>
+    rpc('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }).as<PlatformCrew | null>(),
+  removeCrewMember: (crewId, profileId, reason) =>
+    rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }).as<
+      'removed' | 'handed' | 'deleted'
+    >(),
+  deleteCrew: (crewId, confirmName, reason) =>
+    rpc('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
   audience: () => rpc('platform_audience').as<Audience>(),
-  broadcast: (title, body, to, url) => rpc('platform_broadcast', { p_title: title, p_body: body, p_to: to, p_url: url }),
+  broadcast: (title, body, to, url) =>
+    rpc('platform_broadcast', { p_title: title, p_body: body, p_to: to, p_url: url }),
   audit: ({ source = 'all', before = null, q, limit = 50 }) =>
-    rpc('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }).as<AuditItem[]>(),
+    rpc('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }).as<
+      AuditItem[]
+    >(),
   auditEntry: (source, id) => rpc('platform_audit_entry', { p_source: source, p_id: id }).as<AuditDetail | null>(),
   health: () => rpc('platform_health').as<Health>(),
   telemetry: (hours) => rpc('platform_telemetry', { p_hours: hours }).as<Telemetry>(),
-  setFlag: (key, value, reason) => rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }).as<AppFlags>(),
+  setFlag: (key, value, reason) =>
+    rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }).as<AppFlags>(),
 }
 
 /**
@@ -539,7 +644,13 @@ export const useAppFlags = create<{ flags: AppFlags | null; load(): Promise<void
   async load() {
     try {
       // On a link to watch as anon with no session (STRAT-05): the page is nobody's, whatever this browser keeps.
-      set({ flags: await withTimeout(onLinkPage() ? anonRpc('app_flags').as<AppFlags>() : rpc('app_flags').as<AppFlags>(), 5000, 'avisos') })
+      set({
+        flags: await withTimeout(
+          onLinkPage() ? anonRpc('app_flags').as<AppFlags>() : rpc('app_flags').as<AppFlags>(),
+          5000,
+          'avisos',
+        ),
+      })
     } catch {
       // No banner is better than a stuck app.
     }
@@ -565,7 +676,10 @@ export function suggestTeeMap(drop: CourseTee[], keep: CourseTee[]): Record<stri
 
 /** Whether two tees score the same: same number of holes, same par and stroke index on each. */
 export function sameCard(a: CourseTee, b: CourseTee): boolean {
-  return a.holes.length === b.holes.length && a.holes.every((h, i) => h.par === b.holes[i]?.par && h.si === b.holes[i]?.si && h.n === b.holes[i]?.n)
+  return (
+    a.holes.length === b.holes.length &&
+    a.holes.every((h, i) => h.par === b.holes[i]?.par && h.si === b.holes[i]?.si && h.n === b.holes[i]?.n)
+  )
 }
 
 export const PlatformApiContext = createContext<PlatformApi>(supabasePlatformApi)

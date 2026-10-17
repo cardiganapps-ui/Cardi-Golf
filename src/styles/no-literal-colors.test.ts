@@ -16,7 +16,13 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = new URL('../', import.meta.url).pathname
 const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/
-const PERMANENT = new Set(['styles/tokens.css', 'design/accents.ts', 'dev/fixtures.ts', 'lib/appManifest.ts', 'lib/theme.ts'])
+const PERMANENT = new Set([
+  'styles/tokens.css',
+  'design/accents.ts',
+  'dev/fixtures.ts',
+  'lib/appManifest.ts',
+  'lib/theme.ts',
+])
 const PENDING = new Set<string>([])
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -28,7 +34,10 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 const files = walk(ROOT).map((p) => relative(ROOT, p))
-const hasLiteral = (f: string) => readFileSync(join(ROOT, f), 'utf8').split('\n').some((l) => LITERAL.test(l))
+const hasLiteral = (f: string) =>
+  readFileSync(join(ROOT, f), 'utf8')
+    .split('\n')
+    .some((l) => LITERAL.test(l))
 
 describe('no color literals outside tokens.css', () => {
   it('finds no literal in any file that is not allow-listed', () => {

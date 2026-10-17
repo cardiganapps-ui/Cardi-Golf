@@ -84,15 +84,15 @@ type Scope = 'tournament' | 'round' | 'lot'
 /** How one table's rows live in the snapshot. */
 interface Spec<T> {
   scope: Scope
-  get(s: Snapshot): T[]
-  set(s: Snapshot, list: T[]): void
+  get: (s: Snapshot) => T[]
+  set: (s: Snapshot, list: T[]) => void
   /** Whether a snapshot row has this database row's key (an insert or update: the table's unique key). */
-  same(x: T, row: Row): boolean
+  same: (x: T, row: Row) => boolean
   /** Whether a snapshot row is the one a delete names, when that is not `same` (a score's delete names only its id). */
-  deletes?(x: T, key: Row): boolean
+  deletes?: (x: T, key: Row) => boolean
   /** The order a fetch returns the table in (`SNAPSHOT_KEYS`), on the snapshot's own fields. */
-  order(a: T, b: T): number
-  map(row: Row): T
+  order: (a: T, b: T) => number
+  map: (row: Row) => T
   /**
    * Whether the row held is newer than one this phone's own write brought
    * back: its answer can come after a later write was heard or fetched. Never
@@ -100,7 +100,7 @@ interface Spec<T> {
    * when its transaction began, so a write that waited on the row's lock
    * commits last with the earlier stamp (#92's third verifier, R1).
    */
-  stale?(held: T, coming: T): boolean
+  stale?: (held: T, coming: T) => boolean
 }
 const spec = <T>(x: Spec<T>) => x as unknown as Spec<unknown>
 
@@ -142,7 +142,11 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.snakeTiebreaks,
     set: (s, l) => (s.snakeTiebreaks = l),
     same: (x, r) => x.roundId === r.round_id && x.groupId === r.group_id && x.hole === r.hole,
-    order: byFields((x) => x.roundId, (x) => x.groupId, (x) => x.hole),
+    order: byFields(
+      (x) => x.roundId,
+      (x) => x.groupId,
+      (x) => x.hole,
+    ),
     map: mapSnakeTiebreak,
   }),
   card_signatures: spec({
@@ -153,8 +157,15 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     // before 0054 names the pair.
     same: (x, r) =>
       x.roundId === r.round_id &&
-      (r.card_id != null ? signatureCard(x) === r.card_id : r.pair_id != null ? x.pairId === r.pair_id : r.player_id != null && !x.pairId && x.playerId === r.player_id),
-    order: byFields((x) => x.roundId, (x) => signatureCard(x)),
+      (r.card_id != null
+        ? signatureCard(x) === r.card_id
+        : r.pair_id != null
+          ? x.pairId === r.pair_id
+          : r.player_id != null && !x.pairId && x.playerId === r.player_id),
+    order: byFields(
+      (x) => x.roundId,
+      (x) => signatureCard(x),
+    ),
     map: mapCardSignature,
   }),
   hole_awards: spec({
@@ -162,8 +173,19 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.holeAwards ?? [],
     set: (s, l) => (s.holeAwards = l),
     // 0042: a player's ruling and the same player's claim are two rows; a delete from before it names no source, and takes the player's row whichever it is.
-    same: (x, r) => x.roundId === r.round_id && x.gameId === r.game_id && x.hole === r.hole && x.playerId === r.player_id && (r.source == null || x.source === r.source),
-    order: byFields((x) => x.roundId, (x) => x.gameId, (x) => x.hole, (x) => x.playerId, (x) => x.source),
+    same: (x, r) =>
+      x.roundId === r.round_id &&
+      x.gameId === r.game_id &&
+      x.hole === r.hole &&
+      x.playerId === r.player_id &&
+      (r.source == null || x.source === r.source),
+    order: byFields(
+      (x) => x.roundId,
+      (x) => x.gameId,
+      (x) => x.hole,
+      (x) => x.playerId,
+      (x) => x.source,
+    ),
     map: mapHoleAward,
   }),
   handicap_overrides: spec({
@@ -171,7 +193,10 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.handicapOverrides,
     set: (s, l) => (s.handicapOverrides = l),
     same: (x, r) => x.roundId === r.round_id && x.playerId === r.player_id,
-    order: byFields((x) => x.roundId, (x) => x.playerId),
+    order: byFields(
+      (x) => x.roundId,
+      (x) => x.playerId,
+    ),
     map: mapHandicapOverride,
   }),
   round_tees: spec({
@@ -179,7 +204,10 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.roundTees,
     set: (s, l) => (s.roundTees = l),
     same: (x, r) => x.roundId === r.round_id && x.playerId === r.player_id,
-    order: byFields((x) => x.roundId, (x) => x.playerId),
+    order: byFields(
+      (x) => x.roundId,
+      (x) => x.playerId,
+    ),
     map: mapRoundTee,
   }),
   payments: spec({
@@ -187,7 +215,12 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.payments,
     set: (s, l) => (s.payments = l),
     // One row per flow (payments_flow_key, nulls not distinct): a mark Dinero laid with a local id is the row the server made.
-    same: (x, r) => x.id === r.id || (r.kind !== undefined && x.kind === r.kind && (x.fromPlayerId ?? null) === (r.from_player_id ?? null) && (x.toPlayerId ?? null) === (r.to_player_id ?? null)),
+    same: (x, r) =>
+      x.id === r.id ||
+      (r.kind !== undefined &&
+        x.kind === r.kind &&
+        (x.fromPlayerId ?? null) === (r.from_player_id ?? null) &&
+        (x.toPlayerId ?? null) === (r.to_player_id ?? null)),
     order: byFields((x) => x.id),
     map: mapPayment,
   }),
@@ -200,15 +233,39 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     order: byFields((x) => x.id),
     map: mapMoneyAdjustment,
   }),
-  calcutta_lots: spec({ scope: 'tournament', get: (s) => s.calcuttaLots, set: (s, l) => (s.calcuttaLots = l), same: (x, r) => x.id === r.id, order: byFields((x) => x.id), map: mapLot }),
-  calcutta_bids: spec({ scope: 'lot', get: (s) => s.calcuttaBids, set: (s, l) => (s.calcuttaBids = l), same: (x, r) => x.id === r.id, order: byFields((x) => x.id), map: mapBid }),
-  calcutta_buybacks: spec({ scope: 'lot', get: (s) => s.calcuttaBuybacks, set: (s, l) => (s.calcuttaBuybacks = l), same: (x, r) => x.lotId === r.lot_id, order: byFields((x) => x.lotId), map: mapBuyback }),
+  calcutta_lots: spec({
+    scope: 'tournament',
+    get: (s) => s.calcuttaLots,
+    set: (s, l) => (s.calcuttaLots = l),
+    same: (x, r) => x.id === r.id,
+    order: byFields((x) => x.id),
+    map: mapLot,
+  }),
+  calcutta_bids: spec({
+    scope: 'lot',
+    get: (s) => s.calcuttaBids,
+    set: (s, l) => (s.calcuttaBids = l),
+    same: (x, r) => x.id === r.id,
+    order: byFields((x) => x.id),
+    map: mapBid,
+  }),
+  calcutta_buybacks: spec({
+    scope: 'lot',
+    get: (s) => s.calcuttaBuybacks,
+    set: (s, l) => (s.calcuttaBuybacks = l),
+    same: (x, r) => x.lotId === r.lot_id,
+    order: byFields((x) => x.lotId),
+    map: mapBuyback,
+  }),
   game_entries: spec({
     scope: 'tournament',
     get: (s) => s.gameEntries ?? [],
     set: (s, l) => (s.gameEntries = l),
     same: (x, r) => x.gameId === r.game_id && x.playerId === r.player_id,
-    order: byFields((x) => x.gameId, (x) => x.playerId),
+    order: byFields(
+      (x) => x.gameId,
+      (x) => x.playerId,
+    ),
     map: mapGameEntry,
   }),
   game_results: spec({
@@ -216,7 +273,10 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     get: (s) => s.gameResults ?? [],
     set: (s, l) => (s.gameResults = l),
     same: (x, r) => x.gameId === r.game_id && x.playerId === r.player_id,
-    order: byFields((x) => x.gameId, (x) => x.playerId),
+    order: byFields(
+      (x) => x.gameId,
+      (x) => x.playerId,
+    ),
     map: mapGameResult,
   }),
 }
@@ -248,11 +308,19 @@ function owner(s: Snapshot, tournamentId: string, scope: Scope, row: Row): true 
 
 /** JSON with every object's keys in one order: jsonb from PostgREST and the same value from the Realtime server may list them differently. */
 const canonicalJson = (v: unknown): string =>
-  JSON.stringify(v, (_k, x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x))
+  JSON.stringify(v, (_k, x: unknown) =>
+    x && typeof x === 'object' && !Array.isArray(x)
+      ? Object.fromEntries(
+          Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        )
+      : x,
+  )
 const sameValue = (a: unknown, b: unknown): boolean => {
   if (a === b) return true
   if (typeof a === 'string' && typeof b === 'string') return canonicalTime(a) === canonicalTime(b)
-  return a != null && b != null && typeof a === 'object' && typeof b === 'object' && canonicalJson(a) === canonicalJson(b)
+  return (
+    a != null && b != null && typeof a === 'object' && typeof b === 'object' && canonicalJson(a) === canonicalJson(b)
+  )
 }
 /**
  * Whether the channel's change `heard` is the server's own record of
@@ -274,7 +342,12 @@ export function sameChange(heard: LiveChange, stored: LiveChange): boolean {
  * this phone's own write brought back, which yields to a newer one held
  * (`stale`); the channel's changes apply in the order they come.
  */
-export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, opts: { landed?: boolean } = {}): ApplyResult {
+export function applyChange(
+  s: Snapshot,
+  tournamentId: string,
+  c: LiveChange,
+  opts: { landed?: boolean } = {},
+): ApplyResult {
   const sp = SPECS[c.table as AppliedTable]
   if (!sp) return 'reload'
   const list = sp.get(s)
@@ -285,7 +358,10 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, op
     const hit = sp.deletes ?? sp.same
     // Deletes are not filtered by the server (DB-05): remove only a row this snapshot holds.
     if (!list.some((x) => hit(x, key))) return 'ignored'
-    sp.set(s, list.filter((x) => !hit(x, key)))
+    sp.set(
+      s,
+      list.filter((x) => !hit(x, key)),
+    )
     return 'applied'
   }
 
@@ -312,23 +388,43 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, op
 }
 
 /** The tables the channel hears that reload instead of being applied: their rows need joins the event does not carry. */
-export const RELOADED_TABLES = ['tournaments', 'players', 'pairs', 'rounds', 'groups', 'group_members', 'teams', 'team_members'] as const
+export const RELOADED_TABLES = [
+  'tournaments',
+  'players',
+  'pairs',
+  'rounds',
+  'groups',
+  'group_members',
+  'teams',
+  'team_members',
+] as const
 
 /** Whether the snapshot holds the row this key names (a member: of the group or team it names). */
 function holds(s: Snapshot, tournamentId: string, table: string, key: Row): boolean | undefined {
-  const id = key.id
+  const id: unknown = key.id
   switch (table) {
-    case 'tournaments': return id === undefined ? undefined : id === tournamentId
-    case 'players': return id === undefined ? undefined : s.players.some((x) => x.id === id)
-    case 'rounds': return id === undefined ? undefined : s.rounds.some((x) => x.id === id)
-    case 'pairs': return id === undefined ? undefined : s.pairs.some((x) => x.id === id)
-    case 'groups': return id === undefined ? undefined : s.groups.some((x) => x.id === id)
-    case 'teams': return id === undefined ? undefined : (s.teams ?? []).some((x) => x.id === id)
+    case 'tournaments':
+      return id === undefined ? undefined : id === tournamentId
+    case 'players':
+      return id === undefined ? undefined : s.players.some((x) => x.id === id)
+    case 'rounds':
+      return id === undefined ? undefined : s.rounds.some((x) => x.id === id)
+    case 'pairs':
+      return id === undefined ? undefined : s.pairs.some((x) => x.id === id)
+    case 'groups':
+      return id === undefined ? undefined : s.groups.some((x) => x.id === id)
+    case 'teams':
+      return id === undefined ? undefined : (s.teams ?? []).some((x) => x.id === id)
     case 'group_members':
-      return key.group_id === undefined || key.player_id === undefined ? undefined : s.groups.some((g) => g.id === key.group_id && g.playerIds.includes(key.player_id))
+      return key.group_id === undefined || key.player_id === undefined
+        ? undefined
+        : s.groups.some((g) => g.id === key.group_id && g.playerIds.includes(key.player_id as string))
     case 'team_members':
-      return key.team_id === undefined || key.player_id === undefined ? undefined : (s.teams ?? []).some((t) => t.id === key.team_id && t.playerIds.includes(key.player_id))
-    default: return undefined
+      return key.team_id === undefined || key.player_id === undefined
+        ? undefined
+        : (s.teams ?? []).some((t) => t.id === key.team_id && t.playerIds.includes(key.player_id as string))
+    default:
+      return undefined
   }
 }
 
@@ -344,7 +440,12 @@ function holds(s: Snapshot, tournamentId: string, table: string, key: Row): bool
  * the key is a row the snapshot holds, or while a fetch is on its way (the
  * row may be one it is bringing). Anything it can't place (no tournament on the row, no key) reloads.
  */
-export function concernsBoards(s: Snapshot | null | undefined, tournamentId: string, c: Pick<LiveChange, 'table' | 'eventType' | 'new' | 'old'>, fetchOut: boolean): boolean {
+export function concernsBoards(
+  s: Snapshot | null | undefined,
+  tournamentId: string,
+  c: Pick<LiveChange, 'table' | 'eventType' | 'new' | 'old'>,
+  fetchOut: boolean,
+): boolean {
   if (!s) return true
   if (c.eventType === 'DELETE') {
     const key = c.old

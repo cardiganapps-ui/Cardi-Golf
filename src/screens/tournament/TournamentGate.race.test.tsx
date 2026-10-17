@@ -41,7 +41,7 @@ vi.mock('../../data/auth', async () => {
     ensureSession: server.ensureSession,
     signedOutOnPurpose: () => server.signedOut,
     signOutsAsked: () => server.signOuts,
-    useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } as { id: string } | null })),
+    useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } })),
   }
 })
 vi.mock('../../data/api', () => ({
@@ -49,9 +49,18 @@ vi.mock('../../data/api', () => ({
   myMembership: server.myMembership,
   releaseDevice: server.releaseDevice,
 }))
-vi.mock('../../data/snapshotCache', () => ({ ...phone, saveSnapshot: vi.fn(async () => undefined), onCacheCleared: () => undefined }))
+vi.mock('../../data/snapshotCache', () => ({
+  ...phone,
+  saveSnapshot: vi.fn(async () => undefined),
+  onCacheCleared: () => undefined,
+}))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0), rejectGoneRounds: vi.fn(async () => 0) }))
+vi.mock('../../data/outbox', () => ({
+  adoptQueuedWrites: vi.fn(async () => undefined),
+  refreshOutboxCounters: vi.fn(),
+  rejectGoneTournament: vi.fn(async () => 0),
+  rejectGoneRounds: vi.fn(async () => 0),
+}))
 vi.mock('./EnterScreen', () => ({
   EnterScreen: ({ onEntered }: { onEntered: () => void }) => (
     <button type="button" onClick={onEntered}>
@@ -82,7 +91,11 @@ function deferred<T>() {
 function savedCopy(name = 'Guardado en el teléfono') {
   const snapshot = structuredClone(fx.snapshot)
   snapshot.tournament.name = name
-  return { entry: { slug, tournamentId: id, lookup: fx.lookup, me: fx.me, savedAt: 1 }, snapshot, savedAt: Date.now() - 60_000 }
+  return {
+    entry: { slug, tournamentId: id, lookup: fx.lookup, me: fx.me, savedAt: 1 },
+    snapshot,
+    savedAt: Date.now() - 60_000,
+  }
 }
 /** What the shell would show: whose boards, and where they came from. */
 function Board() {
@@ -119,7 +132,14 @@ function serverLoads(name = 'En vivo del servidor') {
     const snapshot = structuredClone(fx.snapshot)
     snapshot.tournament.name = name
     // As the store's load does: the boards, then the live channel opened (it joins later).
-    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null, realtime: 'connecting' })
+    useTournament.setState({
+      tournamentId: tid,
+      data: dataFromSnapshot(snapshot),
+      updatedAt: Date.now(),
+      source: 'server',
+      error: null,
+      realtime: 'connecting',
+    })
   })
   useTournament.setState({ load })
   return load

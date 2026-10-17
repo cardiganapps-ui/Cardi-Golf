@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { prefersReducedMotion, scrollBehavior } from './reducedMotion'
 
 const prefer = (reduce: boolean) =>
-  vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: reduce && q === '(prefers-reduced-motion: reduce)', media: q }) as MediaQueryList)
+  vi
+    .spyOn(window, 'matchMedia')
+    .mockImplementation(
+      (q: string) => ({ matches: reduce && q === '(prefers-reduced-motion: reduce)', media: q }) as MediaQueryList,
+    )
 
 afterEach(() => vi.restoreAllMocks())
 

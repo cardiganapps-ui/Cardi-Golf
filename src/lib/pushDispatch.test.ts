@@ -33,7 +33,13 @@ vi.mock('@supabase/supabase-js', () => ({
 
 const { default: handler } = await import('../../api/push-dispatch')
 
-const ENV = { PUSH_DISPATCH_SECRET: 's3cret', VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv', VITE_SUPABASE_URL: 'https://db.invalid', VITE_SUPABASE_ANON_KEY: 'anon' }
+const ENV = {
+  PUSH_DISPATCH_SECRET: 's3cret',
+  VAPID_PUBLIC_KEY: 'pub',
+  VAPID_PRIVATE_KEY: 'priv',
+  VITE_SUPABASE_URL: 'https://db.invalid',
+  VITE_SUPABASE_ANON_KEY: 'anon',
+}
 afterEach(() => {
   vi.unstubAllEnvs()
   sent.calls = []
@@ -53,56 +59,126 @@ const sub = (endpoint: string) => ({ endpoint, keys: { p256dh: 'k', auth: 'a' } 
 
 describe('the dispatch route', () => {
   it('an account’s notice: its words and the inbox’s count for the icon', async () => {
-    const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/acct')], notice: { id: 'n1', kind: 'results', data: { tournament: 'Copa', slug: 'copa', rankLabel: '2', field: 8 }, actor: null }, unread: 3 })
+    const r = await call({
+      subscriptions: [sub('https://fcm.googleapis.com/fcm/send/acct')],
+      notice: {
+        id: 'n1',
+        kind: 'results',
+        data: { tournament: 'Copa', slug: 'copa', rankLabel: '2', field: 8 },
+        actor: null,
+      },
+      unread: 3,
+    })
     expect(r).toEqual({ status: 200, json: { sent: 1, pruned: 0 } })
-    expect(sent.calls[0]!.payload).toEqual({ title: 'Polo', body: 'Resultados de Copa: quedaste 2.º de 8', url: '/t/copa', tag: 'n1', badge: 3 })
+    expect(sent.calls[0]!.payload).toEqual({
+      title: 'Polo',
+      body: 'Resultados de Copa: quedaste 2.º de 8',
+      url: '/t/copa',
+      tag: 'n1',
+      badge: 3,
+    })
   })
 
   it('a PIN phone’s notice: the tournament above, no count, so the icon keeps what it shows (PWA-10)', async () => {
     const r = await call({
       subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), sub('https://fcm.googleapis.com/fcm/send/gone')],
-      notice: { id: 'n2', kind: 'round_live', data: { tournament: 'Nacho’s Bachelor', slug: 'nachos-bachelor', round: 1, group: 2, startHole: 10, teeTime: '09:00' }, actor: null },
+      notice: {
+        id: 'n2',
+        kind: 'round_live',
+        data: {
+          tournament: 'Nacho’s Bachelor',
+          slug: 'nachos-bachelor',
+          round: 1,
+          group: 2,
+          startHole: 10,
+          teeTime: '09:00',
+        },
+        actor: null,
+      },
     })
     expect(r.status).toBe(200)
     expect(sent.calls.map((c) => c.payload)).toEqual([
-      { title: 'Nacho’s Bachelor', body: 'Empezó el día 1. Tu grupo 2 sale del hoyo 10 a las 9:00.', url: '/t/nachos-bachelor/tarjeta', tag: 'n2' },
-      { title: 'Nacho’s Bachelor', body: 'Empezó el día 1. Tu grupo 2 sale del hoyo 10 a las 9:00.', url: '/t/nachos-bachelor/tarjeta', tag: 'n2' },
+      {
+        title: 'Nacho’s Bachelor',
+        body: 'Empezó el día 1. Tu grupo 2 sale del hoyo 10 a las 9:00.',
+        url: '/t/nachos-bachelor/tarjeta',
+        tag: 'n2',
+      },
+      {
+        title: 'Nacho’s Bachelor',
+        body: 'Empezó el día 1. Tu grupo 2 sale del hoyo 10 a las 9:00.',
+        url: '/t/nachos-bachelor/tarjeta',
+        tag: 'n2',
+      },
     ])
     expect(sent.calls.every((c) => !('badge' in c.payload))).toBe(true)
   })
 
   it('a dead address goes back to the database with the shared secret, through the anon key', async () => {
     sent.refuse.set('https://fcm.googleapis.com/fcm/send/gone', 410)
-    const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), sub('https://fcm.googleapis.com/fcm/send/gone')], notice: { id: 'n3', kind: 'card_to_sign', data: { tournament: 'X', slug: 'x', round: 1, group: 1 }, actor: null } })
+    const r = await call({
+      subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), sub('https://fcm.googleapis.com/fcm/send/gone')],
+      notice: { id: 'n3', kind: 'card_to_sign', data: { tournament: 'X', slug: 'x', round: 1, group: 1 }, actor: null },
+    })
     expect(r.json).toEqual({ sent: 1, pruned: 1 })
-    expect(pruned.calls).toEqual([['push_prune', { p_secret: 's3cret', p_endpoints: ['https://fcm.googleapis.com/fcm/send/gone'] }]])
+    expect(pruned.calls).toEqual([
+      ['push_prune', { p_secret: 's3cret', p_endpoints: ['https://fcm.googleapis.com/fcm/send/gone'] }],
+    ])
     expect(pruned.clients).toEqual([['https://db.invalid', 'anon']])
   })
 
   it('an endpoint off the push services is never called, and goes back to be pruned (SEC-03)', async () => {
-    const off = ['https://httpbin.org/status/201', 'https://169.254.169.254/latest', 'https://fcm.googleapis.com.evil.test/x', 'http://fcm.googleapis.com/fcm/send/x']
-    const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), ...off.map(sub)], notice: { id: 'n9', kind: 'card_to_sign', data: { tournament: 'X', slug: 'x', round: 1, group: 1 }, actor: null } })
+    const off = [
+      'https://httpbin.org/status/201',
+      'https://169.254.169.254/latest',
+      'https://fcm.googleapis.com.evil.test/x',
+      'http://fcm.googleapis.com/fcm/send/x',
+    ]
+    const r = await call({
+      subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), ...off.map(sub)],
+      notice: { id: 'n9', kind: 'card_to_sign', data: { tournament: 'X', slug: 'x', round: 1, group: 1 }, actor: null },
+    })
     expect(sent.calls.map((c) => c.endpoint)).toEqual(['https://fcm.googleapis.com/fcm/send/ana'])
     expect(r.json).toEqual({ sent: 1, pruned: off.length })
     expect(pruned.calls).toEqual([['push_prune', { p_secret: 's3cret', p_endpoints: off }]])
   })
 
   it('a subscription with no address is neither called nor sent to be pruned', async () => {
-    const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), {}, null, { endpoint: 7 }], notice: { id: 'n10', kind: 'card_to_sign', data: { tournament: 'X', slug: 'x', round: 1, group: 1 }, actor: null } })
+    const r = await call({
+      subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana'), {}, null, { endpoint: 7 }],
+      notice: {
+        id: 'n10',
+        kind: 'card_to_sign',
+        data: { tournament: 'X', slug: 'x', round: 1, group: 1 },
+        actor: null,
+      },
+    })
     expect(sent.calls.map((c) => c.endpoint)).toEqual(['https://fcm.googleapis.com/fcm/send/ana'])
     expect(r.json).toEqual({ sent: 1, pruned: 0 })
     expect(pruned.calls).toEqual([])
   })
 
   it('nothing without the secret', async () => {
-    const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice: { id: 'n4', kind: 'round_live', data: {}, actor: null } }, 'Bearer nope')
+    const r = await call(
+      {
+        subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')],
+        notice: { id: 'n4', kind: 'round_live', data: {}, actor: null },
+      },
+      'Bearer nope',
+    )
     expect(r.status).toBe(401)
     expect(sent.calls).toEqual([])
   })
 
   it('a wrong secret of the same length, none, or a bare one: 401, nothing sent', async () => {
     for (const auth of ['Bearer s3creT', 'Bearer s3cret ', 's3cret', 'Bearer', '', null]) {
-      const r = await call({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice: { id: 'n5', kind: 'round_live', data: {}, actor: null } }, auth)
+      const r = await call(
+        {
+          subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')],
+          notice: { id: 'n5', kind: 'round_live', data: {}, actor: null },
+        },
+        auth,
+      )
       expect(r).toEqual({ status: 401, json: { error: 'unauthorized' } })
     }
     expect(sent.calls).toEqual([])
@@ -119,7 +195,14 @@ describe('the dispatch route', () => {
       for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, v)
       vi.stubEnv(missing, '')
       const { default: fresh } = await import('../../api/push-dispatch')
-      const r = await callRoute(fresh, { method: 'POST', headers: { authorization: 'Bearer s3cret' }, body: { subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice: { id: 'n6', kind: 'round_live', data: {}, actor: null } } })
+      const r = await callRoute(fresh, {
+        method: 'POST',
+        headers: { authorization: 'Bearer s3cret' },
+        body: {
+          subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')],
+          notice: { id: 'n6', kind: 'round_live', data: {}, actor: null },
+        },
+      })
       expect([r.status, r.body]).toEqual([503, { error: 'push not configured' }])
     }
     expect(sent.calls).toEqual([])
@@ -135,14 +218,29 @@ describe('the dispatch route', () => {
 
   it('no notice, or nobody to send it to: nothing sent, nothing signed', async () => {
     const notice = { id: 'n7', kind: 'round_live', data: {}, actor: null }
-    for (const body of [{ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')] }, { notice }, { notice, subscriptions: [] }, { notice, subscriptions: 'https://fcm.googleapis.com/fcm/send/ana' }]) {
+    for (const body of [
+      { subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')] },
+      { notice },
+      { notice, subscriptions: [] },
+      { notice, subscriptions: 'https://fcm.googleapis.com/fcm/send/ana' },
+    ]) {
       expect(await call(body)).toEqual({ status: 200, json: { sent: 0 } })
     }
     expect(sent.vapid).toEqual([])
   })
 
   it('a JSON body sent as text is read the same', async () => {
-    const r = await call(JSON.stringify({ subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice: { id: 'n8', kind: 'results', data: { tournament: 'Copa', slug: 'copa', rankLabel: '1', field: 4 }, actor: null } }))
+    const r = await call(
+      JSON.stringify({
+        subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')],
+        notice: {
+          id: 'n8',
+          kind: 'results',
+          data: { tournament: 'Copa', slug: 'copa', rankLabel: '1', field: 4 },
+          actor: null,
+        },
+      }),
+    )
     expect(r).toEqual({ status: 200, json: { sent: 1, pruned: 0 } })
   })
 
@@ -153,7 +251,11 @@ describe('the dispatch route', () => {
     expect(sent.calls[0]!.options).toEqual({ TTL: 86400, urgency: 'normal' })
     vi.stubEnv('VAPID_SUBJECT', 'mailto:otro@example.com')
     const { default: fresh } = await import('../../api/push-dispatch')
-    await callRoute(fresh, { method: 'POST', headers: { authorization: 'Bearer s3cret' }, body: { subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice } })
+    await callRoute(fresh, {
+      method: 'POST',
+      headers: { authorization: 'Bearer s3cret' },
+      body: { subscriptions: [sub('https://fcm.googleapis.com/fcm/send/ana')], notice },
+    })
     expect(sent.vapid.at(-1)).toEqual(['mailto:otro@example.com', 'pub', 'priv'])
   })
 
@@ -168,9 +270,14 @@ describe('the dispatch route', () => {
     sent.refuse.set('https://fcm.googleapis.com/fcm/send/404', 404)
     sent.refuse.set('https://fcm.googleapis.com/fcm/send/500', 500)
     sent.refuse.set('https://fcm.googleapis.com/fcm/send/413', 413)
-    const r = await call({ subscriptions: ['404', '500', '413', 'ok'].map((e) => sub(`https://fcm.googleapis.com/fcm/send/${e}`)), notice: { id: 'n11', kind: 'round_live', data: {}, actor: null } })
+    const r = await call({
+      subscriptions: ['404', '500', '413', 'ok'].map((e) => sub(`https://fcm.googleapis.com/fcm/send/${e}`)),
+      notice: { id: 'n11', kind: 'round_live', data: {}, actor: null },
+    })
     expect(r.json).toEqual({ sent: 1, pruned: 1 })
-    expect(pruned.calls).toEqual([['push_prune', { p_secret: 's3cret', p_endpoints: ['https://fcm.googleapis.com/fcm/send/404'] }]])
+    expect(pruned.calls).toEqual([
+      ['push_prune', { p_secret: 's3cret', p_endpoints: ['https://fcm.googleapis.com/fcm/send/404'] }],
+    ])
   })
 
   it('the icon’s count: a negative one is 0, anything that is not a number is left out', async () => {

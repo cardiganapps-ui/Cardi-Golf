@@ -26,7 +26,9 @@ export function RivalryLines({ tournamentId, group }: { tournamentId: string; gr
   return (
     <>
       {shown.map((r) => (
-        <span key={r.theirPlayerId}>{t.quick.rivalryLine(players?.find((p) => p.id === r.theirPlayerId)?.displayName ?? '', r.myStrokes)}</span>
+        <span key={r.theirPlayerId}>
+          {t.quick.rivalryLine(players?.find((p) => p.id === r.theirPlayerId)?.displayName ?? '', r.myStrokes)}
+        </span>
       ))}
     </>
   )

@@ -33,8 +33,23 @@ describe('what an id names', () => {
     expect(show('course_id', course.id, 'rounds')).toBe(course.name)
   })
   it('a pair by its name, or its two players; a team and a lot by what they are', () => {
-    const pair = { id: 'pr1', name: null, player1Id: ana!.id, player2Id: beto!.id, kind: 'AD', pickedByHonoree: false, drawnAt: null }
-    const named = auditNames({ ...s, pairs: [pair, { ...pair, id: 'pr2', name: 'Los novios' }], teams: [{ id: 'tm1', name: null, number: 3, playerIds: [], drawnAt: null }], calcuttaLots: [{ id: 'l1', playerId: ana!.id, lotNumber: 4, status: 'sold', price: 750, ownerId: beto!.id, soldAt: null }] })
+    const pair = {
+      id: 'pr1',
+      name: null,
+      player1Id: ana!.id,
+      player2Id: beto!.id,
+      kind: 'AD',
+      pickedByHonoree: false,
+      drawnAt: null,
+    }
+    const named = auditNames({
+      ...s,
+      pairs: [pair, { ...pair, id: 'pr2', name: 'Los novios' }],
+      teams: [{ id: 'tm1', name: null, number: 3, playerIds: [], drawnAt: null }],
+      calcuttaLots: [
+        { id: 'l1', playerId: ana!.id, lotNumber: 4, status: 'sold', price: 750, ownerId: beto!.id, soldAt: null },
+      ],
+    })
     const val = (key: string, v: string) => fieldValue(key, v, 'x', named, tz, currency)
     expect(val('pair_id', 'pr1')).toBe(t.common.andList([ana!.displayName, beto!.displayName]))
     expect(val('pair_id', 'pr2')).toBe('Los novios')
@@ -57,7 +72,9 @@ describe('how a value reads', () => {
     expect(show('avatar_url', 'https://x.supabase.co/storage/v1/object/public/a.png', 'players')).toBe(V.image)
   })
   it('a hole’s earlier value, with who wrote it; what can’t be said in a line says it changed', () => {
-    expect(show('previous', { strokes: 6, putts: 2, picked_up: false, entered_by: beto!.id })).toBe(V.previous('6 golpes, 2 putts', beto!.displayName))
+    expect(show('previous', { strokes: 6, putts: 2, picked_up: false, entered_by: beto!.id })).toBe(
+      V.previous('6 golpes, 2 putts', beto!.displayName),
+    )
     expect(holeValue({ strokes: null, putts: 1, picked_up: true })).toBe(t.card.history.pickedUp(1))
     expect(show('settings', { games: [] }, 'tournaments')).toBe(V.changed)
     expect(show('estimate_inputs', [1, 2, 3], 'players')).toBe(V.changed)
@@ -90,8 +107,26 @@ describe('the bookkeeping stays out', () => {
   it('a score’s version, device and mutation, the row’s tournament, a generated card or source, a decision’s call', () => {
     const f = changedFields({
       action: 'UPDATE',
-      before: { strokes: 6, version: 1, device_id: 'd1', mutation_id: 'm1', tournament_id: 't', card_id: 'c', source: 'group', call_id: 'k' },
-      after: { strokes: 5, version: 2, device_id: 'd2', mutation_id: 'm2', tournament_id: 't2', card_id: 'c2', source: 'comite', call_id: 'k2' },
+      before: {
+        strokes: 6,
+        version: 1,
+        device_id: 'd1',
+        mutation_id: 'm1',
+        tournament_id: 't',
+        card_id: 'c',
+        source: 'group',
+        call_id: 'k',
+      },
+      after: {
+        strokes: 5,
+        version: 2,
+        device_id: 'd2',
+        mutation_id: 'm2',
+        tournament_id: 't2',
+        card_id: 'c2',
+        source: 'comite',
+        call_id: 'k2',
+      },
     })
     expect(f.map((x) => x.key)).toEqual(['strokes'])
   })

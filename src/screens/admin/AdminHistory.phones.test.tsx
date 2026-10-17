@@ -16,7 +16,10 @@ import { t } from '../../i18n/es-MX'
 import { TournamentContext } from '../tournament/tournamentContext'
 
 const audit = vi.hoisted(() => ({ entries: [] as AuditEntry[] }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit: vi.fn(async () => audit.entries) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  tournamentAudit: vi.fn(async () => audit.entries),
+}))
 const { AdminHistory } = await import('./AdminHistory')
 
 const H = t.admin.history
@@ -40,10 +43,23 @@ const entry = (e: Partial<AuditEntry>): AuditEntry => ({
 })
 
 function mount() {
-  useTournament.setState({ tournamentId: 't-history', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-history',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-history',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminHistory />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -55,8 +71,14 @@ afterEach(cleanup)
 describe('Historial names the phone (TRUST-24)', () => {
   it('two phones holding one player: each change says which, and a change from the Comité says none', async () => {
     audit.entries = [
-      entry({ after: { player_id: ana.id, round_id: round.id, hole: 1, strokes: 5 }, phone: { n: 1, of: 2, kind: 'other' } }),
-      entry({ after: { player_id: beto.id, round_id: round.id, hole: 1, strokes: 9 }, phone: { n: 2, of: 2, kind: 'ios' } }),
+      entry({
+        after: { player_id: ana.id, round_id: round.id, hole: 1, strokes: 5 },
+        phone: { n: 1, of: 2, kind: 'other' },
+      }),
+      entry({
+        after: { player_id: beto.id, round_id: round.id, hole: 1, strokes: 9 },
+        phone: { n: 2, of: 2, kind: 'ios' },
+      }),
       entry({ actor: null, after: { player_id: beto.id, round_id: round.id, hole: 2, strokes: 4 } }),
     ]
     mount()
@@ -68,9 +90,26 @@ describe('Historial names the phone (TRUST-24)', () => {
 
   it('a phone taking a player, letting go of him, and the Comité taking it off, with its reason', async () => {
     audit.entries = [
-      entry({ table: 'pin_claims', after: { player_id: ana.id, platform: 'ios', claimed_at: '2027-04-09T15:00:00Z', released_at: null }, phone: { n: 2, of: 2, kind: 'ios' } }),
-      entry({ table: 'pin_claims', action: 'UPDATE', actor: null, before: { player_id: ana.id, released_at: null }, after: { player_id: ana.id, released_at: '2027-04-09T17:00:00Z' } }),
-      entry({ table: 'pin_claims', action: 'UPDATE', actor: 'Diego', reason: 'No es de Ana', before: { player_id: beto.id, released_at: null }, after: { player_id: beto.id, released_at: '2027-04-09T18:00:00Z' } }),
+      entry({
+        table: 'pin_claims',
+        after: { player_id: ana.id, platform: 'ios', claimed_at: '2027-04-09T15:00:00Z', released_at: null },
+        phone: { n: 2, of: 2, kind: 'ios' },
+      }),
+      entry({
+        table: 'pin_claims',
+        action: 'UPDATE',
+        actor: null,
+        before: { player_id: ana.id, released_at: null },
+        after: { player_id: ana.id, released_at: '2027-04-09T17:00:00Z' },
+      }),
+      entry({
+        table: 'pin_claims',
+        action: 'UPDATE',
+        actor: 'Diego',
+        reason: 'No es de Ana',
+        before: { player_id: beto.id, released_at: null },
+        after: { player_id: beto.id, released_at: '2027-04-09T18:00:00Z' },
+      }),
       entry({ table: 'pin_claims', after: { player_id: beto.id, platform: 'desktop' } }),
     ]
     mount()

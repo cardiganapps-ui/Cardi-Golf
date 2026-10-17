@@ -28,13 +28,24 @@ export function PeopleScreen() {
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<PeopleFilter>('all')
   // Typing waits a beat before asking; changing the filter asks at once.
-  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('people'), { q, filter }, (p, offset) => api.people({ ...p, limit: PAGE, offset }), !!q)
+  const { rows, total, error, loadingMore, reload, more } = usePaged(
+    usePlatformKey('people'),
+    { q, filter },
+    (p, offset) => api.people({ ...p, limit: PAGE, offset }),
+    !!q,
+  )
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
       <div className={s.listPane}>
         <h2>{P.sections.people}</h2>
-        <Input type="search" value={q} placeholder={H.search} aria-label={H.search} onChange={(e) => setQ(e.target.value)} />
+        <Input
+          type="search"
+          value={q}
+          placeholder={H.search}
+          aria-label={H.search}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <div className={s.filters} role="group" aria-label={H.filterLabel}>
           {FILTERS.map((f) => (
             <button key={f} type="button" className={s.filter} aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -65,7 +76,11 @@ export function PeopleScreen() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{H.pickOne}</p>}
+        {outlet ? (
+          <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} />
+        ) : (
+          <p className={s.placeholder}>{H.pickOne}</p>
+        )}
       </div>
     </div>
   )
@@ -76,7 +91,8 @@ function PersonLine({ r, active }: { r: PersonRow; active: boolean }) {
     ? r.devicePlayer
       ? H.phoneAs(r.devicePlayer, r.deviceTournament)
       : H.phoneUnclaimed
-    : [r.handle ? `@${r.handle}` : null, r.displayName ? r.email : null].filter(Boolean).join(', ') || (H.provider[r.provider] ?? r.provider)
+    : [r.handle ? `@${r.handle}` : null, r.displayName ? r.email : null].filter(Boolean).join(', ') ||
+      (H.provider[r.provider] ?? r.provider)
   return (
     <Link className={`${s.row} ${active ? s.rowActive : ''}`} to={r.id} aria-current={active ? 'page' : undefined}>
       <Avatar name={personName(r)} url={r.avatarUrl} size="sm" />

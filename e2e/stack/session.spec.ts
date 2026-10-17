@@ -14,7 +14,18 @@
 import { t } from '../../src/i18n/es-MX'
 import { lit, sql } from './env'
 import { HOLE_1, ROUND, SLUGS, type HoleEntry } from './field'
-import { expect, expectKeptOnPhone, expectedScores, openCard, openPage, saveHole, serverScores, storedSession, test, typeHole } from './phone'
+import {
+  expect,
+  expectKeptOnPhone,
+  expectedScores,
+  openCard,
+  openPage,
+  saveHole,
+  serverScores,
+  storedSession,
+  test,
+  typeHole,
+} from './phone'
 
 const REFRESH = /\/auth\/v1\/token\?grant_type=refresh_token/
 
@@ -30,7 +41,7 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   await ana.context.setOffline(true)
   await typeHole(ana.page, 1, HOLE_1)
   await saveHole(ana.page, 1)
-  await typeHole(ana.page, 2, ROUND[1]!)
+  await typeHole(ana.page, 2, ROUND[1])
   await saveHole(ana.page, 2)
   // Both are in the phone's storage before the app is closed below. A person can't close it within
   // milliseconds of a tap; a test can, so it waits (the outbox's own tests hold how soon a save is stored).
@@ -47,7 +58,11 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   let refused = 0
   await ana.context.route(REFRESH, (route) => {
     refused++
-    return route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"e2e-stack: Auth unavailable"}' })
+    return route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: '{"message":"e2e-stack: Auth unavailable"}',
+    })
   })
   await ana.page.close()
   await ana.context.setOffline(false)
@@ -59,21 +74,25 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   const page = await openPage(ana, `/t/${SLUGS.session}/tarjeta?hoyo=3`)
 
   // From the phone's own copy, hole 3 saves too.
-  await typeHole(page, 3, ROUND[2]!)
+  await typeHole(page, 3, ROUND[2])
   await saveHole(page, 3)
 
   // auth-js gives up after its 8th try and holds the failure: from here on the app gets no session.
-  await expect.poll(() => refused, { timeout: 60_000, message: 'auth-js refresh attempts while Auth was down' }).toBeGreaterThanOrEqual(8)
+  await expect
+    .poll(() => refused, { timeout: 60_000, message: 'auth-js refresh attempts while Auth was down' })
+    .toBeGreaterThanOrEqual(8)
   expect(serverScores(SLUGS.session), 'nothing went out without a session').toEqual([])
 
   // Auth answers again. Within its cooldown and the gate's next ask, the same session returns and the holes go out.
   await ana.context.unroute(REFRESH)
   const card = new Map<number, HoleEntry>([
     [1, HOLE_1],
-    [2, ROUND[1]!],
-    [3, ROUND[2]!],
+    [2, ROUND[1]],
+    [3, ROUND[2]],
   ])
-  await expect.poll(() => serverScores(SLUGS.session), { timeout: 180_000, intervals: [2000] }).toEqual(expectedScores(card, 'Ana'))
+  await expect
+    .poll(() => serverScores(SLUGS.session), { timeout: 180_000, intervals: [2000] })
+    .toEqual(expectedScores(card, 'Ana'))
 
   // Still Ana's phone: the same user, a fresh token, no other anonymous sign-in, and no PIN asked for.
   const after = await storedSession(page)
@@ -81,7 +100,9 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   expect(after?.expires_at ?? 0).toBeGreaterThan(Date.now() / 1000)
   expect(ana.signUps, 'anonymous sign-ins on this phone').toBe(1)
   expect(
-    sql<string[]>(`select coalesce(json_agg(d.auth_user_id), '[]') from public.device_sessions d join public.players p on p.id = d.player_id
+    sql<
+      string[]
+    >(`select coalesce(json_agg(d.auth_user_id), '[]') from public.device_sessions d join public.players p on p.id = d.player_id
       join public.tournaments t on t.id = p.tournament_id where t.slug = ${lit(SLUGS.session)}`),
   ).toEqual([uid])
   await expect(page.getByText(t.enter.tapYourFace)).toHaveCount(0)

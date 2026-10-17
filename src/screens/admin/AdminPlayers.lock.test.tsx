@@ -23,8 +23,14 @@ const api = vi.hoisted(() => ({
   unlockHandicaps: vi.fn(async () => undefined),
   playersWithPin: vi.fn(async () => new Set<string>()),
 }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), ...api }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  ...api,
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 const { AdminPlayers } = await import('./AdminPlayers')
 
 const P = t.admin.players
@@ -36,7 +42,16 @@ function mount(change: (s: Snapshot) => void = () => undefined) {
   useTournament.setState({ tournamentId: 't-lock', data: dataFromSnapshot(snap), reload: async () => undefined })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-lock', slug: 'nacho', lookup: getFixture('full12-live')!.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-lock',
+          slug: 'nacho',
+          lookup: getFixture('full12-live')!.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -103,7 +118,10 @@ describe('a fixed handicap changes only with a reason (UX-28)', () => {
     expect(within(ask).getByText(L.reasonBody(p.displayName, `de ${p.baseHcp} a ${p.baseHcp + 2}`))).toBeTruthy()
     await type(within(ask).getByLabelText(t.platform.reason), '  Error de captura ')
     await click(within(ask).getByRole('button', { name: L.reasonConfirm }))
-    expect(api.updatePlayer).toHaveBeenCalledWith(expect.objectContaining({ id: p.id, base_hcp: p.baseHcp + 2, handicap_source: 'manual' }), 'Error de captura')
+    expect(api.updatePlayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: p.id, base_hcp: p.baseHcp + 2, handicap_source: 'manual' }),
+      'Error de captura',
+    )
     expect(screen.queryByRole('dialog', { name: t.common.edit })).toBeNull()
   })
 
@@ -140,7 +158,10 @@ describe('a fixed handicap changes only with a reason (UX-28)', () => {
     await type(within(sheet).getByLabelText(P.displayName), 'Otro')
     await click(within(sheet).getByRole('button', { name: t.common.save }))
     expect(screen.queryByRole('dialog', { name: L.reasonTitle })).toBeNull()
-    expect(api.upsertPlayer).toHaveBeenCalledWith('t-lock', expect.objectContaining({ id: p.id, base_hcp: 12.3, handicap_index: 12.3 }))
+    expect(api.upsertPlayer).toHaveBeenCalledWith(
+      't-lock',
+      expect.objectContaining({ id: p.id, base_hcp: 12.3, handicap_index: 12.3 }),
+    )
   })
 
   it('in setup with nothing fixed, a change saves as before', async () => {
@@ -151,7 +172,10 @@ describe('a fixed handicap changes only with a reason (UX-28)', () => {
     await type(within(sheet).getByLabelText(P.baseHcp), String(p.baseHcp + 2))
     await click(within(sheet).getByRole('button', { name: t.common.save }))
     expect(screen.queryByRole('dialog', { name: L.reasonTitle })).toBeNull()
-    expect(api.upsertPlayer).toHaveBeenCalledWith('t-lock', expect.objectContaining({ id: p.id, base_hcp: p.baseHcp + 2 }))
+    expect(api.upsertPlayer).toHaveBeenCalledWith(
+      't-lock',
+      expect.objectContaining({ id: p.id, base_hcp: p.baseHcp + 2 }),
+    )
   })
 
   it('a handicap changed after they were fixed says so on its row and in its sheet, with the reason', async () => {
@@ -161,7 +185,13 @@ describe('a fixed handicap changes only with a reason (UX-28)', () => {
         ...p,
         handicapNote: {
           from: { handicapSource: 'manual', baseHcp: p.baseHcp + 3, handicapIndex: null, estimateInputs: null },
-          changes: [{ at: '2027-04-09T16:30:00Z', reason: 'Trajo su tarjeta', to: { handicapSource: 'manual', baseHcp: p.baseHcp, handicapIndex: null, estimateInputs: null } }],
+          changes: [
+            {
+              at: '2027-04-09T16:30:00Z',
+              reason: 'Trajo su tarjeta',
+              to: { handicapSource: 'manual', baseHcp: p.baseHcp, handicapIndex: null, estimateInputs: null },
+            },
+          ],
         },
       }
     })

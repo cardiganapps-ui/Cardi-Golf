@@ -7,7 +7,12 @@ import { redeemStashedToken, stashedNameHint } from './profiles'
 describe('the link token kept across a sign-in (ARCH-03)', () => {
   const KEY = 'cardi-golf:link-token'
   it('a stash that does not read is none', async () => {
-    for (const bad of ['{', '"x"', JSON.stringify({ token: 7, exp: 'mañana', hint: null }), JSON.stringify({ token: 't', exp: 1, hint: { displayName: 3 } })]) {
+    for (const bad of [
+      '{',
+      '"x"',
+      JSON.stringify({ token: 7, exp: 'mañana', hint: null }),
+      JSON.stringify({ token: 't', exp: 1, hint: { displayName: 3 } }),
+    ]) {
       sessionStorage.setItem(KEY, bad)
       expect(stashedNameHint()).toBeNull()
       await expect(redeemStashedToken()).resolves.toBeNull()

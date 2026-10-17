@@ -32,14 +32,18 @@ export function quickSettings(o: QuickOptions): TournamentSettings {
   const fee = o.money ? Math.max(0, Math.round(o.entryFee)) : 0
   const games: GameConfig[] = o.games.map((key) => {
     const g = GAME_ENTRIES.find((e) => e.key === key)!.create(key.toLowerCase())
-    return o.money ? g : ({ ...g, money: { ...g.money, source: 'none' } } as GameConfig)
+    return o.money ? g : { ...g, money: { ...g.money, source: 'none' } }
   })
   return {
     ...base,
     rounds: 1,
     entryFee: fee,
     handicap: { ...base.handicap, allowance: 1 },
-    prizes: { ...base.prizes, stableford: fee > 0 ? quickSplit(o.players) : [], stablefordMode: fee > 0 ? 'percent' : 'amount' },
+    prizes: {
+      ...base.prizes,
+      stableford: fee > 0 ? quickSplit(o.players) : [],
+      stablefordMode: fee > 0 ? 'percent' : 'amount',
+    },
     games,
     // A friendly round signs nothing (UX-23): the group fixes its holes while the day is live, the organizer after.
     cardSigning: 'none',

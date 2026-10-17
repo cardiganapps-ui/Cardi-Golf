@@ -41,7 +41,13 @@ export function TournamentsScreen() {
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
       <div className={s.listPane}>
         <h2>{P.sections.tournaments}</h2>
-        <Input type="search" value={q} placeholder={P.search} aria-label={P.search} onChange={(e) => setQ(e.target.value)} />
+        <Input
+          type="search"
+          value={q}
+          placeholder={P.search}
+          aria-label={P.search}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <div className={s.filters} role="group" aria-label={P.kindLabel}>
           {KINDS.map((k) => (
             <button key={k} type="button" className={s.filter} aria-pressed={kind === k} onClick={() => setKind(k)}>
@@ -72,7 +78,11 @@ export function TournamentsScreen() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{P.pickOne}</p>}
+        {outlet ? (
+          <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} />
+        ) : (
+          <p className={s.placeholder}>{P.pickOne}</p>
+        )}
       </div>
     </div>
   )
@@ -94,7 +104,11 @@ function TournamentRow({ r, active }: { r: PlatformTournamentRow; active: boolea
 }
 
 /** Status and the flags that change what the admin may do. */
-export function TournamentChips({ r }: { r: Pick<PlatformTournamentRow, 'status' | 'protected' | 'practice' | 'quick'> & { organizers?: number } }) {
+export function TournamentChips({
+  r,
+}: {
+  r: Pick<PlatformTournamentRow, 'status' | 'protected' | 'practice' | 'quick'> & { organizers?: number }
+}) {
   return (
     <span className={s.chips}>
       {r.protected && <span className={s.flagDanger}>{P.chips.protected}</span>}

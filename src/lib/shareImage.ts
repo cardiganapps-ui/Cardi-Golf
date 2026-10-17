@@ -78,7 +78,11 @@ export interface PageFontFace {
   unicodeRange: string
 }
 
-const unquote = (s: string) => s.trim().replace(/^["']|["']$/g, '').toLowerCase()
+const unquote = (s: string) =>
+  s
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .toLowerCase()
 
 /** Every @font-face rule the page has loaded. */
 export function pageFontFaces(doc: Document = document): PageFontFace[] {
@@ -134,7 +138,12 @@ export function codePointsIn(text: string): Set<number> {
 }
 
 /** The @font-face CSS for the card, every file inlined. Faces whose file did not load are left out of this render. */
-export async function fontEmbedCss(faces: PageFontFace[], families: Set<string>, codePoints: Set<number>, load: Load = fetchAsDataUrl): Promise<string> {
+export async function fontEmbedCss(
+  faces: PageFontFace[],
+  families: Set<string>,
+  codePoints: Set<number>,
+  load: Load = fetchAsDataUrl,
+): Promise<string> {
   const wanted = faces.filter((f) => families.has(f.family) && coversAny(f.unicodeRange, codePoints))
   const css = await Promise.all(
     wanted.map(async (f) => {
@@ -185,10 +194,18 @@ export async function renderNodeToPng(node: HTMLElement): Promise<Blob> {
   const { toBlob } = await import('html-to-image')
   // Fonts still loading would render as fallbacks in the image.
   await document.fonts?.ready
-  const [fontCss, restore] = await Promise.all([fontEmbedCss(pageFontFaces(), familiesIn(node), codePointsIn(node.textContent ?? '')), inlineImages(node)])
+  const [fontCss, restore] = await Promise.all([
+    fontEmbedCss(pageFontFaces(), familiesIn(node), codePointsIn(node.textContent ?? '')),
+    inlineImages(node),
+  ])
   try {
     // Nothing left for html-to-image to fetch: no cache-busting, no session cache of failures.
-    const blob = await toBlob(node, { pixelRatio: 2, cacheBust: false, fontEmbedCSS: fontCss, backgroundColor: getComputedStyle(node).backgroundColor || cssVar('--bg') })
+    const blob = await toBlob(node, {
+      pixelRatio: 2,
+      cacheBust: false,
+      fontEmbedCSS: fontCss,
+      backgroundColor: getComputedStyle(node).backgroundColor || cssVar('--bg'),
+    })
     if (!blob) throw new Error('no image')
     return blob
   } finally {
@@ -208,7 +225,12 @@ function download(blob: Blob, filename: string): ShareResult {
   return 'downloaded'
 }
 
-async function share(file: File, title: string, text: string | undefined, needsTap?: (again: () => Promise<ShareResult>) => void): Promise<ShareResult> {
+async function share(
+  file: File,
+  title: string,
+  text: string | undefined,
+  needsTap?: (again: () => Promise<ShareResult>) => void,
+): Promise<ShareResult> {
   if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title, text })
@@ -232,7 +254,13 @@ async function share(file: File, title: string, text: string | undefined, needsT
  * Renders the node and shares it. `needsTap` receives a function to call from a
  * second tap when the browser refused to share outside the first one.
  */
-export async function shareNodeAsImage(node: HTMLElement, filename: string, title: string, text?: string, needsTap?: (again: () => Promise<ShareResult>) => void): Promise<ShareResult> {
+export async function shareNodeAsImage(
+  node: HTMLElement,
+  filename: string,
+  title: string,
+  text?: string,
+  needsTap?: (again: () => Promise<ShareResult>) => void,
+): Promise<ShareResult> {
   const blob = await renderNodeToPng(node)
   return share(new File([blob], filename, { type: 'image/png' }), title, text, needsTap)
 }

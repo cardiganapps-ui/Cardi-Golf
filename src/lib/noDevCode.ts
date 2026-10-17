@@ -13,11 +13,14 @@ import type { Plugin } from 'vite'
 export const DEV_ONLY = /\/src\/(?:dev\/|design\/DesignScreen|(?:[\w.-]+\/)*testing\/)/
 
 /** The dev-only modules with code in a build's chunks, as `src/…` paths. */
-export function devModulesIn(bundle: Record<string, { type: string; modules?: Record<string, { renderedLength: number }> }>): string[] {
+export function devModulesIn(
+  bundle: Record<string, { type: string; modules?: Record<string, { renderedLength: number }> }>,
+): string[] {
   const found = new Set<string>()
   for (const out of Object.values(bundle)) {
     if (out.type !== 'chunk' || !out.modules) continue
-    for (const [id, m] of Object.entries(out.modules)) if (m.renderedLength > 0 && DEV_ONLY.test(id)) found.add(id.slice(id.lastIndexOf('/src/') + 1))
+    for (const [id, m] of Object.entries(out.modules))
+      if (m.renderedLength > 0 && DEV_ONLY.test(id)) found.add(id.slice(id.lastIndexOf('/src/') + 1))
   }
   return [...found].sort()
 }
@@ -32,7 +35,7 @@ export function noDevCode(): Plugin {
     },
     generateBundle(_, bundle) {
       if (designRoutes) return
-      const found = devModulesIn(bundle as never)
+      const found = devModulesIn(bundle)
       if (found.length) this.error(`dev-only code in a production build (ARCH-07): ${found.join(', ')}`)
     },
   }

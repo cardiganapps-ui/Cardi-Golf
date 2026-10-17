@@ -8,7 +8,18 @@
  */
 
 /** How long a kind of data is kept: each has its sentence in «Cuánto tiempo los guardamos». */
-export type Retention = 'account' | 'tournament' | 'history' | 'notices' | 'answers' | 'record' | 'push' | 'pinPush' | 'short' | 'telemetry' | 'devices'
+export type Retention =
+  | 'account'
+  | 'tournament'
+  | 'history'
+  | 'notices'
+  | 'answers'
+  | 'record'
+  | 'push'
+  | 'pinPush'
+  | 'short'
+  | 'telemetry'
+  | 'devices'
 
 /** The words of «Cuánto tiempo los guardamos» that state each retention. */
 export const RETENTION_WORDS: Record<Retention, string> = {
@@ -27,10 +38,14 @@ export const RETENTION_WORDS: Record<Retention, string> = {
 }
 
 export type InventoryEntry =
-  | { personal: true; what: string; section: string; retention: Retention }
-  | { personal: false; why: string }
+  { personal: true; what: string; section: string; retention: Retention } | { personal: false; why: string }
 
-const T = (what: string, section: string, retention: Retention): InventoryEntry => ({ personal: true, what, section, retention })
+const T = (what: string, section: string, retention: Retention): InventoryEntry => ({
+  personal: true,
+  what,
+  section,
+  retention,
+})
 const NONE = (why: string): InventoryEntry => ({ personal: false, why })
 
 const TOURNAMENT = 'Lo que se ve de un torneo'
@@ -44,18 +59,30 @@ const ADDED = 'Si alguien te agregó a un torneo'
 
 export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   _migrations: NONE('which migrations ran'),
-  tournaments: T('name, logo and who created it, and when its Comité said every player is an adult', TOURNAMENT, 'tournament'),
+  tournaments: T(
+    'name, logo and who created it, and when its Comité said every player is an adult',
+    TOURNAMENT,
+    'tournament',
+  ),
   tournament_organizers: T('which accounts are its Comité', TOURNAMENT, 'tournament'),
   organizers: T('the organizer account and its display name', DATA, 'account'),
   courses: T('the course, which account loaded it, verified its card (0075) and last corrected it', DATA, 'record'),
   course_documents: T('scorecard photos and PDFs someone uploaded', WHERE, 'record'),
   tees: NONE('a course tee: rating, slope, par'),
   holes: NONE('a course hole: par, stroke index, yards'),
-  players: T('name, photo, tier, handicap, the three rounds of an estimate, form guide, which profile it is, and each change to the handicap after it was fixed with the Comité\'s reason', CAPTURED, 'tournament'),
+  players: T(
+    "name, photo, tier, handicap, the three rounds of an estimate, form guide, which profile it is, and each change to the handicap after it was fixed with the Comité's reason",
+    CAPTURED,
+    'tournament',
+  ),
   player_pins: T('the PIN, as a hash', CAPTURED, 'tournament'),
   pin_attempts: T('failed PIN tries per device', DATA, 'short'),
   device_sessions: T('which player each phone entered as', DATA, 'tournament'),
-  pin_claims: T('each phone that entered with a player\'s PIN: what kind (iPhone, Android, computer), since when, until when, and whether the Comité took it off', TOURNAMENT, 'tournament'),
+  pin_claims: T(
+    "each phone that entered with a player's PIN: what kind (iPhone, Android, computer), since when, until when, and whether the Comité took it off",
+    TOURNAMENT,
+    'tournament',
+  ),
   pairs: T('who plays with whom', TOURNAMENT, 'tournament'),
   teams: T('the drawn teams', TOURNAMENT, 'tournament'),
   team_members: T('who is in each team', TOURNAMENT, 'tournament'),
@@ -64,7 +91,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   groups: T('the groups of each day', TOURNAMENT, 'tournament'),
   group_members: T('who plays in each group', TOURNAMENT, 'tournament'),
   scores: T('strokes, putts and pick-ups per hole, and who entered them', TOURNAMENT, 'tournament'),
-  score_mutations: T('the answer the server gave each phone\'s save', DATA, 'answers'),
+  score_mutations: T("the answer the server gave each phone's save", DATA, 'answers'),
   rejected_writes: T('holes the server refused, with the phone that sent them', DATA, 'tournament'),
   snake_tiebreaks: T('who holed out last', TOURNAMENT, 'tournament'),
   card_signatures: T('who signed each card', TOURNAMENT, 'tournament'),
@@ -73,7 +100,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   calcutta_bids: T('every bid', MONEY, 'tournament'),
   calcutta_buybacks: T('buybacks', MONEY, 'tournament'),
   payments: T('what each person paid and is paid', MONEY, 'tournament'),
-  money_adjustments: T('the Comité\'s decisions on unassigned money', MONEY, 'tournament'),
+  money_adjustments: T("the Comité's decisions on unassigned money", MONEY, 'tournament'),
   game_entries: T('who is in each side game', MONEY, 'tournament'),
   hole_awards: T('hole contest winners', TOURNAMENT, 'tournament'),
   game_results: T('the result of a custom bet', MONEY, 'tournament'),
@@ -81,8 +108,8 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   audit_log: T('every change to holes, players, groups and money, with who made it', DATA, 'history'),
   profiles: T('the profile: name, handle, photo, club, city, bio, index', PROFILE, 'account'),
   profile_link_tokens: T('a one-time token that carries the player of a phone to an account', DATA, 'short'),
-  round_results: T('each finished round\'s result per player', PROFILE, 'tournament'),
-  tournament_results: T('each finished tournament\'s place per player', PROFILE, 'tournament'),
+  round_results: T("each finished round's result per player", PROFILE, 'tournament'),
+  tournament_results: T("each finished tournament's place per player", PROFILE, 'tournament'),
   tournament_money: T('what each person won or put in a finished tournament', MONEY, 'tournament'),
   friendships: T('friends', PROFILE, 'account'),
   notifications: T('the notices the app sent', DATA, 'notices'),
@@ -92,18 +119,42 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   crew_members: T('who is in each crew', PROFILE, 'account'),
   crew_requests: T('who asked to enter a crew that approves who enters, until the owner answers', DATA, 'account'),
   push_subscriptions: T('the address a browser gives to receive notices, and which browser', DATA, 'push'),
-  pin_push_subscriptions: T('the address the browser of a phone that entered with a PIN gives to receive its tournament\'s notices, which browser, and its anonymous user and player', DATA, 'pinPush'),
-  player_notices: T('which of its notices a tournament sent each player, and what they said (the day, the group, the hole, a place)', DATA, 'tournament'),
+  pin_push_subscriptions: T(
+    "the address the browser of a phone that entered with a PIN gives to receive its tournament's notices, which browser, and its anonymous user and player",
+    DATA,
+    'pinPush',
+  ),
+  player_notices: T(
+    'which of its notices a tournament sent each player, and what they said (the day, the group, the hole, a place)',
+    DATA,
+    'tournament',
+  ),
   platform_admins: T('who operates Polo', OPERATOR, 'record'),
   platform_unlocks: T('when the operator unlocked a Protegido tournament, and why', OPERATOR, 'record'),
-  platform_audit_log: T('what the operator did or opened, and why; and when a person downloaded his data or deleted his account', OPERATOR, 'record'),
-  platform_settings: T('the operator\'s switches and banner, and which admin set them', OPERATOR, 'record'),
+  platform_audit_log: T(
+    'what the operator did or opened, and why; and when a person downloaded his data or deleted his account',
+    OPERATOR,
+    'record',
+  ),
+  platform_settings: T("the operator's switches and banner, and which admin set them", OPERATOR, 'record'),
   backup_runs: NONE('when each nightly backup ran and its size'),
   retention_runs: NONE('when each nightly deletion ran and how many rows of each kind it took (TRUST-18)'),
   client_events: T('errors, sync times, speed and a few steps from each phone', DATA, 'telemetry'),
-  device_status: T('each phone\'s app version and what it still has to send', DATA, 'devices'),
-  legal_acceptances: T('which version of the notice and the terms each user accepted, when and where, and that an account said it is 18 or older', DATA, 'account'),
-  player_corrections: T('what a player asked the Comité to correct about him, and when it was done', ADDED, 'tournament'),
+  device_status: T("each phone's app version and what it still has to send", DATA, 'devices'),
+  legal_acceptances: T(
+    'which version of the notice and the terms each user accepted, when and where, and that an account said it is 18 or older',
+    DATA,
+    'account',
+  ),
+  player_corrections: T(
+    'what a player asked the Comité to correct about him, and when it was done',
+    ADDED,
+    'tournament',
+  ),
   // Keeps nobody's data, but shows a tournament's to whoever has it (STRAT-05): the notice says who sees what through it.
-  spectator_links: T('the key of the address anyone can open to watch the boards without a PIN, and whether it shows money', TOURNAMENT, 'tournament'),
+  spectator_links: T(
+    'the key of the address anyone can open to watch the boards without a PIN, and whether it shows money',
+    TOURNAMENT,
+    'tournament',
+  ),
 }

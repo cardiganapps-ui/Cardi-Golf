@@ -40,10 +40,15 @@ export function teamEntrants(ctx: FormatContext): Entrant[] {
     .map((pair) => ({
       id: pair.id,
       playerIds: [pair.player1Id, pair.player2Id],
-      name: pair.name?.trim() ? label(pair.name.trim()) : msg('name.pair', { names: [name(pair.player1Id), name(pair.player2Id)] }),
+      name: pair.name?.trim()
+        ? label(pair.name.trim())
+        : msg('name.pair', { names: [name(pair.player1Id), name(pair.player2Id)] }),
       isTeam: true,
     }))
-    .sort((a, b) => Math.min(...a.playerIds.map((p) => order.get(p) ?? 0)) - Math.min(...b.playerIds.map((p) => order.get(p) ?? 0)))
+    .sort(
+      (a, b) =>
+        Math.min(...a.playerIds.map((p) => order.get(p) ?? 0)) - Math.min(...b.playerIds.map((p) => order.get(p) ?? 0)),
+    )
 }
 
 /** The rounds that count, in order. */
@@ -66,7 +71,11 @@ export function emptyCountback(holes = 18): CountbackInput {
  * oriented so more is better — `countback` sums and compares, and does not
  * know whether the format counts up or down.
  */
-export function countbackFrom(values: Array<{ hole: number; value: number }>, holes: number, higherIsBetter: boolean): CountbackInput {
+export function countbackFrom(
+  values: Array<{ hole: number; value: number }>,
+  holes: number,
+  higherIsBetter: boolean,
+): CountbackInput {
   const pointsByHole = new Map<number, number>()
   for (const v of values) pointsByHole.set(v.hole, higherIsBetter ? v.value : -v.value)
   return { pointsByHole, holes }

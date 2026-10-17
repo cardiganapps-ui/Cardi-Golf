@@ -20,7 +20,8 @@ import type { Row } from './mappers'
 import { enterAs, holeScore, installFakePhone, settle, until, type Outcome } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, useOutbox } =
+  await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 const { t } = await import('../i18n/es-MX')
@@ -42,12 +43,14 @@ afterEach(() => _outboxTest.reset())
 
 const boards = () => useTournament.getState().data!.snapshot
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
-const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') => enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
+const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') =>
+  enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
 const played = (strokes: number, putts = 2): HoleEntry['fields'] => ({ strokes, putts })
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const roundGone = () => useOutbox.getState().rejected.filter((r) => r.message === t.sync.errRoundGone)
 /** The reads a look sends (any GET of the rounds or the tournament). */
-const reads = (from: number) => server.wire.slice(from).filter((r) => r.method === 'GET' && (r.target === 'rounds' || r.target === 'tournaments'))
+const reads = (from: number) =>
+  server.wire.slice(from).filter((r) => r.method === 'GET' && (r.target === 'rounds' || r.target === 'tournaments'))
 
 /** Re-stamp every queued item with another identity (null: saved before the session was confirmed). */
 async function markAllHeld(uid: string | null) {
@@ -104,14 +107,16 @@ describe('A1: the look at a gone round reads membership once', () => {
     // Still released when the look sets out; claimed again (the PIN) by the time the tournament is read. Under
     // the two requests the rounds read empty (as a stranger) and the tournament then read (as a member).
     server.decide = async (req): Promise<Outcome> => {
-      if (req.target === 'tournaments' && req.method === 'GET') server.tables.device_sessions = [...(server.tables.device_sessions ?? []), ...mine]
+      if (req.target === 'tournaments' && req.method === 'GET')
+        server.tables.device_sessions = [...(server.tables.device_sessions ?? []), ...mine]
       return 'answer'
     }
     let moved = -1
     try {
       moved = await look()
     } finally {
-      if (!(server.tables.device_sessions ?? []).some((d) => d.auth_user_id === me)) server.tables.device_sessions = [...(server.tables.device_sessions ?? []), ...mine]
+      if (!(server.tables.device_sessions ?? []).some((d) => d.auth_user_id === me))
+        server.tables.device_sessions = [...(server.tables.device_sessions ?? []), ...mine]
     }
     expect((server.tables.rounds ?? []).some((r: Row) => r.id === 'r1')).toBe(true)
     expect(moved).toBe(0)
@@ -178,7 +183,16 @@ describe('gap tests (round-3 verifier)', () => {
 
   it('G-X17: a held legacy item of another round (same hole, same player) holds nothing back', async () => {
     phone.goOffline()
-    const legacy = { key: 'score:r2:p2:7', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p2', 7, 6, 'r2'), attempts: 0, createdAt: 1, seq: 1000, actingUid: null }
+    const legacy = {
+      key: 'score:r2:p2:7',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p2', 7, 6, 'r2'),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: null,
+    }
     await _outboxTest.db()!.items.put(legacy)
     await _outboxTest.load()
     await saveHole(7, [{ player_id: 'p2', fields: played(5), base: {} }])

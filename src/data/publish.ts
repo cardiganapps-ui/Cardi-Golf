@@ -13,6 +13,10 @@ import { useTournament } from './tournamentStore'
 
 export async function publishFromStore(tournamentId: string): Promise<{ players: number; field: number }> {
   const d = useTournament.getState().data
-  if (!d || d.snapshot.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
-  return publishTournamentResults(tournamentId, buildTournamentResults(d.state, d.snapshot.players, (m) => renderMsg(m, d.settings.currency)), d.settings.currency)
+  if (d?.snapshot.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
+  return publishTournamentResults(
+    tournamentId,
+    buildTournamentResults(d.state, d.snapshot.players, (m) => renderMsg(m, d.settings.currency)),
+    d.settings.currency,
+  )
 }

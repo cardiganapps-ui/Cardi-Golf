@@ -69,4 +69,10 @@ export const still = { duration: 0 } as const
  * Seconds from «Revelar»; each further winner of a step starts `nextWinner`
  * later.
  */
-export const REVEAL = { name: DUR_SLOW, figures: DUR_SLOW * 2, countUp: 0.7, trophy: DUR_SLOW * 2 + 0.7, nextWinner: 0.3 } as const
+export const REVEAL = {
+  name: DUR_SLOW,
+  figures: DUR_SLOW * 2,
+  countUp: 0.7,
+  trophy: DUR_SLOW * 2 + 0.7,
+  nextWinner: 0.3,
+} as const

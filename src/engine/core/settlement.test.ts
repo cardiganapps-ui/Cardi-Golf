@@ -16,13 +16,32 @@ import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
 import type { Id, PaymentKind, Snapshot } from '../types'
-import { computeMoney, markPaidWrites, restorePaidWrites, type MoneyState, type PaidWrite, type Transfer } from './money'
+import {
+  computeMoney,
+  markPaidWrites,
+  restorePaidWrites,
+  type MoneyState,
+  type PaidWrite,
+  type Transfer,
+} from './money'
 import { label, type Explanation } from '../messages'
 
 const why: Explanation = { title: label(''), steps: [] }
 
-function prize(playerId: Id, amount: number, opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {}): PrizeAward {
-  return { moduleId: 'individual', playerId, amount, final: true, why, ...opts, label: label(opts.label ?? 'Individual, 1º') }
+function prize(
+  playerId: Id,
+  amount: number,
+  opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {},
+): PrizeAward {
+  return {
+    moduleId: 'individual',
+    playerId,
+    amount,
+    final: true,
+    why,
+    ...opts,
+    label: label(opts.label ?? 'Individual, 1º'),
+  }
 }
 
 function settings(over: Partial<TournamentSettings> = {}): TournamentSettings {
@@ -30,7 +49,15 @@ function settings(over: Partial<TournamentSettings> = {}): TournamentSettings {
 }
 
 function pay(snap: Snapshot, kind: PaymentKind, from: Id | null, to: Id | null, amount: number) {
-  snap.payments.push({ id: `pay${snap.payments.length + 1}`, kind, fromPlayerId: from, toPlayerId: to, amount, paid: true, note: null })
+  snap.payments.push({
+    id: `pay${snap.payments.length + 1}`,
+    kind,
+    fromPlayerId: from,
+    toPlayerId: to,
+    amount,
+    paid: true,
+    note: null,
+  })
 }
 
 /** What the screen does with a write: `set_payment_paid` upserts on (kind, from, to); buybacks are marked on the lot. */
@@ -42,7 +69,16 @@ function apply(snap: Snapshot, writes: PaidWrite[]) {
     }
     const row = snap.payments.find((p) => p.kind === w.kind && p.fromPlayerId === w.from && p.toPlayerId === w.to)
     if (row) Object.assign(row, { amount: w.amount, paid: w.paid })
-    else snap.payments.push({ id: `pay${snap.payments.length + 1}`, kind: w.kind, fromPlayerId: w.from, toPlayerId: w.to, amount: w.amount, paid: w.paid, note: null })
+    else
+      snap.payments.push({
+        id: `pay${snap.payments.length + 1}`,
+        kind: w.kind,
+        fromPlayerId: w.from,
+        toPlayerId: w.to,
+        amount: w.amount,
+        paid: w.paid,
+        note: null,
+      })
   }
 }
 
@@ -66,8 +102,13 @@ function fourPlayers(over: Partial<TournamentSettings> = {}) {
   return { s, snap }
 }
 
-const money = (snap: Snapshot, s: TournamentSettings, prizes: PrizeAward[], auction?: AuctionState, games: Record<string, GameResultState> = {}): MoneyState =>
-  computeMoney(snap, s, prizes, auction, true, games)
+const money = (
+  snap: Snapshot,
+  s: TournamentSettings,
+  prizes: PrizeAward[],
+  auction?: AuctionState,
+  games: Record<string, GameResultState> = {},
+): MoneyState => computeMoney(snap, s, prizes, auction, true, games)
 
 describe('settlement on what is still due (MONEY-01)', () => {
   it('every entry paid: vía banco only pays the winner his gross prize', () => {
@@ -125,7 +166,20 @@ describe('settlement on what is still due (MONEY-01)', () => {
     const s = settings({ entryFee: 0 })
     const snap = makeSnapshot({ players: 2, rounds: 1, settings: s })
     snap.calcuttaBuybacks.push({ lotId: 'lot1', pct: 50, amount: 500, paid: true })
-    const auction = { lots: [{ lotId: 'lot1', playerId: 'p1', lotNumber: 1, status: 'sold', price: 1000, ownerId: 'p2', buybackPct: 50, buybackAmount: 500 }] } as unknown as AuctionState
+    const auction = {
+      lots: [
+        {
+          lotId: 'lot1',
+          playerId: 'p1',
+          lotNumber: 1,
+          status: 'sold',
+          price: 1000,
+          ownerId: 'p2',
+          buybackPct: 50,
+          buybackAmount: 500,
+        },
+      ],
+    } as unknown as AuctionState
     const paid = money(snap, s, [], auction)
     expect(paid.viaBank.filter((t) => t.from && t.to)).toEqual([])
     snap.calcuttaBuybacks[0]!.paid = false
@@ -135,7 +189,10 @@ describe('settlement on what is still due (MONEY-01)', () => {
   it('bets already paid are not asked for again; the rest still net per pair', () => {
     const s = settings({ entryFee: 0 })
     const snap = makeSnapshot({ players: 2, rounds: 1, settings: s })
-    const bets = [prize('p2', 300, { payerId: 'p1', moduleId: 'skins', label: 'Skins' }), prize('p1', 100, { payerId: 'p2', moduleId: 'skins', label: 'Nassau' })]
+    const bets = [
+      prize('p2', 300, { payerId: 'p1', moduleId: 'skins', label: 'Skins' }),
+      prize('p1', 100, { payerId: 'p2', moduleId: 'skins', label: 'Nassau' }),
+    ]
     expect(lines(money(snap, s, bets).viaBank)).toEqual([['p1', 'p2', 200]])
     pay(snap, 'bet', 'p1', 'p2', 300)
     expect(lines(money(snap, s, bets).viaBank)).toEqual([['p2', 'p1', 100]])
@@ -273,7 +330,16 @@ describe('settlement properties', () => {
         const price = 250 * (1 + Math.floor(r() * 6))
         const pct = owner !== id && r() < 0.4 ? 50 : 0
         const lotId = `lot-${id}`
-        lots.push({ lotId, playerId: id, lotNumber: lots.length + 1, status: 'sold', price, ownerId: owner, buybackPct: pct, buybackAmount: (price * pct) / 100 })
+        lots.push({
+          lotId,
+          playerId: id,
+          lotNumber: lots.length + 1,
+          status: 'sold',
+          price,
+          ownerId: owner,
+          buybackPct: pct,
+          buybackAmount: (price * pct) / 100,
+        })
         if (pct) snap.calcuttaBuybacks.push({ lotId, pct, amount: (price * pct) / 100, paid: r() < 0.5 })
         pot += price
       }
@@ -281,7 +347,10 @@ describe('settlement properties', () => {
       // A few direct bets.
       for (let b = 0; b < 3; b++) {
         const [from, to] = [pick(), pick()]
-        if (from !== to && r() < 0.5) prizes.push(prize(to, 50 * (1 + Math.floor(r() * 10)), { payerId: from, moduleId: 'skins', label: `Apuesta ${b}` }))
+        if (from !== to && r() < 0.5)
+          prizes.push(
+            prize(to, 50 * (1 + Math.floor(r() * 10)), { payerId: from, moduleId: 'skins', label: `Apuesta ${b}` }),
+          )
       }
       const auction = { lots } as unknown as AuctionState
       // Side pots (QA-04): some players buy in, the pot is paid back out to one of them.
@@ -292,8 +361,17 @@ describe('settlement properties', () => {
         const buyIn = 50 * (1 + Math.floor(r() * 4))
         const entrants = ids.filter(() => r() < 0.7)
         if (!entrants.length) continue
-        games[id] = { config: { id, label: `Bote ${gi}`, money: { source: 'side', buyIn } }, entrants } as unknown as GameResultState
-        prizes.push(prize(entrants[Math.floor(r() * entrants.length)]!, buyIn * entrants.length, { potId: id, moduleId: 'skins', label: `Bote ${gi}` }))
+        games[id] = {
+          config: { id, label: `Bote ${gi}`, money: { source: 'side', buyIn } },
+          entrants,
+        } as unknown as GameResultState
+        prizes.push(
+          prize(entrants[Math.floor(r() * entrants.length)]!, buyIn * entrants.length, {
+            potId: id,
+            moduleId: 'skins',
+            label: `Bote ${gi}`,
+          }),
+        )
       }
 
       // Random payment state on every key: nothing, in full, partly, or overpaid.
@@ -305,7 +383,8 @@ describe('settlement properties', () => {
         keyOwed.set(k, e)
       }
       if (fee > 0) for (const id of ids) add('entry', id, null, fee)
-      for (const g of Object.values(games)) for (const id of g.entrants) add('side', id, null, (g.config.money as { buyIn: number }).buyIn)
+      for (const g of Object.values(games))
+        for (const id of g.entrants) add('side', id, null, (g.config.money as { buyIn: number }).buyIn)
       for (const l of lots) add('calcutta', l.ownerId as Id, null, l.price as number)
       for (const p of prizes) add(p.payerId ? 'bet' : 'payout', p.payerId ?? null, p.playerId, p.amount)
       const paidOn = new Map<string, number>()
@@ -338,7 +417,10 @@ describe('settlement properties', () => {
       const seen = new Set<string>()
       for (const t of m.viaBank) {
         // Zero only on a line that closes accounts cancelling each other out.
-        expect(t.amount > 0 || (t.amount === 0 && t.settles!.length > 0 && t.settles!.every((a) => a.due !== 0)), ctx).toBe(true)
+        expect(
+          t.amount > 0 || (t.amount === 0 && t.settles!.length > 0 && t.settles!.every((a) => a.due !== 0)),
+          ctx,
+        ).toBe(true)
         expect(Number.isInteger(t.amount), ctx).toBe(true)
         for (const a of t.settles!) {
           const k = `${a.kind}|${a.from}|${a.to}`

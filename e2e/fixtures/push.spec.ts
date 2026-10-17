@@ -11,13 +11,16 @@ import type { Page } from '@playwright/test'
 import { t } from '../../src/i18n/es-MX'
 import { expect, open, test } from './base'
 
-const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 const PHONES = [375, 393]
 const T = t.push.tournament
 
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 /** Every animation that ends has ended: axe reads text caught mid-fade as low contrast. */
 async function settled(page: Page) {
@@ -33,11 +36,17 @@ async function settled(page: Page) {
 async function expectSound(page: Page, pageErrors: string[]) {
   await settled(page)
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   expect(await seriousViolations(page)).toEqual([])
 }
 /** The installed app: what `isStandalone()` reads on an iPhone. */
-const installed = (page: Page) => page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true, configurable: true }))
+const installed = (page: Page) =>
+  page.addInitScript(() =>
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true, configurable: true }),
+  )
 const offer = (page: Page) => page.getByRole('region', { name: T.title })
 /** «Guardar hoyo» once the card has settled (a tap within 700 ms of a hole change is ignored, UX-02), and it saved. */
 async function saveHole(page: Page) {
@@ -67,7 +76,10 @@ test.describe('on an iPhone', () => {
   test.use({ userAgent: IPHONE })
 
   for (const width of PHONES) {
-    test(`Más in Safari says to install first; blocked in the installed app, it says Ajustes, at ${width}px`, async ({ page, pageErrors }) => {
+    test(`Más in Safari says to install first; blocked in the installed app, it says Ajustes, at ${width}px`, async ({
+      page,
+      pageErrors,
+    }) => {
       await page.setViewportSize({ width, height: 852 })
       await open(page, '/t/_/full12-live/mas?push=needsInstall')
       await expect(page.getByText(t.push.needsInstall)).toBeVisible()
@@ -82,7 +94,10 @@ test.describe('on an iPhone', () => {
 })
 
 for (const width of PHONES) {
-  test(`En vivo offers them in the installed app after the first saved hole, never before, at ${width}px`, async ({ page, pageErrors }) => {
+  test(`En vivo offers them in the installed app after the first saved hole, never before, at ${width}px`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width, height: 852 })
     await installed(page)
     await open(page, '/t/_/full12-live?push=off')
@@ -102,7 +117,10 @@ for (const width of PHONES) {
   })
 }
 
-test('«Ahora no» on En vivo puts the offer away for this tournament; Más keeps the switch', async ({ page, pageErrors }) => {
+test('«Ahora no» on En vivo puts the offer away for this tournament; Más keeps the switch', async ({
+  page,
+  pageErrors,
+}) => {
   await installed(page)
   await open(page, '/t/_/full12-live/tarjeta?push=off')
   await saveHole(page)
@@ -123,20 +141,34 @@ const tapNotice = (page: Page, path: string) =>
       new Promise((resolve) => {
         const channel = new MessageChannel()
         channel.port1.onmessage = (e) => resolve(e.data)
-        navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'navigate', url: `${location.origin}${to}` }, ports: [channel.port2] }))
+        navigator.serviceWorker.dispatchEvent(
+          new MessageEvent('message', {
+            data: { type: 'navigate', url: `${location.origin}${to}` },
+            ports: [channel.port2],
+          }),
+        )
       }),
     path,
   )
 
-test('a tap on a notice moves the open app with its router: no reload, and the half-entered hole stays (PWA-12)', async ({ page, pageErrors }) => {
+test('a tap on a notice moves the open app with its router: no reload, and the half-entered hole stays (PWA-12)', async ({
+  page,
+  pageErrors,
+}) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const hole = Number(await page.locator('[class*="holeNum"]').first().textContent())
   // A hole half entered: one player's strokes up, not saved.
-  await page.getByRole('button', { name: new RegExp(`^${t.card.strokesOf('.+')}: ${t.common.stepUp}$`) }).first().click()
+  await page
+    .getByRole('button', { name: new RegExp(`^${t.card.strokesOf('.+')}: ${t.common.stepUp}$`) })
+    .first()
+    .click()
   await page.evaluate(() => void ((window as unknown as { loadedOnce: boolean }).loadedOnce = true))
   expect(await tapNotice(page, '/t/_/full12-live/mas')).toEqual({ ok: true })
   await expect(page).toHaveURL(/\/t\/_\/full12-live\/mas$/)
-  expect(await page.evaluate(() => (window as unknown as { loadedOnce?: boolean }).loadedOnce), 'the page was not reloaded').toBe(true)
+  expect(
+    await page.evaluate(() => (window as unknown as { loadedOnce?: boolean }).loadedOnce),
+    'the page was not reloaded',
+  ).toBe(true)
   // Back on the Tarjeta, the hole is as it was left.
   await page.getByRole('link', { name: t.nav.card }).click()
   await expect(page.locator('[class*="holeNum"]').first()).toHaveText(String(hole))
@@ -144,7 +176,10 @@ test('a tap on a notice moves the open app with its router: no reload, and the h
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
 
-test('a notice tapped on the open Tarjeta goes to the hole it names, or to the whole card to sign (PWA-10)', async ({ page, pageErrors }) => {
+test('a notice tapped on the open Tarjeta goes to the hole it names, or to the whole card to sign (PWA-10)', async ({
+  page,
+  pageErrors,
+}) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const holeNum = page.locator('[class*="holeNum"]').first()
   const target = Number(await holeNum.textContent()) === 3 ? 4 : 3

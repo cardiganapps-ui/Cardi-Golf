@@ -62,14 +62,29 @@ function holeOnThePhone() {
     kind: 'score',
     tournamentId: 't-nacho',
     tournamentName: 'Nacho',
-    payload: { round_id: 'r1', player_id: 'p9', hole: 12, strokes: 5, putts: 2, picked_up: false, entered_by: 'p9', client_ts: 'x' },
+    payload: {
+      round_id: 'r1',
+      player_id: 'p9',
+      hole: 12,
+      strokes: 5,
+      putts: 2,
+      picked_up: false,
+      entered_by: 'p9',
+      client_ts: 'x',
+    },
     attempts: 0,
     createdAt: 1,
   })
 }
 /** The form's inputs, by what they hold. */
-const INPUT = { email: 'input[type="email"]', password: 'input[type="password"]', name: 'input[autocomplete="name"]', code: 'input[autocomplete="one-time-code"]' }
-const fill = (which: keyof typeof INPUT, value: string) => fireEvent.change(document.querySelector(INPUT[which])!, { target: { value } })
+const INPUT = {
+  email: 'input[type="email"]',
+  password: 'input[type="password"]',
+  name: 'input[autocomplete="name"]',
+  code: 'input[autocomplete="one-time-code"]',
+}
+const fill = (which: keyof typeof INPUT, value: string) =>
+  fireEvent.change(document.querySelector(INPUT[which])!, { target: { value } })
 const refusal = t.account.unsentSignal('Nacho', 'switch')
 
 beforeEach(async () => {

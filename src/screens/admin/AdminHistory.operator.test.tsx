@@ -14,9 +14,16 @@ import { t } from '../../i18n/es-MX'
 import { localWhen } from '../../lib/localWhen'
 import { TournamentContext } from '../tournament/tournamentContext'
 
-const audit = vi.hoisted(() => ({ answer: (_f: unknown, _before: unknown): Promise<AuditEntry[]> => Promise.resolve([]) }))
-const tournamentAudit = vi.hoisted(() => vi.fn((_tid: string, before?: number, _limit?: number, filter?: AuditFilter) => audit.answer(filter ?? {}, before)))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit }))
+const audit = vi.hoisted(() => ({
+  answer: (_f: unknown, _before: unknown): Promise<AuditEntry[]> => Promise.resolve([]),
+}))
+const tournamentAudit = vi.hoisted(() =>
+  vi.fn((_tid: string, before?: number, _limit?: number, filter?: AuditFilter) => audit.answer(filter ?? {}, before)),
+)
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  tournamentAudit,
+}))
 const { AdminHistory } = await import('./AdminHistory')
 
 const H = t.admin.history
@@ -39,10 +46,23 @@ const entry = (e: Partial<AuditEntry>): AuditEntry => ({
 })
 
 function mount() {
-  useTournament.setState({ tournamentId: 't-history', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-history',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-history',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminHistory />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -61,13 +81,38 @@ describe('what the Admin de Polo did, in the Comité’s Historial (TRUST-22)', 
   it('a visit from his panel says it with his reason; one by the link says he typed none; an unlock says until when', async () => {
     audit.answer = () =>
       Promise.resolve([
-        entry({ id: -3, table: 'platform_audit_log', action: 'unlock', platform: true, actor: null, reason: 'Corregir el hoyo 7', after: { until: '2027-04-09T17:30:00Z' } }),
+        entry({
+          id: -3,
+          table: 'platform_audit_log',
+          action: 'unlock',
+          platform: true,
+          actor: null,
+          reason: 'Corregir el hoyo 7',
+          after: { until: '2027-04-09T17:30:00Z' },
+        }),
         entry({ id: 41, after: { player_id: ana.id, round_id: round.id, hole: 7, strokes: 5 } }),
-        entry({ id: -2, table: 'platform_audit_log', action: 'view', platform: true, actor: null, reason: 'Soporte: no ve su marcador' }),
-        entry({ id: -1, table: 'platform_audit_log', action: 'view', platform: true, actor: null, reason: null, after: { via: 'link' } }),
+        entry({
+          id: -2,
+          table: 'platform_audit_log',
+          action: 'view',
+          platform: true,
+          actor: null,
+          reason: 'Soporte: no ve su marcador',
+        }),
+        entry({
+          id: -1,
+          table: 'platform_audit_log',
+          action: 'view',
+          platform: true,
+          actor: null,
+          reason: null,
+          after: { via: 'link' },
+        }),
       ])
     mount()
-    expect(await screen.findByText(`${O.line.unlock}, ${O.until(localWhen('2027-04-09T17:30:00Z', 'America/Mazatlan'))}`)).toBeTruthy()
+    expect(
+      await screen.findByText(`${O.line.unlock}, ${O.until(localWhen('2027-04-09T17:30:00Z', 'America/Mazatlan'))}`),
+    ).toBeTruthy()
     expect(screen.getByText(O.line.view!)).toBeTruthy()
     expect(screen.getByText(new RegExp(H.reason('Soporte: no ve su marcador')))).toBeTruthy()
     expect(screen.getByText(O.viewLink)).toBeTruthy()
@@ -77,7 +122,9 @@ describe('what the Admin de Polo did, in the Comité’s Historial (TRUST-22)', 
 
   it('«Ver más» pages from the last history row, not from his lines', async () => {
     const page = [
-      ...Array.from({ length: 50 }, (_, i) => entry({ id: 1000 - i, after: { player_id: ana.id, round_id: round.id, hole: 1 + (i % 18), strokes: 4 } })),
+      ...Array.from({ length: 50 }, (_, i) =>
+        entry({ id: 1000 - i, after: { player_id: ana.id, round_id: round.id, hole: 1 + (i % 18), strokes: 4 } }),
+      ),
       entry({ id: -9, table: 'platform_audit_log', action: 'view', platform: true, actor: null, reason: 'Revisión' }),
     ]
     audit.answer = (_f, before) => Promise.resolve(before ? [] : page)
@@ -91,7 +138,16 @@ describe('what the Admin de Polo did, in the Comité’s Historial (TRUST-22)', 
     audit.answer = () =>
       Promise.resolve([
         ...Array.from({ length: 49 }, (_, i) => entry({ id: 500 - i })),
-        ...Array.from({ length: 3 }, (_, i) => entry({ id: -(i + 1), table: 'platform_audit_log', action: 'view', platform: true, actor: null, reason: 'Revisión' })),
+        ...Array.from({ length: 3 }, (_, i) =>
+          entry({
+            id: -(i + 1),
+            table: 'platform_audit_log',
+            action: 'view',
+            platform: true,
+            actor: null,
+            reason: 'Revisión',
+          }),
+        ),
       ])
     mount()
     await waitFor(() => expect(screen.getAllByText(O.line.view!)).toHaveLength(3))

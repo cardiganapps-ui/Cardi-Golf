@@ -22,7 +22,7 @@ export const ALL_FORMATS: Record<FormatId, MainFormat> = {
  * nothing — the flags carry the mismatch.
  */
 export function formatFor(settings: TournamentSettings): MainFormat {
-  return ALL_FORMATS[settings.modules.individual.format] ?? stablefordFormat
+  return (ALL_FORMATS as Partial<Record<string, MainFormat>>)[settings.modules.individual.format] ?? stablefordFormat
 }
 
 /**
