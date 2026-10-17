@@ -10,15 +10,13 @@
  * A team is a pair the Comité drew. Larger teams arrive with the auto draw.
  */
 import type { TournamentSettings } from '../settings/schema'
-import { say, type Msg } from '../messages'
-import type { ExplanationText, Id } from '../types'
+import { msg, say, type Msg, type TeamMode } from '../messages'
+import type { Explanation, Id } from '../types'
 import { countbackFrom, emptyCountback, teamEntrants } from './entrants'
 import { toParFigure, type Entrant, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
 import { holeStrokes } from './strokePlay'
 
-type Mode = 'scramble' | 'bestBall' | 'shamble'
-
-const MODE_NAME: Record<Mode, string> = { scramble: 'Scramble', bestBall: 'Mejor bola', shamble: 'Shamble' }
+type Mode = TeamMode
 
 /**
  * The team's ball on one hole: most points, or the best score *to par*. Each
@@ -50,24 +48,13 @@ export const teamFormat: MainFormat = {
   higherIsBetter: (s) => s.modules.individual.formatOptions.teamScoring === 'stableford',
   figureLabel: (s) => (s.modules.individual.formatOptions.teamScoring === 'stableford' ? 'Puntos' : s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
 
-  describe(settings: TournamentSettings): ExplanationText {
+  describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions
     const mode = (o.teamMode ?? 'bestBall') as Mode
     const points = o.teamScoring === 'stableford'
-    const how: Record<Mode, string> = {
-      scramble: 'Todos tiran, el equipo escoge la mejor bola y desde ahí vuelven a tirar todos.',
-      bestBall: 'Cada quien juega su propia bola; en cada hoyo cuenta la mejor del equipo.',
-      shamble: 'Todos tiran de salida, el equipo escoge el mejor drive y de ahí cada quien juega su bola.',
-    }
     return {
-      title: MODE_NAME[mode],
-      steps: [
-        how[mode],
-        points ? 'Cada hoyo cuenta los puntos Stableford de la mejor bola del equipo.' : 'Cada hoyo cuenta los golpes de la mejor bola del equipo.',
-        o.scoring === 'gross' ? 'Sin hándicap.' : 'Con los golpes de ventaja de cada quien.',
-        points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes contra el par.',
-        ...(points ? [] : ['Al cierre, un equipo con hoyos sin capturar queda después de los que completaron la tarjeta.']),
-      ],
+      title: msg('format.team', { mode }),
+      steps: [msg('format.teamHow', { mode }), msg('format.teamBall', { points }), msg('format.teamStrokes', { net: o.scoring !== 'gross' }), msg('format.teamWins', { points }), ...(points ? [] : [say('format.teamIncomplete')])],
     }
   },
 

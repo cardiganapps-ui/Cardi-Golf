@@ -23,6 +23,8 @@ import type { TournamentSettings } from '../engine/settings/schema'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { humanError, isTransient } from '../lib/humanError'
+import { renderText } from '../i18n/explain'
+import { PLATFORM_CURRENCY } from '../lib/money'
 import { supabase } from '../lib/supabase'
 import { changeArrived, track } from '../lib/telemetry'
 import { fetchAll, withCount, type PageOf } from './paged'
@@ -391,7 +393,7 @@ function compute(raw: Snapshot, playersKey = playersKeyOf(raw), last: Tournament
     const read = readSettings(snapshot.tournament.settings)
     settings = read.ok ? read.settings : DEFAULT_SETTINGS
     // What it doesn't recognize (a newer build's key, or the schema's own lines), never ZodError's JSON dump (COPY-04).
-    if (!read.ok) settingsError = read.detail.join('; ')
+    if (!read.ok) settingsError = read.detail.map((d) => renderText(d, PLATFORM_CURRENCY)).join('; ')
   }
   return { snapshot, base, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
 }

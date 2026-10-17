@@ -25,11 +25,7 @@ export interface Explanation {
   steps: Msg[]
 }
 
-/**
- * An explanation already in words: the rules of a format and a game's
- * description, for the info sheet and the Reglamento (ARCH-05's second stage
- * turns them into codes too).
- */
+/** An explanation in words, as `renderExplanation` (src/i18n/explain.ts) writes one. */
 export interface ExplanationText {
   title: string
   steps: string[]
@@ -259,8 +255,8 @@ export interface MsgParams {
   'putts.missing': { who: Array<{ name: Name; days: Array<{ day: number; holes: number[] }> }>; games: Name[] }
   'pool.short': { prizes: number; entries: number; missing: number }
   'pool.surplus': { entries: number; prizes: number; left: number }
-  /** A place the field can no longer fill: `detail` as the prize check words it. */
-  'pool.unreachable': { label: Name; detail: string; amount: number }
+  /** A place the field can no longer fill: `detail` as the prize check says it. */
+  'pool.unreachable': { label: Name; detail: Msg; amount: number }
 
   // ---- «Cerrar torneo» (close.ts) -----------------------------------------
   'close.missingRounds': { days: number[] }
@@ -274,7 +270,180 @@ export interface MsgParams {
   'close.rejectedWrites': { n: number }
   'close.rejectedUnavailable': Record<string, never>
   'close.owed': { people: number; amount: number }
+
+  // ---- A format's rules (formats/*.ts `describe`, ARCH-05 stage 2) -------
+  'format.stableford': Record<string, never>
+  'format.stablefordPoints': Record<string, never>
+  'format.stablefordTable': Record<string, never>
+  'format.stablefordExample': Record<string, never>
+  'format.stablefordPickUp': Record<string, never>
+  /** `pct`: the handicap allowance, said when it is not 100. */
+  'format.stablefordWins': { pct: number }
+  'format.strokePlay': { net: boolean }
+  'format.strokeCount': Record<string, never>
+  'format.strokeNet': { net: boolean; pct: number }
+  'format.strokePickUp': Record<string, never>
+  'format.strokeBoard': Record<string, never>
+  'format.strokeIncomplete': Record<string, never>
+  'format.matchPlay': { fourball: boolean }
+  'format.matchSides': { fourball: boolean }
+  'format.matchHoles': Record<string, never>
+  'format.matchStrokes': { net: boolean }
+  'format.matchPoints': Record<string, never>
+  'format.matchOver': Record<string, never>
+  'format.team': { mode: TeamMode }
+  'format.teamHow': { mode: TeamMode }
+  'format.teamBall': { points: boolean }
+  'format.teamStrokes': { net: boolean }
+  'format.teamWins': { points: boolean }
+  'format.teamIncomplete': Record<string, never>
+
+  // ---- An instance game's rules (games/describe.ts) ----------------------
+  'gameRules.skins': { net: boolean }
+  'gameRules.skinsTies': { carry: boolean }
+  /** `side`: paid out of its own bote, else a premio from the bolsa. */
+  'gameRules.skinsPot': { side: boolean }
+  'gameRules.lowScore': { basis: 'net' | 'gross' | 'points' }
+  'gameRules.lowScope': { perRound: boolean; side: boolean }
+  /** Percent of the pot per place, 1st first. */
+  'gameRules.lowSplit': { split: number[] }
+  'gameRules.threePutt': Record<string, never>
+  'gameRules.event': { eagle: boolean; net: boolean }
+  'gameRules.eventDirect': Record<string, never>
+  'gameRules.eventPot': { side: boolean }
+  'gameRules.match': { nassau: boolean }
+  /** `pairs`: how a pair counts, when a match has pairs. */
+  'gameRules.matchBasis': { net: boolean; pairs: 'bestBall' | 'aggregate' | null }
+  'gameRules.press': { at: number; max: number }
+  'gameRules.matchComite': Record<string, never>
+  /** `label`: the game's own, for a contest of its own kind. */
+  'gameRules.contest': { kind: ContestKind; label: Name; holes: 'par3' | 'all' | number[] }
+  'gameRules.customComite': Record<string, never>
+  'gameRules.noMoney': Record<string, never>
+  'gameRules.side': { buyIn: number }
+  'gameRules.main': { amount: number }
+  'gameRules.direct': { stake: number; perBet: boolean }
+  'gameRules.rounds': { rounds: 'all' | number[] }
+  'gameRules.list': Record<string, never>
+
+  // ---- The Reglamento (settings/reglamento.ts, settings/describeModule.ts) -
+  'rules.section': { id: 'summary' | 'field' | 'handicaps' | 'cards' | 'governance' | 'glossary' }
+  'rules.fee': { fee: number; n: number; pot: number }
+  'rules.noFee': Record<string, never>
+  'rules.noMoney': Record<string, never>
+  /** What each game takes from the bolsa. */
+  'rules.prizes': { prizes: Array<{ label: Msg; amount: number }> }
+  'rules.kept': { amount: number }
+  'rules.auctionApart': { game: Name }
+  'rules.sidePots': { games: Name[] }
+  'rules.bets': { games: Name[] }
+  'rules.banker': { name: Name }
+  'rules.noBanker': Record<string, never>
+  'rules.settle': Record<string, never>
+  /** `holes`: the days' holes, null before any day exists. */
+  'rules.field': { n: number; days: number; holes: number[] | null; groupSize: number }
+  'rules.tiers': { tiers: string[] }
+  'rules.scratch': Record<string, never>
+  'rules.hcpWhat': Record<string, never>
+  'rules.hcpBase': Record<string, never>
+  'rules.hcpPlaying': { pct: number; cap: number; rounding: Rounding }
+  'rules.hcpStrokes': Record<string, never>
+  'rules.hcpNine': Record<string, never>
+  'rules.noCut': Record<string, never>
+  /** A cut from one day to the next: `days` 2 says «del día 2»; `points` the event counts Stableford points. */
+  'rules.cut': { days: number; threshold: number; per: number; max: number; cumulative: boolean; points: boolean }
+  'rules.hcpOverride': Record<string, never>
+  /** The last holes a tiebreak looks at (`countbackWindows`). */
+  'rules.tiebreak': { windows: Array<[number, number]>; days: number; prizes: boolean }
+  'rules.matchTiebreak': { days: number; prizes: boolean }
+  /** The individual's prizes by place; `pct` when the split is in percent. */
+  'rules.places': { prizes: Array<{ amount: number; pct: number | null }> }
+  'rules.noPrize': Record<string, never>
+  'rules.lastPlace': { label: Name }
+  'rules.bestRound': { prize: number | null; days: number }
+  'rules.bestRoundCut': Record<string, never>
+  'rules.bestRoundTie': { windows: Array<[number, number]> }
+  /** `auction`: the Calcutta's label when the draw is on its night; `honoree` picks his partner. */
+  'rules.pairs': { pairing: Array<[string, string]>; auction: Name | null; honoree: Name | null }
+  'rules.pairsPoints': Record<string, never>
+  'rules.pairsPrizes': { prizes: number[]; days: number }
+  'rules.pairsTogether': { days: number }
+  'rules.snake': { threshold: number; game: Name }
+  'rules.snakePaid': { per: number; pot: number; threshold: number; game: Name }
+  'rules.snakeFree': { game: Name }
+  'rules.fewestPutts': { prize: number | null; pickup: number }
+  'rules.auction': { game: Name }
+  'rules.auctionBids': { opening: number; increment: number; max: number; selfCounts: boolean }
+  'rules.buyback': { pct: number }
+  /** The Calcutta's payout, slot by slot. */
+  'rules.auctionPot': { slots: Array<{ slot: Msg; share: number }> }
+  /** `tiers`: the categories with a place of their own in the payout. */
+  'rules.auctionOne': { tiers: string[] }
+  'rules.auctionOwed': Record<string, never>
+  /** A Calcutta slot's name: a place, the best of a tier, or last place (its label). */
+  'rules.slot': { slot: 'place' | 'bestOfTier' | 'lastPlace'; place: number | null; tier: string | null; lastPlace: Name }
+  'rules.cardsEnter': Record<string, never>
+  'rules.cards': { mode: 'pairs' | 'marker' | 'none' }
+  'rules.governance': Record<string, never>
+  'rules.governancePage': Record<string, never>
+  'rules.glossary': { word: GlossaryWord }
+  'rules.glossaryAuction': { game: Name }
+
+  // ---- The prize check (settings/prizeCheck.ts) --------------------------
+  /** Fixed prizes, «$10,000 + $5,000», or none. */
+  'pool.amounts': { amounts: number[] }
+  'pool.perDay': { days: number; amount: number }
+  /** The snake on the groups as drawn: their sizes per day, and the days still to draw. */
+  'pool.snakeGroups': { sizes: number[][]; missing: number }
+  'pool.snakePlanned': { groups: number; days: number; perGroup: number }
+  /** The individual on what is left, by percent. */
+  'pool.rest': { split: Array<{ pct: number; amount: number }> }
+  'pool.house': Record<string, never>
+  /** A side pot: `n` × buy-in, and how it pays (`split` for a game paid by places). */
+  'pool.side': { n: number; buyIn: number; pot: number; type: 'skins' | 'lowScore' | 'eventPot' | 'match' | 'contest' | 'custom'; split: number[] }
+  /** A bet's stake and what it is per. */
+  'pool.bet': { stake: number; per: StakeUnit }
+  'pool.places': { places: number; reachable: number; unit: 'player' | 'team' | 'pair' }
+
+  // ---- Settings that make no sense (settings/sense.ts) -------------------
+  'sense.cap': Record<string, never>
+  'sense.cutMax': { max: number }
+  'sense.houseCut': { cut: number; pot: number }
+  'sense.placeTwice': { place: number; lastPlace: Name }
+  'sense.placeUnreachable': { place: number; count: number; unit: 'player' | 'team' }
+  'sense.tierTwice': { tier: string }
+  'sense.lastTwice': { label: Name }
+  'sense.buyback': { max: number }
+  'sense.signingPairs': { game: Name }
+  'sense.currency': { currency: string }
+  'sense.timezone': { zone: string }
+
+  // ---- Settings the schema refuses (settings/schema.ts, settings/games.ts) -
+  'settings.pairingTiers': Record<string, never>
+  'settings.estimateWeights': Record<string, never>
+  'settings.payoutShares': Record<string, never>
+  'settings.tiersUnique': Record<string, never>
+  'settings.payoutTier': { tier: string }
+  'settings.gameId': { id: string }
+  'settings.individualSplit': { sum: number }
+  'settings.pairingTier': { tier: string }
+  'settings.gameSource': { label: Name }
+  'settings.threePuttDirect': { label: Name }
+  'settings.gameSplit': { label: Name; sum: number }
+  'settings.matchSides': { label: Name }
+  'settings.matchSamePlayer': { label: Name }
 }
+
+/** The team formats' modes. */
+export type TeamMode = 'scramble' | 'bestBall' | 'shamble'
+/** A contest's kind. */
+export type ContestKind = 'closest' | 'longDrive' | 'greenie' | 'sandy' | 'custom'
+/** How a handicap is rounded. */
+export type Rounding = 'halfUp' | 'halfDown' | 'nearestEven' | 'floor' | 'ceil'
+/** The golf words the Reglamento explains. */
+export type GlossaryWord = 'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford' | 'pickUp' | 'putts' | 'tee' | 'tiebreak' | 'buyback'
+/** What a direct bet's stake is per: a Nassau's segment, a match, a skin, a three-putt, each event, a hole won, a loser. */
+export type StakeUnit = 'segment' | 'match' | 'skin' | 'threePutt' | 'each' | 'holeWon' | 'loser'
 
 export type MsgCode = keyof MsgParams
 

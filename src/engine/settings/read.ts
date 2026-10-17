@@ -17,6 +17,7 @@
  *   this build can't read the row. Nothing is computed from it and nothing is
  *   saved over it; the screens say to update the app (`settingsError`).
  */
+import type { Msg } from '../messages'
 import { GAME_TYPES } from './games'
 import { LEGACY_SETTINGS_ALIASES, normalizeLegacySettings, TournamentSettingsSchema, type TournamentSettings } from './schema'
 import { SETTINGS_SPEC, type SettingsSpec } from './spec'
@@ -32,8 +33,8 @@ export interface UnknownGame {
 
 export type SettingsRead =
   | { ok: true; settings: TournamentSettings; unknownGames: UnknownGame[] }
-  /** `detail`: the keys it doesn't know («modules.wolf»), or what the schema refused. */
-  | { ok: false; detail: string[] }
+  /** `detail`: the keys it doesn't know («modules.wolf»), or what the schema refused (its message, or zod's words). */
+  | { ok: false; detail: Array<string | Msg> }
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 const KNOWN_GAMES: ReadonlySet<string> = new Set(GAME_TYPES)
@@ -101,6 +102,14 @@ export function readSettings(raw: unknown): SettingsRead {
   if (newer.length) return { ok: false, detail: newer }
   const known = normalizeLegacySettings(withoutUnknownGames(raw))
   const parsed = TournamentSettingsSchema.safeParse(known)
-  if (!parsed.success) return { ok: false, detail: [...new Set(parsed.error.issues.map((i) => i.message))] }
+  if (!parsed.success) {
+    // Each refusal once: the engine's by its message (ARCH-05), zod's by its words.
+    const detail = new Map<string, string | Msg>()
+    for (const i of parsed.error.issues) {
+      const m = (i as { params?: { msg?: Msg } }).params?.msg ?? i.message
+      detail.set(JSON.stringify(m), m)
+    }
+    return { ok: false, detail: [...detail.values()] }
+  }
   return { ok: true, settings: parsed.data, unknownGames }
 }

@@ -41,9 +41,24 @@ export function renderMsg(m: Msg, currency: string): string {
   return render(m, formatFor(currency))
 }
 
-/** An explanation in words; one already in words (a format's rules) comes back as it is. */
-export function renderExplanation(why: Explanation | ExplanationText, currency: string): ExplanationText {
-  if (typeof why.title === 'string') return why as ExplanationText
+/** An explanation in words. */
+export function renderExplanation(why: Explanation, currency: string): ExplanationText {
   const f = formatFor(currency)
-  return { title: render(why.title, f), steps: (why as Explanation).steps.map((s) => render(s, f)) }
+  return { title: render(why.title, f), steps: why.steps.map((s) => render(s, f)) }
+}
+
+const isMsg = (x: unknown): x is Msg => !!x && typeof x === 'object' && 'code' in x && 'params' in x
+
+/** A text that is a message or already words (a key path, zod's own refusal): in words either way. */
+export function renderText(x: string | Msg, currency: string): string {
+  return typeof x === 'string' ? x : renderMsg(x, currency)
+}
+
+/**
+ * A settings refusal in words: the engine's own carries its message in `params.msg` (src/engine/settings/schema.ts,
+ * ARCH-05); zod's own refusals of a value's shape keep zod's message.
+ */
+export function issueWords(issue: { message: string; params?: unknown }, currency: string): string {
+  const m = (issue.params as { msg?: unknown } | undefined)?.msg
+  return isMsg(m) ? renderMsg(m, currency) : issue.message
 }

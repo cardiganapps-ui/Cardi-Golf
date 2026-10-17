@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import type { Explanation, ExplanationText } from '../engine/types'
+import type { Explanation } from '../engine/types'
 import { t } from '../i18n/es-MX'
 import { renderExplanation } from '../i18n/explain'
 import { useCurrency } from './currency'
@@ -7,8 +7,8 @@ import { Sheet } from './ui'
 import styles from './HowCalculated.module.css'
 import { buttonClass } from './buttonClass'
 
-/** What a sheet explains: the engine's explanations (codes, ARCH-05), or rules already in words (a format's, a game's). */
-export type Why = Explanation | ExplanationText
+/** What a sheet explains: the engine's explanations, a format's and a game's rules among them (codes, ARCH-05). */
+export type Why = Explanation
 
 /** The explanation steps, in a sheet. Controlled, for callers that own the trigger. */
 export function ExplanationSheet({ why, open, onClose, title }: { why: Why | Why[] | null; open: boolean; onClose: () => void; title?: string }) {

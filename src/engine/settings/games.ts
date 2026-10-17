@@ -10,6 +10,7 @@
  * - `direct` bets between players: the loser pays the winner `stake` per unit.
  */
 import { z } from 'zod'
+import { msg, type Msg } from '../messages'
 
 const money = z.number().int().nonnegative()
 const label = z.string().trim().min(1).max(40)
@@ -141,22 +142,22 @@ export const PAYS_BY_PLACE: Record<GameType, boolean> = {
   custom: false,
 }
 
-export function gameIssues(g: GameConfig): Array<{ path: (string | number)[]; message: string }> {
-  const out: Array<{ path: (string | number)[]; message: string }> = []
-  if (!GAME_SOURCES[g.type].includes(g.money.source)) {
-    out.push({ path: ['money', 'source'], message: `${g.label}: este juego no se paga así.` })
-  }
+/** What is wrong with one game's settings: where, and what to say (`explain`'s «settings.*», ARCH-05). */
+export function gameIssues(g: GameConfig): Array<{ path: (string | number)[]; says: Msg }> {
+  const out: Array<{ path: (string | number)[]; says: Msg }> = []
+  const label = g.label
+  if (!GAME_SOURCES[g.type].includes(g.money.source)) out.push({ path: ['money', 'source'], says: msg('settings.gameSource', { label }) })
   if (g.type === 'eventPot' && g.options.event === 'threePutt' && (g.money.source === 'main' || g.money.source === 'side')) {
-    out.push({ path: ['money', 'source'], message: `${g.label}: los tres putts se cobran directo entre jugadores.` })
+    out.push({ path: ['money', 'source'], says: msg('settings.threePuttDirect', { label }) })
   }
   if (PAYS_BY_PLACE[g.type] && (g.money.source === 'main' || g.money.source === 'side')) {
     const sum = g.money.split.reduce((s, x) => s + x, 0)
-    if (Math.abs(sum - 100) > 1e-9) out.push({ path: ['money', 'split'], message: `${g.label}: el reparto suma ${sum}%, debe sumar 100%.` })
+    if (Math.abs(sum - 100) > 1e-9) out.push({ path: ['money', 'split'], says: msg('settings.gameSplit', { label, sum }) })
   }
   if (g.type === 'match') {
     g.options.matches.forEach((m, i) => {
-      if (m.a.length !== m.b.length) out.push({ path: ['options', 'matches', i], message: `${g.label}: los dos lados de un partido llevan los mismos jugadores.` })
-      if (m.a.some((p) => m.b.includes(p))) out.push({ path: ['options', 'matches', i], message: `${g.label}: un jugador no puede estar en los dos lados.` })
+      if (m.a.length !== m.b.length) out.push({ path: ['options', 'matches', i], says: msg('settings.matchSides', { label }) })
+      if (m.a.some((p) => m.b.includes(p))) out.push({ path: ['options', 'matches', i], says: msg('settings.matchSamePlayer', { label }) })
     })
   }
   return out

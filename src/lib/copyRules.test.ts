@@ -30,7 +30,7 @@ import { describe, expect, it } from 'vitest'
 import { FIXTURE_NAMES, getFixture } from '../dev/fixtures'
 import { computeTournament } from '../engine/computeTournament'
 import { ALL_FORMATS } from '../engine/formats'
-import { CATEGORY_LABEL, GAME_ENTRIES, MODULE_ENTRIES } from '../engine/games/catalog'
+import { GAME_ENTRIES, MODULE_ENTRIES } from '../engine/games/catalog'
 import { describeGame } from '../engine/games/describe'
 import { PRESETS } from '../engine/games/presets'
 import { QUICK_GAMES, quickSettings } from '../engine/games/quick'
@@ -313,10 +313,10 @@ function engineCopy(v: unknown, path: string, out: Array<[string, string]>, copy
 function rulesCopy(name: string, settings: TournamentSettings, snapshot?: Snapshot): Array<[string, string]> {
   const out: Array<[string, string]> = []
   const field = snapshot ? fieldShape(snapshot, settings) : { players: 12 }
-  for (const id of MODULE_IDS) moduleRules(id, settings, field, 'Nacho').forEach((s, i) => out.push([`${name} Reglamento ${id}[${i}]`, s]))
-  for (const g of settings.games) describeGame(g).forEach((s, i) => out.push([`${name} Reglamento ${g.id}[${i}]`, s]))
+  for (const id of MODULE_IDS) words(moduleRules(id, settings, field, 'Nacho')).forEach((s, i) => out.push([`${name} Reglamento ${id}[${i}]`, s]))
+  for (const g of settings.games) words(describeGame(g)).forEach((s, i) => out.push([`${name} Reglamento ${g.id}[${i}]`, s]))
   const pool = checkPrizePool(settings, field)
-  for (const l of [...pool.lines, ...pool.sidePots, ...pool.bets]) out.push([`${name} prize statement`, `${l.label}: ${l.detail}`])
+  for (const l of [...pool.lines, ...pool.sidePots, ...pool.bets]) out.push([`${name} prize statement`, `${typeof l.label === 'string' ? l.label : words(l.label)}: ${words(l.detail)}`])
   return out
 }
 
@@ -334,19 +334,20 @@ const FORMAT_VARIANTS: TournamentSettings[] = [
 function catalogCopy(): Array<[string, string]> {
   const out: Array<[string, string]> = []
   for (const s of FORMAT_VARIANTS) {
-    const d = ALL_FORMATS[s.modules.individual.format].describe(s)
+    const d = words(ALL_FORMATS[s.modules.individual.format].describe(s))
     for (const line of [d.title, ...d.steps]) out.push([`format ${s.modules.individual.format}`, line])
   }
-  for (const m of MODULE_ENTRIES) for (const line of [m.blurb, m.later]) if (line) out.push([`catalog ${m.id}`, line])
+  const C = t.setup.catalog
+  for (const m of MODULE_ENTRIES) for (const line of [C.modules[m.id].blurb, C.modules[m.id].later]) if (line) out.push([`catalog ${m.id}`, line])
   for (const g of GAME_ENTRIES) {
-    for (const line of [g.title, g.blurb, g.later]) if (line) out.push([`catalog ${g.key}`, line])
-    describeGame(g.create(g.key)).forEach((line) => out.push([`catalog ${g.key} rules`, line]))
+    for (const line of [C.games[g.key]!.title, C.games[g.key]!.blurb, C.games[g.key]!.later]) if (line) out.push([`catalog ${g.key}`, line])
+    words(describeGame(g.create(g.key))).forEach((line) => out.push([`catalog ${g.key} rules`, line]))
   }
   for (const p of PRESETS) {
-    out.push([`preset ${p.id}`, p.name], [`preset ${p.id}`, p.blurb])
+    out.push([`preset ${p.id}`, t.setup.presets[p.id].name], [`preset ${p.id}`, t.setup.presets[p.id].blurb])
     out.push(...rulesCopy(`preset ${p.id}`, p.build()))
   }
-  for (const label of Object.values(CATEGORY_LABEL)) out.push(['catalog category', label])
+  for (const label of Object.values(C.category)) out.push(['catalog category', label])
   out.push(...rulesCopy('quick round', quickSettings({ games: [...QUICK_GAMES], money: true, entryFee: 300, players: 8 })))
   return out
 }
@@ -480,8 +481,8 @@ describe('copy rules: es-MX.ts', () => {
   })
 
   it('pays the snake from the bolsa: «pozo» is the Calcutta’s word only', () => {
-    expect(t.rules.snake(3, '$200', '$600', 'La Víbora').join(' ')).not.toMatch(word('pozo'))
-    expect(t.rules.auction('$250', '$250', 3, 50, ['Campeón 55%'], { game: 'La Calcutta', tiers: [], selfCounts: true }).join(' ')).toMatch(word('pozo'))
+    expect(words(moduleRules('snake', FIRST_TOURNAMENT_SETTINGS, { players: 12 })).join(' ')).not.toMatch(word('pozo'))
+    expect(words(moduleRules('auction', FIRST_TOURNAMENT_SETTINGS, { players: 12 })).join(' ')).toMatch(word('pozo'))
   })
 })
 
