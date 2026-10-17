@@ -10,7 +10,7 @@
 import type { HoleResult } from '../core/types'
 import type { TournamentSettings } from '../settings/schema'
 import { msg, say, type Msg } from '../messages'
-import type { Explanation, ExplanationText, Id } from '../types'
+import type { Explanation, Id } from '../types'
 import { countbackFrom, emptyCountback, playerEntrants, playerRound } from './entrants'
 import { toParFigure, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
 
@@ -63,18 +63,11 @@ export const strokePlayFormat: MainFormat = {
   higherIsBetter: () => false,
   figureLabel: (s) => (s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
 
-  describe(settings: TournamentSettings): ExplanationText {
+  describe(settings: TournamentSettings): Explanation {
     const net = settings.modules.individual.formatOptions.scoring !== 'gross'
-    const pct = Math.round(settings.handicap.allowance * 100)
     return {
-      title: net ? 'Stroke play neto' : 'Stroke play gross',
-      steps: [
-        'Se cuentan todos los golpes de la vuelta. Gana quien menos haga.',
-        net ? `Cada quien descuenta sus golpes de ventaja${pct === 100 ? '' : `, jugando al ${pct}% del hándicap`}.` : 'Sin hándicap: golpes tal cual, palo contra palo.',
-        'Si levantas, el hoyo cuenta como doble bogey neto (par más tus golpes de ventaja, más dos).',
-        'La tabla muestra cuántos golpes llevas sobre o bajo par, y ordena por eso: no importa en qué hoyo vaya cada quien.',
-        'Al cierre, una tarjeta incompleta queda después de las completas.',
-      ],
+      title: msg('format.strokePlay', { net }),
+      steps: [say('format.strokeCount'), msg('format.strokeNet', { net, pct: Math.round(settings.handicap.allowance * 100) }), say('format.strokePickUp'), say('format.strokeBoard'), say('format.strokeIncomplete')],
     }
   },
 

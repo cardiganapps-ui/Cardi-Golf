@@ -17,6 +17,7 @@ import { InfoButton } from '../../../components/InfoButton'
 import { NumberField } from '../../../components/NumberField'
 import { PRESETS, type PresetId } from '../../../engine/games/presets'
 import { describeGame } from '../../../engine/games/describe'
+import { label } from '../../../engine/messages'
 import type { GameConfig } from '../../../engine/settings/games'
 import type { TournamentSettings } from '../../../engine/settings/schema'
 import { FormatPicker } from './FormatPicker'
@@ -144,7 +145,7 @@ export function PlayStep({
                   {on ? <IconCheck size={16} /> : <IconPlus size={16} />}
                   {config.label}
                 </button>
-                <InfoButton why={{ title: config.label, steps: describeGame(config) }} label={W.formatInfo(config.label)} title={W.formatInfoTitle} />
+                <InfoButton why={{ title: label(config.label), steps: describeGame(config) }} label={W.formatInfo(config.label)} title={W.formatInfoTitle} />
               </span>
             )
           })}
@@ -171,8 +172,8 @@ export function PlayStep({
                     setTemplates(false)
                   }}
                 >
-                  <span className={styles.choiceTitle}>{p.name}</span>
-                  <span className={styles.choiceBlurb}>{p.blurb}</span>
+                  <span className={styles.choiceTitle}>{t.setup.presets[p.id].name}</span>
+                  <span className={styles.choiceBlurb}>{t.setup.presets[p.id].blurb}</span>
                 </button>
               </div>
             ))}

@@ -166,6 +166,12 @@ export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'c
     }))
 }
 
+/** A pot line's label as the settings name it: its module's, or its game's. */
+function lineLabel(settings: TournamentSettings, id: string): string {
+  if (id.startsWith('game:')) return settings.games.find((g) => `game:${g.id}` === id)?.label ?? id
+  return settings.modules[id as keyof TournamentSettings['modules']]?.label ?? id
+}
+
 export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   const { snapshot, settings, prizes, pool, auction, games, warnings } = input
   if (!input.closing) return []
@@ -205,7 +211,7 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
     if (line.moduleId === 'house') continue
     const notes: Msg[] = []
     if (line.moduleId === 'bestRound' || line.moduleId === 'snake') notes.push(...lostDays())
-    add(line.moduleId, line.label, 'main', line.amount, notes, entries, line.moduleId === 'snake' ? held : 0)
+    add(line.moduleId, lineLabel(settings, line.moduleId), 'main', line.amount, notes, entries, line.moduleId === 'snake' ? held : 0)
   }
   // Entries no prize claims (the prize check warns while play goes on).
   if (pool.difference > 0) {

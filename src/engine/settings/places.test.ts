@@ -36,7 +36,7 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
     expect(c.balanced).toBe(true)
     expect(c.ok).toBe(false)
     expect(strip(c)).toEqual([{ id: 'individual', places: 4, reachable: 3, amount: 2000 }])
-    expect(c.unreachable[0]!.detail).toBe('4 lugares con premio y 3 jugadores')
+    expect(words(c.unreachable[0]!.detail)).toBe('4 lugares con premio y 3 jugadores')
     // With a 4th player the same prizes are fine.
     expect(checkPrizePool({ ...s, entryFee: 1500 }, { players: 4 }).ok).toBe(true)
   })
@@ -53,7 +53,7 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
     expect(checkPrizePool(s, { players: 8 }).ok).toBe(true)
     // Drawn as 3 teams: the 4th prize has no team.
     expect(strip(checkPrizePool(s, { players: 8, teams: 3 }))).toEqual([{ id: 'individual', places: 4, reachable: 3, amount: 500 }])
-    expect(checkPrizePool(s, { players: 8, teams: 3 }).unreachable[0]!.detail).toBe('4 lugares con premio y 3 equipos')
+    expect(words(checkPrizePool(s, { players: 8, teams: 3 }).unreachable[0]!.detail)).toBe('4 lugares con premio y 3 equipos')
   })
 
   it('fourball match play with two players is one side: its 2nd prize has nobody (the panel’s case)', () => {
@@ -61,7 +61,7 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
     const c = checkPrizePool(s, { players: 2 })
     expect(c.balanced).toBe(true)
     expect(strip(c)).toEqual([{ id: 'individual', places: 2, reachable: 1, amount: 437 }])
-    expect(c.unreachable[0]!.detail).toBe('2 lugares con premio y 1 equipo')
+    expect(words(c.unreachable[0]!.detail)).toBe('2 lugares con premio y 1 equipo')
   })
 
   it('the pairs game counts pairs: [$2,000, $1,000] with one pair leaves $1,000', () => {
@@ -71,7 +71,7 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
     const c = checkPrizePool(s, { players: 2 })
     expect(c.balanced).toBe(true)
     expect(strip(c)).toEqual([{ id: 'pairs', places: 2, reachable: 1, amount: 1000 }])
-    expect(c.unreachable[0]!.detail).toBe('2 lugares con premio y 1 pareja')
+    expect(words(c.unreachable[0]!.detail)).toBe('2 lugares con premio y 1 pareja')
     // Drawn pairs win over the estimate.
     expect(checkPrizePool(s, { players: 6, pairs: 1 }).unreachable.map((u) => u.reachable)).toEqual([1])
   })

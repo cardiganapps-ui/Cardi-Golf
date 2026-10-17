@@ -105,7 +105,12 @@ describe('the engine writes no copy (ARCH-05)', () => {
   })
 
   it('the files that hold the codes and their figures write none', () => {
-    for (const file of ['src/engine/messages.ts', 'src/engine/core/compute.ts', 'src/engine/core/handicap.ts', 'src/engine/core/ranking.ts', 'src/engine/close.ts', 'src/engine/computeTournament.ts', 'src/engine/core/unassigned.ts']) {
+    const files = [
+      ...['src/engine/messages.ts', 'src/engine/core/compute.ts', 'src/engine/core/handicap.ts', 'src/engine/core/ranking.ts', 'src/engine/close.ts', 'src/engine/computeTournament.ts', 'src/engine/core/unassigned.ts'],
+      // ARCH-05 stage 2: the rules, the catalog's rules and the settings' checks.
+      ...['src/engine/games/describe.ts', 'src/engine/settings/describeModule.ts', 'src/engine/settings/reglamento.ts', 'src/engine/settings/prizeCheck.ts', 'src/engine/settings/sense.ts', 'src/engine/settings/schema.ts', 'src/engine/settings/games.ts'],
+    ]
+    for (const file of files) {
       expect(ALL.find((f) => f.file === file)?.copy, file).toEqual([])
     }
   })

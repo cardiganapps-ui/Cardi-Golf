@@ -42,7 +42,7 @@ export interface DayStrokes {
 
 export function dayStrokes(rows: SimulationRows, roundId: string): DayStrokes {
   const read = readSettings(rows.tournament.settings)
-  if (!read.ok) throw new Error(`the tournament's settings don't read: ${read.detail.join('; ')}`)
+  if (!read.ok) throw new Error(`the tournament's settings don't read: ${read.detail.map((d) => (typeof d === 'string' ? d : d.code)).join('; ')}`)
   const empty: Pick<Snapshot, 'groups' | 'pairs' | 'teams' | 'snakeTiebreaks' | 'cardSignatures' | 'calcuttaLots' | 'calcuttaBids' | 'calcuttaBuybacks' | 'payments' | 'gameEntries' | 'holeAwards' | 'gameResults'> = {
     groups: [],
     pairs: [],

@@ -8,10 +8,12 @@
 import { useState } from 'react'
 import { t } from '../../../i18n/es-MX'
 import { Field, Segmented, Sheet, Toggle } from '../../../components/ui'
-import { CATEGORY_LABEL, GAME_ENTRIES, MODULE_ENTRIES, entryOf, newGameId, type CatalogCategory } from '../../../engine/games/catalog'
+import { GAME_ENTRIES, MODULE_ENTRIES, entryOf, newGameId, type CatalogCategory } from '../../../engine/games/catalog'
 import { describeGame } from '../../../engine/games/describe'
 import { moduleRules } from '../../../engine/settings/describeModule'
 import { InfoButton } from '../../../components/InfoButton'
+import { useWords } from '../../../components/currency'
+import { label } from '../../../engine/messages'
 import type { GameConfig } from '../../../engine/settings/games'
 import type { TournamentSettings } from '../../../engine/settings/schema'
 import type { FieldShape } from '../../../engine/settings/prizeCheck'
@@ -21,10 +23,12 @@ import styles from './Setup.module.css'
 
 const U = t.setup
 const W = t.organizer.wizard
+const C = t.setup.catalog
 const CATEGORIES: CatalogCategory[] = ['main', 'hole', 'round', 'matches', 'specials', 'free']
 
 export function GameCatalog({ value, onChange, field }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void; field: FieldShape }) {
   const [more, setMore] = useState<string | null>(null)
+  const words = useWords()
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
@@ -46,7 +50,7 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
         if (!mods.length && !entries.length) return null
         return (
           <div key={cat} className={styles.section}>
-            <h3 className={styles.catTitle}>{CATEGORY_LABEL[cat]}</h3>
+            <h3 className={styles.catTitle}>{C.category[cat]}</h3>
             {mods.map((e) => {
               const mod = value.modules[e.id]
               return (
@@ -54,9 +58,9 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                   <div className={styles.cardHead}>
                     <span className={styles.cardText}>
                       <span className={styles.cardTitle}>{mod.label}</span>
-                      <span className={styles.cardBlurb}>{e.blurb}</span>
+                      <span className={styles.cardBlurb}>{C.modules[e.id].blurb}</span>
                     </span>
-                    <InfoButton why={{ title: mod.label, steps: moduleRules(e.id, value, field) }} label={W.formatInfo(mod.label)} title={W.formatInfoTitle} />
+                    <InfoButton why={{ title: label(mod.label), steps: moduleRules(e.id, value, field) }} label={W.formatInfo(mod.label)} title={W.formatInfoTitle} />
                     <Toggle label="" ariaLabel={mod.label} checked={mod.enabled} onChange={(v) => set((d) => (d.modules[e.id].enabled = v))} />
                   </div>
                   {mod.enabled && e.id === 'snake' && (
@@ -64,7 +68,7 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                       <NumberField label={U.puttsThreshold(value.modules.snake.label)} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
                     </Field>
                   )}
-                  {mod.enabled && e.later && <span className="help">{e.later}</span>}
+                  {mod.enabled && e.later && <span className="help">{C.modules[e.id].later}</span>}
                   {mod.enabled && e.id !== 'individual' && (
                     <Field label={U.name}>
                       <input className="input input--sm" value={mod.label} onChange={(ev) => set((d) => (d.modules[e.id].label = ev.target.value))} />
@@ -82,15 +86,15 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                       <div className={styles.cardHead}>
                         <span className={styles.cardText}>
                           <span className={styles.cardTitle}>{g.label}</span>
-                          <span className={styles.cardBlurb}>{describeGame(g)[0]}</span>
+                          <span className={styles.cardBlurb}>{words(describeGame(g)[0]!)}</span>
                         </span>
-                        <InfoButton why={{ title: g.label, steps: describeGame(g) }} label={W.formatInfo(g.label)} title={W.formatInfoTitle} />
+                        <InfoButton why={{ title: label(g.label), steps: describeGame(g) }} label={W.formatInfo(g.label)} title={W.formatInfoTitle} />
                         <button type="button" className="btn btn--ghost btn--sm" onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}>
                           {U.remove}
                         </button>
                       </div>
                       <QuickFields game={g} onChange={(fn) => setGame(g.id, fn)} />
-                      {e.later && <span className="help">{e.later}</span>}
+                      {e.later && <span className="help">{C.games[e.key]!.later}</span>}
                       <div className={styles.cardFoot}>
                         <button type="button" className="btn btn--secondary btn--sm" onClick={() => setMore(g.id)}>
                           {U.more}
@@ -100,16 +104,16 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                   ))}
                   {instances.length > 0 ? (
                     <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
-                      {U.addAnother}: {e.title}
+                      {U.addAnother}: {C.games[e.key]!.title}
                     </button>
                   ) : (
                     <div className={`${styles.card} ${styles.cardOff}`}>
                       <div className={styles.cardHead}>
                         <span className={styles.cardText}>
-                          <span className={styles.cardTitle}>{e.title}</span>
-                          <span className={styles.cardBlurb}>{e.blurb}</span>
+                          <span className={styles.cardTitle}>{C.games[e.key]!.title}</span>
+                          <span className={styles.cardBlurb}>{C.games[e.key]!.blurb}</span>
                         </span>
-                        <InfoButton why={{ title: e.title, steps: describeGame(e.create('preview')) }} label={W.formatInfo(e.title)} title={W.formatInfoTitle} />
+                        <InfoButton why={{ title: label(C.games[e.key]!.title), steps: describeGame(e.create('preview')) }} label={W.formatInfo(C.games[e.key]!.title)} title={W.formatInfoTitle} />
                         <button type="button" className="btn btn--primary btn--sm" onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
                           {U.add}
                         </button>
@@ -209,6 +213,7 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
 
 /** Everything else: name, days, pair scoring and press limits. */
 function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; rounds: number; onChange: (fn: (g: GameConfig) => void) => void; onDone: () => void }) {
+  const words = useWords()
   const days = Array.from({ length: rounds }, (_, i) => i + 1)
   const on = (d: number) => g.rounds === 'all' || g.rounds.includes(d)
   return (
@@ -251,7 +256,7 @@ function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; r
       )}
       <ul className="small">
         {describeGame(g).map((l, i) => (
-          <li key={i}>{l}</li>
+          <li key={i}>{words(l)}</li>
         ))}
       </ul>
       <button type="button" className="btn btn--primary" onClick={onDone}>

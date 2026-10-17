@@ -12,6 +12,7 @@ import { GAME_SOURCES, PAYS_BY_PLACE, type GameConfig } from '../../../engine/se
 import { safeParseSettings, type TournamentSettings } from '../../../engine/settings/schema'
 import { checkPrizePool, percentPlaces, type FieldShape } from '../../../engine/settings/prizeCheck'
 import { settingsSense } from '../../../engine/settings/sense'
+import { issueWords } from '../../../i18n/explain'
 import { formatMoney } from '../../../lib/money'
 import { PrizeSummary } from '../../admin/PrizeSummary'
 import { NumberField } from '../../../components/NumberField'
@@ -115,8 +116,7 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
         </>
       )}
 
-      {/* eslint-disable-next-line no-restricted-syntax -- the settings schema's validation lines, not a caught error */}
-      <PrizeSummary check={check} players={field.players} currency={cur} issues={parsed.success ? undefined : parsed.error.issues.map((i) => i.message)} />
+      <PrizeSummary check={check} players={field.players} currency={cur} issues={parsed.success ? undefined : parsed.error.issues.map((i) => issueWords(i, cur))} />
     </div>
   )
 }

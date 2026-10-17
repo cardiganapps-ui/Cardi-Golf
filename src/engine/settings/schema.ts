@@ -11,6 +11,15 @@
  */
 import { z } from 'zod'
 import { GameConfig, gameIssues } from './games'
+import { msg, say, type Msg } from '../messages'
+
+/**
+ * A refusal as zod carries it (ARCH-05): the message's code as `message`, and the message itself in `params.msg`,
+ * which the screens write in words (`issueWords`, src/i18n/explain.ts).
+ */
+function refusal(m: Msg): { message: string; params: { msg: Msg } } {
+  return { message: m.code, params: { msg: m } }
+}
 
 const money = z.number().int().nonnegative()
 const label = z.string().trim().min(1).max(40)
@@ -63,7 +72,7 @@ export const PairsModuleSettings = z.object({
         }
         return true
       },
-      { message: 'Each tier can appear in at most one pairing rule.' },
+      refusal(say('settings.pairingTiers')),
     ),
   /** The honoree picks his partner instead of being drawn. */
   honoreePicks: z.boolean(),
@@ -106,7 +115,7 @@ export const HandicapSettings = z.object({
   /** Weights for the three-score estimate: [good day, normal day, bad day] (§13b-E). */
   estimateWeights: z
     .tuple([z.number().min(0), z.number().min(0), z.number().min(0)])
-    .refine((w) => Math.abs(w[0] + w[1] + w[2] - 1) < 1e-9, { message: 'Estimate weights must add up to 1.' })
+    .refine((w) => Math.abs(w[0] + w[1] + w[2] - 1) < 1e-9, refusal(say('settings.estimateWeights')))
     .default([0.45, 0.4, 0.15]),
 })
 
@@ -168,16 +177,14 @@ export const AuctionSettings = z.object({
   buybackMaxPct: z.number().int().min(0).max(100),
   payout: z.array(AuctionPayoutSlot).refine(
     (slots) => Math.abs(slots.reduce((s, x) => s + x.share, 0) - 1) < 1e-9,
-    { message: 'Calcutta payout shares must add up to 100%.' },
+    refusal(say('settings.payoutShares')),
   ),
 })
 
 const TournamentSettingsBase = z.object({
   modules: ModulesSettings,
   /** Ordered best → worst, e.g. ["A","B","C","D"]. Empty = no tiers. */
-  tiers: z.array(z.string().trim().min(1)).refine((t) => new Set(t).size === t.length, {
-    message: 'Tier names must be unique.',
-  }),
+  tiers: z.array(z.string().trim().min(1)).refine((t) => new Set(t).size === t.length, refusal(say('settings.tiersUnique'))),
   /** Number of rounds (days). Rounds are 1..N. */
   rounds: z.number().int().min(1).max(10),
   /** Players per group; groups are 2–4. Used to plan groups and to check the prize pot. */
@@ -238,24 +245,24 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
   if (v.modules.auction.enabled) {
     v.auction.payout.forEach((slot, i) => {
       if (slot.slot === 'bestOfTier' && !tiers.has(slot.tier)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], message: `La categoría «${slot.tier}» del reparto de la Calcutta no existe en las categorías del torneo.` })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], ...refusal(msg('settings.payoutTier', { tier: slot.tier })) })
       }
     })
   }
   const gameIds = new Set<string>()
   v.games.forEach((g, i) => {
-    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], message: `Dos juegos usan el mismo id «${g.id}».` })
+    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], ...refusal(msg('settings.gameId', { id: g.id })) })
     gameIds.add(g.id)
-    for (const issue of gameIssues(g)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, ...issue.path], message: issue.message })
+    for (const issue of gameIssues(g)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, ...issue.path], ...refusal(issue.says) })
   })
   if (v.prizes.stablefordMode === 'percent' && v.modules.individual.enabled) {
     const sum = v.prizes.stableford.reduce((s, x) => s + x, 0)
-    if (sum !== 100) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['prizes', 'stableford'], message: `El reparto individual suma ${sum}%, debe sumar 100%.` })
+    if (sum !== 100) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['prizes', 'stableford'], ...refusal(msg('settings.individualSplit', { sum })) })
   }
   if (v.modules.pairs.enabled) {
     v.modules.pairs.pairing.forEach((rule, i) => {
       for (const tier of rule) {
-        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], message: `La categoría «${tier}» de la regla de parejas no existe en las categorías del torneo.` })
+        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], ...refusal(msg('settings.pairingTier', { tier })) })
       }
     })
   }
