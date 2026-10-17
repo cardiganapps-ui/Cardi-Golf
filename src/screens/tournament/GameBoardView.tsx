@@ -10,10 +10,11 @@ import { useTournament } from '../../data/tournamentStore'
 import type { GameResultState } from '../../engine/games/game'
 import { formatMoney } from '../../lib/money'
 import styles from './GamesScreen.module.css'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 
 export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (playerId: string) => void }) {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)
   if (!data) return null
   const g = data.state.games[gameId]
@@ -28,7 +29,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
       {g.board.sections.map((sec, i) =>
         sec.rows.length === 0 ? null : (
           <div key={i} className={styles.section}>
-            {sec.title && <h2 className="h3">{sec.title}</h2>}
+            {sec.title && <h2 className="h3">{words(sec.title)}</h2>}
             <div className={styles.rows}>
               {sec.rows.map((r, j) => (
                 <LeaderLine key={j} row={r} name={name} onOpen={onOpen} />
@@ -39,7 +40,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
       )}
       {g.board.notes.map((n, i) => (
         <p key={i} className="help">
-          {n}
+          {words(n)}
         </p>
       ))}
       {prizes.length > 0 && (
@@ -51,11 +52,11 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
                 <span className={styles.rowText}>
                   <strong>{p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}</strong>
                   <span className={styles.rowSub}>
-                    {p.label}
+                    {words(p.label)}
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
                   </span>
                 </span>
-                <HowCalculated why={p.why} label={formatMoney(p.amount, cur)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${p.label}`} />
+                <HowCalculated why={p.why} label={formatMoney(p.amount, cur)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${words(p.label)}`} />
               </div>
             ))}
           </div>
@@ -66,19 +67,20 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
 }
 
 function LeaderLine({ row, name, onOpen }: { row: GameResultState['board']['sections'][number]['rows'][number]; name: (id: string) => string; onOpen: (id: string) => void }) {
+  const words = useWords()
   const names = t.common.andList(row.playerIds.map(name))
-  const sub = [row.title ? names : null, row.label, row.sub].filter(Boolean).join(', ')
+  const sub = [row.title ? names : null, row.label ? words(row.label) : null, row.sub ? words(row.sub) : null].filter(Boolean).join(', ')
   return (
     <button type="button" className={styles.gameRow} onClick={() => row.playerIds[0] && onOpen(row.playerIds[0])}>
       <span className={styles.gameText}>
         <span className={styles.gameLabel}>
           {row.pos ? `${row.pos}  ` : ''}
-          {row.title ?? names}
+          {row.title ? words(row.title) : names}
         </span>
         {sub && <span className={styles.gameLeader}>{sub}</span>}
       </span>
       <span className={styles.gameStake}>
-        <strong className="num">{row.figure}</strong>
+        <strong className="num">{words(row.figure)}</strong>
         {row.money ? (
           <span>
             <Money amount={row.money} signed={row.money < 0} />

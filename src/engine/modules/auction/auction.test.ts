@@ -65,7 +65,7 @@ describe('La Calcutta', () => {
     const order = ['p1', 'p4', 'p7', 'p10', 'p2', 'p5', 'p8', 'p11', 'p3', 'p6', 'p9', 'p12']
     const groups = order.map((id, i) => ({ position: i + 1, members: [id] }))
     const slots = assignSlots(ctx, 12000, groups)
-    expect(slots.map((s) => [s.label, s.amount, s.playerIds[0]])).toEqual([
+    expect(slots.map((s) => [words(s.label), s.amount, s.playerIds[0]])).toEqual([
       ['Campeón', 6600, 'p1'],
       ['Subcampeón', 2400, 'p4'],
       ['Mejor C', 1200, 'p7'],
@@ -81,7 +81,7 @@ describe('La Calcutta', () => {
     const order = ['p7', 'p1', 'p8', 'p10', 'p2', 'p4', 'p5', 'p11', 'p3', 'p6', 'p9', 'p12']
     const groups = order.map((id, i) => ({ position: i + 1, members: [id] }))
     const slots = assignSlots(ctx, 12000, groups)
-    const by = Object.fromEntries(slots.map((s) => [s.label, s.playerIds]))
+    const by = Object.fromEntries(slots.map((s) => [words(s.label), s.playerIds]))
     expect(by['Campeón']).toEqual(['p7'])
     expect(by['Mejor C']).toEqual(['p8'])
   })
@@ -92,7 +92,7 @@ describe('La Calcutta', () => {
     const ctx = ctxFor(snap)
     const order = ['p1', 'p10', 'p7', 'p11', 'p2', 'p4', 'p5', 'p8', 'p3', 'p6', 'p9', 'p12']
     const groups = order.map((id, i) => ({ position: i + 1, members: [id] }))
-    const by = Object.fromEntries(assignSlots(ctx, 12000, groups).map((s) => [s.label, s.playerIds]))
+    const by = Object.fromEntries(assignSlots(ctx, 12000, groups).map((s) => [words(s.label), s.playerIds]))
     expect(by['Subcampeón']).toEqual(['p10'])
     expect(by['Mejor D']).toEqual(['p11'])
   })
@@ -124,7 +124,7 @@ describe('La Calcutta', () => {
       ...['p7', 'p10', 'p2', 'p5', 'p8', 'p11', 'p3', 'p6', 'p9', 'p12'].map((id, i) => ({ position: i + 3, members: [id] })),
     ]
     const slots = assignSlots(ctx, 12000, groups)
-    expect(slots[0]!.label).toBe('Campeón + Subcampeón')
+    expect(words(slots[0]!.label)).toBe('Campeón + Subcampeón')
     expect(slots[0]!.share).toBeCloseTo(0.75)
     expect(slots[0]!.playerIds).toEqual(['p1', 'p4'])
     const payouts = payoutsToOwners(snap.calcuttaLots.map((l) => ({
@@ -149,7 +149,7 @@ describe('La Calcutta', () => {
     const total = Object.values(payouts).reduce((s, p) => s + p.amount, 0)
     expect(total).toBe(pot)
     // 6,462 (55% = 6,462.50) + 2,350 + 1,175 + 1,175 + 587 (5% = 587.50) = 11,749: the $1 left is p2's.
-    const rounding = Object.values(payouts).flatMap((p) => p.lines.filter((l) => l.slotLabel === 'Redondeo').map((l) => [p.ownerId, l.amount]))
+    const rounding = Object.values(payouts).flatMap((p) => p.lines.filter((l) => words(l.slotLabel) === 'Redondeo').map((l) => [p.ownerId, l.amount]))
     expect(rounding).toEqual([['p2', 1]])
   })
 
@@ -213,13 +213,13 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
   /** What each owner cashes from one player's slot, as [owner, amount, pct], by owner. */
   const shares = (st: TournamentState, playerId: string) =>
     Object.values(st.modules.auction!.payouts)
-      .flatMap((p) => p.lines.filter((l) => l.playerId === playerId && l.slotLabel !== 'Redondeo').map((l) => [p.ownerId, l.amount, l.pct]))
+      .flatMap((p) => p.lines.filter((l) => l.playerId === playerId && words(l.slotLabel) !== 'Redondeo').map((l) => [p.ownerId, l.amount, l.pct]))
       .sort(byFirst)
-  const buybackFlows = (st: TournamentState) => st.money.flows.filter((f) => f.kind === 'buyback').map((f) => ({ from: f.from, to: f.to, amount: f.amount, label: f.label, lotId: f.lotId }))
+  const buybackFlows = (st: TournamentState) => st.money.flows.filter((f) => f.kind === 'buyback').map((f) => ({ from: f.from, to: f.to, amount: f.amount, label: words(f.label), lotId: f.lotId }))
   /** What the bank pays for one Calcutta slot, as [to, amount], by recipient. */
   const slotPaid = (st: TournamentState, slot: string) =>
     st.money.flows
-      .filter((f) => f.kind === 'payout' && f.potId === 'calcutta' && f.label === `La Calcutta, ${slot}`)
+      .filter((f) => f.kind === 'payout' && f.potId === 'calcutta' && words(f.label) === `La Calcutta, ${slot}`)
       .map((f) => [f.to, f.amount])
       .sort(byFirst)
   const purchase = (st: TournamentState, lotNumber: number) => st.money.flows.filter((f) => f.kind === 'calcutta' && f.lotNumber === lotNumber).map((f) => [f.from, f.to, f.amount])
@@ -232,7 +232,7 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
       { ownerId: 'p2', pct: 75, paid: 750 },
       { ownerId: 'p1', pct: 25, paid: 250 },
     ])
-    const champion = st.modules.auction!.slots.find((s) => s.label === 'Campeón')!
+    const champion = st.modules.auction!.slots.find((s) => words(s.label) === 'Campeón')!
     expect([champion.playerIds, champion.amount]).toEqual([['p1'], 6600])
     expect(shares(st, 'p1')).toEqual([
       ['p1', 1650, 25],
@@ -265,7 +265,7 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
       { ownerId: 'p5', pct: 70, paid: 700 },
       { ownerId: 'p7', pct: 30, paid: 300 },
     ])
-    const bestC = st.modules.auction!.slots.find((s) => s.label === 'Mejor C')!
+    const bestC = st.modules.auction!.slots.find((s) => words(s.label) === 'Mejor C')!
     expect([bestC.playerIds, bestC.amount]).toEqual([['p7'], 1200])
     expect(shares(st, 'p7')).toEqual([
       ['p5', 840, 70],
@@ -336,7 +336,7 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
     // The champion's owners are his buyer, p2 (75%), and p1 himself (25%):
     // the pesos go to the buyer, whose lot it is, not to the champion for
     // holding a share of himself.
-    const rounding = Object.values(a.payouts).flatMap((p) => p.lines.filter((l) => l.slotLabel === 'Redondeo').map((l) => [p.ownerId, l.amount]))
+    const rounding = Object.values(a.payouts).flatMap((p) => p.lines.filter((l) => words(l.slotLabel) === 'Redondeo').map((l) => [p.ownerId, l.amount]))
     expect(rounding).toEqual([['p2', 2]])
     expect(Object.values(a.payouts).reduce((s, p) => s + p.amount, 0)).toBe(11750)
     expect(a.balanced).toBe(true)
@@ -371,7 +371,7 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
     })
     const a = st.modules.auction!
     expect(a.pot).toBe(11750)
-    expect(a.slots.map((s) => [s.label, s.playerIds, s.amount])).toEqual([
+    expect(a.slots.map((s) => [words(s.label), s.playerIds, s.amount])).toEqual([
       ['Campeón', ['p1'], 6462.5],
       ['Subcampeón', ['p4'], 2350],
       ['Mejor C', ['p7'], 1175],
@@ -387,7 +387,7 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
       ['p3', 411],
     ])
     // 6,462 + 2,350 + 1,175 + 1,175 + 411 + 176 = 11,749: the $1 left goes to the champion's owner, p1 himself.
-    const rounding = Object.values(a.payouts).flatMap((p) => p.lines.filter((l) => l.slotLabel === 'Redondeo').map((l) => [p.ownerId, l.amount]))
+    const rounding = Object.values(a.payouts).flatMap((p) => p.lines.filter((l) => words(l.slotLabel) === 'Redondeo').map((l) => [p.ownerId, l.amount]))
     expect(rounding).toEqual([['p1', 1]])
     expect(Object.values(a.payouts).reduce((s, p) => s + p.amount, 0)).toBe(11750)
     expect(a.balanced).toBe(true)
@@ -410,7 +410,7 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
     const st = played((snap) => void (snap.calcuttaLots[11]!.price = 1250), { ...POINTS, p10: 90, p11: 85 })
     const a = st.modules.auction!
     expect(a.pot).toBe(12250)
-    const cuchara = a.slots.find((s) => s.label === 'La Cuchara de Palo')!
+    const cuchara = a.slots.find((s) => words(s.label) === 'La Cuchara de Palo')!
     expect([cuchara.unfilled, cuchara.amount, a.unfilled]).toEqual([true, 612, 612])
     expect(paid(st) + a.unfilled).toBe(12250)
     expect(a.balanced).toBe(true)
@@ -425,7 +425,7 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
     const a = st.modules.auction!
     // Eleven lots at $1,000: p1's never went in the pot.
     expect(a.pot).toBe(11000)
-    expect(a.slots.map((s) => [s.label, s.playerIds])).toEqual([
+    expect(a.slots.map((s) => [words(s.label), s.playerIds])).toEqual([
       ['Campeón', ['p4']],
       ['Subcampeón', ['p7']],
       ['Mejor C', ['p8']],
@@ -461,7 +461,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
   const withPayout = (payout: (typeof S)['auction']['payout']): typeof S => ({ ...S, auction: { ...S.auction, payout } })
   /** What the bank pays under one Calcutta label, by the money flows (not the module's own lines). */
   const bankPays = (st: TournamentState, label: string) =>
-    st.money.flows.filter((f) => f.kind === 'payout' && f.potId === 'calcutta' && f.label === `La Calcutta, ${label}`).reduce((s, f) => s + f.amount, 0)
+    st.money.flows.filter((f) => f.kind === 'payout' && f.potId === 'calcutta' && words(f.label) === `La Calcutta, ${label}`).reduce((s, f) => s + f.amount, 0)
   const rounding = (st: TournamentState) => Object.values(st.modules.auction!.payouts).flatMap((p) => p.lines.filter((l) => l.rounding).map((l) => [p.ownerId, l.playerId, l.amount]))
 
   it('an odd pot: each slot is the pesos it hands over, the champion’s with the rounding peso, and they add up to the pot', () => {
@@ -469,7 +469,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     const st = played({ edit: (snap) => void (snap.calcuttaLots[11]!.price = 750) })
     const a = st.modules.auction!
     expect(a.pot).toBe(11750)
-    expect(a.slots.map((s) => [s.label, s.pesos])).toEqual([
+    expect(a.slots.map((s) => [words(s.label), s.pesos])).toEqual([
       ['Campeón', 6463],
       ['Subcampeón', 2350],
       ['Mejor C', 1175],
@@ -496,7 +496,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     const st = played({ price: 2000, settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 3000) })
     const a = st.modules.auction!
     expect(a.pot).toBe(25000)
-    expect(a.stakes.map((s) => [s.label, s.pesos])).toEqual([
+    expect(a.stakes.map((s) => [words(s.label), s.pesos])).toEqual([
       ['Campeón', 12750],
       ['Subcampeón', 7250],
       ['Mejor C', 2500],
@@ -525,13 +525,13 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     const st = played({ owner: () => 'p1', settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 1001) })
     const a = st.modules.auction!
     expect(a.pot).toBe(12001)
-    expect(a.slots.map((s) => [s.label, s.playerIds, s.pesos])).toEqual([
+    expect(a.slots.map((s) => [words(s.label), s.playerIds, s.pesos])).toEqual([
       ['Mejor C', ['p7'], 6001],
       ['Mejor D', ['p10'], 6000],
     ])
     expect(rounding(st)).toEqual([['p1', 'p7', 1]])
     expect(a.payouts.p7).toBeUndefined()
-    const prize = st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!
+    const prize = st.prizes.find((p) => words(p.label) === 'La Calcutta, Redondeo')!
     expect([prize.playerId, prize.amount, words(prize.why).steps]).toEqual(['p1', 1, ['Resto del redondeo al dueño de J7, que cobra el premio más alto']])
     expect(a.stakes.map((s) => s.pesos)).toEqual([6001, 6000])
   })
@@ -544,12 +544,12 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     ])
     const st = played({ owner: (pid) => (pid === 'p1' ? 'p5' : pid), settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 1001) })
     const a = st.modules.auction!
-    expect(a.slots.map((s) => [s.label, s.playerIds, s.pesos])).toEqual([
+    expect(a.slots.map((s) => [words(s.label), s.playerIds, s.pesos])).toEqual([
       ['Mejor C', ['p7'], 7200],
       ['Campeón', ['p1'], 4801],
     ])
     expect(rounding(st)).toEqual([['p5', 'p1', 1]])
-    expect(words(st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!.why).steps).toEqual(['Resto del redondeo al dueño del campeón'])
+    expect(words(st.prizes.find((p) => words(p.label) === 'La Calcutta, Redondeo')!.why).steps).toEqual(['Resto del redondeo al dueño del campeón'])
     expect(a.stakes.map((s) => s.pesos)).toEqual([7200, 4801])
   })
 
@@ -560,7 +560,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     snap.calcuttaLots[11]!.price = 1250
     scoreEveryone(snap, (pid) => ({ ...POINTS, p10: 90, p11: 85 })[pid]!)
     const a = computeTournament(snap, S).modules.auction!
-    const cuchara = a.slots.find((s) => s.label === 'La Cuchara de Palo')!
+    const cuchara = a.slots.find((s) => words(s.label) === 'La Cuchara de Palo')!
     expect([cuchara.unfilled, cuchara.pesos]).toEqual([true, 612])
     expect(words(cuchara.why).steps).toEqual(['Quien quedó último ya cobra un lugar mejor', '5% de $12,250 = $612.50', 'En pesos enteros: $612; los centavos van al redondeo', 'Se queda en el banco hasta que el Comité decida'])
     expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(12250)

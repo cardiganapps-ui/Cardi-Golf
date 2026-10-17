@@ -12,6 +12,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Course, Round, Snapshot, Tee } from '../../engine/types'
 import { handicapsLocked } from '../../engine/core/handicapLock'
 import { t } from '../../i18n/es-MX'
+import { renderMsg } from '../../i18n/explain'
 
 export type ReadinessId = 'players' | 'pins' | 'handicaps' | 'rounds' | 'roundSetup' | 'card' | 'foreignTees' | 'teams' | 'pairs' | 'bracket' | 'tees' | 'groups'
 
@@ -208,7 +209,7 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
     const last = bracket.rounds.at(-1)
     const undecided = last && !bracket.champion ? last.matches.filter((m) => m.sides[1] && !m.winner).length : 0
     // Whoever the Comité sends through, it groups by hand: once the day has groups, the decision is made.
-    if (last && undecided) items.push(grouped.size ? groupsLine(true, R.groups(next.number)) : groupsLine(false, R.bracketUndecided(last.name, undecided, next.number)))
+    if (last && undecided) items.push(grouped.size ? groupsLine(true, R.groups(next.number)) : groupsLine(false, R.bracketUndecided(renderMsg(last.name, settings.currency), undecided, next.number)))
     return items
   }
   const real = b.matches.filter((m) => m.sides[1])

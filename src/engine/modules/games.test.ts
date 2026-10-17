@@ -155,7 +155,7 @@ describe('module switches (§0.5)', () => {
     const off = computeTournament(snap, settings)
     expect(off.modules[id]).toBeUndefined()
     expect(off.prizes.some((p) => p.moduleId === id)).toBe(false)
-    expect(off.money.flows.some((f) => f.label.startsWith(S.modules[id].label))).toBe(false)
+    expect(off.money.flows.some((f) => words(f.label).startsWith(S.modules[id].label))).toBe(false)
     // Everything else is untouched.
     const other = on.prizes.filter((p) => p.moduleId !== id).reduce((s, p) => s + p.amount, 0)
     expect(off.prizes.reduce((s, p) => s + p.amount, 0)).toBe(other)

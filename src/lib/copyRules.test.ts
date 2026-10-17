@@ -195,7 +195,7 @@ function commaNameLists(text: string, names: string[]): string[] {
  * source line they sit on. Each says why it is not the mistake its rule looks for.
  */
 const ALLOW: Array<{ file: string; line: RegExp; why: string }> = [
-  { file: 'src/engine/games/match/index.ts', line: /`\$\{wins\} \$\{n\} y \$\{bet\.remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
+  { file: 'src/i18n/es-MX.ts', line: /`\$\{wins\} \$\{n\} y \$\{remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
   { file: 'api/scorecard-extract.ts', line: /índice de dificultad \(handicap\/SI, 1–18\)/, why: 'the prompt that tells the model what a printed card calls the stroke index; nobody reads it in the app' },
 ]
 
@@ -390,7 +390,9 @@ describe('copy rules: es-MX.ts', () => {
   })
 
   it('joins names with t.common.andList, never by hand', () => {
-    const hits = all.filter((pc) => HAND_JOIN.test(pc.text)).map((pc) => `es-MX.ts:${pc.line}: ${JSON.stringify(pc.text)}`)
+    const source = readFileSync(file, 'utf8').split('\n')
+    const allowed = (line: number) => ALLOW.some((x) => x.file === 'src/i18n/es-MX.ts' && x.line.test(source[line - 1] ?? ''))
+    const hits = all.filter((pc) => HAND_JOIN.test(pc.text) && !allowed(pc.line)).map((pc) => `es-MX.ts:${pc.line}: ${JSON.stringify(pc.text)}`)
     expect(hits).toEqual([])
   })
 

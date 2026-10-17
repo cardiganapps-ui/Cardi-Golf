@@ -11,11 +11,12 @@
  *   - `keep`: copy that is settings data, kept on purpose, by the property it
  *     is the value of (a game's `defaultLabel` is what a new tournament
  *     stores, and the organizer renames it), anywhere or in one file;
- *   - `remaining`: what ARCH-05's second stage turns into codes (labels,
- *     board text, the rules and the game catalog), by file, as a count that
- *     may only go down: a file with more copy than its count fails, and so
- *     does one with less, until the count is lowered with it.
- * The same holds for the engine's imports of src/i18n (`i18nImports`).
+ *   - `remaining`: copy still in the engine, by file, as a count that may
+ *     only go down (a file with more copy than its count fails, and so does
+ *     one with less, until the count is lowered with it), each with its
+ *     reason in `residue`. Since ARCH-05's later stages (the rules, the
+ *     catalog, the labels and boards of the computed state) one file is left.
+ * The engine imports nothing of src/i18n (`i18nImports`, empty).
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -97,6 +98,8 @@ describe('the engine writes no copy (ARCH-05)', () => {
     expect(over, 'copy belongs in src/i18n: give it a code in messages.ts and its words in es-MX.ts').toEqual([])
     expect(under).toEqual([])
     for (const file of [...Object.keys(remaining), ...Object.keys(keep.files)]) expect(ALL.some((f) => f.file === file), `${file} is listed but gone`).toBe(true)
+    // What is left says why it is left.
+    for (const file of Object.keys(remaining)) expect((baseline as { residue?: Record<string, string> }).residue?.[file], `${file} has copy left and no reason in residue`).toBeTruthy()
   })
 
   it('imports src/i18n only from the files that still write copy', () => {
@@ -109,6 +112,8 @@ describe('the engine writes no copy (ARCH-05)', () => {
       ...['src/engine/messages.ts', 'src/engine/core/compute.ts', 'src/engine/core/handicap.ts', 'src/engine/core/ranking.ts', 'src/engine/close.ts', 'src/engine/computeTournament.ts', 'src/engine/core/unassigned.ts'],
       // ARCH-05 stage 2: the rules, the catalog's rules and the settings' checks.
       ...['src/engine/games/describe.ts', 'src/engine/settings/describeModule.ts', 'src/engine/settings/reglamento.ts', 'src/engine/settings/prizeCheck.ts', 'src/engine/settings/sense.ts', 'src/engine/settings/schema.ts', 'src/engine/settings/games.ts'],
+      // Stage 3: the computed state's labels and the games' boards.
+      ...['src/engine/core/money.ts', 'src/engine/games/payout.ts', 'src/engine/formats/entrants.ts', 'src/engine/formats/bracket.ts', 'src/engine/modules/auction/index.ts', 'src/engine/games/match/index.ts', 'src/engine/games/skins/index.ts'],
     ]
     for (const file of files) {
       expect(ALL.find((f) => f.file === file)?.copy, file).toEqual([])

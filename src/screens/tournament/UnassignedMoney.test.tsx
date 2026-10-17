@@ -25,6 +25,7 @@ import { t } from '../../i18n/es-MX'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { MoneyScreen } from './MoneyScreen'
 import { TournamentContext } from './tournamentContext'
+import { words } from '../../engine/testing/words'
 
 const U = t.unassigned
 const TID = 'fixture:full12-live'
@@ -73,15 +74,15 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
     expect(screen.getByText(U.total(formatMoney(u.total, 'MXN')))).toBeTruthy()
     expect(screen.getByText(U.totalHint)).toBeTruthy()
     for (const b of u.buckets) {
-      expect(list().getByText(b.label)).toBeTruthy()
+      expect(list().getByText(words(b.label))).toBeTruthy()
       expect(list().getAllByText(formatMoney(b.remaining, 'MXN')).length).toBeGreaterThan(0)
     }
     expect(list().getAllByText(U.decides)).toHaveLength(u.buckets.length)
     // Snake money a tiebreak holds is listed too, with what to answer and no «Decidir».
     expect(u.held.length).toBeGreaterThan(0)
     for (const h of u.held) {
-      expect(list().getByText(h.label)).toBeTruthy()
-      expect(list().getAllByText(h.note).length).toBeGreaterThan(0)
+      expect(list().getByText(words(h.label))).toBeTruthy()
+      expect(list().getAllByText(words(h.note)).length).toBeGreaterThan(0)
     }
     expect(list().getAllByRole('button', { name: t.money.howCalculated })).toHaveLength(u.buckets.length + u.held.length)
     expect(list().queryByRole('button', { name: new RegExp(`^${U.decide}`) })).toBeNull()
@@ -144,8 +145,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('to the house, with a reason: one call with the line’s key', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     // No reason yet: nothing is sent.
     fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
@@ -161,8 +162,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('back to who paid it: the pro-rata split is shown before it is sent, and sent as shown', async () => {
     const data = mount(true)
     const b = data.state.money.unassigned.buckets.find((x) => x.contributors?.length)!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${b.label}, ${formatMoney(b.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(b.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(b.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.refund }))
     expect(sheet.getByText(U.refundHint)).toBeTruthy()
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Se devuelve' } })
@@ -177,8 +178,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('to someone: more than the line holds is refused before anything is sent', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     const [first, second] = data.snapshot.players
     // Each box stops at what the line holds; two of them together go over.
     for (const p of [first!, second!]) {
@@ -196,8 +197,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('a line another Comité phone assigned meanwhile: the sheet reads it again before sending, and sends nothing', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
     // The other phone's $100 on the same line reaches this one on the fetch the sheet makes before sending.
@@ -223,8 +224,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
     expect(best.remaining).toBe(1200)
     expect(best.contributors?.length).toBeGreaterThan(0)
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.refund }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Se devuelve' } })
     // The other phone's decision lands live (no fetch): the pro-rata split now covers $1,100, not the $1,200 the Comité looked at.
@@ -246,8 +247,8 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('«a la casa» of the whole line, changed under the sheet the same way: nothing is sent, then the whole new line', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining, 'MXN')}` }))
-    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
     otherPhoneAward(data)

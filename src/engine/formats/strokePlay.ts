@@ -61,7 +61,7 @@ export const strokePlayFormat: MainFormat = {
   defaultLabel: 'Stroke play',
   // Fewest strokes wins, so the ranking runs the other way from Stableford.
   higherIsBetter: () => false,
-  figureLabel: (s) => (s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
+  figureLabel: (s) => msg('figure.label', { unit: s.modules.individual.formatOptions.scoring === 'gross' ? 'gross' : 'net' }),
 
   describe(settings: TournamentSettings): Explanation {
     const net = settings.modules.individual.formatOptions.scoring !== 'gross'

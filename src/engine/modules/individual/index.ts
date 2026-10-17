@@ -7,12 +7,12 @@
  * they play: rank the entrants, break ties on countback, label the positions,
  * and split the prizes.
  */
-import { ordinal } from '../../../i18n/es-MX'
-import { msg, say, type MatchSide, type Msg } from '../../messages'
+import { label, msg, say, type MatchSide, type Msg } from '../../messages'
 import { countback, flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { figureKind, formatFor, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 import { fieldShape, individualPrizeAmounts } from '../../settings/prizeCheck'
 
 export interface IndividualRow {
@@ -39,8 +39,8 @@ export interface IndividualRow {
 export interface IndividualState {
   /** Which format produced these standings. */
   formatId: string
-  /** Header for the headline column: "Puntos", "Gross", "Neto". */
-  figureLabel: string
+  /** Header for the headline column: «Puntos», «Gross», «Neto». */
+  figureLabel: Msg
   /** Team formats rank teams, so a row covers more than one player. */
   byTeam: boolean
   rows: IndividualRow[]
@@ -89,7 +89,7 @@ function rankStandings(ctx: ModuleContext) {
   return { format, standings, groups, rankValue, incomplete, expectedHoles }
 }
 
-function incompleteWarning(cards: Array<{ name: string; thru: number; of: number }>): Msg[] {
+function incompleteWarning(cards: Array<{ name: Msg; thru: number; of: number }>): Msg[] {
   if (!cards.length) return []
   return [msg('individual.incomplete', { cards })]
 }
@@ -128,7 +128,7 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
   compute(ctx) {
     const { format, standings, groups, rankValue, incomplete, expectedHoles } = rankStandings(ctx)
     const byId = new Map(standings.entrants.map((e) => [e.id, e]))
-    const nameOf = (id: Id) => byId.get(id)?.name ?? id
+    const nameOf = (id: Id) => byId.get(id)?.name ?? label(id)
     const ranked = flattenRanks(groups)
 
     const rows: IndividualRow[] = ranked.map((r, i) => {
@@ -186,7 +186,7 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
   },
 
   prizes(state, ctx) {
-    const label = ctx.settings.modules.individual.label
+    const game = ctx.settings.modules.individual.label
     const kind = figureKind(ctx.settings)
     const out: PrizeAward[] = []
     for (const row of state.rows) {
@@ -203,7 +203,7 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
         const each = amount - extra
         out.push({
           moduleId: 'individual',
-          label: `${label}, ${ordinal(row.label)}`,
+          ...prizeLabel(game, msg('part.place', { place: row.label })),
           playerId,
           amount,
           final: state.final,
@@ -229,7 +229,7 @@ function explainCountback(
   standings: FormatStandings,
   aboveId: Id,
   id: Id,
-  nameOf: (id: Id) => string,
+  nameOf: (id: Id) => Msg,
   tied: boolean,
   up: boolean,
 ): Explanation {

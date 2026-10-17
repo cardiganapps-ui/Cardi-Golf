@@ -5,7 +5,7 @@
  * shared place, which rounds make it final, where the rounding pesos go)
  * instead of writing its own.
  */
-import { msg, type Msg } from '../messages'
+import { msg, named, type Msg } from '../messages'
 import type { Explanation, Id } from '../types'
 
 export interface Ranked<T> {
@@ -253,7 +253,7 @@ export function unfilledPlaces(groups: RankGroup<unknown>[], prizes: number[]): 
  * of the prizes for the places it occupies, split evenly in whole pesos;
  * any remainder pesos go one each to the first members in group order.
  */
-export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (t: T) => string): PrizeShare<T>[] {
+export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (t: T) => string | Msg): PrizeShare<T>[] {
   const out: PrizeShare<T>[] = []
   for (const g of groups) {
     const n = g.members.length
@@ -276,7 +276,7 @@ export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (
       else {
         steps.push(msg('prize.tie', { n, place: g.position, places, total }))
         steps.push(msg('prize.tieSplit', { total, n, each: base, rounding: extra }))
-        steps.push(msg('prize.tied', { names: g.members.map(name) }))
+        steps.push(msg('prize.tied', { names: g.members.map((m) => named(name(m))) }))
       }
       out.push({ item: m, amount, why: { title: msg('amount', { amount }), steps } })
     })

@@ -32,7 +32,7 @@ import { TournamentLogo } from '../../components/TournamentLogo'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 import { fromLine } from '../../engine/core/unassigned'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 import { SaveResults } from './SaveResults'
 import { Button } from '../../components/primitives'
 import { buttonClass } from '../../components/buttonClass'
@@ -192,6 +192,7 @@ function Row({ row }: { row: ListRow }) {
 
 export function CeremonyScreen() {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)
   const { slug } = useTournamentCtx()
   const [idx, setIdx] = useState(-1)
@@ -220,7 +221,7 @@ export function CeremonyScreen() {
     const entrants = new Map((m.individual?.rows ?? []).map((r) => [r.playerId, r.entrant]))
     const entrantLine = (id: string) => {
       const e = entrants.get(id)
-      return e?.isTeam ? keepInitial(e.name) : nameOf(id)
+      return e?.isTeam ? keepInitial(words(e.name)) : nameOf(id)
     }
     const facesOf = (ids: string[]) => ids.flatMap((id) => entrants.get(id)?.playerIds ?? [id])
     const out: Step[] = []
@@ -299,7 +300,7 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${ordinal(r.label)}, ${r.name}`, sub: [andList(r.playerIds.map(nameOf)), fig(r.total, C.withPoints)] })),
+          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${ordinal(r.label)}, ${words(r.name)}`, sub: [andList(r.playerIds.map(nameOf)), fig(r.total, C.withPoints)] })),
         })
       }
     }
@@ -328,7 +329,7 @@ export function CeremonyScreen() {
           key: `slot${i}`,
           name: (
             <>
-              {s.label}: <strong>{s.unfilled ? t.games.unassigned : andList(s.playerIds.map(nameOf))}</strong>
+              {words(s.label)}: <strong>{s.unfilled ? t.games.unassigned : andList(s.playerIds.map(nameOf))}</strong>
             </>
           ),
           figure: formatMoney(s.pesos, cur),
@@ -349,7 +350,7 @@ export function CeremonyScreen() {
       })
     }
     return out
-  }, [data, cur])
+  }, [data, cur, words])
 
   const step = idx >= 0 ? steps[idx] : undefined
   const reduce = useReducedMotionConfig()

@@ -6,6 +6,7 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
+import { renderMsg } from '../../i18n/explain'
 import { Field } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
@@ -55,7 +56,7 @@ export function AdminData() {
         r.entrant.playerIds.map((id) => {
           const p = snapshot.players.find((x) => x.id === id)
           const m = state.money.people[id]
-          return [r.label, p?.fullName ?? id, ...(byTeam ? [r.entrant.name] : []), p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
+          return [r.label, p?.fullName ?? id, ...(byTeam ? [renderMsg(r.entrant.name, data.settings.currency)] : []), p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
         }),
       ),
     )

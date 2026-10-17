@@ -40,12 +40,13 @@ import { humanError } from '../../lib/humanError'
 import { formatMoney } from '../../lib/money'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './MoneyScreen.module.css'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 
 const U = t.unassigned
 
 export function UnassignedMoney() {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { me, tournamentId, spectator } = useTournamentCtx()
@@ -69,14 +70,14 @@ export function UnassignedMoney() {
           {u.buckets.map((b) => (
             <div key={b.key} className={styles.transfer}>
               <span className={styles.transferText}>
-                <strong>{b.label}</strong>
+                <strong>{words(b.label)}</strong>
                 <span className={styles.transferKind}>{U.decides}</span>
                 <HowCalculated why={b.why} />
               </span>
               <span className={styles.amount}>{formatMoney(b.remaining, cur)}</span>
               {me.isComite && (
                 <span className={styles.action}>
-                  <Button size="sm" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${b.label}, ${formatMoney(b.remaining, cur)}`}>
+                  <Button size="sm" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, cur)}`}>
                     {U.decide}
                   </Button>
                 </span>
@@ -90,8 +91,8 @@ export function UnassignedMoney() {
           {u.held.map((h) => (
             <div key={h.key} className={styles.transfer} data-held>
               <span className={styles.transferText}>
-                <strong>{h.label}</strong>
-                {!spectator && <span className={styles.transferKind}>{h.note}</span>}
+                <strong>{words(h.label)}</strong>
+                {!spectator && <span className={styles.transferKind}>{words(h.note)}</span>}
                 <HowCalculated why={h.why} />
               </span>
               <span className={styles.amount}>{formatMoney(h.amount, cur)}</span>
@@ -109,7 +110,7 @@ export function UnassignedMoney() {
                 <div key={a.id} className={styles.transfer}>
                   <span className={styles.transferText}>
                     <span>
-                      <strong>{a.label}</strong>: {who(a)}
+                      <strong>{words(a.label)}</strong>: {who(a)}
                     </span>
                     <span className={styles.transferKind}>{a.reason}</span>
                     {note && (
@@ -121,7 +122,7 @@ export function UnassignedMoney() {
                   <span className={styles.amount}>{formatMoney(a.total, cur)}</span>
                   {me.isComite && (
                     <span className={styles.action}>
-                      <Button variant="ghost" size="sm" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(a.label, formatMoney(a.total, cur), a.reason)}`}>
+                      <Button variant="ghost" size="sm" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(words(a.label), formatMoney(a.total, cur), a.reason)}`}>
                         {U.void}
                       </Button>
                     </span>
@@ -137,7 +138,7 @@ export function UnassignedMoney() {
         <ReasonSheet
           open={!!voiding}
           title={U.voidTitle}
-          body={voiding ? `${U.rowWhat(voiding.label, formatMoney(voiding.total, cur), voiding.reason)}. ${U.voidBody}` : undefined}
+          body={voiding ? `${U.rowWhat(words(voiding.label), formatMoney(voiding.total, cur), voiding.reason)}. ${U.voidBody}` : undefined}
           confirmLabel={U.void}
           danger
           onConfirm={async (reason) => {
@@ -157,6 +158,7 @@ type Mode = 'give' | 'refund' | 'house'
 /** One decision on one line: to whom and how much, with a reason. Never more than the line holds. */
 function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bucketKey: string | null; players: Player[]; tournamentId: string; onClose: () => void; onDone: () => Promise<unknown> }) {
   const cur = useCurrency()
+  const words = useWords()
   // The line as the boards hold it now, not as it was when the sheet opened.
   const bucket = useTournament((s) => (bucketKey ? (s.data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey) ?? null) : null))
   const remaining = bucket?.remaining ?? 0
@@ -227,7 +229,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
   }
 
   return (
-    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(bucket.label) : ''} body={U.available(formatMoney(remaining, cur))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
+    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(words(bucket.label)) : ''} body={U.available(formatMoney(remaining, cur))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
       <Segmented
         value={mode}
         label={U.decide}

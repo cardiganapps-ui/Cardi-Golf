@@ -14,7 +14,7 @@ import { words } from '../../testing/words'
 
 const PARS = PAR_72.map(([p]) => p)
 const rows = (snap: Snapshot) => computeTournament(snap, parseSettings(snap.tournament.settings)).modules.individual!.rows
-const steps = (snap: Snapshot, name: string) => words(rows(snap).find((r) => r.entrant.name === name)!.countbackWhy)?.steps ?? []
+const steps = (snap: Snapshot, name: string) => words(rows(snap).find((r) => words(r.entrant.name) === name)!.countbackWhy)?.steps ?? []
 
 it('match play, day 2 under way: a live pair «va», an unstarted pair «todavía no»', () => {
   // match8's eight players over two days: day 1 as in the fixture, day 2 drawn winners v winners, losers v losers.

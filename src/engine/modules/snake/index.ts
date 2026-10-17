@@ -8,6 +8,7 @@ import { playOrder } from '../../core/playOrder'
 import { isFinal, splitEven } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 import { msg } from '../../messages'
 
 export interface SnakePass {
@@ -159,7 +160,7 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
         if (p.amount === 0) continue
         out.push({
           moduleId: 'snake',
-          label: `${label}, día ${g.roundNumber}, grupo ${g.groupNumber}`,
+          ...prizeLabel(label, msg('part.dayGroup', { day: g.roundNumber, group: g.groupNumber })),
           playerId,
           amount: p.amount,
           final: g.final,

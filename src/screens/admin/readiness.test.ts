@@ -316,7 +316,7 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     const r = run('match8', (s) => knockout(s, { players: 1, days: 1 }))
     expect(words(r.d.state.bracket!.warnings)[0]).toMatch(/suficientes jugadores para armar el cuadro/)
     expect(r.d.state.flags.warnings).not.toContain(r.d.state.bracket!.warnings[0])
-    for (const w of [say('bracket.tooFew'), msg('bracket.needsRounds', { rounds: 3, have: 1 }), msg('bracket.tied', { round: 'Cuartos de final' })]) {
+    for (const w of [say('bracket.tooFew'), msg('bracket.needsRounds', { rounds: 3, have: 1 }), msg('bracket.tied', { round: msg('bracket.round', { matches: 4 }) })]) {
       expect(coveredByChecklist(w, r.items)).toBe(false)
     }
   })

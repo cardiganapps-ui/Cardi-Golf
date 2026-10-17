@@ -492,11 +492,14 @@
       "workstream": "W10",
       "phase": 2,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 237,
+      "tests": [
+        "src/i18n/explain.test.ts",
+        "src/engine/copy.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Two strings stay in src/engine/formats/matchPlay.ts (the match figure, reason in copyRemaining.json); SQL errors the client matches by Spanish text (rejectedInbox, outbox 42501, profiles handle) still need stable codes via a migration."
     },
     {
       "id": "ARCH-06",

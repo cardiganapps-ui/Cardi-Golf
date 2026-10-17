@@ -7,8 +7,9 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
-import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
-import { moneyByPlayer, namer, plural, rankedUnits, roundNumberOf } from '../util'
+import { msg, say, type Msg } from '../../messages'
+import { directUnits, payUnits, potNote, refundUnwon, unwonWarning } from '../payout'
+import { moneyByPlayer, namer, rankedUnits, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'eventPot'>
 
@@ -16,12 +17,6 @@ export interface EventPotState {
   counts: Record<Id, number>
   /** Every event, in round and hole order. */
   events: Array<{ playerId: Id; roundId: Id; hole: number }>
-}
-
-const NAMES: Record<Cfg['options']['event'], [string, string]> = {
-  birdie: ['birdie', 'birdies'],
-  eagle: ['águila', 'águilas'],
-  threePutt: ['tres putts', 'tres putts'],
 }
 
 export const eventPotGame: GameImpl<EventPotState, Cfg> = {
@@ -62,16 +57,16 @@ export const eventPotGame: GameImpl<EventPotState, Cfg> = {
     return Object.values(state.counts).some((c) => c > 0) ? [] : unwonWarning(ctx, ctx.config.options.event)
   },
   board(state, ctx) {
-    const unit = NAMES[ctx.config.options.event]
+    const unit = ctx.config.options.event
     const money = moneyByPlayer(eventPotGame.prizes(state, ctx))
-    const rows = rankedUnits(Object.entries(state.counts)).map(({ id, units: c, label }) => ({ playerIds: [id], pos: label, figure: plural(c, unit[0], unit[1]), money: money.get(id) ?? 0 }))
+    const rows = rankedUnits(Object.entries(state.counts)).map(({ id, units: c, label }) => ({ playerIds: [id], pos: label, figure: msg('board.units', { n: c, unit }), money: money.get(id) ?? 0 }))
     const multi = ctx.roundIds.length > 1
-    const log = state.events.map((e) => ({ playerIds: [e.playerId], pos: null, label: `${multi ? `Día ${roundNumberOf(ctx, e.roundId)}, ` : ''}hoyo ${e.hole}`, figure: unit[0] }))
-    const notes: string[] = []
+    const log = state.events.map((e) => ({ playerIds: [e.playerId], pos: null, label: msg('board.hole', { day: multi ? roundNumberOf(ctx, e.roundId) : null, hole: e.hole }), figure: msg('board.unit', { unit }) }))
+    const notes: Msg[] = []
     const { event, basis } = ctx.config.options
-    if (ctx.config.money.source === 'direct') notes.push(event === 'threePutt' ? `Cada tres putts le cuesta ${fmt(ctx.config.money.stake)} a quien los hace, para cada uno de los demás.` : `Cada ${unit[0]} cobra ${fmt(ctx.config.money.stake)} de cada uno de los demás.`)
-    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte por cada ${unit[0]}.`)
-    if (event !== 'threePutt') notes.push(`${basis === 'net' ? 'Neto' : 'Gross'}, ${event === 'eagle' ? 'águila' : 'birdie'} o mejor.`)
-    return { sections: [{ rows }, { title: 'Hoyo por hoyo', rows: log }], notes }
+    if (ctx.config.money.source === 'direct') notes.push(msg('board.eventStake', { unit, stake: ctx.config.money.stake }))
+    else if (ctx.pot > 0) notes.push(potNote(ctx.config, ctx.pot, { unit }))
+    if (event !== 'threePutt') notes.push(msg('board.eventRule', { net: basis === 'net', eagle: event === 'eagle' }))
+    return { sections: [{ rows }, { title: say('board.byHole'), rows: log }], notes }
   },
 }

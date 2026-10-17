@@ -56,7 +56,7 @@ describe('stroke play', () => {
     const state = computeTournament(snap, cfgOf(snap))
     const rows = state.modules.individual!.rows
 
-    expect(state.modules.individual!.figureLabel).toBe('Gross')
+    expect(words(state.modules.individual!.figureLabel)).toBe('Gross')
     expect(rows.map((r) => r.playerId)).toEqual(['p3', 'p1', 'p2'])
     expect(rows.map((r) => r.figure.text)).toEqual(['−1', 'E', '+1'])
     expect(rows.map((r) => r.figure.value)).toEqual([71, 72, 73])
@@ -85,7 +85,7 @@ describe('stroke play', () => {
     play(snap, 'r1', 'p2', Array<number>(18).fill(1))
 
     const state = computeTournament(snap, cfgOf(snap))
-    expect(state.modules.individual!.figureLabel).toBe('Neto')
+    expect(words(state.modules.individual!.figureLabel)).toBe('Neto')
     expect(state.modules.individual!.rows.map((r) => r.figure.value)).toEqual([72, 72])
     expect(state.modules.individual!.rows.every((r) => r.figure.text === 'E')).toBe(true)
   })
@@ -163,7 +163,7 @@ describe('match play', () => {
     const state = computeTournament(snap, cfgOf(snap))
     const rows = state.modules.individual!.rows
     expect(state.modules.individual!.byTeam).toBe(true)
-    expect(rows[0]!.entrant.name).toBe('Pareja A')
+    expect(words(rows[0]!.entrant.name)).toBe('Pareja A')
     expect(rows[0]!.perRound[0]!.text).toBe('1 arriba')
     expect(rows[0]!.figure.value).toBe(1)
   })
@@ -217,7 +217,7 @@ describe('team formats', () => {
 
     const state = computeTournament(snap, cfgOf(snap))
     const rows = state.modules.individual!.rows
-    expect(rows.map((r) => r.entrant.name)).toEqual(['Equipo B', 'Equipo A'])
+    expect(rows.map((r) => words(r.entrant.name))).toEqual(['Equipo B', 'Equipo A'])
     expect(rows.map((r) => r.figure.value)).toEqual([71, 72])
     expect(rows.map((r) => r.figure.text)).toEqual(['−1', 'E'])
   })
@@ -232,7 +232,7 @@ describe('team formats', () => {
     play(snap, 'r1', 'p2', Array<number>(18).fill(2))
 
     const state = computeTournament(snap, cfgOf(snap))
-    expect(state.modules.individual!.figureLabel).toBe('Puntos')
+    expect(words(state.modules.individual!.figureLabel)).toBe('Puntos')
     expect(state.modules.individual!.rows[0]!.figure.value).toBe(37)
   })
 
@@ -253,7 +253,7 @@ describe('team formats', () => {
 
     const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
     expect(rows.map((r) => r.figure.text)).toEqual(['E', 'E'])
-    expect(rows.map((r) => [r.entrant.name, r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
+    expect(rows.map((r) => [words(r.entrant.name), r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
     expect(words(rows[1]!.countbackWhy)!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
   })
 

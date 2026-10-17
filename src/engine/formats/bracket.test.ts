@@ -10,10 +10,11 @@ import { parseSettings, type TournamentSettings } from '../settings/schema'
 import { fillRound, makeGroup, makeSnapshot } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 import { advance, bracketState, firstRound, roundName, seed } from './bracket'
+import { label } from '../messages'
 import type { Entrant, FormatContext } from './format'
 import { words } from '../testing/words'
 
-const ent = (id: string, name = id): Entrant => ({ id, playerIds: [id], name, isTeam: false })
+const ent = (id: string, name = id): Entrant => ({ id, playerIds: [id], name: label(name), isTeam: false })
 
 /** Settings for a match-play tournament of `rounds` days. */
 function matchSettings(rounds: number): TournamentSettings {
@@ -36,11 +37,11 @@ function ctxOf(snap: Snapshot, settings: TournamentSettings): FormatContext {
 
 describe('bracket shape', () => {
   it('names each round by how many matches it holds', () => {
-    expect(roundName(1)).toBe('Final')
-    expect(roundName(2)).toBe('Semifinal')
-    expect(roundName(4)).toBe('Cuartos de final')
-    expect(roundName(8)).toBe('Octavos de final')
-    expect(roundName(16)).toBe('Ronda de 32')
+    expect(words(roundName(1))).toBe('Final')
+    expect(words(roundName(2))).toBe('Semifinal')
+    expect(words(roundName(4))).toBe('Cuartos de final')
+    expect(words(roundName(8))).toBe('Octavos de final')
+    expect(words(roundName(16))).toBe('Ronda de 32')
   })
 
   it('pairs 1 v 8, 2 v 7, 3 v 6, 4 v 5 — so seeds 1 and 2 can only meet in the final', () => {
@@ -94,11 +95,11 @@ describe('bracket over a played tournament', () => {
   it('reads the semifinals from the groups and names the finalists', () => {
     const snap = semisPlayed()
     const st = bracketState(ctxOf(snap, settings))
-    expect(st.rounds[0]!.name).toBe('Semifinal')
-    expect(st.rounds[0]!.matches.map((m) => `${m.sides[0].name} v ${m.sides[1]?.name}`)).toEqual(['J1 v J4', 'J2 v J3'])
+    expect(words(st.rounds[0]!.name)).toBe('Semifinal')
+    expect(st.rounds[0]!.matches.map((m) => `${words(m.sides[0].name)} v ${m.sides[1] ? words(m.sides[1].name) : undefined}`)).toEqual(['J1 v J4', 'J2 v J3'])
     expect(st.rounds[0]!.matches.every((m) => m.winner)).toBe(true)
     // The final is listed with the two winners, waiting for its groups.
-    expect(st.rounds[1]!.name).toBe('Final')
+    expect(words(st.rounds[1]!.name)).toBe('Final')
     expect(st.rounds[1]!.matches[0]!.pending).toBe(true)
     expect(st.champion).toBeNull()
   })

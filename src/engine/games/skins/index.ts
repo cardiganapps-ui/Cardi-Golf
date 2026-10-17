@@ -10,9 +10,10 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
-import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
+import { msg, say, type Msg } from '../../messages'
+import { directUnits, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { isFinal } from '../../core/ranking'
-import { holeOf, holeScore, moneyByPlayer, namer, plural, rankedUnits, roundHoles, roundNumberOf } from '../util'
+import { holeOf, holeScore, moneyByPlayer, namer, rankedUnits, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'skins'>
 
@@ -86,7 +87,7 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
     const standings = rankedUnits(Object.entries(state.units)).map(({ id, units: u, label }) => ({
       playerIds: [id],
       pos: label,
-      figure: plural(u, 'skin', 'skins'),
+      figure: msg('board.units', { n: u, unit: 'skin' }),
       money: money.get(id) ?? 0,
     }))
     const log = state.holes
@@ -94,16 +95,16 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
       .map((h) => ({
         playerIds: [h.winnerId!],
         pos: null,
-        label: `${multiRound(ctx) ? `Día ${h.roundNumber}, ` : ''}hoyo ${h.hole}`,
-        figure: plural(h.value, 'skin', 'skins'),
+        label: msg('board.hole', { day: multiRound(ctx) ? h.roundNumber : null, hole: h.hole }),
+        figure: msg('board.units', { n: h.value, unit: 'skin' }),
       }))
-    const notes: string[] = []
+    const notes: Msg[] = []
     const riding = lastRiding(state)
-    if (riding) notes.push(`Se acumulan ${plural(riding.value, 'skin', 'skins')} para el hoyo ${riding.hole}.`)
-    if (state.unclaimed) notes.push(`${plural(state.unclaimed, 'skin quedó', 'skins quedaron')} sin ganador al final de la ronda.`)
-    notes.push(`${ctx.config.options.basis === 'net' ? 'Neto' : 'Gross'}${ctx.config.options.carryOver ? ', empates se acumulan' : ', empates no se acumulan'}.`)
-    if (ctx.config.money.source === 'direct') notes.push(`Cada skin vale ${fmt(ctx.config.money.stake)} de cada jugador.`)
-    return { sections: [{ rows: standings }, { title: 'Hoyo por hoyo', rows: log }], notes }
+    if (riding) notes.push(msg('board.skinsRiding', { n: riding.value, hole: riding.hole }))
+    if (state.unclaimed) notes.push(msg('board.skinsUnclaimed', { n: state.unclaimed }))
+    notes.push(msg('board.skinsRule', { net: ctx.config.options.basis === 'net', carry: ctx.config.options.carryOver }))
+    if (ctx.config.money.source === 'direct') notes.push(msg('board.skinStake', { stake: ctx.config.money.stake }))
+    return { sections: [{ rows: standings }, { title: say('board.byHole'), rows: log }], notes }
   },
   warnings(state, ctx) {
     return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'skin')

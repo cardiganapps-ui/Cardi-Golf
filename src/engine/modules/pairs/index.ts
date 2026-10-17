@@ -4,15 +4,16 @@
  * combined last round, then split. Also validates group composition and
  * generates the next round's groups from the standings.
  */
-import { ordinal, t } from '../../../i18n/es-MX'
-import { msg, say, type Msg } from '../../messages'
+import { label as named, msg, say, type Msg } from '../../messages'
 import { flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 
 export interface PairRow {
   pairId: Id
-  name: string
+  /** Its name, or its two players' when it has none (`name.pair`). */
+  name: Msg
   playerIds: [Id, Id]
   kind: string | null
   position: number
@@ -101,7 +102,7 @@ export const pairsModule: GameModule<PairsState, 'pairs'> = {
     })
     const nameOfPair = (id: Id) => {
       const p = byId.get(id)!
-      return p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => playersById.get(id)?.displayName ?? id))
+      return p.name != null ? named(p.name) : msg('name.pair', { names: [p.player1Id, p.player2Id].map((id) => playersById.get(id)?.displayName ?? id) })
     }
     const rows: PairRow[] = flattenRanks(groups).map((r) => {
       const p = byId.get(r.item)!
@@ -157,7 +158,7 @@ export const pairsModule: GameModule<PairsState, 'pairs'> = {
       const row = state.rows.find((r) => r.pairId === p.pairId)
       out.push({
         moduleId: 'pairs',
-        label: `${label}, ${ordinal(row?.label ?? '')}`,
+        ...prizeLabel(label, msg('part.place', { place: row?.label ?? '' })),
         playerId,
         amount: p.amount,
         final: state.final,

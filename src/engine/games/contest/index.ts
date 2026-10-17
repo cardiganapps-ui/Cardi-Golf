@@ -11,13 +11,12 @@
  * Money: a pot is split by holes won; direct bets pay `stake` from every
  * other entrant per hole won.
  */
-import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
-import { msg } from '../../messages'
+import { msg, say, type Msg } from '../../messages'
 import type { HoleAward, Id } from '../../types'
 import { isGameOf, type GameContext, type GameImpl, type GameResultState } from '../game'
-import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
-import { holeOf, moneyByPlayer, namer, plural, rankedUnits, roundHoles, roundNumberOf } from '../util'
+import { directUnits, payUnits, potNote, refundUnwon, unwonWarning } from '../payout'
+import { holeOf, moneyByPlayer, namer, rankedUnits, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'contest'>
 
@@ -102,20 +101,20 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
   board(state, ctx) {
     const name = namer(ctx)
     const money = moneyByPlayer(contestGame.prizes(state, ctx))
-    const rows = rankedUnits(Object.entries(state.units).filter(([, u]) => u > 0)).map(({ id, units: u, label }) => ({ playerIds: [id], pos: label, figure: plural(u, 'hoyo', 'hoyos'), money: money.get(id) ?? 0 }))
+    const rows = rankedUnits(Object.entries(state.units).filter(([, u]) => u > 0)).map(({ id, units: u, label }) => ({ playerIds: [id], pos: label, figure: msg('board.units', { n: u, unit: 'hole' }), money: money.get(id) ?? 0 }))
     const multi = ctx.roundIds.length > 1
     const log = state.holes.map((h) => ({
-      title: `${multi ? `Día ${h.roundNumber}, ` : ''}hoyo ${h.hole}`,
+      title: msg('board.hole', { day: multi ? h.roundNumber : null, hole: h.hole }),
       playerIds: h.status === 'won' ? h.winners : [],
       pos: null,
-      figure: h.status === 'won' ? '✓' : h.status === 'disputed' ? 'En disputa' : 'Pendiente',
-      sub: h.status === 'disputed' ? `Reclaman: ${t.common.andList(h.claims.map(name))}` : h.voided.length ? `No cuenta (sin par): ${t.common.andList(h.voided.map(name))}` : undefined,
+      figure: say(h.status === 'won' ? 'board.won' : h.status === 'disputed' ? 'board.disputed' : 'board.pending'),
+      sub: h.status === 'disputed' ? msg('board.claims', { names: h.claims.map(name) }) : h.voided.length ? msg('board.voided', { names: h.voided.map(name) }) : undefined,
     }))
-    const notes: string[] = []
-    if (ctx.config.money.source === 'direct') notes.push(`Cada hoyo ganado cobra ${fmt(ctx.config.money.stake)} de cada uno de los demás.`)
-    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte entre los hoyos ganados.`)
-    if (state.holes.some((h) => h.status === 'disputed')) notes.push('Hay hoyos en disputa: el Comité decide en Comité, Juegos.')
-    return { sections: [{ rows }, { title: 'Hoyo por hoyo', rows: log }], notes }
+    const notes: Msg[] = []
+    if (ctx.config.money.source === 'direct') notes.push(msg('board.holeStake', { stake: ctx.config.money.stake }))
+    else if (ctx.pot > 0) notes.push(potNote(ctx.config, ctx.pot, 'holes'))
+    if (state.holes.some((h) => h.status === 'disputed')) notes.push(say('board.disputedNote'))
+    return { sections: [{ rows }, { title: say('board.byHole'), rows: log }], notes }
   },
   warnings(state, ctx) {
     const d = state.holes.filter((h) => h.status === 'disputed')

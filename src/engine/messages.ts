@@ -113,8 +113,8 @@ export interface MsgParams {
   'team.noTeams': Record<string, never>
   'bracket.tooFew': Record<string, never>
   /** `round`: the bracket round's name, as the state names it. */
-  'bracket.offBracket': { day: number; off: number; round: string }
-  'bracket.tied': { round: string }
+  'bracket.offBracket': { day: number; off: number; round: Msg }
+  'bracket.tied': { round: Msg }
   'bracket.needsRounds': { rounds: number; have: number }
 
   // ---- Places and prizes (core/ranking.ts, modules/individual) -----------
@@ -123,19 +123,19 @@ export interface MsgParams {
   'prize.place': { place: number; amount: number }
   'prize.tie': { n: number; place: number; places: number[]; total: number }
   'prize.tieSplit': { total: number; n: number; each: number; rounding: number }
-  'prize.tied': { names: Name[] }
-  'individual.incomplete': { cards: Array<{ name: Name; thru: number; of: number }> }
+  'prize.tied': { names: Msg[] }
+  'individual.incomplete': { cards: Array<{ name: Msg; thru: number; of: number }> }
   /** Where a main-event prize comes from: the place (its label, «T3») and the figure as the board shows it. */
-  'individual.where': { name: Name; final: boolean; place: string; figure: string; value: number; kind: FigureUnit }
-  'individual.teamSplit': { team: Name; n: number; total: number; each: number; rounding: number }
-  'countback.title': { name: Name; tied: boolean }
-  'countback.line': { day: number; window: HoleWindow; aName: Name; a: number; bName: Name; b: number; up: boolean }
+  'individual.where': { name: Msg; final: boolean; place: string; figure: string; value: number; kind: FigureUnit }
+  'individual.teamSplit': { team: Msg; n: number; total: number; each: number; rounding: number }
+  'countback.title': { name: Msg; tied: boolean }
+  'countback.line': { day: number; window: HoleWindow; aName: Msg; a: number; bName: Msg; b: number; up: boolean }
   'countback.equalTo': { hole: number }
   'countback.matchPoints': Record<string, never>
   'countback.matchShare': Record<string, never>
   'countback.matchNone': { day: number; over: boolean }
-  'countback.matchSame': { day: number; done: boolean; aName: Name; a: number; bName: Name; b: number }
-  'countback.matchSides': { day: number; aName: Name; aSide: MatchSide; a: number; bName: Name; bSide: MatchSide; b: number }
+  'countback.matchSame': { day: number; done: boolean; aName: Msg; a: number; bName: Msg; b: number }
+  'countback.matchSides': { day: number; aName: Msg; aSide: MatchSide; a: number; bName: Msg; bSide: MatchSide; b: number }
 
   // ---- The side games (modules/*) ----------------------------------------
   'pairs.notPairs': Record<string, never>
@@ -177,8 +177,8 @@ export interface MsgParams {
   'auction.plusRounding': { rounding: number; paid: number }
   'auction.ownerPct': { pct: number; name: Name }
   'auction.rounding': { champion: boolean; name: Name }
-  /** `label`: the Calcutta's label; `slots`: the unfilled slots' labels. */
-  'auction.unfilled': { label: Name; amount: number; slots: Name[] }
+  /** `label`: the Calcutta's label; `slots`: the unfilled slots' names. */
+  'auction.unfilled': { label: Name; amount: number; slots: Msg[] }
   'auction.noResult': { label: Name; pot: number }
   'auction.unsold': { label: Name; names: Name[] }
 
@@ -193,13 +193,13 @@ export interface MsgParams {
   'bet.net': { gross: number; back: number; winner: Name; amount: number }
   'bet.pays': { payer: Name; amount: number }
   /** A match's bet: `segment` its label («Ida»), `day` when the game covers several. */
-  'match.bet': { day: number | null; segment: Name; press: number; from: number; side: Name[]; up: number; decided: boolean; stake: number }
+  'match.bet': { day: number | null; segment: Msg; press: number; from: number; side: Name[]; up: number; decided: boolean; stake: number }
   'match.invalid': { label: Name; n: number }
   'contest.disputed': { label: Name; holes: number[] }
 
   // ---- The settlement (core/money.ts) ------------------------------------
   /** A part of an amount people pay by, signed from the payer's side; `of` when part of it was paid already. */
-  'settle.part': { label: Name; amount: number; of: number | null }
+  'settle.part': { label: Msg; amount: number; of: number | null }
   /** A party is a name, or null for the bank. */
   'settle.squared': { from: Name | null; to: Name | null }
   'settle.pays': { from: Name | null; to: Name | null; amount: number; bankerSelf: boolean }
@@ -228,7 +228,7 @@ export interface MsgParams {
 
   // ---- Por asignar (core/unassigned.ts) ----------------------------------
   'unassigned.title': { amount: number }
-  'unassigned.budget': { label: Name; amount: number }
+  'unassigned.budget': { label: Msg; amount: number }
   'unassigned.paid': { amount: number }
   'unassigned.left': { amount: number }
   'unassigned.decides': Record<string, never>
@@ -242,11 +242,11 @@ export interface MsgParams {
   'unassigned.pendingTiebreak': { day: number; group: number; hole: number }
   /** `game`: the snake's label. */
   'unassigned.heldWhy': { amount: number; game: Name }
-  'unassigned.from': { label: Name; amount: number }
+  'unassigned.from': { label: Msg; amount: number }
   /** The Comité's reason; a link to watch carries none (its free text stays with the members, STRAT-05). */
   'unassigned.decided': { reason: string | null }
-  'unassigned.over': { label: Name; assigned: number; left: number }
-  'unassigned.orphan': { label: Name; amount: number }
+  'unassigned.over': { label: Msg; assigned: number; left: number }
+  'unassigned.orphan': { label: Msg; amount: number }
   'unassigned.mismatch': { bank: number; listed: number }
 
   // ---- The tournament's warnings (computeTournament.ts) ------------------
@@ -432,6 +432,89 @@ export interface MsgParams {
   'settings.gameSplit': { label: Name; sum: number }
   'settings.matchSides': { label: Name }
   'settings.matchSamePlayer': { label: Name }
+
+  // ---- The labels in the computed state (ARCH-05 stage 3) ----------------
+  /** A prize as the money screens list it: its game's label and, after a comma, what in the game paid it. */
+  'prize.label': { game: Msg; part: Msg | null }
+  /** A place on a board, from its label («T3»): «empatado en 3.º». */
+  'part.place': { place: string }
+  'part.day': { day: number }
+  'part.dayGroup': { day: number; group: number }
+  /** A low score's day and place: «Día 1, 2.º». */
+  'part.dayPlace': { day: number | null; place: string }
+  'part.units': { n: number; unit: GameUnit }
+  'part.refund': Record<string, never>
+  'part.from': { payer: Name }
+  'part.assigned': Record<string, never>
+  'part.refunded': Record<string, never>
+  /** What a flow is for: the inscription, a lot bought, a buyback. */
+  'flow.entry': Record<string, never>
+  'flow.lot': { lot: number }
+  'flow.buyback': { pct: number }
+  /** What a party paid beyond what it owes on an account of `kind`. */
+  'settle.overpaid': { kind: 'entry' | 'calcutta' | 'buyback' | 'side' | 'payout' | 'bet' | 'other' }
+  'settle.bankCollects': Record<string, never>
+  'settle.bankPays': Record<string, never>
+  /** «Inscripciones sin premio»: the entries no prize claims. */
+  'unassigned.pool': Record<string, never>
+  'unassigned.held': { game: Name; day: number; group: number }
+  'unassigned.heldNote': { hole: number }
+  /** A Calcutta slot as its payout names it: «Campeón», «3.º lugar», «Mejor C», last place's label; or the pot's rounding. */
+  'auction.slot': { slot: 'place' | 'bestOfTier' | 'lastPlace' | 'rounding'; place: number | null; tier: string | null; lastPlace: Name }
+  /** Slots a tie across places shares: «Campeón + Subcampeón». */
+  'auction.slots': { slots: Msg[] }
+  /** An entrant with no name of its own: a team by its number, a pair by its two players. */
+  'name.team': { n: number }
+  'name.pair': { names: Name[] }
+  /** A main event's headline figure, as its column says it. */
+  'figure.label': { unit: 'points' | 'gross' | 'net' }
+  /** A knockout round by how many matches it has: «Final», «Cuartos de final», «Ronda de 32». */
+  'bracket.round': { matches: number }
+  /** A Nassau's segment, or the one match of a round (`match`) on `holes` holes. */
+  'match.segment': { key: 'front' | 'back' | 'total' | 'match'; holes: number }
+  // A game's board (games/*): its sections' titles, its rows' figures and its notes.
+  'board.units': { n: number; unit: GameUnit }
+  'board.unit': { unit: GameUnit }
+  'board.hole': { day: number | null; hole: number }
+  'board.byHole': Record<string, never>
+  'board.day': { day: number }
+  'board.holes': { n: number }
+  'board.toPar': { n: number }
+  'board.won': Record<string, never>
+  'board.disputed': Record<string, never>
+  'board.pending': Record<string, never>
+  'board.claims': { names: Name[] }
+  'board.voided': { names: Name[] }
+  'board.decidedWin': Record<string, never>
+  'board.skinsRiding': { n: number; hole: number }
+  'board.skinsUnclaimed': { n: number }
+  'board.skinsRule': { net: boolean; carry: boolean }
+  'board.skinStake': { stake: number }
+  'board.eventStake': { unit: GameUnit; stake: number }
+  'board.eventRule': { net: boolean; eagle: boolean }
+  'board.holeStake': { stake: number }
+  'board.disputedNote': Record<string, never>
+  'board.customDecided': { decided: boolean }
+  'board.customStake': { stake: number }
+  /** A game's pot and how it pays: by `unit` won, among the holes won, to its winners, by places. */
+  'board.potUnits': { pot: number; side: boolean; unit: GameUnit }
+  'board.potHoles': { pot: number; side: boolean }
+  'board.potWinners': { pot: number; side: boolean }
+  'board.potPlaces': { pot: number; side: boolean; split: number[] }
+  'board.lowRule': { basis: 'net' | 'gross' | 'points'; perRound: boolean }
+  'board.lowIncomplete': { day: number | null; who: Array<{ name: Name; thru: number }>; holes: number }
+  /** A match's standing: `up` holes up (0 even), decided or not, `remaining` holes left, a side of `plural` players. */
+  'board.matchStatus': { up: number; decided: boolean; remaining: number; plural: boolean }
+  'board.matchPress': { side: Name[] | null; up: number; decided: boolean; remaining: number }
+  /** A segment's progress, and its presses. */
+  'board.matchThru': { thru: number; presses: Array<{ from: number; status: Msg }> }
+  'board.matchMoney': Record<string, never>
+  'board.matchPays': { side: Name[] }
+  'board.signedMoney': { amount: number }
+  'board.matchTitle': { day: number | null; a: Name[]; b: Name[] }
+  'board.matchRule': { nassau: boolean; net: boolean; stake: number }
+  'board.matchPressRule': { at: number; max: number }
+  'board.noMatches': Record<string, never>
 }
 
 /** The team formats' modes. */
@@ -463,3 +546,5 @@ export function say<K extends { [C in MsgCode]: MsgParams[C] extends Record<stri
 
 /** A name or label as data. */
 export const label = (text: Name): Msg => ({ code: 'label', params: { text } })
+/** A name as a message: a player's or a label as data, or one the engine says (a team with no name of its own). */
+export const named = (x: Name | Msg): Msg => (typeof x === 'string' ? label(x) : x)
