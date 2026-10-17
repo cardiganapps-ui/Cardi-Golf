@@ -20,6 +20,7 @@ import type { FieldShape } from '../../../engine/settings/prizeCheck'
 import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
+import { Button } from '../../../components/primitives'
 
 const U = t.setup
 const W = t.organizer.wizard
@@ -89,23 +90,23 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                           <span className={styles.cardBlurb}>{words(describeGame(g)[0]!)}</span>
                         </span>
                         <InfoButton why={{ title: label(g.label), steps: describeGame(g) }} label={W.formatInfo(g.label)} title={W.formatInfoTitle} />
-                        <button type="button" className="btn btn--ghost btn--sm" onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}>
+                        <Button variant="ghost" size="sm" onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}>
                           {U.remove}
-                        </button>
+                        </Button>
                       </div>
                       <QuickFields game={g} onChange={(fn) => setGame(g.id, fn)} />
                       {e.later && <span className="help">{C.games[e.key]!.later}</span>}
                       <div className={styles.cardFoot}>
-                        <button type="button" className="btn btn--secondary btn--sm" onClick={() => setMore(g.id)}>
+                        <Button size="sm" onClick={() => setMore(g.id)}>
                           {U.more}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
                   {instances.length > 0 ? (
-                    <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
+                    <Button size="sm" style={{ alignSelf: 'flex-start' }} onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
                       {U.addAnother}: {C.games[e.key]!.title}
-                    </button>
+                    </Button>
                   ) : (
                     <div className={`${styles.card} ${styles.cardOff}`}>
                       <div className={styles.cardHead}>
@@ -114,9 +115,9 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                           <span className={styles.cardBlurb}>{C.games[e.key]!.blurb}</span>
                         </span>
                         <InfoButton why={{ title: label(C.games[e.key]!.title), steps: describeGame(e.create('preview')) }} label={W.formatInfo(C.games[e.key]!.title)} title={W.formatInfoTitle} />
-                        <button type="button" className="btn btn--primary btn--sm" onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
+                        <Button variant="primary" size="sm" onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
                           {U.add}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -259,9 +260,9 @@ function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; r
           <li key={i}>{words(l)}</li>
         ))}
       </ul>
-      <button type="button" className="btn btn--primary" onClick={onDone}>
+      <Button variant="primary" onClick={onDone}>
         {U.done}
-      </button>
+      </Button>
     </div>
   )
 }

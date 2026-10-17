@@ -4,9 +4,8 @@
  * by the two people involved.
  */
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
 import type { NoticeLike } from '../lib/noticeText'
-import { ApiError } from './api'
+import { rpc } from './rpc'
 
 export interface FriendCard {
   handle: string
@@ -113,27 +112,21 @@ export type FeedItem =
   | { kind: 'round'; at: string; who: Actor; data: { course: string | null; tournament: string; slug: string; gross: number | null; birdies: number; eagles: number; best: boolean } }
   | { kind: 'rivalry'; at: string; who: Actor; data: { rivalryId: string; result: RivalryResult } }
 
-async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw ApiError.from(error)
-  return data as T
-}
-
-export const myFriends = () => rpc<MyFriends>('my_friends')
-export const friendshipWith = (handle: string) => rpc<Friendship>('friendship_with', { p_handle: handle })
+export const myFriends = () => rpc('my_friends').as<MyFriends>()
+export const friendshipWith = (handle: string) => rpc('friendship_with', { p_handle: handle }).as<Friendship>()
 /** Returns 'pending', 'accepted' (it answered their request), 'blocked' or 'not_found'. */
-export const friendRequest = (handle: string) => rpc<string>('friend_request', { p_handle: handle })
-export const friendRespond = (handle: string, accept: boolean) => rpc<string>('friend_respond', { p_handle: handle, p_accept: accept })
-export const friendRemove = (handle: string) => rpc<void>('friend_remove', { p_handle: handle })
-export const friendBlock = (handle: string) => rpc<void>('friend_block', { p_handle: handle })
-export const headToHead = (handle: string) => rpc<HeadToHead | null>('head_to_head', { p_handle: handle })
+export const friendRequest = (handle: string) => rpc('friend_request', { p_handle: handle })
+export const friendRespond = (handle: string, accept: boolean) => rpc('friend_respond', { p_handle: handle, p_accept: accept })
+export const friendRemove = (handle: string) => rpc('friend_remove', { p_handle: handle })
+export const friendBlock = (handle: string) => rpc('friend_block', { p_handle: handle })
+export const headToHead = (handle: string) => rpc('head_to_head', { p_handle: handle }).as<HeadToHead | null>()
 /** `strokes`: what I receive from them (negative: I give). */
-export const rivalryPropose = (handle: string, strokes: number) => rpc<string>('rivalry_propose', { p_handle: handle, p_strokes: strokes })
-export const rivalryRespond = (id: string, accept: boolean) => rpc<void>('rivalry_respond', { p_id: id, p_accept: accept })
-export const rivalryEnd = (id: string) => rpc<void>('rivalry_end', { p_id: id })
-export const friendsFeed = () => rpc<FeedItem[]>('friends_feed')
-export const myNotifications = () => rpc<Notice[]>('my_notifications')
-export const markNotificationsRead = (ids?: string[]) => rpc<void>('mark_notifications_read', { p_ids: ids ?? null })
+export const rivalryPropose = (handle: string, strokes: number) => rpc('rivalry_propose', { p_handle: handle, p_strokes: strokes })
+export const rivalryRespond = (id: string, accept: boolean) => rpc('rivalry_respond', { p_id: id, p_accept: accept })
+export const rivalryEnd = (id: string) => rpc('rivalry_end', { p_id: id })
+export const friendsFeed = () => rpc('friends_feed').as<FeedItem[]>()
+export const myNotifications = () => rpc('my_notifications').as<Notice[]>()
+export const markNotificationsRead = (ids?: string[]) => rpc('mark_notifications_read', { p_ids: ids ?? null })
 
 /** The bell's count. Refreshed on Mi Polo and when the inbox is read. */
 interface UnreadState {
@@ -145,7 +138,7 @@ export const useUnread = create<UnreadState>((set) => ({
   count: 0,
   refresh: async () => {
     try {
-      set({ count: await rpc<number>('unread_notifications') })
+      set({ count: await rpc('unread_notifications') })
     } catch {
       /* no account or offline: keep what we had */
     }

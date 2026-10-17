@@ -3,7 +3,7 @@ import { animate, useReducedMotion } from 'motion/react'
 import { Link, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
-import { EventName } from '../../components/primitives'
+import { Button, EventName } from '../../components/primitives'
 import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
 import { InstallFirst } from '../../components/InstallGuide'
@@ -19,6 +19,7 @@ import { haptic } from '../../lib/haptics'
 import { easeSlow } from '../../design/motion'
 import { useViewFocus } from '../../components/viewFocus'
 import { usePageTitle } from '../../app/pageTitle'
+import { buttonClass } from '../../components/buttonClass'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -180,14 +181,16 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                   setSelected(p)
                 }}
               >
-                <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? undefined : 'lg'} honoree={p.isHonoree} />
-                <span className={styles.faceName}>{p.displayName}</span>
-                {p.pendingMe ? <span className={styles.faceAsk}>{t.enter.isThisYou}</span> : p.tier && <span className="tierBadge">{p.tier}</span>}
+                <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? 'sm' : undefined} honoree={p.isHonoree} seed={p.id} />
+                <span className={styles.faceText}>
+                  <span className={styles.faceName}>{p.displayName}</span>
+                  {p.pendingMe ? <span className={styles.faceAsk}>{t.enter.isThisYou}</span> : p.tier && <span className={styles.faceTier}>{t.enter.faceTier(p.tier)}</span>}
+                </span>
               </button>
             ))}
           </div>
           {user && !isAnonymous && (
-            <Link className="btn btn--ghost btn--sm" to="/organizer">
+            <Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to="/organizer">
               {t.enter.organizerEnter}
             </Link>
           )}
@@ -195,25 +198,25 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       ) : askSave ? (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={askSave.displayName} url={askSave.avatarUrl} size="lg" honoree={askSave.isHonoree} />
+            <Avatar name={askSave.displayName} url={askSave.avatarUrl} size="lg" honoree={askSave.isHonoree} seed={askSave.id} />
             <div className="grow">
               <h2 data-view-heading>{t.more.saveHere}</h2>
               <p className="help">{t.more.saveProfileHint}</p>
             </div>
           </div>
           <div className={styles.actions}>
-            <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => onEntered()}>
+            <Button disabled={busy} onClick={() => onEntered()}>
               {t.common.notNow}
-            </button>
-            <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void saveToProfile()}>
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => void saveToProfile()}>
               {t.common.save}
-            </button>
+            </Button>
           </div>
         </div>
       ) : selected.pendingMe ? (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
+            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} seed={selected.id} />
             <div className="grow">
               <h2 data-view-heading>{t.enter.isThisYou}</h2>
               <p className="help">{t.enter.confirmYou(selected.displayName)}</p>
@@ -225,18 +228,18 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             </p>
           )}
           <div className={styles.actions}>
-            <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void answer(false)}>
+            <Button disabled={busy} onClick={() => void answer(false)}>
               {t.mipolo.no}
-            </button>
-            <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void answer(true)}>
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => void answer(true)}>
               {t.mipolo.yes}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
+            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} seed={selected.id} />
             <div className="grow">
               <h2>{t.enter.enterAs(selected.displayName)}</h2>
               <p className="help" id={pinHintId}>
@@ -290,9 +293,9 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             </p>
           )}
           <div className={styles.actions}>
-            <button
-              className="btn btn--secondary"
-              type="button"
+            <Button
+              
+             
               onClick={() => {
                 setSelected(null)
                 setPin('')
@@ -300,10 +303,10 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               }}
             >
               {t.enter.notMe}
-            </button>
-            <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void submit(pin)}>
+            </Button>
+            <Button variant="primary" disabled={busy || pin.length !== 4} onClick={() => void submit(pin)}>
               {busy ? t.auth.signingIn : t.home.joinButton}
-            </button>
+            </Button>
           </div>
         </div>
       )}

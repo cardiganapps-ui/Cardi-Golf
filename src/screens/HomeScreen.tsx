@@ -14,6 +14,7 @@ import { BootProblem } from '../components/BootProblem'
 import { Spinner } from '../components/ui'
 import { MiPolo } from './profile/MiPolo'
 import styles from './HomeScreen.module.css'
+import { buttonClass } from '../components/buttonClass'
 
 /**
  * `/`: one line on what Polo does, then one way in.
@@ -92,7 +93,7 @@ export function HomeScreen() {
             spellCheck={false}
             inputMode="text"
           />
-          <button className={`btn ${last ? 'btn--secondary' : 'btn--primary'}`} type="submit" disabled={!target}>
+          <button className={buttonClass({ variant: last ? 'secondary' : 'primary' })} type="submit" disabled={!target}>
             {t.home.joinButton}
           </button>
         </form>
@@ -129,7 +130,7 @@ function LastTournamentCard({ last }: { last: LastTournament }) {
     <section className={styles.last}>
       <span className="label">{t.home.lastTournament}</span>
       <span className={styles.lastName}>{last.name}</span>
-      <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
+      <Link className={buttonClass({ variant: 'primary', block: true })} to={`/t/${last.slug}`}>
         {t.home.joinButton}
       </Link>
     </section>

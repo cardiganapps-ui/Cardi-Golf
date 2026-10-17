@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { Field, Toggle } from '../../components/ui'
-import { Input } from '../../components/primitives'
+import { Button, Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
@@ -119,13 +119,13 @@ export function OrganizerLoginScreen() {
               {error}
             </p>
           )}
-          <button className="btn btn--primary btn--block" type="submit" disabled={busy || code.length < 6}>
+          <Button variant="primary" block type="submit" disabled={busy || code.length < 6}>
             {busy ? t.auth.confirming : t.auth.confirmCode}
-          </button>
+          </Button>
           <div className={styles.quiet}>
-            <button
-              className="btn btn--ghost btn--sm"
-              type="button"
+            <Button
+              variant="ghost" size="sm"
+             
               disabled={busy}
               onClick={() =>
                 void run(async () => {
@@ -135,10 +135,10 @@ export function OrganizerLoginScreen() {
               }
             >
               {t.auth.resend}
-            </button>
-            <button
-              className="btn btn--ghost btn--sm"
-              type="button"
+            </Button>
+            <Button
+              variant="ghost" size="sm"
+             
               onClick={() => {
                 setAwaiting(null)
                 setCode('')
@@ -147,7 +147,7 @@ export function OrganizerLoginScreen() {
               }}
             >
               {t.auth.otherEmail}
-            </button>
+            </Button>
           </div>
         </form>
       ) : (
@@ -177,14 +177,14 @@ export function OrganizerLoginScreen() {
           <LegalConsent />
           {/* A new account says the person is an adult (TRUST-13); signing in to one is not a new one. */}
           {mode === 'up' && <Toggle label={t.legal.adult.check} hint={t.legal.adult.hint} checked={adult} onChange={setAdult} />}
-          <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
+          <Button variant="primary" block type="submit" disabled={busy}>
             {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
-          </button>
+          </Button>
           {mode === 'in' && (
             <div className={styles.quiet}>
-              <button
-                className="btn btn--ghost btn--sm"
-                type="button"
+              <Button
+                variant="ghost" size="sm"
+               
                 onClick={() =>
                   void run(async () => {
                     await refuseWithUnsent('switch')
@@ -195,10 +195,10 @@ export function OrganizerLoginScreen() {
                 disabled={busy || !hasEmail}
               >
                 {t.auth.magicLink}
-              </button>
-              <button
-                className="btn btn--ghost btn--sm"
-                type="button"
+              </Button>
+              <Button
+                variant="ghost" size="sm"
+               
                 onClick={() =>
                   void run(async () => {
                     await requestPasswordReset(email.trim())
@@ -208,7 +208,7 @@ export function OrganizerLoginScreen() {
                 disabled={busy || !hasEmail}
               >
                 {t.auth.forgot}
-              </button>
+              </Button>
             </div>
           )}
         </form>
@@ -217,9 +217,9 @@ export function OrganizerLoginScreen() {
       {!awaiting && (
         <div className={styles.switch}>
           <span>{mode === 'in' ? t.auth.firstTime : t.auth.haveAccount}</span>
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
+          <Button variant="ghost" size="sm" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
             {mode === 'in' ? t.auth.toggleToSignUp : t.auth.toggleToSignIn}
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -3,7 +3,9 @@
 # it reaches the one that holds the tournament.
 #   1. Every migration replayed from zero on Postgres with Supabase's stubs:
 #      by a plain psql loop, one transaction per file (the chain needs nothing
-#      before it, DB-22), and by scripts/db.mjs as production gets them.
+#      before it, DB-22), and by scripts/db.mjs as production gets them; the
+#      TypeScript types generated from the result (scripts/gen-db-types.mjs)
+#      equal src/data/database.types.ts (ARCH-03; POLO_TYPES_WRITE=1 writes it).
 #   2. db.mjs again: nothing left to apply; a file edited or removed after it
 #      ran is refused; a ledger without checksums (production before DB-17)
 #      gets them, and nothing is applied twice.
@@ -57,6 +59,16 @@ dbmjs "$P" migrate >"$work/out" || { cat "$work/out"; exit 1; }
 n=$("${PSQL[@]}" -d "$P" -Atc "select count(*) from public._migrations where checksum is not null")
 [ "$n" -eq "$(echo "$migrations" | wc -l)" ] || { echo "  ✗ $n of $(echo "$migrations" | wc -l) recorded with a checksum"; exit 1; }
 echo "  ✓ $n migrations, each recorded with its checksum"
+
+step "1c. The generated types: src/data/database.types.ts is what the migrations make (ARCH-03)"
+PGDATABASE="${P}_plain" node "$root/scripts/gen-db-types.mjs" >"$work/types.ts"
+if [ -n "${POLO_TYPES_WRITE:-}" ]; then cp "$work/types.ts" "$root/src/data/database.types.ts"; fi
+if ! diff -u "$root/src/data/database.types.ts" "$work/types.ts" >"$work/out"; then
+  head -80 "$work/out"
+  echo "  ✗ src/data/database.types.ts is stale: run POLO_TYPES_WRITE=1 scripts/db-test.sh, or scripts/gen-db-types.mjs on a migrated database, and commit it"
+  exit 1
+fi
+echo "  ✓ src/data/database.types.ts matches the chain"
 
 step "2. db.mjs: nothing twice, nothing edited, nothing missing"
 dbmjs "$P" migrate >"$work/out"

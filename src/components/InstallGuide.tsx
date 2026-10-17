@@ -19,6 +19,7 @@ import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { IconHome, IconShare } from './icons'
 import { Sheet } from './ui'
 import styles from './InstallGuide.module.css'
+import { Button } from './primitives'
 
 /** «Ahora no» until then. */
 const LATER = 'cardi-golf:install-later'
@@ -38,9 +39,9 @@ export function InstallSteps({ platform }: { platform: DevicePlatform }) {
   if (platform === 'android') {
     // Chrome offered the install: one tap. Otherwise its menu, which every Android browser has.
     return offer ? (
-      <button className="btn btn--primary" type="button" onClick={() => void installNow()}>
+      <Button variant="primary" onClick={() => void installNow()}>
         {t.install.installButton}
-      </button>
+      </Button>
     ) : (
       <p className={styles.step}>{t.install.android}</p>
     )
@@ -92,12 +93,12 @@ export function InstallCard() {
       <p className="help">{t.install.why}</p>
       <InstallSteps platform={platform} />
       <div className={styles.actions}>
-        <button className="btn btn--ghost btn--sm btn--flush" type="button" onClick={later}>
+        <Button variant="ghost" size="sm" flush onClick={later}>
           {t.install.later}
-        </button>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={have}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={have}>
           {t.install.done}
-        </button>
+        </Button>
       </div>
     </section>
   )

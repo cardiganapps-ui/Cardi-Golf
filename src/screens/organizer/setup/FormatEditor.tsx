@@ -11,6 +11,7 @@ import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import { FormatPicker } from './FormatPicker'
 import styles from './Setup.module.css'
+import { Button } from '../../../components/primitives'
 
 const W = t.organizer.wizard
 const ALLOWANCES = ['1', '0.9', '0.8', '0'] as const
@@ -75,9 +76,9 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
             </span>
           ))}
           <input className="input input--sm" style={{ width: '8em' }} value={newTier} placeholder={W.tierName} aria-label={W.tierName} onChange={(e) => setNewTier(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTier())} />
-          <button type="button" className="btn btn--secondary btn--sm" onClick={addTier}>
+          <Button size="sm" onClick={addTier}>
             {W.tierAdd}
-          </button>
+          </Button>
         </div>
       )}
     </div>

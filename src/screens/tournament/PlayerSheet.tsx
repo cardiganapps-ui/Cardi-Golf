@@ -24,6 +24,7 @@ import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
 import { useCurrency, useWords } from '../../components/currency'
+import { buttonClass } from '../../components/buttonClass'
 
 /**
  * Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a
@@ -113,7 +114,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
             </span>
           </div>
           {profile && (
-            <Link className="btn btn--ghost btn--sm" to={`/p/${profile.handle}`}>
+            <Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to={`/p/${profile.handle}`}>
               {t.profile.viewProfile}
             </Link>
           )}
@@ -234,7 +235,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span className="label">{t.player.stats}</span>
-            <ShareCardButton what={{ kind: 'player', playerId: p.id }} className="btn btn--ghost btn--sm" />
+            <ShareCardButton what={{ kind: 'player', playerId: p.id }} className={buttonClass({ variant: 'ghost', size: 'sm' })} />
           </div>
           <div className={styles.stats}>
             <Stat label={t.player.birdies} v={stats.birdies} />

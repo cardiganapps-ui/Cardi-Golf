@@ -12,12 +12,7 @@ import { ApiError } from './apiError'
 import { downloadText } from './backup'
 import { signOut } from './auth'
 import { forgetSignedOut, unsentReason } from './account'
-
-async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw ApiError.from(error)
-  return data as T
-}
+import { isMissingFunction, rpc } from './rpc'
 
 /** «polo-mis-datos-2026-10-16.json», today in the phone's own calendar. */
 export function exportFileName(at = new Date()): string {
@@ -27,7 +22,7 @@ export function exportFileName(at = new Date()): string {
 
 /** Everything Polo keeps about me, downloaded as one file. */
 export async function downloadMyData(): Promise<void> {
-  const data = await rpc<Record<string, unknown>>('my_data_export')
+  const data = await rpc('my_data_export').as<Record<string, unknown>>()
   downloadText(exportFileName(), `${JSON.stringify(data, null, 2)}\n`)
 }
 
@@ -42,7 +37,7 @@ export interface DeletePreview {
   crewsDeleted: string[]
 }
 
-export const myDeletePreview = () => rpc<DeletePreview>('my_delete_preview')
+export const myDeletePreview = () => rpc('my_delete_preview').as<DeletePreview>()
 
 /**
  * Deletes my account, its email typed as the confirmation. Refused, in words, while this phone holds writes
@@ -59,7 +54,7 @@ export async function deleteMyAccount(email: string): Promise<{ done: true } | {
 }
 
 /** The Comité says every player of its tournament is an adult, or takes it back (TRUST-13). */
-export const confirmAdults = (tournamentId: string, on: boolean) => rpc<string | null>('confirm_adults', { p_tournament_id: tournamentId, p_on: on })
+export const confirmAdults = (tournamentId: string, on: boolean) => rpc('confirm_adults', { p_tournament_id: tournamentId, p_on: on }).as<string | null>()
 
 /** When the Comité said so, or null; undefined on a database without 0070 (the card says nothing then). */
 export async function adultsConfirmedAt(tournamentId: string): Promise<string | null | undefined> {
@@ -81,14 +76,14 @@ export interface CorrectionRequest {
 }
 
 /** A player asks the Comité to fix what it saved about him (TRUST-16). */
-export const requestCorrection = (tournamentId: string, message: string) => rpc<number>('request_player_correction', { p_tournament_id: tournamentId, p_message: message })
+export const requestCorrection = (tournamentId: string, message: string) => rpc('request_player_correction', { p_tournament_id: tournamentId, p_message: message })
 /** The Comité's list, open ones first; null on a database without 0070. */
 export async function correctionRequests(tournamentId: string): Promise<CorrectionRequest[] | null> {
-  const { data, error } = await supabase().rpc('player_corrections', { p_tournament_id: tournamentId })
-  if (error) {
-    if (error.code === 'PGRST202' || error.code === '42883') return null
-    throw ApiError.from(error)
+  try {
+    return (await rpc('player_corrections', { p_tournament_id: tournamentId }).as<CorrectionRequest[] | null>()) ?? []
+  } catch (e) {
+    if (isMissingFunction(e)) return null
+    throw e
   }
-  return (data as CorrectionRequest[] | null) ?? []
 }
-export const resolveCorrection = (id: number) => rpc<void>('resolve_player_correction', { p_id: id })
+export const resolveCorrection = (id: number) => rpc('resolve_player_correction', { p_id: id })

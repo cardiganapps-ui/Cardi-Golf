@@ -3,13 +3,13 @@
  * tournament; closing it finishes the round and the tournament and publishes
  * the results. Also the rivalry strokes for the Tarjeta.
  */
-import { supabase } from '../lib/supabase'
+import { rpc } from './rpc'
 import { step } from '../lib/telemetry'
 import { acceptLegal } from './legal'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import type { TournamentSettings } from '../engine/settings/schema'
-import { ApiError, setRoundStatus, updateTournament } from './api'
+import { setRoundStatus, updateTournament } from './api'
 import { publishFromStore } from './publish'
 import { setTournamentCrew } from './crews'
 import { confirmAdults } from './myData'
@@ -31,9 +31,7 @@ export interface QuickRoundInput {
 }
 
 export async function createQuickRound({ crewId, adults, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
-  const { data, error } = await supabase().rpc('create_quick_round', { p: input })
-  if (error) throw ApiError.from(error)
-  const created = data as { id: string; slug: string }
+  const created = await rpc('create_quick_round', { p: input }).as<{ id: string; slug: string }>()
   step('quick_round_created')
   // Created under the consent line (TRUST-05).
   void acceptLegal('quick')
@@ -51,9 +49,7 @@ export interface RoundRivalry {
 }
 
 export async function roundRivalries(tournamentId: string): Promise<RoundRivalry[]> {
-  const { data, error } = await supabase().rpc('round_rivalries', { tid: tournamentId })
-  if (error) throw ApiError.from(error)
-  return (data ?? []) as RoundRivalry[]
+  return (await rpc('round_rivalries', { tid: tournamentId }).as<RoundRivalry[] | null>()) ?? []
 }
 
 /** Only the live rounds finished: what is «por asignar» then shows in Dinero, for the Comité to decide before publishing (MONEY-05). */

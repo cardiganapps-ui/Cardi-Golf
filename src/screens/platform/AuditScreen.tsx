@@ -7,12 +7,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner } from '../../components/ui'
-import { Input, Segmented } from '../../components/primitives'
+import { Button, Input, Segmented } from '../../components/primitives'
 import { usePlatformApi, type AuditDetail, type AuditItem } from '../../data/platform'
 import { changedFields, showValue } from '../../lib/auditDiff'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 const A = t.platform.auditLog
 const PAGE = 50
@@ -74,16 +75,16 @@ export function AuditScreen() {
                   <span className={s.rowSub}>{[x.tournament, x.reason, x.source === 'platform' && !x.tournament ? x.detail : null].filter(Boolean).join(', ') || '—'}</span>
                 </span>
                 <span className={s.rowEnd}>
-                  {x.source === 'comite' && <span className="chip chip--outline">{A.sources.comite}</span>}
+                  {x.source === 'comite' && <span className={s.flag}>{A.sources.comite}</span>}
                   {relTime(x.at)}
                 </span>
               </button>
             ))}
           </div>
           {!done && (
-            <button
-              className="btn btn--secondary"
-              type="button"
+            <Button
+              
+             
               disabled={loadingMore}
               onClick={async () => {
                 setLoadingMore(true)
@@ -92,7 +93,7 @@ export function AuditScreen() {
               }}
             >
               {A.more}
-            </button>
+            </Button>
           )}
         </>
       )}
@@ -123,7 +124,7 @@ function AuditEntry({ item }: { item: AuditItem }) {
       <span className={s.help}>{[item.actor, new Date(item.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].filter(Boolean).join(', ')}</span>
       {item.reason && <span className={s.help}>{t.admin.history.reason(item.reason)}</span>}
       {item.tournamentId && (
-        <Link className="btn btn--secondary btn--sm" to={`../torneos/${item.tournamentId}`} relative="path">
+        <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to={`../torneos/${item.tournamentId}`} relative="path">
           {item.tournament ?? t.platform.open}
         </Link>
       )}

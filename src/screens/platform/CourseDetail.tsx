@@ -11,7 +11,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { leaveSheetHistory } from '../../components/sheetHistory'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
 import { loadCourseDraft, saveCourse, type CourseDraft } from '../../data/api'
@@ -22,6 +22,7 @@ import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 const C = t.platform.courses
 
@@ -53,7 +54,7 @@ export function CourseDetail() {
   }, [load])
 
   const back = (
-    <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
+    <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {C.back}
     </Link>
@@ -117,8 +118,8 @@ export function CourseDetail() {
         <h2>{course.name}</h2>
         <span className={s.chips}>
           {course.verifiedAt && <VerifiedBadge />}
-          {course.dupes.length > 0 && <span className="chip chip--sun">{C.chips.dupe}</span>}
-          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className="chip chip--coral">{C.chips.broken}</span>}
+          {course.dupes.length > 0 && <span className={s.flagCaution}>{C.chips.dupe}</span>}
+          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className={s.flagDanger}>{C.chips.broken}</span>}
         </span>
         <span className={s.help}>
           {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(', ')}
@@ -127,24 +128,24 @@ export function CourseDetail() {
         {course.verifiedAt && <span className={s.help}>{C.verifiedBy(course.verifiedVia, course.verifierEmail, relTime(course.verifiedAt))}</span>}
         {course.correctedAt && <span className={s.help}>{C.correctedLine(course.correctorEmail, relTime(course.correctedAt))}</span>}
         <div className={s.actions}>
-          <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void edit()}>
+          <Button variant="primary" size="sm" disabled={busy} onClick={() => void edit()}>
             {C.edit}
-          </button>
+          </Button>
           {rounds > 0 && (
-            <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void refresh()}>
+            <Button size="sm" disabled={busy} onClick={() => void refresh()}>
               {C.refresh}
-            </button>
+            </Button>
           )}
           {/* A database without 0075 says nothing of verification, and offers none. */}
           {'verifiedAt' in course && (
-            <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => setMarking(course.verifiedAt ? 'off' : 'on')}>
+            <Button size="sm" disabled={busy} onClick={() => setMarking(course.verifiedAt ? 'off' : 'on')}>
               {course.verifiedAt ? C.unverify : C.verify}
-            </button>
+            </Button>
           )}
           {rounds === 0 && (
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAsking(true)}>
+            <Button variant="danger" size="sm" onClick={() => setAsking(true)}>
               {C.delete}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -174,7 +175,7 @@ export function CourseDetail() {
                   <span className={s.rowTitle}>{u.name}</span>
                   <span className={s.rowSub}>{C.usedLine(u.rounds)}</span>
                 </span>
-                <span className={s.rowEnd}>{u.protected && <span className="chip chip--coral">{t.platform.chips.protected}</span>}</span>
+                <span className={s.rowEnd}>{u.protected && <span className={s.flagDanger}>{t.platform.chips.protected}</span>}</span>
               </Link>
             ))}
           </div>
@@ -195,9 +196,9 @@ export function CourseDetail() {
                     <span className={s.rowSub}>{[d.location, C.usedLine(d.rounds)].filter(Boolean).join(', ')}</span>
                   </span>
                 </Link>
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => setMergeWith(d.id)}>
+                <Button size="sm" onClick={() => setMergeWith(d.id)}>
                   {C.merge}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -363,9 +364,9 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
                 <span className="label">{C.mergeKeep}</span>
                 <strong>{keep!.name}</strong>
               </span>
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setKeepFirst(!keepFirst)}>
+              <Button variant="ghost" size="sm" onClick={() => setKeepFirst(!keepFirst)}>
                 {C.mergeSwap}
-              </button>
+              </Button>
               <span>
                 <span className="label">{C.mergeDrop}</span>
                 <strong>{drop!.name}</strong>
@@ -388,9 +389,9 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
             <Field label={t.platform.reason} error={error}>
               <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
             </Field>
-            <button className="btn btn--primary btn--block" type="button" disabled={busy || !ready} onClick={() => void go()}>
+            <Button variant="primary" block disabled={busy || !ready} onClick={() => void go()}>
               {busy ? t.common.saving : C.merge}
-            </button>
+            </Button>
           </>
         )}
       </div>

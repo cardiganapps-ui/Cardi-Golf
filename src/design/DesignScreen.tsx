@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { getFixture } from '../dev/fixtures'
 import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from '../components/icons'
-import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, type GridHole } from '../components/primitives'
+import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, TabItem, Wordmark, type GridHole } from '../components/primitives'
 import { formatMoney, formatSignedMoney, PLATFORM_CURRENCY } from '../lib/money'
 import { toPar } from '../components/notation'
 import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
@@ -215,12 +215,12 @@ export function DesignScreen() {
         {/* ---- Buttons ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Botones</h2>
-          {(['primary', 'secondary', 'quiet', 'danger'] as const).map((v) => (
+          {(['primary', 'secondary', 'ghost', 'danger'] as const).map((v) => (
             <div key={v} className={s.states}>
               {[
                 ['normal', {}],
-                ['presionado', { pressed: true }],
-                ['foco', { focus: true }],
+                ['presionado', { 'data-pressed': '' }],
+                ['foco', { className: s.demoFocus }],
                 ['deshabilitado', { disabled: true }],
               ].map(([label, props]) => (
                 <div key={label as string}>
@@ -228,7 +228,7 @@ export function DesignScreen() {
                     {v} · {label as string}
                   </div>
                   <Button variant={v} {...(props as object)}>
-                    {v === 'primary' ? 'Guardar hoyo' : v === 'danger' ? 'Borrar' : v === 'quiet' ? 'Deshacer' : 'Ver tarjeta'}
+                    {v === 'primary' ? 'Guardar hoyo' : v === 'danger' ? 'Borrar' : v === 'ghost' ? 'Deshacer' : 'Ver tarjeta'}
                   </Button>
                 </div>
               ))}
@@ -239,7 +239,7 @@ export function DesignScreen() {
               Entrar
             </Button>
             <Button size="sm">Comité</Button>
-            <Button variant="quiet" size="sm">
+            <Button variant="ghost" size="sm">
               ¿Cómo se calculó?
             </Button>
           </div>
@@ -299,7 +299,7 @@ export function DesignScreen() {
               ))}
               <div className={s.row}>
                 <Stepper label="Putts de Diego" value={putts} onChange={setPutts} min={0} max={6} />
-                <Button variant="quiet" size="sm">
+                <Button variant="ghost" size="sm">
                   Levantó
                 </Button>
               </div>
@@ -400,15 +400,19 @@ export function DesignScreen() {
                 <LiveStatus text="Actualizado hace 1 min" />
               </div>
             </div>
-            <TabBar
-              items={[
-                { icon: <IconFlag />, label: 'En vivo', active: true },
-                { icon: <IconPencil />, label: 'Tarjeta' },
-                { icon: <IconGames />, label: 'Juegos' },
-                { icon: <IconCoin />, label: 'Dinero' },
-                { icon: <IconMore />, label: 'Más' },
-              ]}
-            />
+            <TabBar>
+              {(
+                [
+                  [<IconFlag />, 'En vivo'],
+                  [<IconPencil />, 'Tarjeta'],
+                  [<IconGames />, 'Juegos'],
+                  [<IconCoin />, 'Dinero'],
+                  [<IconMore />, 'Más'],
+                ] as const
+              ).map(([icon, label], i) => (
+                <TabItem key={label} to={`/design/${i}`} active={i === 0} icon={icon} label={label} badge={i === 1 ? { count: 2 } : undefined} onClick={(e) => e.preventDefault()} />
+              ))}
+            </TabBar>
           </div>
           <div className={s.row}>
             <Segmented
@@ -419,8 +423,24 @@ export function DesignScreen() {
                 { value: 'snake', label: 'Víbora' },
               ]}
               onChange={() => undefined}
+              label="Vista"
             />
           </div>
+          {/* A value is the segmented control; a set of panels is the in-page tabs (VIS-17). */}
+          <Segmented
+            value="individual"
+            tabs
+            label="Juegos"
+            options={[
+              { value: 'individual', label: 'Individual' },
+              { value: 'pairs', label: 'Los Matrimonios' },
+              { value: 'best', label: 'Mejor ronda' },
+              { value: 'snake', label: 'La Víbora' },
+              { value: 'putts', label: 'Menos putts' },
+              { value: 'auction', label: 'La Calcutta' },
+            ]}
+            onChange={() => undefined}
+          />
         </section>
 
         {/* ---- Sheet, toast, skeleton, empty ---- */}

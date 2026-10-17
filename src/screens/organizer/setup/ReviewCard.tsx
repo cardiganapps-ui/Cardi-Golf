@@ -39,7 +39,8 @@ export function ReviewCard({ name, tagline, settings, players, check }: { name: 
   )
 }
 
-function Lines({ lines }: { lines: ReviewLine[] }) {
+/** Label and value lines, as «Antes de crear» and the wizard's preview set them. */
+export function Lines({ lines }: { lines: ReviewLine[] }) {
   return (
     <dl className={styles.review}>
       {lines.map((l) => (

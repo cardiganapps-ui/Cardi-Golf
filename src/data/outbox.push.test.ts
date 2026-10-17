@@ -84,7 +84,7 @@ vi.mock('./tournamentStore', () => ({
   },
 }))
 
-const { _outboxTest, flush, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, enqueueHole, flush, startOutbox, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 
 const item = <K extends 'score' | 'tiebreak' | 'award' | 'signature'>(kind: K, key: string, payload: Record<string, unknown>) => ({ key, kind, tournamentId: 't1', payload, attempts: 0, createdAt: 1 }) as never
@@ -200,5 +200,37 @@ describe('a push hands the store the rows the server stored', () => {
     } finally {
       tab.close()
     }
+  })
+})
+
+// ARCH-03: the answer is checked against its shape before anything of it lands. It used to be taken once it had a
+// status word: a list that held something else reached the boards (a row that is null) or the questions the
+// Tarjeta asks (a conflict whose fields are a word), and the hole was taken off the queue as settled.
+describe('save_hole’s answer is read before it is settled (ARCH-03)', () => {
+  const stored = { id: 's-9', round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 2, picked_up: false, updated_at: '2027-04-09T18:00:00+00:00' }
+  const hole = () => enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p2', fields: { strokes: 5 }, base: {} }] })
+
+  it('a readable answer lands its rows, and keys this build does not know are no reason to refuse it', async () => {
+    srv.rpcAnswers.set('save_hole', { status: 'ok', rows: [stored], conflicts: [], rejected: [], unchanged: [], newer: 'kept' })
+    await hole()
+    await flush()
+    expect(srv.selected).toEqual(['rpc:save_hole'])
+    expect(srv.landed.map((l) => l.changes)).toEqual([[{ table: 'scores', eventType: 'UPDATE', new: stored, old: {} }]])
+    expect(_outboxTest.queue()).toEqual([])
+  })
+
+  it.each([
+    ['rows that are not rows', { status: 'ok', rows: [null], conflicts: [], rejected: [], unchanged: [] }],
+    ['a conflict whose fields are not a list', { status: 'conflict', rows: [], conflicts: [{ player_id: 'p2', fields: 'strokes', server: null }], rejected: [], unchanged: [] }],
+    ['a refusal with no reason', { status: 'rejected', rows: [], conflicts: [], rejected: [{ player_id: 'p2' }], unchanged: [] }],
+  ])('%s is no answer: nothing lands, nothing is asked, and the hole waits to go again', async (_what, answer) => {
+    srv.rpcAnswers.set('save_hole', answer)
+    await hole()
+    await flush()
+    expect(srv.selected).toEqual(['rpc:save_hole'])
+    expect(srv.landed).toEqual([])
+    expect(useOutbox.getState().conflicts).toEqual([])
+    expect(useOutbox.getState().rejected).toEqual([])
+    expect(_outboxTest.queue().map((x) => x.kind)).toEqual(['hole'])
   })
 })

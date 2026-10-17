@@ -7,6 +7,7 @@ import { t } from '../../../i18n/es-MX'
 import { syncWords } from './syncWords'
 import type { SavedNote } from './useHoleSave'
 import styles from '../ScorecardScreen.module.css'
+import { buttonClass } from '../../../components/buttonClass'
 
 const S = t.card
 /** While signed out, how often the line looks at the stored session again (auth-js removes it with no event). */
@@ -83,7 +84,7 @@ export const SaveBar = memo(function SaveBar(p: {
 }) {
   return (
     <div className={styles.saveBar}>
-      <button className={`btn btn--primary btn--block ${styles.saveBtn} ${p.justSaved ? styles.saveBtnDone : ''}`} type="button" disabled={p.disabled} onClick={() => p.onSave()}>
+      <button className={buttonClass({ variant: 'primary', block: true }, `${styles.saveBtn} ${p.justSaved ? styles.saveBtnDone : ''}`)} type="button" disabled={p.disabled} onClick={() => p.onSave()}>
         <span className={styles.saveLabel}>{p.busy ? t.common.saving : p.label}</span>
         {p.justSaved && (
           <span className={styles.saveCheck} aria-hidden="true">

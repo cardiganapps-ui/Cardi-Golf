@@ -2,11 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { EmptyState } from '../../components/primitives'
+import { Button, EmptyState } from '../../components/primitives'
 import { Field, Spinner } from '../../components/ui'
 import { updatePassword, useAuth } from '../../data/auth'
 import styles from './OrganizerAuth.module.css'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 /** Landing page of the password-reset email; also "Cambiar contraseña" from Más. */
 export function ResetPasswordScreen() {
@@ -45,7 +46,7 @@ export function ResetPasswordScreen() {
           title={t.auth.resetExpired}
           body=""
           action={
-            <Link className="btn btn--secondary" to="/organizer/login">
+            <Link className={buttonClass({ variant: 'secondary' })} to="/organizer/login">
               {t.auth.signIn}
             </Link>
           }
@@ -62,9 +63,9 @@ export function ResetPasswordScreen() {
               {error}
             </p>
           )}
-          <button className="btn btn--primary btn--block" type="submit" disabled={busy || password.length < 8}>
+          <Button variant="primary" block type="submit" disabled={busy || password.length < 8}>
             {busy ? t.common.saving : t.common.save}
-          </button>
+          </Button>
         </form>
       )}
     </div>

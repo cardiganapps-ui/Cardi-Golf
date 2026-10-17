@@ -32,6 +32,7 @@ import { TournamentLogo } from './TournamentLogo'
 import styles from './ShareCard.module.css'
 import { useCurrency, useWords } from './currency'
 import { localDay } from '../lib/localWhen'
+import { buttonClass } from './buttonClass'
 
 /** `settle`: the settlement as Dinero shows it, vía banco (the default) or sin banco. */
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement'; settle?: 'bank' | 'p2p' }
@@ -82,7 +83,7 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
   const text = label || (what.kind === 'leaderboard' ? t.share.leaderboard : what.kind === 'player' ? t.share.round : t.share.settlement)
   return (
     <>
-      <button className={className ?? 'btn btn--secondary btn--sm'} type="button" disabled={busy} onClick={() => setBusy(true)}>
+      <button className={className ?? buttonClass({ size: 'sm' })} type="button" disabled={busy} onClick={() => setBusy(true)}>
         {busy ? t.share.generating : text}
       </button>
       {busy && (

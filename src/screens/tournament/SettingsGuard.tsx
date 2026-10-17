@@ -10,6 +10,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
 import { TournamentContext } from './tournamentContext'
 import styles from './SettingsGuard.module.css'
+import { Button } from '../../components/primitives'
 
 /** `money`: a screen that is money (Dinero, the Ceremonia) also waits while a side game this build doesn't know may move some. */
 export function SettingsGuard({ children, money = false }: { children: ReactNode; money?: boolean }) {
@@ -31,9 +32,9 @@ export function OutdatedNotice({ detail, body = t.outdated.body }: { detail?: st
         {t.outdated.title}
       </h1>
       <p>{body}</p>
-      <button
-        type="button"
-        className="btn btn--primary"
+      <Button
+       
+        variant="primary"
         disabled={busy}
         aria-busy={busy || undefined}
         onClick={() => {
@@ -42,7 +43,7 @@ export function OutdatedNotice({ detail, body = t.outdated.body }: { detail?: st
         }}
       >
         {busy ? t.sync.refreshing : t.sync.update}
-      </button>
+      </Button>
       {detail && comite && <p className="small">{t.outdated.detail(detail)}</p>}
     </section>
   )

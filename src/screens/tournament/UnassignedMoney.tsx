@@ -30,7 +30,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { HowCalculated } from '../../components/HowCalculated'
 import { NumberField } from '../../components/NumberField'
 import { ReasonSheet } from '../../components/ReasonSheet'
-import { Field, Input, Segmented } from '../../components/primitives'
+import { Button, Field, Input, Segmented } from '../../components/primitives'
 import { toast } from '../../components/toast'
 import { assignUnassigned, voidAdjustment, type AssignEntry } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -77,9 +77,9 @@ export function UnassignedMoney() {
               <span className={styles.amount}>{formatMoney(b.remaining, cur)}</span>
               {me.isComite && (
                 <span className={styles.action}>
-                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, cur)}`}>
+                  <Button size="sm" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, cur)}`}>
                     {U.decide}
-                  </button>
+                  </Button>
                 </span>
               )}
             </div>
@@ -122,9 +122,9 @@ export function UnassignedMoney() {
                   <span className={styles.amount}>{formatMoney(a.total, cur)}</span>
                   {me.isComite && (
                     <span className={styles.action}>
-                      <button className="btn btn--ghost btn--sm" type="button" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(words(a.label), formatMoney(a.total, cur), a.reason)}`}>
+                      <Button variant="ghost" size="sm" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(words(a.label), formatMoney(a.total, cur), a.reason)}`}>
                         {U.void}
-                      </button>
+                      </Button>
                     </span>
                   )}
                 </div>

@@ -23,6 +23,7 @@ import { pushNote, usePushSwitch } from '../profile/usePushSwitch'
 import { tournamentPushHint } from './pushHint'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './TournamentPush.module.css'
+import { Button } from '../../components/primitives'
 
 const P = t.push
 const T = t.push.tournament
@@ -68,14 +69,14 @@ function PushSwitch({ tournamentId }: { tournamentId: string | null }) {
       {/* Before the tap that stores this browser's address (TRUST-05), and heard with the button. */}
       {state === 'off' && <NoticeNote note={tournamentId ? t.legal.pinPushNote : t.legal.pushNote} id={noteId} />}
       {state === 'off' && (
-        <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void enable()} aria-describedby={noteId}>
+        <Button variant="primary" size="sm" disabled={busy} onClick={() => void enable()} aria-describedby={noteId}>
           {P.enable}
-        </button>
+        </Button>
       )}
       {state === 'on' && (
-        <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void disable()}>
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void disable()}>
           {P.disable}
-        </button>
+        </Button>
       )}
     </section>
   )
@@ -115,12 +116,12 @@ function PushOffer({ tournamentId, onLater }: { tournamentId: string | null; onL
       <p className="help">{hint}</p>
       <NoticeNote note={tournamentId ? t.legal.pinPushNote : t.legal.pushNote} id={noteId} />
       <div className={styles.actions}>
-        <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void enable()} aria-describedby={noteId}>
+        <Button variant="primary" size="sm" disabled={busy} onClick={() => void enable()} aria-describedby={noteId}>
           {P.enable}
-        </button>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={onLater}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onLater}>
           {T.later}
-        </button>
+        </Button>
       </div>
     </section>
   )

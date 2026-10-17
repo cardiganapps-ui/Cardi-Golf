@@ -19,6 +19,7 @@ import { useTournament } from '../data/tournamentStore'
 import { toast } from './toast'
 import { humanError } from '../lib/humanError'
 import styles from './RejectedWrites.module.css'
+import { Button } from './primitives'
 
 const S = t.card
 
@@ -57,12 +58,12 @@ export function HoleConflicts({ roundId, myPlayerId }: { roundId: string | null;
           <div key={c.key} className={styles.row}>
             <span className={styles.text}>{line(c)}</span>
             <span className={styles.actions}>
-              <button className="btn btn--secondary btn--sm" type="button" onClick={() => act(() => sendMineAgain(c.key, myPlayerId))} aria-label={S.conflictAction(S.keepMine, c.hole, name(c.player_id) ?? '?', day(c))}>
+              <Button size="sm" onClick={() => act(() => sendMineAgain(c.key, myPlayerId))} aria-label={S.conflictAction(S.keepMine, c.hole, name(c.player_id) ?? '?', day(c))}>
                 {S.keepMine}
-              </button>
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => act(() => keepTheirs(c.key))} aria-label={S.conflictAction(S.keepTheirs, c.hole, name(c.player_id) ?? '?', day(c))}>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => act(() => keepTheirs(c.key))} aria-label={S.conflictAction(S.keepTheirs, c.hole, name(c.player_id) ?? '?', day(c))}>
                 {S.keepTheirs}
-              </button>
+              </Button>
             </span>
           </div>
         ))}

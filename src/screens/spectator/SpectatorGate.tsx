@@ -163,7 +163,7 @@ export function SpectatorGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <Spinner />
+        <Spinner kind="board" />
       </div>
     )
   }

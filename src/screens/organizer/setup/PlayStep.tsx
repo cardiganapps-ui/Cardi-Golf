@@ -23,6 +23,7 @@ import type { TournamentSettings } from '../../../engine/settings/schema'
 import { FormatPicker } from './FormatPicker'
 import { Group } from './Group'
 import styles from './Setup.module.css'
+import { Button } from '../../../components/primitives'
 
 const W = t.organizer.wizard
 const U = t.setup
@@ -152,9 +153,9 @@ export function PlayStep({
         </div>
       </Group>
 
-      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTemplates(true)}>
+      <Button variant="ghost" size="sm" onClick={() => setTemplates(true)}>
         {W.templateLink}
-      </button>
+      </Button>
 
       <Sheet open={templates} onClose={() => setTemplates(false)} title={W.template}>
         <div className="stack">

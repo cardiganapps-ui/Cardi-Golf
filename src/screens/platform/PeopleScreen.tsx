@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Spinner } from '../../components/ui'
-import { Input } from '../../components/primitives'
+import { Button, Input } from '../../components/primitives'
 import { usePlatformApi, type PeopleFilter, type PersonRow } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
@@ -79,9 +79,9 @@ export function PeopleScreen() {
               ))}
             </div>
             {rows.length < total && (
-              <button
-                className="btn btn--secondary"
-                type="button"
+              <Button
+                
+               
                 disabled={loadingMore}
                 onClick={async () => {
                   setLoadingMore(true)
@@ -90,7 +90,7 @@ export function PeopleScreen() {
                 }}
               >
                 {P.more}
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -117,8 +117,8 @@ function PersonLine({ r, active }: { r: PersonRow; active: boolean }) {
       </span>
       <span className={s.rowEnd}>
         <span className={s.chips}>
-          {r.blocked && <span className="chip chip--coral">{H.chips.blocked}</span>}
-          {r.isAdmin && <span className="chip chip--teal">{H.chips.admin}</span>}
+          {r.blocked && <span className={s.flagDanger}>{H.chips.blocked}</span>}
+          {r.isAdmin && <span className={s.flagOn}>{H.chips.admin}</span>}
         </span>
         <span>{relTime(r.lastSignInAt ?? r.createdAt)}</span>
       </span>
