@@ -98,7 +98,7 @@ describe('a contest nobody won (MONEY-10)', () => {
     expect(run(snap).prizes).toEqual([])
     over(snap)
     const st = run(snap)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']))
     expect(words(st.prizes[0]!.why).steps).toEqual(['Nadie ganó un hoyo: se devuelve a cada quien su entrada, $100'])
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual([])

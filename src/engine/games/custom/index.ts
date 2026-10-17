@@ -9,7 +9,8 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
-import { directUnits, fmt, PotWords, payUnits } from '../payout'
+import { label, msg, type Msg } from '../../messages'
+import { directUnits, payUnits, potNote } from '../payout'
 import { moneyByPlayer, namer } from '../util'
 
 type Cfg = GameOf<'custom'>
@@ -41,16 +42,16 @@ export const customGame: GameImpl<CustomState, Cfg> = {
     }
     // Shares may be fractional: scale to whole units first.
     const units = new Map(Object.entries(state.winners).map(([id, s]) => [id, Math.round(s * 100)]))
-    return payUnits(c, units, 'part', name).map((p) => ({ ...p, label: ctx.config.label }))
+    return payUnits(c, units, 'part', name, c.pot, () => null)
   },
   board(state, ctx) {
     const money = moneyByPlayer(customGame.prizes(state, ctx))
-    const rows = Object.keys(state.winners).map((id) => ({ playerIds: [id], pos: '1', figure: 'Ganó', money: money.get(id) ?? 0 }))
-    const notes: string[] = []
-    if (ctx.config.options.description) notes.push(ctx.config.options.description)
-    notes.push(state.decided ? 'Decidido por el Comité.' : 'El Comité marca a los ganadores en Comité, Juegos.')
-    if (ctx.config.money.source === 'direct') notes.push(`Cada uno de los que no ganaron le paga ${fmt(ctx.config.money.stake)} a cada ganador.`)
-    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} es para los ganadores.`)
+    const rows = Object.keys(state.winners).map((id) => ({ playerIds: [id], pos: '1', figure: msg('board.decidedWin', {}), money: money.get(id) ?? 0 }))
+    const notes: Msg[] = []
+    if (ctx.config.options.description) notes.push(label(ctx.config.options.description))
+    notes.push(msg('board.customDecided', { decided: state.decided }))
+    if (ctx.config.money.source === 'direct') notes.push(msg('board.customStake', { stake: ctx.config.money.stake }))
+    else if (ctx.pot > 0) notes.push(potNote(ctx.config, ctx.pot, 'winners'))
     return { sections: [{ rows }], notes }
   },
 }

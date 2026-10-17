@@ -17,7 +17,7 @@ import { makeSnapshot } from '../testing/fixtures'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { Id, PaymentKind, Snapshot } from '../types'
-import { computeMoney, type MoneyState } from './money'
+import { computeMoney, type MoneyPart, type MoneyState } from './money'
 import { t } from '../../i18n/es-MX'
 import { words } from '../testing/words'
 import { label, type Explanation } from '../messages'
@@ -26,9 +26,11 @@ const W = t.settleWhy
 const why: Explanation = { title: label(''), steps: [] }
 const sum = (xs: Array<{ amount: number }>) => xs.reduce((s, x) => s + x.amount, 0)
 
-function prize(playerId: Id, amount: number, opts: Partial<PrizeAward> = {}): PrizeAward {
-  return { moduleId: 'individual', label: 'Individual, 1.º', playerId, amount, final: true, why, ...opts }
+function prize(playerId: Id, amount: number, opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {}): PrizeAward {
+  return { moduleId: 'individual', playerId, amount, final: true, why, ...opts, label: label(opts.label ?? 'Individual, 1.º') }
 }
+/** A line's or a position's parts as Dinero says them (ARCH-05). */
+const said = (parts: MoneyPart[] | undefined) => parts?.map((x) => ({ ...x, label: words(x.label) }))
 function pay(snap: Snapshot, kind: PaymentKind, from: Id | null, to: Id | null, amount: number) {
   snap.payments.push({ id: `pay${snap.payments.length + 1}`, kind, fromPlayerId: from, toPlayerId: to, amount, paid: true, note: null })
 }
@@ -71,7 +73,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const m = money(snap, s, [prize('p1', 3000), prize('p1', 1000, { moduleId: 'bestRound', label: 'Mejor ronda, día 1' })])
     const line = m.viaBank.find((x) => x.to === 'p1')!
     expect(line.amount).toBe(3000)
-    expect(line.parts).toEqual([
+    expect(said(line.parts)).toEqual([
       { label: 'Individual, 1.º', amount: 3000 },
       { label: 'Mejor ronda, día 1', amount: 1000 },
       { label: 'Inscripción', amount: -1000 },
@@ -86,7 +88,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const m = money(snap, s, [prize('p1', 4000)])
     const p2 = m.viaBank.find((x) => x.from === 'p2')!
     expect(p2.amount).toBe(600)
-    expect(p2.parts).toEqual([{ label: 'Inscripción', amount: 600, of: 1000 }])
+    expect(said(p2.parts)).toEqual([{ label: 'Inscripción', amount: 600, of: 1000 }])
     expect(words(p2.why)[0]!.steps[0]).toBe('Inscripción: +$600 (de $1,000; lo demás ya se pagó)')
     explained(m)
   })
@@ -97,7 +99,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const m = money(snap, s, [prize('p1', 4000)])
     const p3 = m.viaBank.find((x) => x.to === 'p3')!
     expect([p3.from, p3.amount]).toEqual([null, 500])
-    expect(p3.parts).toEqual([{ label: W.overpaid('Inscripción'), amount: 500 }])
+    expect(said(p3.parts)).toEqual([{ label: W.overpaid('Inscripción'), amount: 500 }])
     explained(m)
   })
 
@@ -106,7 +108,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const m = money(snap, s, [prize('p1', 1000), prize('p2', 3000, { label: 'Individual, 2.º' })])
     const square = m.viaBank.find((x) => x.from === 'p1')!
     expect(square.amount).toBe(0)
-    expect(square.parts).toEqual([
+    expect(said(square.parts)).toEqual([
       { label: 'Inscripción', amount: 1000 },
       { label: 'Individual, 1.º', amount: -1000 },
     ])
@@ -122,10 +124,10 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const bets = [prize('p2', 300, { payerId: 'p1', gameId: 'g1', label: 'Nassau, frente' }), prize('p1', 100, { payerId: 'p2', gameId: 'g1', label: 'Nassau, vuelta' })]
     const m = money(snap, s, bets, auction)
     const buyback = m.viaBank.find((x) => x.settles?.some((a) => a.kind === 'buyback'))!
-    expect([buyback.from, buyback.to, buyback.parts]).toEqual(['p1', 'p2', [{ label: 'Recompra 50%', amount: 500 }]])
+    expect([buyback.from, buyback.to, said(buyback.parts)]).toEqual(['p1', 'p2', [{ label: 'Recompra 50%', amount: 500 }]])
     const bet = m.viaBank.find((x) => x.settles?.some((a) => a.kind === 'bet'))!
     expect([bet.from, bet.to, bet.amount]).toEqual(['p1', 'p2', 200])
-    expect(bet.parts).toEqual([
+    expect(said(bet.parts)).toEqual([
       { label: 'Nassau, frente', amount: 300 },
       { label: 'Nassau, vuelta', amount: -100 },
     ])
@@ -140,7 +142,7 @@ describe('sin banco: each transfer comes from two positions (MONEY-07)', () => {
     const m = money(snap, s, [prize('p1', 2500), prize('p2', 1500, { label: 'Individual, 2.º' })])
     const bank = m.positions.find((p) => p.party === null)!
     // Still to collect: p1, p3, p4's entries ($3,000); still to pay: both prizes ($4,000).
-    expect(bank.parts).toEqual([
+    expect(said(bank.parts)).toEqual([
       { label: W.bankCollects, amount: 3000 },
       { label: W.bankPays, amount: -4000 },
     ])
@@ -154,7 +156,7 @@ describe('sin banco: each transfer comes from two positions (MONEY-07)', () => {
     const { s, snap } = fourPlayers({}, 'p4')
     const m = money(snap, s, [prize('p1', 4000)])
     const banker = m.positions.find((p) => p.party === 'p4')!
-    expect(banker.parts).toEqual([
+    expect(said(banker.parts)).toEqual([
       { label: 'Inscripción', amount: -1000 },
       { label: W.bankCollects, amount: 4000 },
       { label: W.bankPays, amount: -4000 },

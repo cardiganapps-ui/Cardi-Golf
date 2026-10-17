@@ -30,7 +30,7 @@ import { tournamentBase } from './tournamentView'
 import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 import { buttonClass } from '../../components/buttonClass'
 import { renderMsg } from '../../i18n/explain'
 
@@ -52,11 +52,15 @@ export function MoneyScreen() {
   const banker = snapshot.tournament.bankerPlayerId ? byId.get(snapshot.tournament.bankerPlayerId) : undefined
   /** A party of a money line: the person's name, or null for the bank, which the sentence words itself (COPY-08). */
   const party = useCallback((id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : null), [byId])
+  /** What the engine says, in words (ARCH-05). */
+  const text = useWords()
   /** Who pays whom: the banker with his own bank is his money in or out of what he holds, not a payment to himself. */
   const words = useCallback(
     (from: string | null, to: string | null, paid = false) => M.payWords(party(from), party(to), paid, !!banker && ((from === banker.id && to === null) || (from === null && to === banker.id))),
     [party, banker],
   )
+  /** A bet's game, by its label in the settings. */
+  const gameOf = (pr: PrizeAward) => settings.games.find((g) => g.id === pr.gameId)?.label ?? pr.gameId ?? ''
   const [mode, setMode] = useState<'live' | 'byGame' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -79,17 +83,17 @@ export function MoneyScreen() {
         ? (settings.games.find((g) => g.id === pr.gameId)?.label ?? pr.gameId)
         : pr.moduleId === 'adjustment'
           ? M.byComite
-          : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(', ')[0] ?? pr.moduleId)
+          : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.moduleId)
       const g = groups.get(key) ?? { label: gameLabel, total: 0, final: true, lines: [] }
       g.total += pr.amount
       g.final = g.final && pr.final
-      // «Individual, 1.º» → «1.º»: the heading already says which game it is.
-      const trimmed = gameLabel && pr.label.startsWith(gameLabel) ? pr.label.slice(gameLabel.length).replace(/^\s*,\s*/, '') : pr.label
-      g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: trimmed, why: pr.why })
+      // «Individual, 1.º» → «1.º»: the heading already says which game it is; the Comité's says whose line it was.
+      const own = pr.moduleId === 'adjustment' ? text(pr.label) : pr.part ? text(pr.part) : ''
+      g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: own, why: pr.why })
       groups.set(key, g)
     }
     return [...groups.values()].sort((a, b) => b.total - a.total)
-  }, [state.prizes, settings])
+  }, [state.prizes, settings, text])
 
   /** «Quién debe qué»: one row per debt still due (a payment key), the way «Pagado» records it. */
   const owed = useMemo(
@@ -108,9 +112,9 @@ export function MoneyScreen() {
       if (a.kind === 'payout') return M.prizes
       if (a.kind === 'calcutta') return flows.length ? M.owesLots(flows.map((f) => f.lotNumber ?? 0)) : M.shares
       const kind = a.kind === 'bet' ? M.owesBet : M.owesSide
-      return flows.length ? `${kind}, ${flows.map((f) => f.label).join(', ')}` : kind
+      return flows.length ? `${kind}, ${flows.map((f) => text(f.label)).join(', ')}` : kind
     },
-    [money.flows],
+    [money.flows, text],
   )
 
   /**
@@ -415,19 +419,19 @@ export function MoneyScreen() {
                     {betsLost.map((pr, i) => (
                       <div key={`bet${i}`} className={styles.line}>
                         <span>
-                          {pr.label.split(',')[0]}, {M.paysTo} {name(pr.playerId)}
+                          {gameOf(pr)}, {M.paysTo} {name(pr.playerId)}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount, cur)} about={`${pr.label.split(',')[0]}, ${M.paysTo} ${name(pr.playerId)}`} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount, cur)} about={`${gameOf(pr)}, ${M.paysTo} ${name(pr.playerId)}`} />
                       </div>
                     ))}
                     {prizes.map((pr, i) => (
                       <div key={i} className={styles.line}>
                         <span>
-                          {pr.label}
+                          {text(pr.label)}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount, cur)} about={pr.label} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount, cur)} about={text(pr.label)} />
                       </div>
                     ))}
                     {p.buybacksReceived > 0 && <Line label={M.buybacksReceived} amount={p.buybacksReceived} />}

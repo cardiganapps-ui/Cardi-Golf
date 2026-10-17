@@ -8,11 +8,11 @@
  * were (MONEY-11). Every screen shows a slot's `pesos`, what it hands over,
  * never pot × share worked out again (MONEY-16).
  */
-import { ordinal } from '../../../i18n/es-MX'
-import { label as labelMsg, msg, say, type Msg } from '../../messages'
+import { msg, say, type Msg } from '../../messages'
 import type { AuctionPayoutSlot } from '../../settings/schema'
 import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 import { rankIndividual } from '../individual'
 import { isFinal } from '../../core/ranking'
 
@@ -41,7 +41,8 @@ export interface LotState {
 
 export interface SlotResult {
   slot: AuctionPayoutSlot
-  label: string
+  /** «Campeón», «Mejor C», «Campeón + Subcampeón» for a tie across them (`auction.slot`). */
+  label: Msg
   share: number
   /** Players filling the slot (several when tied); empty when nobody qualifies. */
   playerIds: Id[]
@@ -73,7 +74,7 @@ export type AssignedSlot = Omit<SlotResult, 'pesos'>
 /** One slot of the payout on the pot as it stands, before anyone has a result (the TV's «Lo que está en juego»). */
 export interface Stake {
   slot: AuctionPayoutSlot
-  label: string
+  label: Msg
   share: number
   /** Pot × share in whole pesos, the rounding pesos to the champion's slot (or the highest one): the stakes add up to the pot. */
   pesos: number
@@ -83,7 +84,7 @@ export interface OwnerPayout {
   ownerId: Id
   amount: number
   /** Which player(s) earned it; `slot` is the index of the slot paid. The rounding line names the slot it rides with. */
-  lines: Array<{ playerId: Id; slotLabel: string; amount: number; pct: number; slot: number; rounding?: true }>
+  lines: Array<{ playerId: Id; slotLabel: Msg; amount: number; pct: number; slot: number; rounding?: true }>
 }
 
 export interface OwnerPortfolio {
@@ -119,17 +120,10 @@ export interface AuctionState {
 const money = (x: number) => Math.round(x * 100) / 100
 
 /** The pot's rounding pesos, paid with the slot they ride with. */
-const ROUNDING = 'Redondeo'
+const ROUNDING: Msg = msg('auction.slot', { slot: 'rounding', place: null, tier: null, lastPlace: '' })
 
-function slotLabel(slot: AuctionPayoutSlot, ctx: ModuleContext): string {
-  switch (slot.slot) {
-    case 'place':
-      return slot.place === 1 ? 'Campeón' : slot.place === 2 ? 'Subcampeón' : `${ordinal(String(slot.place))} lugar`
-    case 'bestOfTier':
-      return `Mejor ${slot.tier}`
-    case 'lastPlace':
-      return ctx.settings.labels.lastPlace
-  }
+function slotLabel(slot: AuctionPayoutSlot, ctx: ModuleContext): Msg {
+  return msg('auction.slot', { slot: slot.slot, place: slot.slot === 'place' ? slot.place : null, tier: slot.slot === 'bestOfTier' ? slot.tier : null, lastPlace: ctx.settings.labels.lastPlace })
 }
 
 export function buildLots(ctx: ModuleContext): LotState[] {
@@ -210,7 +204,7 @@ export function assignSlots(
       const share = covered.reduce((s, x) => s + x.share, 0)
       const members = g ? g.members.filter((m) => !cashed.has(m)) : []
       for (const c of covered) placeDone.add(c)
-      const label = covered.length === 1 ? slotLabel(slot, ctx) : covered.map((c) => slotLabel(c, ctx)).join(' + ')
+      const label = covered.length === 1 ? slotLabel(slot, ctx) : msg('auction.slots', { slots: covered.map((c) => slotLabel(c, ctx)) })
       if (!members.length) {
         results.push(unfilledSlot(slot, label, share, pot, msg('auction.nobodyAt', { place: slot.place })))
         continue
@@ -228,7 +222,7 @@ export function assignSlots(
               msg('auction.tie', { places, at, shares: covered.map((c) => c.share), share }),
               uneven ? msg('auction.tieTeams', { share, teams: teams.length }) : msg('auction.tieEach', { share, n: members.length }),
             ]
-      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: labelMsg(label), steps }, ...(weights ? { weights } : {}) })
+      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -243,7 +237,7 @@ export function assignSlots(
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
       const steps = [msg('auction.bestOfTier', { tier: slot.tier, names: members.map(nameOf), place: g.finish ?? g.position })]
       if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: labelMsg(label), steps } })
+      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -257,7 +251,7 @@ export function assignSlots(
       }
       const steps = [msg('auction.last', { names: members.map(nameOf) })]
       if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: labelMsg(label), steps } })
+      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)
     }
   }
@@ -288,8 +282,8 @@ export function inCalcutta(groups: Array<{ position: number; members: Id[]; entr
 }
 
 /** Whole pesos (MONEY-08): the centavos of an unfilled slot go with the rounding, so payouts and what stays in the bank add up to the pot. */
-function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: Msg): AssignedSlot {
-  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: labelMsg(label), steps: [reason, say('auction.staysInBank')] } }
+function unfilledSlot(slot: AuctionPayoutSlot, label: Msg, share: number, pot: number, reason: Msg): AssignedSlot {
+  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: label, steps: [reason, say('auction.staysInBank')] } }
 }
 
 /**
@@ -445,7 +439,7 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
         out.push({
           moduleId: 'auction',
           potId: 'calcutta',
-          label: `${label}, ${line.slotLabel}`,
+          ...prizeLabel(label, line.slotLabel),
           playerId: p.ownerId,
           amount: line.amount,
           final: state.final,

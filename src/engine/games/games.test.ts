@@ -90,7 +90,7 @@ describe('skins', () => {
     expect(s.holes[2]!.value).toBe(2)
     expect(s.units).toEqual({ p1: 1, p2: 0, p3: 0 })
     // Board note: the carry riding to the next hole.
-    expect(run(snap).games.skins!.board.notes[0]).toContain('2 skins para el hoyo 3')
+    expect(words(run(snap).games.skins!.board.notes[0]!)).toContain('2 skins para el hoyo 3')
   })
 
   it('net skins use strokes received: a stroke on SI 1 turns a par into a net birdie', () => {
@@ -114,7 +114,7 @@ describe('skins', () => {
     expect(run(snap).prizes).toEqual([])
     finish(snap)
     const st = run(snap)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']))
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual([])
   })
@@ -157,10 +157,10 @@ describe('low score', () => {
     card(snap, 'r2', 'p4', { 4: -1, 5: -1, 6: -1 })
     finish(snap)
     const st = run(snap)
-    const paid = st.prizes.filter((p) => p.gameId === 'low').map((p) => `${p.label}=${p.amount}`)
+    const paid = st.prizes.filter((p) => p.gameId === 'low').map((p) => `${words(p.label)}=${p.amount}`)
     // $200 per day: 60% = $120, 40% = $80.
     expect(paid.sort()).toEqual(['Low neto, Día 1, 1.º=120', 'Low neto, Día 1, 2.º=80', 'Low neto, Día 2, 1.º=120', 'Low neto, Día 2, 2.º=80'])
-    expect(st.prizes.find((p) => p.label === 'Low neto, Día 2, 1.º')!.playerId).toBe('p4')
+    expect(st.prizes.find((p) => words(p.label) === 'Low neto, Día 2, 1.º')!.playerId).toBe('p4')
     expect(st.money.banker.balanced).toBe(true)
   })
 
@@ -209,7 +209,7 @@ describe('event pots', () => {
     for (const id of ['p1', 'p2', 'p3']) card(side, 'r1', id)
     finish(side)
     st = run(side)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']))
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual([])
   })
@@ -277,7 +277,7 @@ describe('match play / Nassau', () => {
     const st = run(snap)
     const total = (st.games.nassau!.state as MatchState).rounds[0]!.segments[0]!
     expect(total.bets[0]).toMatchObject({ up: 5, decided: true })
-    expect(st.games.nassau!.board.sections[0]!.rows[0]!.figure).toBe('Gana 5 y 4')
+    expect(words(st.games.nassau!.board.sections[0]!.rows[0]!.figure)).toBe('Gana 5 y 4')
   })
 
   it('pairs, best ball: the better ball of each pair decides the hole; each loser pays his opposite', () => {
@@ -299,7 +299,7 @@ describe('match play / Nassau', () => {
     card(snap, 'r1', 'p1', {}, { holes: 9 })
     card(snap, 'r1', 'p2', {}, { holes: 9 })
     finish(snap)
-    expect((run(snap).games.nassau!.state as MatchState).rounds[0]!.segments.map((s) => s.label)).toEqual(['9 hoyos'])
+    expect((run(snap).games.nassau!.state as MatchState).rounds[0]!.segments.map((s) => words(s.label))).toEqual(['9 hoyos'])
   })
 
   it('a match naming a player outside the game is ignored and flagged', () => {

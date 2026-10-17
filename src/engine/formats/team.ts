@@ -46,7 +46,7 @@ export const teamFormat: MainFormat = {
   defaultLabel: 'Por equipos',
   // Points count up, strokes count down.
   higherIsBetter: (s) => s.modules.individual.formatOptions.teamScoring === 'stableford',
-  figureLabel: (s) => (s.modules.individual.formatOptions.teamScoring === 'stableford' ? 'Puntos' : s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
+  figureLabel: (s) => msg('figure.label', { unit: s.modules.individual.formatOptions.teamScoring === 'stableford' ? 'points' : s.modules.individual.formatOptions.scoring === 'gross' ? 'gross' : 'net' }),
 
   describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions

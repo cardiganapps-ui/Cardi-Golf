@@ -23,7 +23,7 @@ import { figureKind, holeStrokes, mainScoring, strokesWhy, type Figure } from '.
 import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 import { buttonClass } from '../../components/buttonClass'
 
 /**
@@ -39,6 +39,7 @@ export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { pl
 
 function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: string; open: boolean; onClose: () => void; onExited: () => void }) {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)
   /** The in-memory fixtures have no server to ask a card's history of (TRUST-14). */
   const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
@@ -104,7 +105,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
               {p.tier && <span className="tierBadge">{p.tier}</span>}
               {row && totals ? (
                 <span>
-                  {(team ? (f: string, w: string | null) => t.player.positionTeam(row.label, team.name, f, w) : (f: string, w: string | null) => t.player.position(row.label, f, w))(
+                  {(team ? (f: string, w: string | null) => t.player.positionTeam(row.label, words(team.name), f, w) : (f: string, w: string | null) => t.player.position(row.label, f, w))(
                     t.common.figure(row.figure.text, row.figure.value, kind),
                     whereNow(rounds),
                   )}
@@ -210,10 +211,10 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
                 {money.map((m, i) => (
                   <div key={i} className={styles.row}>
                     <span>
-                      {m.label}
+                      {words(m.label)}
                       {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
                     </span>
-                    <HowCalculated why={m.why} label={formatMoney(m.amount, cur)} about={m.label} />
+                    <HowCalculated why={m.why} label={formatMoney(m.amount, cur)} about={words(m.label)} />
                   </div>
                 ))}
                 {person && (

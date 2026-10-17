@@ -32,7 +32,8 @@ export interface Entrant {
   id: Id
   /** Who it covers. One player for an individual format. */
   playerIds: Id[]
-  name: string
+  /** A player's or a team's name, or one the engine says for a team with none (`name.team`, `name.pair`). */
+  name: Msg
   /** A team's members are shown under its name; a single player's are not. */
   isTeam: boolean
 }
@@ -90,8 +91,8 @@ export interface MainFormat {
   id: FormatId
   /** Default name, renamable per tournament. */
   defaultLabel: string
-  /** Header of the headline column: "Puntos", "Gross", "Neto", "Partidos". */
-  figureLabel(settings: TournamentSettings): string
+  /** Header of the headline column: «Puntos», «Gross», «Neto». */
+  figureLabel(settings: TournamentSettings): Msg
   /**
    * True when a bigger figure wins (points, matches won), false for strokes.
    * A function because team play flips it: the same format counts strokes down

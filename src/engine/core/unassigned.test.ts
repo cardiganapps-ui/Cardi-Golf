@@ -68,7 +68,7 @@ function expectBalanced(st: TournamentState) {
   expect(st.money.banker.difference).toBe(0)
   expect(st.money.banker.balanced).toBe(true)
   expect(st.money.netSum).toBe(0)
-  for (const f of st.money.flows) expect(Number.isInteger(f.amount), f.label).toBe(true)
+  for (const f of st.money.flows) expect(Number.isInteger(f.amount), words(f.label)).toBe(true)
   // Sin banco: what moves between people and the bank nets to zero too.
   const net = new Map<string | null, number>()
   for (const tr of st.money.peerToPeer) {
@@ -111,9 +111,10 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     const st = run(snap)
     expect(keyed(st)).toEqual({ snake: 1800 })
     const prize = st.prizes.find((p) => p.moduleId === 'adjustment')!
-    expect(prize).toMatchObject({ playerId: 'p5', amount: 1200, label: 'Mejor ronda, asignado por el Comité', potId: 'main', final: true, sourceKey: 'bestRound' })
+    expect(prize).toMatchObject({ playerId: 'p5', amount: 1200, potId: 'main', final: true, sourceKey: 'bestRound' })
+    expect(words(prize.label)).toBe('Mejor ronda, asignado por el Comité')
     expect(words(prize.why).steps).toEqual(['Mejor ronda: $1,200 sin asignar', 'El Comité decidió: Mejor ronda del día 1 se lleva los dos'])
-    expect(st.money.people.p5!.prizes['Mejor ronda, asignado por el Comité']).toBe(1200)
+    expect(st.money.people.p5!.prizes.map((x) => [words(x.label), x.amount])).toContainEqual(['Mejor ronda, asignado por el Comité', 1200])
     expect(st.money.banker.difference).toBe(1800)
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
     // Vía banco: the bank pays him the prize with the rest of his money.
@@ -130,7 +131,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     snap.moneyAdjustments = call('snake', shares.map((s) => ({ kind: 'refund', toPlayerId: s.playerId, amount: s.amount })), 'Día 2 cancelado: se devuelve')
     const st = run(snap)
     expect(keyed(st)).toEqual({ bestRound: 1200 })
-    const back = st.prizes.filter((p) => p.moduleId === 'adjustment').map((p) => [p.playerId, p.amount, p.label])
+    const back = st.prizes.filter((p) => p.moduleId === 'adjustment').map((p) => [p.playerId, p.amount, words(p.label)])
     expect(back.sort()).toEqual(snap.players.map((p) => [p.id, 150, 'La Víbora, devolución']).sort())
   })
 
@@ -183,7 +184,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     expect(st.flags.pendingSnakeTiebreaks).toHaveLength(1)
     expect(keyed(st)).toEqual({})
     expect(st.money.unassigned.total).toBe(0)
-    expect(st.money.unassigned.held.map((h) => ({ ...h, why: words(h.why) }))).toEqual([
+    expect(st.money.unassigned.held.map((h) => ({ ...h, label: words(h.label), note: words(h.note), why: words(h.why) }))).toEqual([
       {
         key: 'snake:r2:r2g1',
         label: 'La Víbora, día 2, grupo 1',
@@ -265,7 +266,8 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     const a = st.modules.auction!
     expect(a.unfilled).toBeGreaterThan(0)
     const bucket = st.money.unassigned.buckets.find((b) => b.key === 'calcutta')!
-    expect(bucket).toMatchObject({ label: 'La Calcutta', potId: 'calcutta', amount: a.unfilled })
+    expect(bucket).toMatchObject({ potId: 'calcutta', amount: a.unfilled })
+    expect(words(bucket.label)).toBe('La Calcutta')
     expect(bucket.contributors!.reduce((s, c) => s + c.amount, 0)).toBe(a.pot)
     snap.moneyAdjustments = call('calcutta', proRata(bucket.remaining, bucket.contributors!).map((c) => ({ kind: 'refund', toPlayerId: c.playerId, amount: c.amount })))
     const after = run(snap)
@@ -344,7 +346,7 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     snap.rounds[0]!.status = 'finished'
     const st = run(snap, settings)
     expect(keyed(st)).toEqual({ pool: 1000 })
-    expect(st.money.unassigned.buckets[0]!.label).toBe('Inscripciones sin premio')
+    expect(words(st.money.unassigned.buckets[0]!.label)).toBe('Inscripciones sin premio')
   })
 
   it('the keys do not move with what moves inside a bucket', () => {

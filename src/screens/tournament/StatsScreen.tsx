@@ -8,6 +8,7 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, Segmented } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { useTournament } from '../../data/tournamentStore'
+import { useWords } from '../../components/currency'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './StatsScreen.module.css'
@@ -19,6 +20,7 @@ const S = t.stats
 
 export function StatsScreen() {
   const data = useTournament((s) => s.data)
+  const words = useWords()
   const { tournamentId, me } = useTournamentCtx()
   const [open, setOpen] = useState<string | null>(null)
   const [race, setRace] = useState<'players' | 'pairs'>('players')
@@ -61,14 +63,14 @@ export function StatsScreen() {
         const n = Math.max(a.length, b.length)
         const values: number[] = []
         for (let i = 0; i < n; i++) values.push((a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0))
-        return { id: pr.pairId, label: pr.name, values }
+        return { id: pr.pairId, label: words(pr.name), values }
       })
       const pairOf = (pid: string | null) => (pid ? (pairs.find((pr) => pr.playerIds.includes(pid))?.pairId ?? null) : null)
       return { entrants, stable: data.snapshot.pairs.map((p) => p.id), me: pairOf(me.playerId), honoree: pairOf(honoreeId) }
     }
     const entrants = order.filter((id) => stats.players[id]).map((id) => ({ id, label: nameOf(id), values: stats.players[id]!.race }))
     return { entrants, stable: players.map((p) => p.id), me: me.playerId, honoree: honoreeId }
-  }, [data, stats, raceKind, nameOf, order, players, me.playerId])
+  }, [data, stats, raceKind, nameOf, order, players, me.playerId, words])
   /** The event's days on the race's axis, as they are: 1..N of 9 or 18 holes. */
   const days = useMemo<RaceDay[]>(() => {
     if (!data) return []

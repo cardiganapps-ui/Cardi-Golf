@@ -175,7 +175,7 @@ describe('Low neto pays a full card (MONEY-02)', () => {
       ['p1', 150],
       ['p2', 150],
     ])
-    expect(st.games.lownet!.board.notes.join(' ')).toMatch(/incompleta.*\(1 de 18\)/)
+    expect(words(st.games.lownet!.board.notes).join(' ')).toMatch(/incompleta.*\(1 de 18\)/)
   })
 
   it('among incomplete cards, more holes first', () => {

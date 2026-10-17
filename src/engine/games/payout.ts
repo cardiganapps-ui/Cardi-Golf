@@ -9,31 +9,16 @@ import type { PrizeAward } from '../modules/module'
 import type { RankGroup } from '../core/ranking'
 import { splitPrizes, splitWhole } from '../core/ranking'
 import { percentPlaces } from '../settings/prizeCheck'
-import { pesos } from '../core/pesos'
-import type { GameContext } from './game'
-import { t, unitWord } from '../../i18n/es-MX'
+import { prizeLabel, type GameContext } from './game'
 import { msg, type GameUnit, type Msg } from '../messages'
 
-/** The engine's peso formatter (core/pesos.ts), under the name the games use. */
-export const fmt = pesos
-
-/**
- * A game's money in words (COPY-14): «el bote de $1,600» when its entrants put it in, «el premio de $1,600 (sale de
- * la bolsa)» when it comes from the inscriptions. A «bote» is only ever what a game's own entrants paid.
- */
-export function potWords(config: GameConfig, pot: number): string {
-  return config.money.source === 'side' ? `el bote de ${fmt(pot)}` : `el premio de ${fmt(pot)} (sale de la bolsa)`
-}
-
-/** The same at the start of a sentence: «El bote de $1,600». */
-export function PotWords(config: GameConfig, pot: number): string {
-  const w = potWords(config, pot)
-  return w.charAt(0).toUpperCase() + w.slice(1)
-}
-
-/** A split by places in words: «60% al 1.º y 40% al 2.º». */
-export function splitWords(split: number[]): string {
-  return t.common.andList(split.map((p, i) => `${p}% al ${i + 1}.º`))
+/** A game's pot and how it pays, for its board's notes: by places, by what each won, among the holes won, to its winners. */
+export function potNote(config: GameConfig, pot: number, how: { places: number[] } | { unit: GameUnit } | 'holes' | 'winners'): Msg {
+  const side = config.money.source === 'side'
+  if (how === 'holes') return msg('board.potHoles', { pot, side })
+  if (how === 'winners') return msg('board.potWinners', { pot, side })
+  if ('places' in how) return msg('board.potPlaces', { pot, side, split: how.places })
+  return msg('board.potUnits', { pot, side, unit: how.unit })
 }
 
 /** The pot a game's money config funds. */
@@ -51,13 +36,13 @@ export function potIdOf(config: GameConfig): string {
 /** Whole-peso amounts for percent places: floor each, remainder to 1st (the prize check's own rule). */
 export const placeAmounts = percentPlaces
 
-function award(ctx: GameContext, playerId: Id, amount: number, why: Explanation, label: string, payerId?: Id): PrizeAward {
+function award(ctx: GameContext, playerId: Id, amount: number, why: Explanation, part: Msg | null, payerId?: Id): PrizeAward {
   return {
     moduleId: ctx.config.type,
     gameId: ctx.config.id,
     potId: payerId ? undefined : potIdOf(ctx.config),
     payerId,
-    label,
+    ...prizeLabel(ctx.config.label, part),
     playerId,
     amount,
     final: ctx.final,
@@ -66,11 +51,11 @@ function award(ctx: GameContext, playerId: Id, amount: number, why: Explanation,
 }
 
 /** Pay a pot by places to ranked groups (ties split the places they occupy). */
-export function payPlaces(ctx: GameContext, groups: RankGroup<Id>[], name: (id: Id) => string, labelFor: (id: Id) => string, pot = ctx.pot): PrizeAward[] {
+export function payPlaces(ctx: GameContext, groups: RankGroup<Id>[], name: (id: Id) => string, partFor: (id: Id) => Msg, pot = ctx.pot): PrizeAward[] {
   if (pot <= 0) return []
   const amounts = placeAmounts(pot, ctx.config.money.split)
   const head = msg('game.places', { pot, side: ctx.config.money.source === 'side', split: ctx.config.money.split })
-  return splitPrizes(groups, amounts, name).map((s) => award(ctx, s.item, s.amount, { ...s.why, steps: [head, ...s.why.steps] }, labelFor(s.item)))
+  return splitPrizes(groups, amounts, name).map((s) => award(ctx, s.item, s.amount, { ...s.why, steps: [head, ...s.why.steps] }, partFor(s.item)))
 }
 
 /**
@@ -78,7 +63,7 @@ export function payPlaces(ctx: GameContext, groups: RankGroup<Id>[], name: (id: 
  * pot ÷ units. Pesos left over by the division go to the players with the
  * most units first. Returns nothing when nobody won a unit.
  */
-export function payUnits(ctx: GameContext, units: Map<Id, number>, unit: GameUnit, name: (id: Id) => string, pot = ctx.pot): PrizeAward[] {
+export function payUnits(ctx: GameContext, units: Map<Id, number>, unit: GameUnit, name: (id: Id) => string, pot = ctx.pot, part: (units: number) => Msg | null = (n) => msg('part.units', { n, unit })): PrizeAward[] {
   const total = [...units.values()].reduce((s, x) => s + x, 0)
   if (pot <= 0 || total <= 0) return []
   const per = pot / total
@@ -96,7 +81,7 @@ export function payUnits(ctx: GameContext, units: Map<Id, number>, unit: GameUni
         title: msg('amount', { amount }),
         steps: [msg('game.unitsPot', { pot, side, total, unit, per }), msg('game.unitsWon', { name: name(id), units: u, unit, amount, rounding })],
       },
-      `${ctx.config.label}, ${u} ${unitWord(unit, u)}`,
+      part(u),
     )
   })
 }
@@ -110,7 +95,7 @@ export function payUnits(ctx: GameContext, units: Map<Id, number>, unit: GameUni
 export function refundUnwon(ctx: GameContext, unit: GameUnit): PrizeAward[] {
   if (!ctx.final || ctx.config.money.source !== 'side' || ctx.pot <= 0) return []
   const buyIn = ctx.config.money.buyIn
-  return ctx.entrants.map((id) => award(ctx, id, buyIn, { title: msg('amount', { amount: buyIn }), steps: [msg('game.refund', { unit, buyIn })] }, `${ctx.config.label}, entrada devuelta`))
+  return ctx.entrants.map((id) => award(ctx, id, buyIn, { title: msg('amount', { amount: buyIn }), steps: [msg('game.refund', { unit, buyIn })] }, msg('part.refund', {})))
 }
 
 /** The warning for a pot from the inscriptions that nobody won, once the game is over. */
@@ -159,7 +144,7 @@ export function netBets(ctx: GameContext, owed: Map<string, number>, why: (payer
     const back = owed.get(`${winner}|${payer}`) ?? 0
     const steps = [...why(payer, winner)]
     if (back > 0) steps.push(msg('bet.net', { gross: amount + back, back, winner: name(winner), amount }))
-    out.push(award(ctx, winner, amount, { title: msg('bet.pays', { payer: name(payer), amount }), steps }, `${ctx.config.label}, de ${name(payer)}`, payer))
+    out.push(award(ctx, winner, amount, { title: msg('bet.pays', { payer: name(payer), amount }), steps }, msg('part.from', { payer: name(payer) }), payer))
   }
   return out
 }

@@ -25,7 +25,7 @@ import { useViewFocus } from '../../components/viewFocus'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import { unknownGamesOf } from '../../engine/settings/read'
 import styles from './GamesScreen.module.css'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 
 /** The game boards' panel, which the game tabs control (A11Y-17). */
 const PANEL = 'juegos-panel'
@@ -33,6 +33,7 @@ const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestP
 
 export function GamesScreen() {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)
   const round = useActiveRound()
   const ctx = useTournamentCtx()
@@ -81,17 +82,17 @@ export function GamesScreen() {
     const m = state.modules
     if (id.startsWith('game:')) {
       const g = state.games[id.slice(5)]
-      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g && showMoney ? gameStake(g, cur) : stake }
+      return { id, label, leader: g ? gameLeader(g, name, words) : t.games.outdated, stake: g && showMoney ? gameStake(g, cur) : stake }
     }
     if (id === 'individual' && m.individual) {
       const r = m.individual.rows[0]
       // The board's leader in the board's own figure: a team by its name, strokes against par, match points (STRAT-03).
-      if (r && r.thru > 0) leader = t.games.leader(r.entrant.isTeam ? r.entrant.name : name(r.playerId), t.common.figure(r.figure.text, r.figure.value, figureKind(settings)))
+      if (r && r.thru > 0) leader = t.games.leader(r.entrant.isTeam ? words(r.entrant.name) : name(r.playerId), t.common.figure(r.figure.text, r.figure.value, figureKind(settings)))
       const first = individualPrizeAmounts(settings, fieldShape(snapshot, settings))[0] ?? 0
       stake = { text: t.games.firstPrize(formatMoney(first, cur)), amount: first }
     } else if (id === 'pairs' && m.pairs) {
       const r = m.pairs.rows[0]
-      if (r && r.thru > 0) leader = t.games.leader(r.name, t.games.pointsFigure(r.total))
+      if (r && r.thru > 0) leader = t.games.leader(words(r.name), t.games.pointsFigure(r.total))
       stake = { text: t.games.firstPrize(formatMoney(settings.prizes.pairs[0] ?? 0, cur)), amount: settings.prizes.pairs[0] }
     } else if (id === 'bestRound' && m.bestRound) {
       const d = [...m.bestRound.days].reverse().find((x) => x.rows.some((r) => r.thru > 0)) ?? m.bestRound.days.at(-1)
@@ -195,12 +196,12 @@ export function GamesScreen() {
             <div className={styles.section}>
               <Board>
                 {/* The format's own column and figure, as En vivo shows them (STRAT-03): «Puntos» and «34» only where points count. */}
-                <BoardHead figureLabel={state.modules.individual.figureLabel} dense={state.modules.individual.rows.length > 20} />
+                <BoardHead figureLabel={words(state.modules.individual.figureLabel)} dense={state.modules.individual.rows.length > 20} />
                 {state.modules.individual.rows.map((r) => (
                   <LeaderRow
                     key={r.playerId}
                     pos={r.label}
-                    name={r.entrant.isTeam ? r.entrant.name : name(r.playerId)}
+                    name={r.entrant.isTeam ? words(r.entrant.name) : name(r.playerId)}
                     sub={
                       <span className={styles.sub}>
                         {/* perRound became Figure[] with the format seam; it prints
@@ -225,10 +226,10 @@ export function GamesScreen() {
                       <div key={r.playerId} className={styles.rowLine}>
                         <span className={styles.rowText}>
                           <span>
-                            {r.label} {r.entrant.isTeam ? r.entrant.name : name(r.playerId)}
+                            {r.label} {r.entrant.isTeam ? words(r.entrant.name) : name(r.playerId)}
                           </span>
                         </span>
-                        <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} about={`${r.label} ${r.entrant.isTeam ? r.entrant.name : name(r.playerId)}`} />
+                        <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} about={`${r.label} ${r.entrant.isTeam ? words(r.entrant.name) : name(r.playerId)}`} />
                       </div>
                     ))}
                 </div>
@@ -245,7 +246,7 @@ export function GamesScreen() {
                   <LeaderRow
                     key={r.pairId}
                     pos={r.label}
-                    name={r.name}
+                    name={words(r.name)}
                     sub={
                       <span className={styles.sub}>
                         <span>
@@ -372,12 +373,12 @@ export function GamesScreen() {
                   {state.modules.auction.slots.map((s, i) => (
                     <div key={i} className={styles.rowLine}>
                       <span className={styles.rowText}>
-                        <strong>{s.label}</strong>
+                        <strong>{words(s.label)}</strong>
                         <span className={styles.rowSub}>
                           {s.unfilled ? t.games.unassigned : t.common.andList(s.playerIds.map(name))}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
-                      <HowCalculated why={s.why} label={formatMoney(s.pesos, cur)} about={s.label} />
+                      <HowCalculated why={s.why} label={formatMoney(s.pesos, cur)} about={words(s.label)} />
                     </div>
                   ))}
                 </div>

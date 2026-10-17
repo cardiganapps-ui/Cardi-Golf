@@ -10,6 +10,7 @@ import { flattenRanks, isFinal, rankField, splitPrizes, type RankGroup } from '.
 import { msg } from '../../messages'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 
 export interface PuttsRow {
   playerId: Id
@@ -107,7 +108,7 @@ export const fewestPuttsModule: GameModule<FewestPuttsState, 'fewestPutts'> = {
     const label = ctx.settings.modules.fewestPutts.label
     return Object.entries(state.prizes).map(([playerId, p]): PrizeAward => ({
       moduleId: 'fewestPutts',
-      label,
+      ...prizeLabel(label),
       playerId,
       amount: p.amount,
       final: state.final,

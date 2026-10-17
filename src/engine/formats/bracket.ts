@@ -24,7 +24,7 @@ export interface BracketMatch {
   sides: [Entrant, Entrant | null]
   /** The winner once the match is decided; a bye wins immediately. */
   winner: Entrant | null
-  /** "3&2", "Iguales", "—". */
+  /** The match's figure, «3&2», «Iguales»; «—» before it is drawn; nothing for a bye (the board says it). */
   text: string
   /** True when the pairing is what the bracket says should happen, but no group has been drawn for it. */
   pending: boolean
@@ -34,8 +34,8 @@ export interface BracketRound {
   /** The golf round this bracket round is played in, when one exists. */
   roundId: Id | null
   number: number
-  /** "Octavos", "Cuartos", "Semifinal", "Final". */
-  name: string
+  /** «Octavos de final», «Cuartos de final», «Semifinal», «Final» (`bracket.round`). */
+  name: Msg
   matches: BracketMatch[]
 }
 
@@ -47,12 +47,8 @@ export interface BracketState {
 }
 
 /** What a round with `n` matches is called. */
-export function roundName(matches: number): string {
-  if (matches === 1) return 'Final'
-  if (matches === 2) return 'Semifinal'
-  if (matches === 4) return 'Cuartos de final'
-  if (matches === 8) return 'Octavos de final'
-  return `Ronda de ${matches * 2}`
+export function roundName(matches: number): Msg {
+  return msg('bracket.round', { matches })
 }
 
 /**
@@ -132,7 +128,7 @@ export function bracketState(ctx: FormatContext): BracketState {
     const roundId = roundIds[i] ?? null
     const matches: BracketMatch[] = pairings.map(([a, b]) => {
       // A bye is won before anyone tees off.
-      if (!b) return { sides: [a, null] as [Entrant, null], winner: a, text: 'Pasa directo', pending: false }
+      if (!b) return { sides: [a, null] as [Entrant, null], winner: a, text: '', pending: false }
       const played = roundId ? playedMatch(results, roundId, a, b) : undefined
       if (!played) return { sides: [a, b] as [Entrant, Entrant], winner: null, text: '—', pending: true }
       const winner = !played.done ? null : played.up > 0 ? a : played.up < 0 ? b : null

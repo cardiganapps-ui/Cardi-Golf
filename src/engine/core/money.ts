@@ -16,15 +16,12 @@
  * house stays with the banker beside the house cut (`toHouse`).
  */
 import type { TournamentSettings } from '../settings/schema'
-import { t } from '../../i18n/es-MX'
 import { label, msg, say, type Msg } from '../messages'
 import type { Explanation, Id, PaymentKind, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
 import { NO_UNASSIGNED, type UnassignedState } from './unassigned'
-const W = t.settleWhy
-const M = t.moneyScreen
 
 /** null = the banker. */
 export interface Flow {
@@ -32,7 +29,8 @@ export interface Flow {
   to: Id | null
   amount: number
   kind: PaymentKind
-  label: string
+  /** What it is for: the inscription, a lot, a buyback, a side pot's label, a prize's label. */
+  label: Msg
   paid: boolean
   final: boolean
   /** The pot a payout comes from or a buy-in goes to: `main`, `calcutta` or a game id. */
@@ -67,8 +65,8 @@ export interface Account {
 
 export interface PersonMoney {
   playerId: Id
-  /** By category label → amount. */
-  prizes: Record<string, number>
+  /** What he won, by prize label, in the order the prizes came (each label once, its amounts summed). */
+  prizes: Array<{ label: Msg; amount: number }>
   prizesTotal: number
   calcuttaShares: number
   buybacksReceived: number
@@ -88,7 +86,7 @@ export interface PersonMoney {
 
 /** One part of an amount people pay by (MONEY-07). */
 export interface MoneyPart {
-  label: string
+  label: Msg
   /**
    * Signed from the side that reads it. On a vía-banco line, + is what the
    * payer owes on it and − what nets against it; in a party's position, + is
@@ -161,17 +159,6 @@ export interface MoneyState {
 
 /** A part of an amount, signed: + what is owed or received, − what nets against it. */
 const partText = (p: MoneyPart): Msg => msg('settle.part', { label: p.label, amount: p.amount, of: p.of ?? null })
-function kindLabel(kind: PaymentKind): string {
-  switch (kind) {
-    case 'entry': return M.entry
-    case 'calcutta': return M.purchases
-    case 'buyback': return M.owesBuyback
-    case 'side': return M.sidePots
-    case 'payout': return M.prizes
-    case 'bet': return M.owesBet
-    default: return kind
-  }
-}
 
 /** The payment kinds the settlement reads; `other` is a note, not a debt. */
 const SETTLED_KINDS: ReadonlySet<PaymentKind> = new Set<PaymentKind>(['entry', 'side', 'calcutta', 'buyback', 'payout', 'bet'])
@@ -199,7 +186,7 @@ export function computeMoney(
         to: null,
         amount: settings.entryFee,
         kind: 'entry',
-        label: 'Inscripción',
+        label: say('flow.entry'),
         paid: false,
         final: true,
         outstanding: settings.entryFee,
@@ -211,7 +198,7 @@ export function computeMoney(
   for (const g of Object.values(games)) {
     if (g.config.money.source !== 'side' || g.config.money.buyIn <= 0) continue
     for (const id of g.entrants) {
-      flows.push({ from: id, to: null, amount: g.config.money.buyIn, kind: 'side', label: g.config.label, paid: false, final: true, potId: g.config.id, outstanding: g.config.money.buyIn })
+      flows.push({ from: id, to: null, amount: g.config.money.buyIn, kind: 'side', label: label(g.config.label), paid: false, final: true, potId: g.config.id, outstanding: g.config.money.buyIn })
     }
   }
 
@@ -224,7 +211,7 @@ export function computeMoney(
         to: null,
         amount: lot.price,
         kind: 'calcutta',
-        label: `Calcutta, lote ${lot.lotNumber}`,
+        label: msg('flow.lot', { lot: lot.lotNumber }),
         paid: false,
         final: true,
         outstanding: lot.price,
@@ -236,7 +223,7 @@ export function computeMoney(
           to: lot.ownerId,
           amount: lot.buybackAmount,
           kind: 'buyback',
-          label: `Recompra ${lot.buybackPct}%`,
+          label: msg('flow.buyback', { pct: lot.buybackPct }),
           paid: false,
           final: true,
           outstanding: lot.buybackAmount,
@@ -303,7 +290,7 @@ export function computeMoney(
   const nameOf = (id: Id | null) => (id ? (names.get(id) ?? '?') : null)
   /** `sign` 1: from the account's payer's side (what he owes is +). */
   const accountParts = (a: Account, sign: 1 | -1): MoneyPart[] => {
-    if (a.due < 0) return [{ label: W.overpaid(kindLabel(a.kind)), amount: sign * a.due }]
+    if (a.due < 0) return [{ label: msg('settle.overpaid', { kind: a.kind }), amount: sign * a.due }]
     return byKey
       .get(accountKey(a.kind, a.from, a.to))!
       .flows.filter((f) => f.outstanding > 0)
@@ -315,7 +302,7 @@ export function computeMoney(
   for (const p of players) {
     people[p.id] = {
       playerId: p.id,
-      prizes: {},
+      prizes: [],
       prizesTotal: 0,
       calcuttaShares: 0,
       buybacksReceived: 0,
@@ -345,7 +332,10 @@ export function computeMoney(
       if (f.kind === 'buyback') m.buybacksReceived += f.amount
       else if (f.kind === 'bet') m.betsReceived += f.amount
       else if (f.kind === 'payout') {
-        m.prizes[f.label] = (m.prizes[f.label] ?? 0) + f.amount
+        const key = JSON.stringify(f.label)
+        const won = m.prizes.find((x) => JSON.stringify(x.label) === key)
+        if (won) won.amount += f.amount
+        else m.prizes.push({ label: f.label, amount: f.amount })
         if (f.potId === 'calcutta') m.calcuttaShares += f.amount
         else m.prizesTotal += f.amount
       }
@@ -433,8 +423,8 @@ export function computeMoney(
   }
   const bankPosition = bankCollects - bankPays
   const bankParts: MoneyPart[] = [
-    { label: W.bankCollects, amount: bankCollects },
-    { label: W.bankPays, amount: -bankPays },
+    { label: say('settle.bankCollects'), amount: bankCollects },
+    { label: say('settle.bankPays'), amount: -bankPays },
   ].filter((x) => x.amount !== 0)
   const bankParty = bankerId && positions.has(bankerId) ? bankerId : null
   positions.set(bankParty, (positions.get(bankParty) ?? 0) + bankPosition)
@@ -468,14 +458,15 @@ export function computeMoney(
     if (f.to === null) {
       if (f.kind === 'entry') add(bankIn, 'entries', () => msg('settle.entries', { n: entryCount, fee: settings.entryFee }), f.amount)
       else if (f.kind === 'calcutta') add(bankIn, 'lots', () => msg('settle.lots', { n: lotCount }), f.amount)
-      else add(bankIn, `label:${f.label}`, () => label(f.label), f.amount)
+      else add(bankIn, `label:${JSON.stringify(f.label)}`, () => f.label, f.amount)
     }
     if (f.from === null) {
       if (f.potId === 'calcutta') add(bankOut, 'calcutta', () => say('settle.calcuttaShares'), f.amount)
       else if (!f.potId || f.potId === 'main') add(bankOut, 'main', () => say('settle.mainPrizes'), f.amount)
       else {
-        const pot = games[f.potId]?.config.label ?? f.label
-        add(bankOut, `label:${pot}`, () => label(pot), f.amount)
+        const pot = games[f.potId]?.config.label
+        const what = pot != null ? label(pot) : f.label
+        add(bankOut, `label:${JSON.stringify(what)}`, () => what, f.amount)
       }
     }
   }
