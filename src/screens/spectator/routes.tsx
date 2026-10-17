@@ -13,8 +13,8 @@ export const spectatorChildren = [
   {
     element: <Lazy><TournamentShell /></Lazy>,
     children: [
-      { index: true, element: <Lazy><LiveScreen /></Lazy> },
-      { path: 'juegos', element: <Lazy><GamesScreen /></Lazy> },
+      { index: true, element: <Lazy skeleton="board"><LiveScreen /></Lazy> },
+      { path: 'juegos', element: <Lazy skeleton="board"><GamesScreen /></Lazy> },
       { path: 'dinero', element: <Lazy><SpectatorMoney /></Lazy> },
     ],
   },

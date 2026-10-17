@@ -3,20 +3,21 @@
  *
  * - Before any screen has shown, it is the boot screen index.html paints (the same paper, mark and words), so
  *   a first open goes from the launch image to the app with nothing in between while the route's chunk loads.
- * - After that it waits: nothing for `LATE_MS`, then the skeleton rows. A screen that loads quickly (from the
+ * - After that it waits: nothing for `LATE_MS`, then the screen's own skeleton (VIS-13). A screen that loads quickly (from the
  *   precache, or preloaded on intent) shows no placeholder at all; the skeleton used to flash for a few hundred
  *   ms on every first visit to Estadísticas, the TV or a Comité section.
  */
 import { Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { assetUrl } from '../lib/assetUrl'
-import { Spinner } from './ui'
+import { Spinner, type SkeletonKind } from './ui'
 import { LATE_MS, markScreenShown, screenShown } from './lazyState'
 import styles from './Lazy.module.css'
 
-export function Lazy({ children }: { children: ReactNode }) {
+/** `skeleton`: the shape of the screen it loads (VIS-13), drawn once the wait is late. */
+export function Lazy({ children, skeleton }: { children: ReactNode; skeleton?: SkeletonKind }) {
   return (
-    <Suspense fallback={screenShown() ? <Late /> : <Boot />}>
+    <Suspense fallback={screenShown() ? <Late kind={skeleton} /> : <Boot />}>
       <Shown>{children}</Shown>
     </Suspense>
   )
@@ -28,13 +29,13 @@ function Shown({ children }: { children: ReactNode }) {
   return children
 }
 
-function Late() {
+function Late({ kind }: { kind?: SkeletonKind }) {
   const [late, setLate] = useState(false)
   useEffect(() => {
     const id = setTimeout(() => setLate(true), LATE_MS)
     return () => clearTimeout(id)
   }, [])
-  return late ? <Spinner /> : null
+  return late ? <Spinner kind={kind} /> : null
 }
 
 /** index.html's boot screen, drawn by the app until the first screen's chunk is in. */

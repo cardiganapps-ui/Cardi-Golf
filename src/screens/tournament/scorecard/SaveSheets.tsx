@@ -2,6 +2,7 @@
 import { memo } from 'react'
 import { Sheet } from '../../../components/ui'
 import { t } from '../../../i18n/es-MX'
+import { Button } from '../../../components/primitives'
 
 const S = t.card
 
@@ -27,15 +28,15 @@ export const TiebreakSheet = memo(function TiebreakSheet(p: {
           const name = p.named.find((x) => x.id === id)?.name
           if (name === undefined) return null
           return (
-            <button key={id} type="button" className="btn btn--secondary btn--block" disabled={p.busy} onClick={() => p.onAnswer(id)}>
+            <Button key={id} block disabled={p.busy} onClick={() => p.onAnswer(id)}>
               {name}
-            </button>
+            </Button>
           )
         })}
         {/* Nobody remembers: the scores go in now and the question waits for the Comité, never a guess (UX-08). */}
-        <button type="button" className="btn btn--ghost btn--block" disabled={p.busy} onClick={() => p.onAnswer(undefined)}>
+        <Button variant="ghost" block disabled={p.busy} onClick={() => p.onAnswer(undefined)}>
           {S.whoHoledLastUnknown}
-        </button>
+        </Button>
         <p className="help">{S.whoHoledLastUnknownHint(p.game)}</p>
       </div>
     </Sheet>
@@ -49,12 +50,12 @@ export const DefaultsSheet = memo(function DefaultsSheet(p: { open: boolean; hol
       <div className="stack">
         <p className="help">{S.allDefaultsHint}</p>
         <div className="row">
-          <button className="btn btn--secondary" type="button" onClick={p.onBack}>
+          <Button onClick={p.onBack}>
             {S.allDefaultsBack}
-          </button>
-          <button className="btn btn--primary grow" type="button" onClick={p.onConfirm}>
+          </Button>
+          <Button variant="primary" className="grow" onClick={p.onConfirm}>
             {S.allDefaultsConfirm}
-          </button>
+          </Button>
         </div>
       </div>
     </Sheet>
@@ -72,12 +73,12 @@ export const UnusualSheet = memo(function UnusualSheet(p: { lines: readonly stri
           ))}
         </ul>
         <div className="row">
-          <button className="btn btn--secondary" type="button" onClick={p.onFix}>
+          <Button onClick={p.onFix}>
             {S.weirdFix}
-          </button>
-          <button className="btn btn--primary grow" type="button" onClick={p.onConfirm}>
+          </Button>
+          <Button variant="primary" className="grow" onClick={p.onConfirm}>
             {S.weirdConfirm}
-          </button>
+          </Button>
         </div>
       </div>
     </Sheet>

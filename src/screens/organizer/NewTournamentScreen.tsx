@@ -36,9 +36,12 @@ import { newTournamentCardSigning } from '../../engine/core/cardSigning'
 import { safeParseSettings } from '../../engine/settings/schema'
 import { PlayStep } from './setup/PlayStep'
 import { ReviewCard } from './setup/ReviewCard'
+import { WizardPreview } from './setup/WizardPreview'
 import styles from './Organizer.module.css'
 import { humanError } from '../../lib/humanError'
 import { clearDraft, draftKey, readDraft, writeDraft } from './wizardDraft'
+import { Button } from '../../components/primitives'
+import { buttonClass } from '../../components/buttonClass'
 
 const BLANK = PRESETS.find((p) => p.id === 'blank')!
 /** The blank settings as the schema reads them, to tell a draft from an untouched wizard. */
@@ -228,12 +231,12 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
 
   const nav = (prev: Step, next: Step | null, nextLabel: string = t.common.next, disabled = false, onNext?: () => void) => (
     <div className={styles.actions}>
-      <button className="btn btn--secondary" type="button" onClick={() => back(prev)}>
+      <Button onClick={() => back(prev)}>
         {t.common.back}
-      </button>
-      <button className="btn btn--primary" type="button" disabled={disabled} onClick={() => (onNext ? onNext() : next && forward(next))}>
+      </Button>
+      <Button variant="primary" disabled={disabled} onClick={() => (onNext ? onNext() : next && forward(next))}>
         {nextLabel}
-      </button>
+      </Button>
     </div>
   )
 
@@ -245,7 +248,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   useViewFocus(shown, (v) => progressRef.current?.querySelector(v === DONE ? 'h1' : '[data-view-heading]'), { always: true })
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} ${shown === DONE ? '' : styles.wizard}`}>
       <Link to="/organizer" className={styles.brand}>
         <Wordmark />
       </Link>
@@ -281,9 +284,9 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
           <Field label={W.tagline}>
             <input className="input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder={W.taglinePlaceholder} />
           </Field>
-          <button className="btn btn--primary" type="submit" disabled={name.trim().length < 3}>
+          <Button variant="primary" type="submit" disabled={name.trim().length < 3}>
             {t.common.next}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -311,6 +314,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         </div>
       )}
 
+      {shown !== DONE && <WizardPreview name={name} tagline={tagline} settings={settings} check={check} step={shown} />}
+
       <ConfirmSheet open={!!askPreset} title={W.replaceTitle} body={W.replaceBody} confirmLabel={W.replaceConfirm} onConfirm={() => askPreset && applyPreset(askPreset)} onClose={() => setAskPreset(null)} />
       <ConfirmSheet open={blocker.state === 'blocked' && !restoring} title={W.leaveTitle} body={W.leaveBody} confirmLabel={W.leaveConfirm} cancelLabel={W.leaveStay} danger onConfirm={leave} onClose={() => blocker.state === 'blocked' && blocker.reset()} />
 
@@ -319,7 +324,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
           {/* What comes next first (UX-06). The code used to lead, and players who joined
               with it found an empty face grid: it waits until there are players. */}
           <p>{W.nextSteps}</p>
-          <Link className="btn btn--primary btn--block" to={`/t/${created.slug}/admin`}>
+          <Link className={buttonClass({ variant: 'primary', block: true })} to={`/t/${created.slug}/admin`}>
             {W.goAdmin}
           </Link>
           <details className={styles.shareLater}>

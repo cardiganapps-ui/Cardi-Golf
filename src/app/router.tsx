@@ -77,12 +77,12 @@ const tournamentChildren = [
           {
             element: <Lazy><TournamentShell /></Lazy>,
             children: [
-              { index: true, element: <Lazy><LiveScreen /></Lazy> },
-              { path: 'tarjeta', element: <Lazy><ScorecardScreen /></Lazy> },
-              { path: 'juegos', element: <Lazy><GamesScreen /></Lazy> },
+              { index: true, element: <Lazy skeleton="board"><LiveScreen /></Lazy> },
+              { path: 'tarjeta', element: <Lazy skeleton="card"><ScorecardScreen /></Lazy> },
+              { path: 'juegos', element: <Lazy skeleton="board"><GamesScreen /></Lazy> },
               { path: 'dinero', element: <Lazy><MoneyScreen /></Lazy> },
               { path: 'stats', element: <Lazy><StatsScreen /></Lazy> },
-              { path: 'reglamento', element: <Lazy><RulesScreen /></Lazy> },
+              { path: 'reglamento', element: <Lazy skeleton="text"><RulesScreen /></Lazy> },
               { path: 'mas', element: <Lazy><MoreScreen /></Lazy> },
             ],
           },

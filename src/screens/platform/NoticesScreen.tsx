@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { Field, Input, Segmented } from '../../components/primitives'
+import { Button, Field, Input, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { safeNoticeUrl } from '../../lib/noticeText'
 import { usePlatformApi, type Audience, type PersonRow } from '../../data/platform'
@@ -103,9 +103,9 @@ export function NoticesScreen() {
         ) : to ? (
           <div className={s.actions}>
             <strong>{N.picked(personName(to))}</strong>
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setTo(null)}>
+            <Button variant="ghost" size="sm" onClick={() => setTo(null)}>
               {N.change}
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -141,9 +141,9 @@ export function NoticesScreen() {
             <span>{body.trim()}</span>
           </div>
         )}
-        <button className="btn btn--primary btn--block" type="button" disabled={!ready} onClick={() => setAsking(true)}>
+        <Button variant="primary" block disabled={!ready} onClick={() => setAsking(true)}>
           {N.send}
-        </button>
+        </Button>
       </section>
 
       <section className={s.section}>

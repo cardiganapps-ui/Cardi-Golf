@@ -18,6 +18,7 @@ import { formatIndex } from '../../data/profiles'
 import { humanError } from '../../lib/humanError'
 import { useTournamentCtx } from './tournamentContext'
 import styles from '../../components/InstallGuide.module.css'
+import { Button } from '../../components/primitives'
 
 const M = t.myData
 const key = (tid: string, pid: string) => `cardi-golf:my-data-seen:${tid}:${pid}`
@@ -103,22 +104,22 @@ export const MyDataCard = memo(function MyDataCard() {
             <textarea className="textarea" rows={3} maxLength={500} value={what} onChange={(e) => setWhat(e.target.value)} />
           </Field>
           <div className={styles.actions}>
-            <button className="btn btn--primary btn--sm" type="submit" disabled={busy || what.trim().length < 3}>
+            <Button variant="primary" size="sm" type="submit" disabled={busy || what.trim().length < 3}>
               {M.send}
-            </button>
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAsking(false)}>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setAsking(false)}>
               {t.common.cancel}
-            </button>
+            </Button>
           </div>
         </form>
       ) : (
         <div className={styles.actions}>
-          <button className="btn btn--secondary btn--sm" type="button" onClick={close}>
+          <Button size="sm" onClick={close}>
             {M.ok}
-          </button>
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAsking(true)}>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
             {M.ask}
-          </button>
+          </Button>
         </div>
       )}
     </section>

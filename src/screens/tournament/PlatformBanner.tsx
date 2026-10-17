@@ -17,6 +17,8 @@ import { usePlatformApi } from '../../data/platform'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './PlatformBanner.module.css'
 import { humanError } from '../../lib/humanError'
+import { Button } from '../../components/primitives'
+import { buttonClass } from '../../components/buttonClass'
 
 const P = t.platform
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -62,16 +64,16 @@ export function PlatformBanner() {
       </span>
       <span className={styles.actions}>
         {locked && (
-          <button className="btn btn--secondary btn--sm" type="button" onClick={() => setAsking(true)}>
+          <Button size="sm" onClick={() => setAsking(true)}>
             {P.unlock}
-          </button>
+          </Button>
         )}
         {until && (
-          <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void relock()}>
+          <Button size="sm" disabled={busy} onClick={() => void relock()}>
             {P.relock}
-          </button>
+          </Button>
         )}
-        <Link className="btn btn--ghost btn--sm" to={`/admin/torneos/${tournamentId}`}>
+        <Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to={`/admin/torneos/${tournamentId}`}>
           {P.bannerPanel}
         </Link>
       </span>

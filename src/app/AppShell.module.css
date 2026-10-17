@@ -44,6 +44,27 @@
   --main-max: 1200px;
 }
 
+/* VIS-19: a laptop or an iPad gets two columns where a screen has them (the wizard and its preview, the board and
+   its feed), never a phone column centred in empty space. */
+@media (min-width: 900px) {
+  .mainRoomy {
+    --main-max: 1120px;
+  }
+}
+/* A line of prose stops at about 70 characters, whatever the column (VIS-19); zero specificity, so a screen's own
+   measure wins. A phone's column is narrower than that already. */
+.mainProse :where(p, .help) {
+  max-inline-size: 70ch;
+}
+
 .mainTabbed {
   padding-bottom: 0;
+}
+
+/* On paper the page is the column (VIS-25): the printable cards take the sheet's width, gutters and all. */
+@media print {
+  .main {
+    max-width: none;
+    padding: 0;
+  }
 }

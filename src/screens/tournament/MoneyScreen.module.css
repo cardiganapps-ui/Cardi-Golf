@@ -122,9 +122,9 @@
   font-weight: 600;
 
 }
+/* «Pone $6,000, recibe $8,200»: figures, so the line wraps to a second rather than cutting one off. */
 .personSub {
-  composes: rowSubText from '../../components/primitives.module.css';
-
+  composes: rowSubText rowSubWrap from '../../components/primitives.module.css';
 }
 /* «Quién debe qué: 14 pendientes, $19,625» (COPY-07). */
 /* A count and an amount: ink, AAA (A11Y-09); the heading says it is pending. */

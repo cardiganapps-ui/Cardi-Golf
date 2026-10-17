@@ -118,3 +118,36 @@
     background: var(--surface);
   }
 }
+
+/*
+ * VIS-19: from 900 px (a laptop, an iPad) the board and the feed side by side. The screen's own items stay one
+ * column, in the order a phone reads them; the feed takes a second column from the top and stays in view as the
+ * board scrolls. A phone keeps one column, the feed under the board.
+ */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    column-gap: var(--s8);
+    row-gap: 0;
+    align-items: start;
+  }
+  .screen > * {
+    grid-column: 1;
+    margin-bottom: var(--s4);
+  }
+  .screen > .side {
+    grid-column: 2;
+    grid-row: 1 / span 40;
+    position: sticky;
+    top: calc(var(--safe-top) + 56px + var(--s4));
+    padding-left: var(--s6);
+    border-left: var(--hairline);
+  }
+}

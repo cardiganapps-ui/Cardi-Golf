@@ -8,7 +8,7 @@
  */
 import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { reasonLength, trimReason } from '../../lib/reason'
 import s from './Platform.module.css'
 
@@ -37,9 +37,9 @@ export function ViewReasonForm({ kind, onOpen }: { kind: keyof typeof V.body; on
         <Input value={reason} maxLength={200} placeholder={V.placeholder} onChange={(e) => setReason(e.target.value)} />
       </Field>
       <div className={s.actions}>
-        <button className="btn btn--primary btn--sm" type="submit" disabled={!ok || busy}>
+        <Button variant="primary" size="sm" type="submit" disabled={!ok || busy}>
           {V.open}
-        </button>
+        </Button>
       </div>
     </form>
   )

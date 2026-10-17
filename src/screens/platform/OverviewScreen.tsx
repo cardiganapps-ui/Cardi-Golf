@@ -101,10 +101,14 @@ export function Funnel({ f }: { f: PlatformFunnel }) {
   const created = f.steps.find((x) => x.key === 'created')?.tournaments ?? 0
   return (
     <section className={s.section} aria-labelledby="funnel-title">
-      <div className={s.kpi}>
-        <span className={s.kpiLabel}>{P.northStar.title}</span>
-        <span className={s.kpiValue}>{n(f.northStar)}</span>
-        <span className={s.kpiSub}>{P.northStar.finished(f.finished)}</span>
+      <div className={`${s.kpi} ${s.kpiLead}`} data-kpi>
+        <span className={s.kpiText}>
+          <span className={s.kpiLabel}>{P.northStar.title}</span>
+          <span className={s.kpiSub}>{P.northStar.finished(f.finished)}</span>
+        </span>
+        <span className={s.kpiValue} data-kpi-value>
+          {n(f.northStar)}
+        </span>
       </div>
       <p className={s.help}>{P.northStar.hint(f.days)}</p>
       <div className={s.sectionHead}>
@@ -166,10 +170,14 @@ function CourseArrivals({ c }: { c: { all: FunnelCourses; first: FunnelCourses }
 
 function Kpi({ label, value, sub }: { label: string; value: number; sub: string }) {
   return (
-    <div className={s.kpi}>
-      <span className={s.kpiLabel}>{label}</span>
-      <span className={s.kpiValue}>{n(value)}</span>
-      <span className={s.kpiSub}>{sub}</span>
+    <div className={s.kpi} data-kpi>
+      <span className={s.kpiText}>
+        <span className={s.kpiLabel}>{label}</span>
+        <span className={s.kpiSub}>{sub}</span>
+      </span>
+      <span className={s.kpiValue} data-kpi-value>
+        {n(value)}
+      </span>
     </div>
   )
 }

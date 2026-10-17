@@ -11,7 +11,7 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Sheet, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { leaveSheetHistory } from '../../components/sheetHistory'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
@@ -24,6 +24,7 @@ import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
 import { ViewReasonForm } from './ViewReason'
 import { useAdminView } from './useAdminView'
+import { buttonClass } from '../../components/buttonClass'
 
 const H = t.platform.people
 
@@ -51,7 +52,7 @@ export function PersonDetail() {
   }
 
   const back = (
-    <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
+    <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {H.back}
     </Link>
@@ -83,10 +84,10 @@ export function PersonDetail() {
           </div>
         </div>
         <span className={s.chips}>
-          <span className="chip chip--outline">{H.provider[p.provider] ?? p.provider}</span>
-          {p.blocked && <span className="chip chip--coral">{H.chips.blocked}</span>}
-          {p.isAdmin && <span className="chip chip--teal">{H.chips.admin}</span>}
-          {p.isSelf && <span className="chip chip--outline">{H.chips.you}</span>}
+          <span className={s.flag}>{H.provider[p.provider] ?? p.provider}</span>
+          {p.blocked && <span className={s.flagDanger}>{H.chips.blocked}</span>}
+          {p.isAdmin && <span className={s.flagOn}>{H.chips.admin}</span>}
+          {p.isSelf && <span className={s.flag}>{H.chips.you}</span>}
         </span>
         <span className={s.help}>
           {[H.joined(relTime(p.createdAt)), p.lastSignInAt ? H.lastSeen(relTime(p.lastSignInAt)) : H.neverSeen, !p.anonymous && !p.confirmedAt ? H.unconfirmed : null]
@@ -95,7 +96,7 @@ export function PersonDetail() {
         </span>
         {p.profile && (
           <div className={s.actions}>
-            <Link className="btn btn--secondary btn--sm" to={`/p/${p.profile.handle}`}>
+            <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to={`/p/${p.profile.handle}`}>
               {H.viewProfile}
             </Link>
           </div>
@@ -130,9 +131,9 @@ export function PersonDetail() {
                   </span>
                 </Link>
                 {(x.link === 'confirmed' || x.link === 'pending') && x.playerId && (
-                  <button className="btn btn--ghost btn--sm" type="button" onClick={() => setPending({ kind: 'unlink', playerId: x.playerId!, label: H.playerIn(x.playerName, x.name) })}>
+                  <Button variant="danger" size="sm" onClick={() => setPending({ kind: 'unlink', playerId: x.playerId!, label: H.playerIn(x.playerName, x.name) })}>
                     {H.unlink}
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -175,9 +176,9 @@ export function PersonDetail() {
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{H.deviceLock(p.deviceLock.failed, p.deviceLock.lockedUntil ? clock(p.deviceLock.lockedUntil) : null)}</span>
                 </span>
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => setPending({ kind: 'lock', userId: p.id })}>
+                <Button size="sm" onClick={() => setPending({ kind: 'lock', userId: p.id })}>
                   {H.clearLock}
-                </button>
+                </Button>
               </div>
             )}
             {p.playerLocks.map((l) => (
@@ -185,9 +186,9 @@ export function PersonDetail() {
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{H.playerLock(l.name, l.tournament, l.lockedUntil ? clock(l.lockedUntil) : null)}</span>
                 </span>
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => setPending({ kind: 'lock', playerId: l.playerId })}>
+                <Button size="sm" onClick={() => setPending({ kind: 'lock', playerId: l.playerId })}>
                   {H.clearLock}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -203,17 +204,17 @@ export function PersonDetail() {
         ) : (
           <div className={s.actions}>
             {p.blocked ? (
-              <button className="btn btn--secondary" type="button" onClick={() => setPending({ kind: 'unblock' })}>
+              <Button onClick={() => setPending({ kind: 'unblock' })}>
                 {H.unblock}
-              </button>
+              </Button>
             ) : (
-              <button className="btn btn--secondary" type="button" onClick={() => setPending({ kind: 'block' })}>
+              <Button variant="danger" onClick={() => setPending({ kind: 'block' })}>
                 {H.block}
-              </button>
+              </Button>
             )}
-            <button className="btn btn--danger" type="button" onClick={() => setPending({ kind: 'delete' })}>
+            <Button variant="danger" onClick={() => setPending({ kind: 'delete' })}>
               {H.delete}
-            </button>
+            </Button>
           </div>
         )}
       </section>
@@ -387,9 +388,9 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
         </Field>
         <div className={s.actions}>
           {!person.blocked && (
-            <button
-              className="btn btn--secondary"
-              type="button"
+            <Button
+              
+             
               disabled={busy}
               onClick={() => {
                 onClose()
@@ -397,11 +398,11 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
               }}
             >
               {H.deleteInstead}
-            </button>
+            </Button>
           )}
-          <button className="btn btn--danger" type="button" disabled={busy || !ready} onClick={() => void go()}>
+          <Button variant="danger" disabled={busy || !ready} onClick={() => void go()}>
             {busy ? t.common.saving : H.delete}
-          </button>
+          </Button>
         </div>
       </div>
     </Sheet>

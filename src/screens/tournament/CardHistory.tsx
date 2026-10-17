@@ -12,6 +12,7 @@ import { historyWhy } from '../../lib/comiteReasons'
 import { humanError } from '../../lib/humanError'
 import { localWhen } from '../../lib/localWhen'
 import styles from './PlayerSheet.module.css'
+import { Button } from '../../components/primitives'
 
 const H = t.card.history
 
@@ -54,9 +55,9 @@ export function CardHistory({ tournamentId, playerId, timeZone }: { tournamentId
       {(shown.kind === 'idle' || shown.kind === 'loading') && (
         <>
           <p className="help">{H.hint}</p>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => void load()} disabled={shown.kind === 'loading'}>
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={shown.kind === 'loading'}>
             {shown.kind === 'loading' ? H.loading : H.show}
-          </button>
+          </Button>
         </>
       )}
       {shown.kind === 'unavailable' && <p className="help">{H.unavailable}</p>}
@@ -65,9 +66,9 @@ export function CardHistory({ tournamentId, playerId, timeZone }: { tournamentId
           <p className="help" role="alert">
             {shown.said}
           </p>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => void load()}>
+          <Button variant="ghost" size="sm" onClick={() => void load()}>
             {t.common.retry}
-          </button>
+          </Button>
         </>
       )}
       {shown.kind === 'shown' && shown.trails.length === 0 && <p className="help">{H.none}</p>}
