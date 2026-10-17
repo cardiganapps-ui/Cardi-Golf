@@ -13,6 +13,7 @@ import { fillRound, makeSnapshot } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 import type { GameImpl } from './game'
 import { directUnits, payUnits } from './payout'
+import { words } from '../testing/words'
 
 /** A fake "most points" game: one unit per point over 25, paid by units. */
 const unitsGame: GameImpl<Map<string, number>> = {
@@ -25,7 +26,7 @@ const unitsGame: GameImpl<Map<string, number>> = {
   },
   prizes(units, ctx) {
     const name = (id: string) => id
-    return ctx.config.money.source === 'direct' ? directUnits(ctx, units, 'reward', ['punto', 'puntos'], name) : payUnits(ctx, units, ['punto', 'puntos'], name)
+    return ctx.config.money.source === 'direct' ? directUnits(ctx, units, 'reward', 'part', name) : payUnits(ctx, units, 'part', name)
   },
   board: () => ({ sections: [], notes: [] }),
 }
@@ -189,7 +190,7 @@ describe('registry', () => {
     const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } })] }
     const st = computeTournament(finished(settings), settings, { games: { custom: undefined } })
     expect(st.flags.missingGames).toEqual(['g1'])
-    expect(st.flags.warnings.some((w) => w.includes('Apuesta'))).toBe(true)
+    expect(words(st.flags.warnings).some((w) => w.includes('Apuesta'))).toBe(true)
   })
 
   it('a disabled game contributes nothing', () => {

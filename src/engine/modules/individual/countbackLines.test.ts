@@ -10,10 +10,11 @@ import { parseSettings } from '../../settings/schema'
 import { DEFAULT_SETTINGS } from '../../settings/presets'
 import { PAR_72, makeGroup, makePlayer, makeRound, makeSnapshot, score } from '../../testing/fixtures'
 import type { Snapshot } from '../../types'
+import { words } from '../../testing/words'
 
 const PARS = PAR_72.map(([p]) => p)
 const rows = (snap: Snapshot) => computeTournament(snap, parseSettings(snap.tournament.settings)).modules.individual!.rows
-const steps = (snap: Snapshot, name: string) => rows(snap).find((r) => r.entrant.name === name)!.countbackWhy?.steps ?? []
+const steps = (snap: Snapshot, name: string) => words(rows(snap).find((r) => r.entrant.name === name)!.countbackWhy)?.steps ?? []
 
 it('match play, day 2 under way: a live pair «va», an unstarted pair «todavía no»', () => {
   // match8's eight players over two days: day 1 as in the fixture, day 2 drawn winners v winners, losers v losers.
@@ -81,7 +82,7 @@ it('a team that has not started the last nine still breaks its tie on that nine�
   const snap = teams([9, 9], ['finished', 'live'], [9, 6])
   // Team B hasn't teed off on day 2.
   snap.scores = snap.scores.filter((s) => !(s.roundId === 'r2' && (s.playerId === 'p3' || s.playerId === 'p4')))
-  const all = rows(snap).flatMap((r) => r.countbackWhy?.steps ?? [])
+  const all = rows(snap).flatMap((r) => words(r.countbackWhy)?.steps ?? [])
   expect(all.join('\n')).not.toMatch(/Hoyos 10–18|Hoyo 18/)
 })
 
@@ -97,7 +98,7 @@ it('match play: a side whose match is over and one that hasn’t teed off are ea
     snap.scores.push(score('r2', p('Elías'), h, PARS[h - 1]! - 1, 1))
     snap.scores.push(score('r2', p('Leonel'), h, PARS[h - 1]! + 3, 2))
   }
-  const all = rows(snap).flatMap((r) => r.countbackWhy?.steps ?? [])
+  const all = rows(snap).flatMap((r) => words(r.countbackWhy)?.steps ?? [])
   expect(all.join('\n')).not.toMatch(/empatado/)
   expect(all.join('\n')).toMatch(/terminó 10 arriba contra .* no ha salido|no ha salido contra .* terminó 10 arriba/)
 })
@@ -106,7 +107,7 @@ it('a finished bracket: players out before the last day never read «todavía no
   // bracket8 with its last day closed: the players knocked out earlier never play it.
   const snap = structuredClone(getFixture('bracket8')!.snapshot)
   snap.rounds = snap.rounds.map((r) => ({ ...r, status: 'finished' as const }))
-  const all = rows(snap).flatMap((r) => r.countbackWhy?.steps ?? []).join('\n')
+  const all = rows(snap).flatMap((r) => words(r.countbackWhy)?.steps ?? []).join('\n')
   expect(all).not.toMatch(/todavía no juegan/)
   expect(all).toMatch(/Día 3: ninguno jugó partido ese día/)
 })

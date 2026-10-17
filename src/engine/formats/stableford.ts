@@ -6,7 +6,7 @@
  * exactly what it did before the seam existed.
  */
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation } from '../types'
+import type { ExplanationText } from '../types'
 import { countbackFrom, emptyCountback, playerEntrants, playerRound } from './entrants'
 import type { Figure, FormatContext, FormatStandings, MainFormat } from './format'
 
@@ -16,7 +16,7 @@ export const stablefordFormat: MainFormat = {
   higherIsBetter: () => true,
   figureLabel: () => 'Puntos',
 
-  describe(settings: TournamentSettings): Explanation {
+  describe(settings: TournamentSettings): ExplanationText {
     const pct = Math.round(settings.handicap.allowance * 100)
     return {
       title: 'Stableford',

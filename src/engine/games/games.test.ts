@@ -11,6 +11,7 @@ import { makeGroup, makePlayer, makeRound, makeSnapshot, PAR_72, score } from '.
 import type { Snapshot } from '../types'
 import type { SkinsState } from './skins'
 import type { MatchState } from './match'
+import { words } from '../testing/words'
 
 const PARS = PAR_72.map(([p]) => p)
 
@@ -115,7 +116,7 @@ describe('skins', () => {
     const st = run(snap)
     expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']))
     expect(st.money.banker.balanced).toBe(true)
-    expect(st.flags.warnings.filter((w) => w.startsWith('Skins'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual([])
   })
 
   it('a pot from the inscriptions with no skin won stays unassigned, and the Comité is told how much (MONEY-10)', () => {
@@ -126,7 +127,7 @@ describe('skins', () => {
     finish(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(st.flags.warnings.filter((w) => w.startsWith('Skins'))).toEqual(['Skins: nadie ganó un skin; $300 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Skins'))).toEqual(['Skins: nadie ganó un skin; $300 quedan sin asignar. El Comité decide.'])
   })
 
   it('9-hole round: nine skins at most, all resolved', () => {
@@ -198,11 +199,11 @@ describe('event pots', () => {
     card(main, 'r1', 'p1', { 1: -1 }) // a birdie is not an eagle
     card(main, 'r1', 'p2')
     card(main, 'r1', 'p3')
-    expect(run(main).flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual([])
+    expect(words(run(main).flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual([])
     finish(main)
     let st = run(main)
     expect(st.prizes).toEqual([])
-    expect(st.flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual(['Águilas: nadie ganó un águila; $300 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual(['Águilas: nadie ganó un águila; $300 quedan sin asignar. El Comité decide.'])
 
     const side = setup([eagles(money({ source: 'side', buyIn: 50 }))])
     for (const id of ['p1', 'p2', 'p3']) card(side, 'r1', id)
@@ -210,7 +211,7 @@ describe('event pots', () => {
     st = run(side)
     expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']))
     expect(st.money.banker.balanced).toBe(true)
-    expect(st.flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Águilas'))).toEqual([])
   })
 
   it('three-putts are fines: $5 to each other player per three-putt', () => {
@@ -254,7 +255,7 @@ describe('match play / Nassau', () => {
     const bets = st.money.flows.filter((f) => f.kind === 'bet')
     expect(bets.map((f) => `${f.from}>${f.to}:${f.amount}`)).toEqual(['p1>p2:200'])
     expect(st.money.netSum).toBe(0)
-    expect(st.prizes[0]!.why.steps).toEqual(['Ida: J2 2 arriba, $100', 'Total: J2 2 arriba, $100'])
+    expect(words(st.prizes[0]!.why).steps).toEqual(['Ida: J2 2 arriba, $100', 'Total: J2 2 arriba, $100'])
   })
 
   it('start hole 10: the back nine is played first, but presses still follow the order played', () => {
@@ -307,7 +308,7 @@ describe('match play / Nassau', () => {
     snap.gameEntries = [{ gameId: 'nassau', playerId: 'p1' }]
     const st = run(snap)
     expect((st.games.nassau!.state as MatchState).invalid).toEqual(['m1'])
-    expect(st.flags.warnings.some((w) => w.startsWith('Nassau:'))).toBe(true)
+    expect(words(st.flags.warnings).some((w) => w.startsWith('Nassau:'))).toBe(true)
   })
 })
 

@@ -13,6 +13,7 @@
  */
 import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
+import { msg } from '../../messages'
 import type { HoleAward, Id } from '../../types'
 import { isGameOf, type GameContext, type GameImpl, type GameResultState } from '../game'
 import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
@@ -92,11 +93,11 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
   prizes(state, ctx) {
     const units = new Map(Object.entries(state.units))
     const name = namer(ctx)
-    const unit: [string, string] = ['hoyo', 'hoyos']
+    const unit = 'hole'
     if (ctx.config.money.source === 'direct') return directUnits(ctx, units, 'reward', unit, name)
     const paid = payUnits(ctx, units, unit, name)
     // A hole still in dispute may yet have a winner: the Comité decides it first.
-    return paid.length || state.holes.some((h) => h.status === 'disputed') ? paid : refundUnwon(ctx, 'un hoyo')
+    return paid.length || state.holes.some((h) => h.status === 'disputed') ? paid : refundUnwon(ctx, 'hole')
   },
   board(state, ctx) {
     const name = namer(ctx)
@@ -118,7 +119,7 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
   },
   warnings(state, ctx) {
     const d = state.holes.filter((h) => h.status === 'disputed')
-    if (d.length) return [`${ctx.config.label}: ${d.length === 1 ? 'un hoyo en disputa' : `${d.length} hoyos en disputa`} (${d.map((h) => h.hole).join(', ')}). El Comité decide.`]
-    return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'un hoyo')
+    if (d.length) return [msg('contest.disputed', { label: ctx.config.label, holes: d.map((h) => h.hole) })]
+    return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'hole')
   },
 }

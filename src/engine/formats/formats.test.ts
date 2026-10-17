@@ -9,6 +9,7 @@ import { DEFAULT_SETTINGS } from '../settings/presets'
 import { parseSettings, type TournamentSettings } from '../settings/schema'
 import { PAR_72, makeGroup, makePlayer, makeSnapshot, score } from '../testing/fixtures'
 import type { Snapshot } from '../types'
+import { words } from '../testing/words'
 
 /** Scratch, so net equals gross and the sums are easy to follow. */
 function settings(over: Partial<TournamentSettings> = {}): TournamentSettings {
@@ -102,7 +103,7 @@ describe('stroke play', () => {
 
     const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
     expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p2'])
-    expect(rows[1]!.countbackWhy!.steps).toEqual(['Día 1, Total: J1 E contra J2 E', 'Día 1, Hoyos 10–18: J1 −1 contra J2 +1'])
+    expect(words(rows[1]!.countbackWhy)!.steps).toEqual(['Día 1, Total: J1 E contra J2 E', 'Día 1, Hoyos 10–18: J1 −1 contra J2 +1'])
   })
 })
 
@@ -195,7 +196,7 @@ describe('match play', () => {
     play(snap, 'r1', 'p1', allPars())
 
     const state = computeTournament(snap, cfgOf(snap))
-    expect(state.modules.individual!.warnings.join(' ')).toContain('exactamente dos jugadores')
+    expect(words(state.modules.individual!.warnings).join(' ')).toContain('exactamente dos jugadores')
   })
 })
 
@@ -253,14 +254,14 @@ describe('team formats', () => {
     const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
     expect(rows.map((r) => r.figure.text)).toEqual(['E', 'E'])
     expect(rows.map((r) => [r.entrant.name, r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
-    expect(rows[1]!.countbackWhy!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
+    expect(words(rows[1]!.countbackWhy)!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
   })
 
   it('asks for a draw instead of showing an empty board', () => {
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
     const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team') })
     const state = computeTournament(snap, cfgOf(snap))
-    expect(state.modules.individual!.warnings.join(' ')).toContain('equipos sorteados')
+    expect(words(state.modules.individual!.warnings).join(' ')).toContain('equipos sorteados')
   })
 })
 

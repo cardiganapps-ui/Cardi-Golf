@@ -14,6 +14,7 @@ import { computeTournament } from '../computeTournament'
 import { FIRST_TOURNAMENT_SETTINGS } from './presets'
 import { parseSettings } from './schema'
 import { readSettings, unknownSettingsKeys } from './read'
+import { words } from '../testing/words'
 
 type Raw = Record<string, unknown>
 const WOLF = { id: 'wolf-1', type: 'wolf', label: 'Wolf', enabled: true, rounds: 'all', entrants: 'all', money: { source: 'main', amount: 1000 }, options: { rotation: 'fixed' } }
@@ -47,7 +48,7 @@ describe('a side game of a type this build doesn’t know is set aside', () => {
     expect(st.modules).toEqual(plain.modules)
     expect(st.prizes).toEqual(plain.prizes)
     expect(st.flags.missingGames).toEqual(['wolf-1'])
-    expect(st.flags.warnings).toContain(t.outdated.game('Wolf'))
+    expect(words(st.flags.warnings)).toContain(t.outdated.game('Wolf'))
     expect(st.flags.moneyUnknown).toEqual(['Wolf'])
     expect(plain.flags.moneyUnknown).toEqual([])
   })

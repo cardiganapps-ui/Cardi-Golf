@@ -18,7 +18,8 @@ import { t } from '../../../i18n/es-MX'
 import { playOrder } from '../../core/playOrder'
 import { isFinal } from '../../core/ranking'
 import type { GameOf, Match } from '../../settings/games'
-import type { Explanation, Id } from '../../types'
+import { msg, type Msg } from '../../messages'
+import type { Id } from '../../types'
 import type { BoardRow, BoardSection, GameContext, GameImpl } from '../game'
 import { fmt, netBets } from '../payout'
 import { holeOf, holeScore, moneyByPlayer, namer, roundHoles, roundNumberOf } from '../util'
@@ -153,7 +154,7 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
     if (ctx.config.money.source !== 'direct' || stake <= 0) return []
     const name = namer(ctx)
     const owed = new Map<string, number>()
-    const lines = new Map<string, string[]>()
+    const lines = new Map<string, Msg[]>()
     const multi = ctx.roundIds.length > 1
     for (const mr of state.rounds) {
       for (const seg of mr.segments) {
@@ -164,13 +165,13 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
             const payer = lose[i]!
             const k = `${payer}|${w}`
             owed.set(k, (owed.get(k) ?? 0) + stake)
-            const what = `${multi ? `Día ${mr.roundNumber}, ` : ''}${seg.label}${bet.press ? `, presión ${bet.press} (desde el ${bet.fromHole})` : ''}`
-            lines.set(k, [...(lines.get(k) ?? []), `${what}: ${sideName(win, name)} ${Math.abs(bet.up)} arriba${bet.decided ? '' : ' (si terminara ahora)'}, ${fmt(stake)}`])
+            const line = msg('match.bet', { day: multi ? mr.roundNumber : null, segment: seg.label, press: bet.press, from: bet.fromHole, side: win.map(name), up: Math.abs(bet.up), decided: bet.decided, stake })
+            lines.set(k, [...(lines.get(k) ?? []), line])
           })
         }
       }
     }
-    return netBets(ctx, owed, (payer, winner): Explanation => ({ title: '', steps: lines.get(`${payer}|${winner}`) ?? [] }), name).map((p) => ({ ...p, final: ctx.final && state.rounds.every((mr) => mr.segments.every((s) => s.bets.every((b) => b.decided))) }))
+    return netBets(ctx, owed, (payer, winner) => lines.get(`${payer}|${winner}`) ?? [], name).map((p) => ({ ...p, final: ctx.final && state.rounds.every((mr) => mr.segments.every((s) => s.bets.every((b) => b.decided))) }))
   },
   board(state, ctx) {
     const name = namer(ctx)
@@ -201,7 +202,7 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
     return { sections, notes }
   },
   warnings(state, ctx) {
-    return state.invalid.length ? [`${ctx.config.label}: ${state.invalid.length === 1 ? 'un partido tiene' : `${state.invalid.length} partidos tienen`} jugadores que no están en el juego.`] : []
+    return state.invalid.length ? [msg('match.invalid', { label: ctx.config.label, n: state.invalid.length })] : []
   },
 }
 

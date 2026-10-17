@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { FIRST_TOURNAMENT_SETTINGS } from '../settings/presets'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
+import { words } from '../testing/words'
 
 const H = FIRST_TOURNAMENT_SETTINGS.handicap
 const CUT = FIRST_TOURNAMENT_SETTINGS.day2Cut
@@ -30,14 +31,14 @@ describe('playing handicap (80%, round half up, cap 54)', () => {
 
   it('says a plus playing handicap gives strokes back, written as golfers write it', () => {
     const r = playingHandicap(-3, H)
-    expect(r.why.title).toBe('Hándicap de juego +2')
-    expect(r.why.steps.at(-1)).toBe('Juega con +2: devuelve 2 golpes, en los 2 hoyos más fáciles')
+    expect(words(r.why).title).toBe('Hándicap de juego +2')
+    expect(words(r.why).steps.at(-1)).toBe('Juega con +2: devuelve 2 golpes, en los 2 hoyos más fáciles')
   })
 
   it('explains the cap and the rounding', () => {
     const r = playingHandicap(60, H)
-    expect(r.why.steps.join(' | ')).toContain('el tope es 54')
-    expect(r.why.steps.join(' | ')).toContain('80% de 54 = 43.2')
+    expect(words(r.why).steps.join(' | ')).toContain('el tope es 54')
+    expect(words(r.why).steps.join(' | ')).toContain('80% de 54 = 43.2')
   })
 })
 

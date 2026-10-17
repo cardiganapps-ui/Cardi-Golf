@@ -2,28 +2,14 @@
  * Handicaps (CLAUDE.md §5.2, §13b-D/E). Pure functions; every result
  * carries its explanation for "¿Cómo se calculó?".
  */
-import { handicapText, ptsText } from '../../i18n/es-MX'
 import { whsCourseHandicap } from '../profile/whs'
 import type { TournamentSettings } from '../settings/schema'
+import { msg, say, type Msg } from '../messages'
 import type { Explained } from '../types'
 import { roundHalfUp, roundTo, roundWith } from './rounding'
 
 type HandicapSettings = TournamentSettings['handicap']
 type CutSettings = TournamentSettings['day2Cut']
-
-/** A number in an explanation: up to 2 decimals, and a true minus (−0.8, never -0.8). */
-const fmt = (n: number) => {
-  const abs = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(2).replace(/\.?0+$/, '')
-  return n < 0 && abs !== '0' ? `−${abs}` : abs
-}
-/** A plus handicap's arithmetic is negative; say once how it is written. */
-const written = (n: number) => (n < 0 ? `, se escribe ${handicapText(n)}` : '')
-
-/** What a plus playing handicap does on the card (MONEY-21): it gives strokes back on the easiest holes. */
-function givesBack(ph: number): string {
-  const n = -ph
-  return `Juega con ${handicapText(ph)}: devuelve ${n} golpe${n === 1 ? '' : 's'}, en ${n === 1 ? 'el hoyo más fácil' : `los ${n} hoyos más fáciles`}`
-}
 
 /**
  * Playing handicap from a course handicap: cap, then allowance, then rounding.
@@ -37,13 +23,13 @@ export function playingHandicap(courseHcp: number, h: HandicapSettings): Explain
   const capped = Math.min(courseHcp, h.cap)
   const raw = h.allowance * capped
   const value = roundWith(raw, h.rounding)
-  const steps: string[] = []
+  const steps: Msg[] = []
   // COPY-19: each step says what it does before its arithmetic.
-  if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}; el tope es ${fmt(h.cap)}, así que cuenta ${fmt(h.cap)}`)
-  steps.push(`Se juega con el ${Math.round(h.allowance * 100)}%: ${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
-  if (roundTo(raw, 2) !== value) steps.push(`Redondeado al entero: ${fmt(value)}`)
-  if (value < 0) steps.push(givesBack(value))
-  return { value, why: { title: `Hándicap de juego ${handicapText(value)}`, steps } }
+  if (capped !== courseHcp) steps.push(msg('hcp.cap', { hcp: courseHcp, cap: h.cap }))
+  steps.push(msg('hcp.allowance', { pct: Math.round(h.allowance * 100), of: capped, result: roundTo(raw, 2) }))
+  if (roundTo(raw, 2) !== value) steps.push(msg('hcp.rounded', { value }))
+  if (value < 0) steps.push(msg('hcp.givesBack', { value }))
+  return { value, why: { title: msg('hcp.playingTitle', { value }), steps } }
 }
 
 /** A figure in tenths, half away from zero, as Postgres's `round(x * 10)` reads it (0015's `round(idx * 10)::int`). */
@@ -68,11 +54,11 @@ export function courseHandicap(
   const diff = roundTo(rating - tee.par, 1)
   // COPY-19: what each step does, then its arithmetic; the WHS formula in three short sentences.
   const steps = [
-    `El índice se ajusta a la dificultad del tee: índice ${index < 0 ? `${handicapText(index)}, en la cuenta ${fmt(index)},` : fmt(index)} × slope ${slope} ÷ 113 = ${fmt(scaled)}`,
-    `Se suma lo que el rating del tee pasa del par: rating ${fmt(rating)} − par ${tee.par} = ${fmt(diff)}`,
-    `${fmt(scaled)} ${diff < 0 ? '−' : '+'} ${fmt(Math.abs(diff))} = ${fmt(roundTo(raw, 2))}, redondeado ${fmt(value)}${written(value)}: el hándicap de campo`,
+    msg('hcp.courseScale', { index, slope, scaled }),
+    msg('hcp.courseRating', { rating, par: tee.par, diff }),
+    msg('hcp.courseSum', { scaled, diff, raw: roundTo(raw, 2), value }),
   ]
-  return { value, why: { title: `Hándicap de campo ${handicapText(value)}`, steps } }
+  return { value, why: { title: msg('hcp.courseTitle', { value }), steps } }
 }
 
 export interface EstimateScore {
@@ -114,21 +100,21 @@ export function estimateIndex(
   const weighted = wg * sorted[0] + wa * sorted[1] + wb * sorted[2]
   const uncapped = roundTo(weighted, 1)
   const value = Math.min(uncapped, h.cap)
-  const d = sorted.map((x) => fmt(roundTo(x, 2)))
+  const d = sorted.map((x) => roundTo(x, 2)) as [number, number, number]
   const steps = [
-    `Diferenciales: ${d[0]} (buen día), ${d[1]} (normal), ${d[2]} (mal día)`,
-    `${wg} × ${d[0]} + ${wa} × ${d[1]} + ${wb} × ${d[2]} = ${fmt(roundTo(weighted, 2))}`,
-    `Redondeado a 1 decimal: ${fmt(uncapped)}${value === uncapped ? written(value) : ''}`,
+    msg('est.diffs', { d }),
+    msg('est.weighted', { w: [wg, wa, wb], d, result: roundTo(weighted, 2) }),
+    msg('est.rounded', { value: uncapped, written: value === uncapped }),
   ]
-  if (value !== uncapped) steps.push(`Tope ${fmt(h.cap)}: ${fmt(value)}`)
-  if (reordered) steps.push('Las rondas venían en otro orden; se acomodaron de mejor a peor.')
-  if (assumed) steps.push('Rating/slope asumidos (par 72, slope 113) donde no se capturaron.')
+  if (value !== uncapped) steps.push(msg('est.cap', { cap: h.cap, value }))
+  if (reordered) steps.push(say('est.reordered'))
+  if (assumed) steps.push(say('est.assumed'))
   return {
     value,
     differentials: [roundTo(sorted[0], 2), roundTo(sorted[1], 2), roundTo(sorted[2], 2)],
     reordered,
     assumed,
-    why: { title: `Índice estimado ${handicapText(value)}`, steps },
+    why: { title: msg('est.title', { value }), steps },
   }
 }
 
@@ -141,16 +127,14 @@ export function nextRoundCut(points: number, c: CutSettings): Explained<number> 
   const over = points - c.threshold
   const value = over > 0 ? Math.min(c.maxStrokes, Math.floor(over / c.pointsPerStroke)) : 0
   // COPY-19: sentences that follow «El día 1» in the playing handicap's explanation, hence the lower case.
-  const steps: string[] = []
-  if (over <= 0) steps.push(`hizo ${ptsText(points)}, no más de ${c.threshold}: sin recorte`)
+  const steps: Msg[] = []
+  if (over <= 0) steps.push(msg('cut.under', { points, threshold: c.threshold }))
   else {
-    steps.push(`hizo ${ptsText(points)}: ${points} − ${c.threshold} = ${ptsText(over)} de más`)
-    steps.push(
-      `se recorta 1 golpe por ${c.pointsPerStroke === 1 ? 'cada punto' : `cada ${c.pointsPerStroke} puntos`} de más: ${over} ÷ ${c.pointsPerStroke} = ${over % c.pointsPerStroke ? `${(over / c.pointsPerStroke).toFixed(1)}, ` : ''}${Math.floor(over / c.pointsPerStroke)} golpe${Math.floor(over / c.pointsPerStroke) === 1 ? '' : 's'}`,
-    )
-    if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(`el máximo es ${c.maxStrokes}`)
+    steps.push(msg('cut.over', { points, threshold: c.threshold, over }))
+    steps.push(msg('cut.per', { per: c.pointsPerStroke, over }))
+    if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(msg('cut.max', { max: c.maxStrokes }))
   }
-  return { value, why: { title: value ? `Recorte de ${value}` : 'Sin recorte', steps } }
+  return { value, why: { title: msg('cut.title', { value }), steps } }
 }
 
 /**

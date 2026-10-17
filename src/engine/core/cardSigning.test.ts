@@ -14,6 +14,7 @@ import { fillRound, makeFirstTournament, makeGroup, makePlayer, makeRound, makeS
 import type { Snapshot } from '../types'
 import { quickSettings } from '../games/quick'
 import { cardSignedFor, cardSigningMode, cardSigningModeOf, newTournamentCardSigning, signatureCard } from './cardSigning'
+import { words } from '../testing/words'
 
 const withPairs = (on: boolean, cardSigning?: TournamentSettings['cardSigning']): TournamentSettings => ({
   ...DEFAULT_SETTINGS,
@@ -124,7 +125,7 @@ describe('unsigned cards and the close gate, by rule', () => {
     const snap = foursome(settings)
     const before = closeCheck(snap, settings, { openRejected: 0 })
     expect(before.blockers.map((b) => b.kind)).toEqual(['unsignedCards'])
-    expect(before.blockers[0]!.text).toContain('4 tarjetas sin firmar')
+    expect(words(before.blockers[0]!.says)).toContain('4 tarjetas sin firmar')
     snap.cardSignatures = ['p1', 'p2', 'p3', 'p4'].map((p, i) => ({ roundId: 'r1', pairId: null, playerId: p, signedBy: `p${((i + 1) % 4) + 1}`, signedAt: '' }))
     expect(closeCheck(snap, settings, { openRejected: 0 }).ok).toBe(true)
   })

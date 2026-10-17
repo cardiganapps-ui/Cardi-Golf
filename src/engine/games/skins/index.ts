@@ -77,9 +77,9 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
   prizes(state, ctx) {
     const units = new Map(Object.entries(state.units))
     const name = namer(ctx)
-    if (ctx.config.money.source === 'direct') return directUnits(ctx, units, 'reward', ['skin', 'skins'], name)
-    const paid = payUnits(ctx, units, ['skin', 'skins'], name)
-    return paid.length ? paid : refundUnwon(ctx, 'un skin')
+    if (ctx.config.money.source === 'direct') return directUnits(ctx, units, 'reward', 'skin', name)
+    const paid = payUnits(ctx, units, 'skin', name)
+    return paid.length ? paid : refundUnwon(ctx, 'skin')
   },
   board(state, ctx) {
     const money = moneyByPlayer(skinsGame.prizes(state, ctx))
@@ -106,7 +106,7 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
     return { sections: [{ rows: standings }, { title: 'Hoyo por hoyo', rows: log }], notes }
   },
   warnings(state, ctx) {
-    return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'un skin')
+    return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'skin')
   },
 }
 

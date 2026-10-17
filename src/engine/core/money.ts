@@ -17,13 +17,12 @@
  */
 import type { TournamentSettings } from '../settings/schema'
 import { t } from '../../i18n/es-MX'
+import { label, msg, say, type Msg } from '../messages'
 import type { Explanation, Id, PaymentKind, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
 import { NO_UNASSIGNED, type UnassignedState } from './unassigned'
-import { fmt } from '../games/payout'
-
 const W = t.settleWhy
 const M = t.moneyScreen
 
@@ -160,9 +159,8 @@ export interface MoneyState {
   unassigned: UnassignedState
 }
 
-/** A signed amount for an explanation: + what is owed or received, − what nets against it. */
-const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n))
-const partText = (p: MoneyPart) => (p.of ? W.partOf(p.label, signed(p.amount), fmt(p.of)) : W.part(p.label, signed(p.amount)))
+/** A part of an amount, signed: + what is owed or received, − what nets against it. */
+const partText = (p: MoneyPart): Msg => msg('settle.part', { label: p.label, amount: p.amount, of: p.of ?? null })
 function kindLabel(kind: PaymentKind): string {
   switch (kind) {
     case 'entry': return M.entry
@@ -382,8 +380,8 @@ export function computeMoney(
     const parts = settles.flatMap((a) => accountParts(a, a.from === from ? 1 : -1)).sort((x, y) => Number(x.amount < 0) - Number(y.amount < 0))
     // The banker with his own bank is his money in or out of what he holds, never a payment to himself.
     const bankerSelf = !!bankerId && ((from === bankerId && to === null) || (from === null && to === bankerId))
-    const title = amount === 0 ? M.squared(nameOf(from), nameOf(to)) : M.pays(nameOf(from), nameOf(to), fmt(amount), bankerSelf)
-    return { from, to, amount, settles, final: settles.every((a) => a.final), parts, why: [{ title, steps: [...parts.map(partText), amount === 0 ? W.nets : W.total(fmt(amount))] }] }
+    const title = amount === 0 ? msg('settle.squared', { from: nameOf(from), to: nameOf(to) }) : msg('settle.pays', { from: nameOf(from), to: nameOf(to), amount, bankerSelf })
+    return { from, to, amount, settles, final: settles.every((a) => a.final), parts, why: [{ title, steps: [...parts.map(partText), amount === 0 ? say('settle.nets') : msg('settle.total', { amount })] }] }
   }
   for (const p of players) {
     const settles = open.filter((a) => (a.from === p.id && a.to === null) || (a.from === null && a.to === p.id))
@@ -447,36 +445,51 @@ export function computeMoney(
   const positionOf = new Map(positionList.map((x) => [x.party, x]))
   const positionWhy = (party: Id | null): Explanation => {
     const x = positionOf.get(party)!
-    return { title: x.amount < 0 ? W.owesTotal(nameOf(party), fmt(-x.amount)) : W.getsTotal(nameOf(party), fmt(x.amount)), steps: x.parts.map(partText) }
+    return { title: x.amount < 0 ? msg('settle.owesTotal', { name: nameOf(party), amount: -x.amount }) : msg('settle.getsTotal', { name: nameOf(party), amount: x.amount }), steps: x.parts.map(partText) }
   }
   // Each minimized transfer, explained by both positions and the share of the payer's debt it carries.
   const explainP2P = (list: Transfer[]): Transfer[] =>
     list.map((tr) => ({
       ...tr,
-      why: [positionWhy(tr.from), positionWhy(tr.to), { title: W.ruleTitle, steps: [W.rule, W.share(nameOf(tr.from), fmt(-positionOf.get(tr.from)!.amount), fmt(tr.amount), nameOf(tr.to))] }],
+      why: [positionWhy(tr.from), positionWhy(tr.to), { title: say('settle.ruleTitle'), steps: [say('settle.rule'), msg('settle.share', { from: nameOf(tr.from), total: -positionOf.get(tr.from)!.amount, amount: tr.amount, to: nameOf(tr.to) })] }],
     }))
 
-  // The bank's two figures, by what moves them.
-  const bankIn = new Map<string, number>()
-  const bankOut = new Map<string, number>()
-  const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n)
+  // The bank's two figures, by what moves them: one line per kind of money (the inscriptions, the lots) or per pot.
+  const bankIn = new Map<string, { what: Msg; amount: number }>()
+  const bankOut = new Map<string, { what: Msg; amount: number }>()
+  const add = (m: Map<string, { what: Msg; amount: number }>, key: string, what: () => Msg, n: number) => {
+    const line = m.get(key)
+    if (line) line.amount += n
+    else m.set(key, { what: what(), amount: n })
+  }
   const entryCount = flows.filter((f) => f.kind === 'entry').length
   const lotCount = flows.filter((f) => f.kind === 'calcutta').length
   for (const f of flows) {
-    if (f.to === null) add(bankIn, f.kind === 'entry' ? W.entries(entryCount, fmt(settings.entryFee)) : f.kind === 'calcutta' ? W.lots(lotCount) : f.label, f.amount)
-    if (f.from === null) add(bankOut, f.potId === 'calcutta' ? W.calcuttaShares : !f.potId || f.potId === 'main' ? W.mainPrizes : (games[f.potId]?.config.label ?? f.label), f.amount)
+    if (f.to === null) {
+      if (f.kind === 'entry') add(bankIn, 'entries', () => msg('settle.entries', { n: entryCount, fee: settings.entryFee }), f.amount)
+      else if (f.kind === 'calcutta') add(bankIn, 'lots', () => msg('settle.lots', { n: lotCount }), f.amount)
+      else add(bankIn, `label:${f.label}`, () => label(f.label), f.amount)
+    }
+    if (f.from === null) {
+      if (f.potId === 'calcutta') add(bankOut, 'calcutta', () => say('settle.calcuttaShares'), f.amount)
+      else if (!f.potId || f.potId === 'main') add(bankOut, 'main', () => say('settle.mainPrizes'), f.amount)
+      else {
+        const pot = games[f.potId]?.config.label ?? f.label
+        add(bankOut, `label:${pot}`, () => label(pot), f.amount)
+      }
+    }
   }
   const bankWhy: Explanation = {
-    title: W.bankTitle,
+    title: say('settle.bankTitle'),
     steps: [
-      W.gross,
-      ...[...bankIn].map(([k, n]) => W.bankIn(k, fmt(n))),
-      W.bankInTotal(fmt(bankerReceives)),
-      ...[...bankOut].map(([k, n]) => W.bankOut(k, fmt(n))),
-      W.bankOutTotal(fmt(bankerPays)),
-      ...(houseCut > 0 ? [W.houseCut(fmt(houseCut))] : []),
-      ...(toHouse > 0 ? [W.toHouse(fmt(toHouse))] : []),
-      difference === 0 ? W.squares : difference > 0 ? W.left(fmt(difference)) : W.short(fmt(-difference)),
+      say('settle.gross'),
+      ...[...bankIn.values()].map((x) => msg('settle.bankIn', x)),
+      msg('settle.bankInTotal', { amount: bankerReceives }),
+      ...[...bankOut.values()].map((x) => msg('settle.bankOut', x)),
+      msg('settle.bankOutTotal', { amount: bankerPays }),
+      ...(houseCut > 0 ? [msg('settle.houseCut', { amount: houseCut })] : []),
+      ...(toHouse > 0 ? [msg('settle.toHouse', { amount: toHouse })] : []),
+      difference === 0 ? say('settle.squares') : difference > 0 ? msg('settle.left', { amount: difference }) : msg('settle.short', { amount: -difference }),
     ],
   }
 

@@ -7,6 +7,7 @@
  */
 import { teeById, teeForPlayerRound } from '../../engine/core/compute'
 import type { BracketState } from '../../engine/formats/bracket'
+import type { Msg } from '../../engine/messages'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Course, Round, Snapshot, Tee } from '../../engine/types'
 import { handicapsLocked } from '../../engine/core/handicapLock'
@@ -242,18 +243,25 @@ export function checkedText(items: ReadinessItem[]): string {
  * while the pairs aren't drawn). The bracket's own warnings never reach the
  * engine's list, so none is claimed. Anything else counts on its own.
  */
-export function coveredByChecklist(warning: string, items: ReadinessItem[]): boolean {
+export function coveredByChecklist(warning: Msg, items: ReadinessItem[]): boolean {
   const open = items.filter((i) => !i.done)
-  const day = Number(/^Día (\d+)[,:]/.exec(warning)?.[1] ?? NaN)
-  const about = (ids: ReadinessId[]) => open.some((i) => ids.includes(i.id) && !!i.days?.includes(day))
-  if (/sin campo cargado/.test(warning)) return about(['roundSetup', 'card', 'foreignTees'])
-  if (/un partido individual necesita exactamente dos jugadores/.test(warning)) return about(['groups'])
-  if (/un fourball necesita dos parejas/.test(warning)) return about(['groups']) || open.some((i) => i.id === 'pairs')
-  if (/todavía no hay equipos sorteados/.test(warning)) return open.some((i) => i.id === 'teams')
-  return false
+  // By the warning's code and its day (ARCH-05): it used to match the warning's Spanish.
+  const about = (ids: ReadinessId[], day: number | null) => open.some((i) => ids.includes(i.id) && day != null && !!i.days?.includes(day))
+  switch (warning.code) {
+    case 'core.noCourse':
+      return about(['roundSetup', 'card', 'foreignTees'], warning.params.day)
+    case 'match.needsTwo':
+      return about(['groups'], warning.params.day)
+    case 'match.needsPairs':
+      return about(['groups'], warning.params.day) || open.some((i) => i.id === 'pairs')
+    case 'team.noTeams':
+      return open.some((i) => i.id === 'teams')
+    default:
+      return false
+  }
 }
 
 /** The Torneo tab's count while the tournament is set up: the open lines plus what else the engine warns about. */
-export function setupBadge(items: ReadinessItem[], warnings: string[], missingModules: number): number {
+export function setupBadge(items: ReadinessItem[], warnings: readonly Msg[], missingModules: number): number {
   return items.filter((i) => !i.done).length + warnings.filter((w) => !coveredByChecklist(w, items)).length + missingModules
 }

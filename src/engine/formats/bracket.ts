@@ -13,6 +13,7 @@
  * the top seeds byes, so nobody plays two matches in a round while someone
  * else plays none.
  */
+import { msg, say, type Msg } from '../messages'
 import type { Id } from '../types'
 import type { Entrant, FormatContext } from './format'
 import { playMatches, type MatchResult } from './matchPlay'
@@ -42,7 +43,7 @@ export interface BracketState {
   rounds: BracketRound[]
   champion: Entrant | null
   /** Why the bracket cannot be read, if it cannot. */
-  warnings: string[]
+  warnings: Msg[]
 }
 
 /** What a round with `n` matches is called. */
@@ -118,8 +119,8 @@ export function bracketState(ctx: FormatContext): BracketState {
   const o = ctx.settings.modules.individual.formatOptions
   const fourball = o.matchMode === 'fourball'
   const entrants = fourball ? teamEntrants(ctx) : playerEntrants(ctx)
-  const warnings: string[] = []
-  if (entrants.length < 2) return { rounds: [], champion: null, warnings: ['Todavía no hay suficientes jugadores para armar el cuadro.'] }
+  const warnings: Msg[] = []
+  if (entrants.length < 2) return { rounds: [], champion: null, warnings: [say('bracket.tooFew')] }
 
   const { results } = playMatches(ctx, entrants, fourball, o.scoring !== 'gross')
   const roundIds = ctx.core.roundIds
@@ -143,7 +144,7 @@ export function bracketState(ctx: FormatContext): BracketState {
     if (roundId) {
       const listed = new Set(pairings.flatMap(([a, b]) => (b ? [`${a.id}|${b.id}`, `${b.id}|${a.id}`] : [])))
       const off = Math.ceil(results.filter((r) => r.roundId === roundId && r.played > 0 && !listed.has(`${r.sideId}|${r.opponentId}`)).length / 2)
-      if (off > 0) warnings.push(`Día ${i + 1}: ${off === 1 ? 'un partido de los grupos no es' : `${off} partidos de los grupos no son`} del cuadro (${roundName(matches.length)}). ${off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`)
+      if (off > 0) warnings.push(msg('bracket.offBracket', { day: i + 1, off, round: roundName(matches.length) }))
     }
 
     if (matches.length === 1) {
@@ -153,14 +154,14 @@ export function bracketState(ctx: FormatContext): BracketState {
     if (matches.some((m) => !m.winner)) {
       // The round is not finished, so who plays next is not known yet. The
       // bracket stops here rather than inventing pairings.
-      if (matches.some((m) => !m.pending && !m.winner)) warnings.push(`${roundName(matches.length)}: hay un partido empatado; el Comité decide quién pasa.`)
+      if (matches.some((m) => !m.pending && !m.winner)) warnings.push(msg('bracket.tied', { round: roundName(matches.length) }))
       break
     }
     pairings = advance(matches.map((m) => m.winner))
   }
 
   if (roundIds.length < rounds.length) {
-    warnings.push(`El cuadro necesita ${rounds.length} ${rounds.length === 1 ? 'ronda' : 'rondas'} y el torneo tiene ${roundIds.length}.`)
+    warnings.push(msg('bracket.needsRounds', { rounds: rounds.length, have: roundIds.length }))
   }
   return { rounds, champion, warnings }
 }
