@@ -56,6 +56,12 @@
   align-items: center;
   gap: var(--s2);
 }
+/* A game's long name at large text breaks inside the screen, «Matri-monios», instead of past it (A11Y-07). */
+.detailHead h1 {
+  min-width: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
 .section {
   display: flex;
   flex-direction: column;
@@ -83,6 +89,17 @@
 .subMoney {
   color: var(--ink-2);
   flex-shrink: 0;
+}
+/* On a board narrow for its text the sub line wraps instead of cutting its figures off (A11Y-07). */
+@container board (width < 18rem) {
+  .sub {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .sub > span:first-child {
+    white-space: normal;
+    overflow: visible;
+  }
 }
 .rows {
   display: flex;
@@ -117,6 +134,8 @@
 }
 .potLine {
   display: flex;
+  /* At large text «12 de 12 vendidos» goes under the pot (A11Y-07). */
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s3);

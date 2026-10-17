@@ -85,7 +85,8 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      5. Abre Más → Modo TV: el título y «Salir» deben verse completos.
      6. En Comité › Grupos, con la pantalla sin mover: el botón «Guardar» de abajo queda arriba de la rayita de la orilla (la que usas para salir de la app), no encima de ella.
      7. Gira el teléfono (horizontal) en Comité › Tarjetas y en Modo TV: ningún texto debe quedar debajo de la muesca o la isla del lado.
-   - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app, tu versión de iOS y si algo quedó debajo de la muesca al girar. Lo anoto para el ensayo con los 12 teléfonos.
+     8. **Texto más grande** (A11Y-08): Ajustes › Accesibilidad › Pantalla y tamaño de texto › Texto más grande → activa «Tamaños más grandes» y lleva la barra hasta el final. Vuelve a Polo (desde el ícono): las letras deben verse más grandes que antes. Recorre En vivo, Tarjeta, Juegos y Dinero: ninguna cifra cortada con «…», nada que se salga por la derecha, «Guardar hoyo» visible arriba de la barra de abajo. Luego regresa el tamaño a como lo tenías y vuelve a Polo: debe regresar también.
+   - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app, tu versión de iOS, si algo quedó debajo de la muesca al girar y si el texto creció con «Texto más grande» (si no creció, dime tu versión de iOS: es el único paso que en la computadora solo se puede simular). Lo anoto para el ensayo con los 12 teléfonos.
 8. [ ] **Instalar desde la página del torneo en tu iPhone** (PWA-09, 5 minutos, antes del primer ensayo). Lo que solo se prueba en un iPhone de verdad: que la app instalada desde un torneo abra en ese torneo.
    - **Pasos:**
      1. Si ya tienes Polo en la pantalla de inicio, quítala (mantén presionado el ícono, «Eliminar app»).

@@ -87,6 +87,8 @@
 .players {
   display: flex;
   flex-direction: column;
+  /* Its rows lay out by how many letters fit across it (A11Y-07): a query container, below. */
+  container: players / inline-size;
 }
 .player {
   display: flex;
@@ -202,6 +204,31 @@
   color: var(--ink-3);
 }
 
+/*
+ * A11Y-07: with large text (under 17 rem across: 150 % on a 393 px phone) the two steppers and «Levantó» no longer
+ * fit one line: the putts' «+» ran into «Levantó». The steppers share the line, still under «Golpes» and «Putts»,
+ * and «Levantó» takes the next one; the points line goes under the name instead of cutting «birdie neto» off.
+ */
+@container players (width < 17rem) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .controls > .pickup {
+    grid-column: 1 / -1;
+  }
+  .playerLine {
+    flex-wrap: wrap;
+  }
+  .playerName {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pts {
+    max-width: none;
+    white-space: normal;
+  }
+}
+
 .contest {
   display: flex;
   flex-direction: column;
@@ -222,15 +249,21 @@
 
 .saveBar {
   position: sticky;
-  /* Above the sticky tab bar (56 px + safe area) so "Guardar hoyo" never hides behind it on short screens. */
-  /* Its background runs down to the tab bar, so no stepper shows through underneath. */
-  bottom: calc(56px + var(--safe-bottom));
+  /* On the sticky tab bar, at its real height (A11Y-07: it grows with the text; 56 px and the safe area until the
+     shell says), so "Guardar hoyo" never hides behind it. Its background runs down to the tab bar, so no stepper
+     shows through underneath (VIS-20). */
+  bottom: var(--shell-tabbar, calc(56px + var(--safe-bottom)));
   z-index: 3;
   display: flex;
   flex-direction: column;
   gap: var(--s1);
   padding: var(--s2) 0;
   background: var(--bg);
+}
+/* A viewport short for its text (landscape, or large text; `data-short`, src/lib/textSize.ts): the bar stays under
+   the last player and scrolls with the card, so the sticky bars don't take a third of the screen (A11Y-07). */
+:global(:root[data-short]) .saveBar {
+  position: static;
 }
 .saveStatus {
   display: flex;
