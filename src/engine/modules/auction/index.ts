@@ -8,12 +8,12 @@
  * were (MONEY-11). Every screen shows a slot's `pesos`, what it hands over,
  * never pot × share worked out again (MONEY-16).
  */
-import { ordinal, t } from '../../../i18n/es-MX'
+import { ordinal } from '../../../i18n/es-MX'
+import { label as labelMsg, msg, say, type Msg } from '../../messages'
 import type { AuctionPayoutSlot } from '../../settings/schema'
 import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { rankIndividual } from '../individual'
-import { pesos, pesosCents } from '../../core/pesos'
 import { isFinal } from '../../core/ranking'
 
 export interface Ownership {
@@ -212,7 +212,7 @@ export function assignSlots(
       for (const c of covered) placeDone.add(c)
       const label = covered.length === 1 ? slotLabel(slot, ctx) : covered.map((c) => slotLabel(c, ctx)).join(' + ')
       if (!members.length) {
-        results.push(unfilledSlot(slot, label, share, pot, `Nadie ocupa el ${ordinal(String(slot.place))} lugar`))
+        results.push(unfilledSlot(slot, label, share, pot, msg('auction.nobodyAt', { place: slot.place })))
         continue
       }
       const places = placesOf(g!)
@@ -220,19 +220,15 @@ export function assignSlots(
       const teams = (g!.entrants ?? []).map((e) => e.filter((m) => members.includes(m))).filter((e) => e.length)
       const uneven = teams.length > 1 && new Set(teams.map((e) => e.length)).size > 1
       const weights = uneven ? Object.fromEntries(teams.flatMap((e) => e.map((m) => [m, 1 / teams.length / e.length]))) : undefined
+      const at = finishOf(g!)
       const steps =
         places === 1
-          ? [
-              `${t.common.andList(members.map(nameOf))} ${members.length === 1 ? 'termina' : 'terminan'} ${finishText(g!)}: ${pct(share)} del pozo`,
-              ...(members.length > 1 ? [`Un equipo: ${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`] : []),
-            ]
+          ? [msg('auction.finish', { names: members.map(nameOf), at, share }), ...(members.length > 1 ? [msg('auction.teamShare', { share, n: members.length })] : [])]
           : [
-              `Empate a ${places} en el ${finishText(g!)}: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
-              uneven
-                ? `${pct(share)} ÷ ${teams.length} equipos = ${pct(share / teams.length)} por equipo, repartido entre sus jugadores`
-                : `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
+              msg('auction.tie', { places, at, shares: covered.map((c) => c.share), share }),
+              uneven ? msg('auction.tieTeams', { share, teams: teams.length }) : msg('auction.tieEach', { share, n: members.length }),
             ]
-      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
+      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: labelMsg(label), steps }, ...(weights ? { weights } : {}) })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -241,13 +237,13 @@ export function assignSlots(
       const g = groups.find((x) => x.members.some((m) => tierOf.get(m) === slot.tier && !cashed.has(m)))
       if (!g) {
         const anyOfTier = snapshot.players.some((p) => p.tier === slot.tier)
-        results.push(unfilledSlot(slot, label, slot.share, pot, anyOfTier ? `Todos los de la categoría ${slot.tier} ya cobran un lugar mejor` : `No hay jugadores de la categoría ${slot.tier}`))
+        results.push(unfilledSlot(slot, label, slot.share, pot, msg('auction.tierNone', { tier: slot.tier, any: anyOfTier })))
         continue
       }
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
-      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${t.common.andList(members.map(nameOf))} (${ordinal(String(g.finish ?? g.position))})`]
-      if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
+      const steps = [msg('auction.bestOfTier', { tier: slot.tier, names: members.map(nameOf), place: g.finish ?? g.position })]
+      if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
+      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: labelMsg(label), steps } })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -256,12 +252,12 @@ export function assignSlots(
       const g = groups.at(-1)
       const members = g ? g.members.filter((m) => !cashed.has(m)) : []
       if (!members.length) {
-        results.push(unfilledSlot(slot, label, slot.share, pot, 'Quien quedó último ya cobra un lugar mejor'))
+        results.push(unfilledSlot(slot, label, slot.share, pot, say('auction.lastCashes')))
         continue
       }
-      const steps = [`Último lugar: ${t.common.andList(members.map(nameOf))}`]
-      if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
+      const steps = [msg('auction.last', { names: members.map(nameOf) })]
+      if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
+      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: labelMsg(label), steps } })
       for (const m of members) cashed.add(m)
     }
   }
@@ -269,9 +265,8 @@ export function assignSlots(
 }
 
 /** Where a group finished: its place on the leaderboard, and among the lots sold when a player ahead of it is not in the Calcutta. */
-function finishText(g: { position: number; finish?: number }): string {
-  const at = ordinal(String(g.finish ?? g.position))
-  return g.finish != null && g.finish !== g.position ? `${at}, ${ordinal(String(g.position))} entre los lotes vendidos` : at
+function finishOf(g: { position: number; finish?: number }): { finish: number; amongSold: number | null } {
+  return { finish: g.finish ?? g.position, amongSold: g.finish != null && g.finish !== g.position ? g.position : null }
 }
 
 /**
@@ -292,15 +287,9 @@ export function inCalcutta(groups: Array<{ position: number; members: Id[]; entr
   return out
 }
 
-/** Percentages in explanations: whole numbers when they are, else one decimal. */
-function pct(share: number): string {
-  const v = share * 100
-  return `${Number.isInteger(Math.round(v * 10) / 10) ? Math.round(v) : (Math.round(v * 10) / 10).toFixed(1)}%`
-}
-
 /** Whole pesos (MONEY-08): the centavos of an unfilled slot go with the rounding, so payouts and what stays in the bank add up to the pot. */
-function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: string): AssignedSlot {
-  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: label, steps: [reason, 'Se queda en el banco hasta que el Comité decida'] } }
+function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: Msg): AssignedSlot {
+  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: labelMsg(label), steps: [reason, say('auction.staysInBank')] } }
 }
 
 /**
@@ -358,13 +347,13 @@ function withPesos(slots: AssignedSlot[], payouts: Record<Id, OwnerPayout>, pot:
     const raw = money(pot * s.share)
     const steps = [...s.why.steps]
     if (s.unfilled) {
-      steps.splice(1, 0, `${pct(s.share)} de ${pesos(pot)} = ${pesosCents(raw)}`, ...(raw !== s.amount ? [`En pesos enteros: ${pesos(s.amount)}; los centavos van al redondeo`] : []))
+      steps.splice(1, 0, msg('auction.shareOf', { share: s.share, pot, raw }), ...(raw !== s.amount ? [msg('auction.wholeUnfilled', { amount: s.amount })] : []))
       return { ...s, pesos: s.amount, why: { ...s.why, steps } }
     }
     const paid = floored[i]! + rounding[i]!
-    steps.push(`${pct(s.share)} de ${pesos(pot)} = ${pesosCents(raw)}`)
-    if (floored[i] !== raw) steps.push(`En pesos enteros: ${pesos(floored[i]!)}`)
-    if (rounding[i]) steps.push(`Más ${pesos(rounding[i]!)} del redondeo de todo el pozo: ${pesos(paid)}`)
+    steps.push(msg('auction.shareOf', { share: s.share, pot, raw }))
+    if (floored[i] !== raw) steps.push(msg('auction.whole', { amount: floored[i]! }))
+    if (rounding[i]) steps.push(msg('auction.plusRounding', { rounding: rounding[i]!, paid }))
     return { ...s, pesos: paid, why: { ...s.why, steps } }
   })
 }
@@ -434,17 +423,16 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
   warnings(state, ctx) {
     const { snapshot, settings, tournamentFinal } = ctx
     const label = settings.modules.auction.label
-    const out: string[] = []
+    const out: Msg[] = []
     const unfilled = state.slots.filter((s) => s.unfilled)
-    if (unfilled.length) out.push(`${label}: ${pesos(state.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    if (unfilled.length) out.push(msg('auction.unfilled', { label, amount: state.unfilled, slots: unfilled.map((s) => s.label) }))
     // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
-    if (tournamentFinal && state.pot > 0 && state.slots.length === 0) out.push(`${label}: nadie tiene resultado, así que ningún lugar se ocupa: ${pesos(state.pot)} sin asignar. El Comité decide.`)
+    if (tournamentFinal && state.pot > 0 && state.slots.length === 0) out.push(msg('auction.noResult', { label, pot: state.pot }))
     // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
     const unsold = state.lots.filter((l) => l.status !== 'sold')
     const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
     if (playing && unsold.length && state.soldCount > 0) {
-      const names = t.common.andList(unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))
-      out.push(`${label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender (${names}): no cobra${unsold.length === 1 ? '' : 'n'} la Calcutta.`)
+      out.push(msg('auction.unsold', { label, names: unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId) }))
     }
     return out
   },
@@ -462,8 +450,8 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
           amount: line.amount,
           final: state.final,
           why: {
-            title: pesos(line.amount),
-            steps: line.rounding ? [roundingWhy(state.slots[line.slot], nameOf(line.playerId))] : [`${line.pct}% de ${nameOf(line.playerId)}`],
+            title: msg('amount', { amount: line.amount }),
+            steps: line.rounding ? [msg('auction.rounding', { champion: !!state.slots[line.slot]?.places?.includes(1), name: nameOf(line.playerId) })] : [msg('auction.ownerPct', { pct: line.pct, name: nameOf(line.playerId) })],
           },
         })
       }
@@ -472,7 +460,3 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
   },
 }
 
-/** Whose owner takes the pot's rounding pesos, and why him. */
-function roundingWhy(slot: SlotResult | undefined, name: string): string {
-  return slot?.places?.includes(1) ? 'Resto del redondeo al dueño del campeón' : `Resto del redondeo al dueño de ${name}, que cobra el premio más alto`
-}

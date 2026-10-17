@@ -5,8 +5,7 @@
  * the database, and the board again on a second phone that has no copy and no
  * outbox of its own: what it shows can only have come from the server.
  */
-import { t } from '../../src/i18n/es-MX'
-import { netScoreName } from '../../src/engine/core/stableford'
+import { netScoreName, t } from '../../src/i18n/es-MX'
 import { HOLE_1, PLAYERS, SLUGS } from './field'
 import { boardRows, expect, expectedScores, openCard, row, saveHole, serverScores, tab, test, typeHole } from './phone'
 

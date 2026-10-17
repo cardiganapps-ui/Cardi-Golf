@@ -1,3 +1,4 @@
+import type { Msg } from '../messages'
 import type { Explanation, Id, Tee } from '../types'
 
 /** Per player, per round, per hole (§6). */
@@ -69,5 +70,5 @@ export interface CoreState {
       why: Explanation
     }
   >
-  warnings: string[]
+  warnings: Msg[]
 }

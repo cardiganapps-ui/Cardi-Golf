@@ -15,6 +15,7 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../settings/presets
 import type { TournamentSettings } from '../settings/schema'
 import { PAR_72, makeCourse, makeHoles, makePlayer, makeRound, makeSnapshot, makeTee, score } from '../testing/fixtures'
 import type { Snapshot } from '../types'
+import { words } from '../testing/words'
 
 /** Every listed hole at par + delta (default card PAR_72). */
 function card(snap: Snapshot, pid: string, holes: number[], delta = 0) {
@@ -41,7 +42,7 @@ describe('stroke play pays a full card (MONEY-02)', () => {
     const st = computeTournament(snap, settings)
     expect(st.modules.individual!.rows.map((r) => r.playerId)).toEqual(['p1', 'p2'])
     expect(st.prizes.filter((p) => p.moduleId === 'individual').map((p) => [p.playerId, p.amount])).toEqual([['p1', 1000]])
-    expect(st.modules.individual!.warnings.join(' ')).toMatch(/incompleta.*9 de 18/)
+    expect(words(st.modules.individual!.warnings).join(' ')).toMatch(/incompleta.*9 de 18/)
   })
 
   it('an incomplete card that is better to par still ranks after every complete one', () => {
@@ -67,7 +68,7 @@ describe('stroke play pays a full card (MONEY-02)', () => {
     // The «si terminara ahora» chip follows the board.
     expect(st.prizes.filter((p) => p.moduleId === 'individual').map((p) => p.playerId)).toEqual(['p1'])
     // Live, nobody is called incomplete: everyone is still playing.
-    expect(st.modules.individual!.warnings).toEqual([])
+    expect(words(st.modules.individual!.warnings)).toEqual([])
   })
 
   it('best ball on strokes: a team missing the back nine ranks after a complete team', () => {
@@ -101,7 +102,7 @@ describe('stroke play pays a full card (MONEY-02)', () => {
     card(snap, 'p2', range(1, 9), -1) // 27 points over nine
     const st = computeTournament(snap, settings)
     expect(st.modules.individual!.rows.map((r) => r.playerId)).toEqual(['p2', 'p1'])
-    expect(st.modules.individual!.warnings).toEqual([])
+    expect(words(st.modules.individual!.warnings)).toEqual([])
   })
 })
 
@@ -238,7 +239,7 @@ describe('a team is one entrant in the Calcutta (MONEY-20)', () => {
     expect(Object.fromEntries(Object.entries(a.payouts).map(([k, v]) => [k, v.amount]))).toEqual({ p1: 2100, p2: 2100, p3: 900, p4: 900 })
     expect(Object.values(a.payouts).reduce((s, v) => s + v.amount, 0)).toBe(6000)
     // Called what it is: a team in 1st, not a two-way tie.
-    expect(a.slots[0]!.why.steps.join(' ')).not.toMatch(/Empate/)
+    expect(words(a.slots[0]!.why).steps.join(' ')).not.toMatch(/Empate/)
   })
 
   it('teams of different sizes tied for 1st split per team, then per player', () => {

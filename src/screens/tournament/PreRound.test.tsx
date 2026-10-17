@@ -17,6 +17,7 @@ import { t } from '../../i18n/es-MX'
 import type { TournamentCtx } from './tournamentContext'
 import { TournamentContext } from './tournamentContext'
 import { countdownText, preRoundInfo } from './preRoundInfo'
+import { words } from '../../engine/testing/words'
 
 vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
 const { LiveScreen } = await import('./LiveScreen')
@@ -74,7 +75,7 @@ describe('En vivo before the first hole (STRAT-10)', () => {
     const pr = data.state.core.rounds.r1!.p9!
     await act(async () => fireEvent.click(within(block()!).getByRole('button', { name: t.money.howCalculatedOf(`${P.hcp}, ${pr.playingHcp}`) })))
     const sheet = screen.getByRole('dialog')
-    expect(within(sheet).getByText(pr.playingHcpWhy.title)).toBeTruthy()
+    expect(within(sheet).getByText(words(pr.playingHcpWhy).title)).toBeTruthy()
   })
 
   it('what he still owes, by kind, when the tournament moves money', () => {

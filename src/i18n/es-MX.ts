@@ -1,3 +1,5 @@
+import type { GameUnit, MatchSide, Msg, MsgParams } from '../engine/messages.js'
+
 /**
  * All app copy, Spanish (Mexico). One file so a second language is a file,
  * not a refactor (CLAUDE.md §0.5).
@@ -174,6 +176,89 @@ function payWords(from: string | null, to: string | null, paid = false, bankerSe
 function payText(w: PayWords, amount?: string): string {
   return `${w.who} ${w.verb}${w.whom ? ` ${w.whom}` : ''}${amount ? `: ${amount}` : ''}`
 }
+
+/** «birdie neto», «águila neta»… for the live badge and the hole's explanation (the term table: águila, never eagle). */
+export function netScoreName(points: number): string {
+  switch (points) {
+    case 0:
+      return 'doble bogey neto o peor'
+    case 1:
+      return 'bogey neto'
+    case 2:
+      return 'par neto'
+    case 3:
+      return 'birdie neto'
+    case 4:
+      return 'águila neta'
+    default:
+      return points >= 5 ? 'albatros neto' : ''
+  }
+}
+
+/**
+ * How a message's figures are written (ARCH-05): money in the tournament's currency, and a nested message in
+ * words. `src/i18n/explain.ts` makes one per currency.
+ */
+export interface MsgFormat {
+  /** Whole units: «$10,000», «−$1,200». */
+  money(n: number): string
+  /** With centavos when there are any: «$6,462.50». */
+  moneyCents(n: number): string
+  /** Signed for a part of a line: «+$2,500», «−$500», «$0». */
+  signedMoney(n: number): string
+  msg(m: Msg): string
+}
+/** The engine's every code, in words (`explain`). TypeScript holds it to the contract in src/engine/messages.ts. */
+type ExplainCatalog = { [K in keyof MsgParams]: (p: MsgParams[K], f: MsgFormat) => string }
+
+/** A whole number with a true minus: «−2», «0», «3». */
+const minus = (n: number) => (n < 0 ? `−${Math.abs(n)}` : String(n))
+/** A number in a handicap's arithmetic: up to 2 decimals, and a true minus (−0.8, never -0.8). */
+const num = (n: number) => {
+  const abs = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(2).replace(/\.?0+$/, '')
+  return n < 0 && abs !== '0' ? `−${abs}` : abs
+}
+/** A plus handicap's arithmetic is negative; say once how it is written. */
+const written = (n: number) => (n < 0 ? `, se escribe ${handicapText(n)}` : '')
+/** «1 golpe», «5 golpes». */
+const golpes = (n: number) => `${n} ${n === 1 ? 'golpe' : 'golpes'}`
+/** «+2», «E», «−1»: strokes relative to par. */
+const toParText = (d: number) => (d === 0 ? 'E' : d > 0 ? `+${d}` : minus(d))
+/** A countback's holes: «Total», «Hoyo 18», «Hoyos 10–18». */
+const windowLabel = (w: { from: number; to: number; total: boolean }) => (w.total ? 'Total' : w.from === w.to ? `Hoyo ${w.to}` : `Hoyos ${w.from}–${w.to}`)
+/** A match's standing in holes: «2 arriba», «1 abajo», «empatado». */
+const holesUp = (n: number) => (n > 0 ? `${n} arriba` : n < 0 ? `${-n} abajo` : 'empatado')
+/** One side of a match on the last day: each on its own, since one over or not started is not the other's «empatado». */
+const matchSide = (side: MatchSide, n: number) => (side === 'notPlayed' ? 'no jugó' : side === 'notOut' ? 'no ha salido' : `${side === 'done' ? 'terminó' : 'va'} ${holesUp(n)}`)
+const UNFILLED_UNIT: Record<'player' | 'team' | 'pair', [string, string]> = { player: ['jugador', 'jugadores'], team: ['equipo', 'equipos'], pair: ['pareja', 'parejas'] }
+const UNIT_WORDS: Record<GameUnit, [string, string]> = {
+  skin: ['skin', 'skins'],
+  birdie: ['birdie', 'birdies'],
+  eagle: ['águila', 'águilas'],
+  threePutt: ['tres putts', 'tres putts'],
+  hole: ['hoyo', 'hoyos'],
+  bet: ['apuesta', 'apuestas'],
+  part: ['parte', 'partes'],
+}
+/** What a game counts, for `n` of them: «skin», «skins», «tres putts». */
+export function unitWord(unit: GameUnit, n: number): string {
+  const [one, many] = UNIT_WORDS[unit]
+  return n === 1 ? one : many
+}
+/** A game's money (COPY-14): «El bote de $1,600» when its entrants put it in, «El premio de $1,600 (sale de la bolsa)» when it comes from the inscriptions. */
+const potText = (pot: string, side: boolean) => (side ? `El bote de ${pot}` : `El premio de ${pot} (sale de la bolsa)`)
+/** A share as a percentage: whole when it is, else one decimal («55%», «37.5%»). */
+const pctText = (share: number) => {
+  const v = share * 100
+  return `${Number.isInteger(Math.round(v * 10) / 10) ? Math.round(v) : (Math.round(v * 10) / 10).toFixed(1)}%`
+}
+/** Where a Calcutta slot's group finished: «2.º», or «3.º, 2.º entre los lotes vendidos». */
+const finishText = (at: { finish: number; amongSold: number | null }) => {
+  const place = ordinal(String(at.finish))
+  return at.amongSold != null ? `${place}, ${ordinal(String(at.amongSold))} entre los lotes vendidos` : place
+}
+/** Strokes against par in words: «par», «2 sobre par», «1 bajo par». */
+const toParWordsOf = (d: number) => (d === 0 ? 'par' : d > 0 ? `${d} sobre par` : `${-d} bajo par`)
 
 export type UnsentAction = 'signOut' | 'switch' | 'enter' | 'delete'
 const UNSENT_ACTION: Record<UnsentAction, string> = {
@@ -3446,8 +3531,6 @@ export const t = {
     decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.',
     awardLabel: (label: string) => `${label}, asignado por el Comité`,
     refundLabel: (label: string) => `${label}, devolución`,
-    /** The Comité's reason; a link to watch carries none (its free text stays with the members, STRAT-05). */
-    adjustmentWhy: (label: string, amount: string, reason: string) => [`${label}: ${amount} sin asignar`, reason ? `El Comité decidió: ${reason}` : 'Lo decidió el Comité'],
     over: (label: string, assigned: string, left: string) => `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
     orphan: (label: string, assigned: string) => `Asignación sin dinero en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
     mismatch: (bank: string, listed: string) => `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
@@ -4081,3 +4164,249 @@ export const t = {
 } as const
 
 export type Copy = typeof t
+
+/**
+ * What the engine says, by code (ARCH-05): every «¿Cómo se calculó?» line and warning of the computed state. Each
+ * entry takes the code's figures and how to write money (`MsgFormat`); `src/i18n/explain.ts` calls them.
+ */
+export const explain: ExplainCatalog = {
+  label: (p) => p.text,
+  amount: (p, f) => f.money(p.amount),
+  pts: (p) => ptsText(p.n),
+
+  // A hole's points. COPY-19: a sentence first, in words («5 golpes en un par 4, con 1 golpe de ventaja: 4 neto,
+  // par neto, 2 pts»), then the arithmetic, whose «+ 2» is said once: a net par is worth two points.
+  'hole.unplayed': () => 'Sin capturar',
+  'hole.pickedUp': () => 'Levantó (dejó el hoyo sin terminarlo): cuenta 0 pts',
+  // A plus handicap gives a stroke back here (MONEY-21): «dando 1 golpe», «5 + 1 = 6 neto», «4 − 1 − 5 + 2».
+  'hole.played': (p) =>
+    `${golpes(p.gross)} en un par ${p.par}, ${p.received > 0 ? `con ${golpes(p.received)} de ventaja` : p.received < 0 ? `dando ${golpes(-p.received)} (hándicap por debajo de 0)` : 'sin golpes de ventaja'} en este hoyo (índice de golpe ${p.si}): ${minus(p.net)} neto, ${netScoreName(p.points)}, ${ptsText(p.points)}`,
+  'hole.net': (p) => `${p.gross} ${p.received < 0 ? '+' : '−'} ${Math.abs(p.received)} = ${minus(p.net)} neto`,
+  // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, que cuenta 0 pts», never «= 0».
+  'hole.points': (p) => {
+    const raw = p.par + p.received - p.gross + 2
+    return `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${p.par} ${p.received < 0 ? '−' : '+'} ${Math.abs(p.received)} − ${p.gross} + 2 = ${raw < 0 ? `${minus(raw)}, que cuenta 0 pts` : ptsText(p.points)}`
+  },
+
+  // A hole in strokes, where the event counts strokes: the hole's own explanation is in points.
+  'strokes.title': (p) => `${golpes(p.strokes)}${p.net ? ' netos' : ''}`,
+  'strokes.pickedUp': (p) =>
+    `Levantó en un par ${p.par}${p.net ? `, con ${golpes(p.received)} de ventaja en este hoyo (índice de golpe ${p.si})` : ''}: cuenta ${golpes(p.counted)}${p.net ? ' netos' : ''}, ${toParWordsOf(p.toPar)}`,
+  'strokes.played': (p) =>
+    `${golpes(p.gross)} en un par ${p.par}${p.net ? `, con ${golpes(p.received)} de ventaja en este hoyo (índice de golpe ${p.si}): ${p.counted} netos, ${toParWordsOf(p.toPar)}` : `: ${toParWordsOf(p.toPar)}`}`,
+  'strokes.pickupRule': (p) => `Un hoyo levantado cuenta como doble bogey neto: par ${p.par} + ${golpes(p.received)} de ventaja + 2 = ${p.par + p.received + 2}`,
+  'strokes.pickupNet': (p) => `${p.par + p.received + 2} − ${p.received} = ${p.counted} neto`,
+  'strokes.net': (p) => `${p.gross} − ${p.received} = ${p.counted} neto`,
+
+  // Handicaps. COPY-19: each step says what it does before its arithmetic.
+  'hcp.indexTitle': (p) => `Índice ${handicapText(p.value)}`,
+  'hcp.indexTyped': () => 'Índice de hándicap capturado por el Comité',
+  'hcp.baseTitle': (p) => `Hándicap base ${handicapText(p.value)}`,
+  'hcp.baseTyped': () => 'Capturado por el Comité; se usa tal cual',
+  // A plus handicap typed by the Comité: the arithmetic below uses it below zero.
+  'hcp.plusInSum': (p) => `En la cuenta, ${minus(p.value)}`,
+  'hcp.playingTitle': (p) => `Hándicap de juego ${handicapText(p.value)}`,
+  'hcp.cap': (p) => `Hándicap ${num(p.hcp)}; el tope es ${num(p.cap)}, así que cuenta ${num(p.cap)}`,
+  'hcp.allowance': (p) => `Se juega con el ${p.pct}%: ${p.pct}% de ${num(p.of)} = ${num(p.result)}`,
+  'hcp.rounded': (p) => `Redondeado al entero: ${num(p.value)}`,
+  // What a plus playing handicap does on the card (MONEY-21): it gives strokes back on the easiest holes.
+  'hcp.givesBack': (p) => {
+    const n = -p.value
+    return `Juega con ${handicapText(p.value)}: devuelve ${n} golpe${n === 1 ? '' : 's'}, en ${n === 1 ? 'el hoyo más fácil' : `los ${n} hoyos más fáciles`}`
+  },
+  'hcp.courseTitle': (p) => `Hándicap de campo ${handicapText(p.value)}`,
+  // The WHS formula in three short sentences.
+  'hcp.courseScale': (p) => `El índice se ajusta a la dificultad del tee: índice ${p.index < 0 ? `${handicapText(p.index)}, en la cuenta ${num(p.index)},` : num(p.index)} × slope ${p.slope} ÷ 113 = ${num(p.scaled)}`,
+  'hcp.courseRating': (p) => `Se suma lo que el rating del tee pasa del par: rating ${num(p.rating)} − par ${p.par} = ${num(p.diff)}`,
+  'hcp.courseSum': (p) => `${num(p.scaled)} ${p.diff < 0 ? '−' : '+'} ${num(Math.abs(p.diff))} = ${num(p.raw)}, redondeado ${num(p.value)}${written(p.value)}: el hándicap de campo`,
+  // A link to watch carries no reason (the Comité's free text stays with the members, STRAT-05).
+  'hcp.override': (p) => `Ajuste del Comité: de ${handicapText(p.from)} a ${handicapText(p.to)}${p.reason ? ` (${p.reason})` : ''}`,
+  'hcp.nine': (p) => `Ronda de 9 hoyos: la mitad, ${handicapText(p.half)}, repartida en los nueve hoyos del más difícil al más fácil`,
+  'est.title': (p) => `Índice estimado ${handicapText(p.value)}`,
+  'est.diffs': (p) => `Diferenciales: ${num(p.d[0])} (buen día), ${num(p.d[1])} (normal), ${num(p.d[2])} (mal día)`,
+  'est.weighted': (p) => `${p.w[0]} × ${num(p.d[0])} + ${p.w[1]} × ${num(p.d[1])} + ${p.w[2]} × ${num(p.d[2])} = ${num(p.result)}`,
+  'est.rounded': (p) => `Redondeado a 1 decimal: ${num(p.value)}${p.written ? written(p.value) : ''}`,
+  'est.cap': (p) => `Tope ${num(p.cap)}: ${num(p.value)}`,
+  'est.reordered': () => 'Las rondas venían en otro orden; se acomodaron de mejor a peor.',
+  'est.assumed': () => 'Rating/slope asumidos (par 72, slope 113) donde no se capturaron.',
+  // The day's cut: sentences that follow «El día 1» in the playing handicap's explanation, hence the lower case.
+  'cut.title': (p) => (p.value ? `Recorte de ${p.value}` : 'Sin recorte'),
+  'cut.notPlayed': () => 'no jugó: sin recorte',
+  'cut.under': (p) => `hizo ${ptsText(p.points)}, no más de ${p.threshold}: sin recorte`,
+  'cut.over': (p) => `hizo ${ptsText(p.points)}: ${p.points} − ${p.threshold} = ${ptsText(p.over)} de más`,
+  'cut.per': (p) => {
+    const strokes = Math.floor(p.over / p.per)
+    return `se recorta 1 golpe por ${p.per === 1 ? 'cada punto' : `cada ${p.per} puntos`} de más: ${p.over} ÷ ${p.per} = ${p.over % p.per ? `${(p.over / p.per).toFixed(1)}, ` : ''}${strokes} golpe${strokes === 1 ? '' : 's'}`
+  },
+  'cut.max': (p) => `el máximo es ${p.max}`,
+  'cut.day': (p, f) => `El día ${p.day} ${p.steps.map(f.msg).join('; ')}`,
+  'cut.plusKeeps': (p) => `Juega con ${handicapText(p.value)}: no recibe golpes, así que el recorte no le quita nada`,
+  // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
+  'cut.applied': (p) => `Con el recorte: ${p.playing} − ${p.cut} = ${p.after < 0 ? `${minus(p.after)}, no baja de 0: 0` : p.after}`,
+  'core.noCourse': (p) => `Día ${p.day}: sin campo cargado; se usa par 4 en todos los hoyos.`,
+
+  // The formats' warnings.
+  'match.needsPairs': (p) => `Día ${p.day ?? '?'}, grupo ${p.group}: un fourball necesita dos parejas ya sorteadas en ese grupo.`,
+  'match.needsTwo': (p) => `Día ${p.day ?? '?'}, grupo ${p.group}: un partido individual necesita exactamente dos jugadores.`,
+  'team.noTeams': () => 'Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.',
+  'bracket.tooFew': () => 'Todavía no hay suficientes jugadores para armar el cuadro.',
+  'bracket.offBracket': (p) => `Día ${p.day}: ${p.off === 1 ? 'un partido de los grupos no es' : `${p.off} partidos de los grupos no son`} del cuadro (${p.round}). ${p.off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`,
+  'bracket.tied': (p) => `${p.round}: hay un partido empatado; el Comité decide quién pasa.`,
+  // Places and prizes. COPY-19: the place and what it pays, in a sentence; a tie says whose prizes it joins and how it splits them.
+  'rank.unfilled': (p, f) => {
+    const which = andList(p.places.map((n) => ordinal(String(n))))
+    const what = p.places.length === 1 ? `el ${which} lugar no lo gana nadie` : `los lugares ${which} no los gana nadie`
+    const [one, many] = UNFILLED_UNIT[p.unit]
+    const why = p.count === 0 ? 'nadie tiene resultado' : `${p.count} ${p.count === 1 ? one : many} con resultado`
+    return `${p.label}${p.day != null ? `, Día ${p.day}` : ''}: ${what} (${why}): ${f.money(p.amount)} sin asignar. El Comité decide.`
+  },
+  'prize.place': (p, f) => `El ${ordinal(String(p.place))} lugar paga ${f.money(p.amount)}`,
+  'prize.tie': (p, f) => `Empataron ${p.n} en el ${ordinal(String(p.place))} lugar: juntan los premios del ${andList(p.places.map((n) => ordinal(String(n))))}, ${f.money(p.total)}`,
+  'prize.tieSplit': (p, f) => `${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
+  'prize.tied': (p) => `Empatados: ${andList(p.names)}`,
+  'individual.incomplete': (p) => `Tarjeta incompleta, hoyos jugados: ${andList(p.cards.map((c) => `${c.name} (${c.thru} de ${c.of})`))}. ${p.cards.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`,
+  // COPY-19: where the prize comes from, in words: the place and the figure, and «si terminara ahora» while it runs.
+  'individual.where': (p) => `${p.name} ${p.final ? 'terminó' : 'va'} ${ordinal(p.place)} con ${t.common.figure(p.figure, p.value, p.kind)}${p.final ? '' : ', si el torneo terminara ahora'}`,
+  'individual.teamSplit': (p, f) => `${p.team} lo reparte entre ${p.n}: ${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
+  // Why one entrant sits above another on an equal figure. Strokes are held negated so more is better; the line
+  // turns them back into to-par figures («+4», «E», «−1»).
+  'countback.title': (p) => `${p.tied ? 'Empate' : 'Desempate'} con ${p.name}`,
+  'countback.line': (p) => {
+    const fig = (n: number) => (p.up ? minus(n) : toParText(-n))
+    return `Día ${p.day}, ${windowLabel(p.window)}: ${p.aName} ${fig(p.a)}${t.common.versus}${p.bName} ${fig(p.b)}`
+  },
+  'countback.equalTo': (p) => `Iguales hasta el hoyo ${p.hole}: se reparten los premios.`,
+  // Match play's countback is the last day's match, holes up (the Reglamento says so), not the last holes' scores.
+  'countback.matchPoints': () => 'Iguales en puntos de partido',
+  'countback.matchShare': () => 'Iguales: se reparten los premios de los lugares que ocupan.',
+  'countback.matchNone': (p) => (p.over ? `Día ${p.day}: ninguno jugó partido ese día` : `Día ${p.day}: todavía no juegan su partido`),
+  'countback.matchSame': (p) => `Día ${p.day}, ${p.done ? 'cómo terminó' : 'cómo va'} su partido: ${p.aName} ${holesUp(p.a)}${t.common.versus}${p.bName} ${holesUp(p.b)}`,
+  'countback.matchSides': (p) => `Día ${p.day}: ${p.aName} ${matchSide(p.aSide, p.a)}${t.common.versus}${p.bName} ${matchSide(p.bSide, p.b)}`,
+
+  // The side games.
+  'pairs.notPairs': () => 'El grupo no está formado por parejas completas.',
+  'pairs.wrongKinds': (p) => `El grupo no es ${andList(p.kinds.map((k) => `una pareja ${k}`))}.`,
+  'pairs.eachTitle': (p, f) => `${f.money(p.each)} cada uno`,
+  'pairs.split': (p, f) => `El premio es de la pareja: ${f.money(p.total)} entre los dos = ${f.money(p.each)} cada uno${p.odd ? `, más ${f.money(p.odd)} para ${p.to}` : ''}`,
+  'bestRound.day': (p) => `${ptsText(p.points)} el día ${p.day}`,
+  'bestRound.countback': (p) => `${windowLabel(p.window)}: ${p.aName} ${p.a} – ${p.bName} ${p.b}`,
+  'putts.total': (p) => `${p.putts} putts en ${p.holes} hoyos`,
+  'putts.pickups': (p) => `Hoyos levantados: cuentan ${p.min} putts como mínimo`,
+  // The game's own name, in a sentence (STRAT-11): «la Víbora», or whatever the organizer called it.
+  'snake.holder': (p) => `Terminó la ronda con ${labelInSentence(p.game)}: fue el último en hacer ${p.threshold} putts o más, en el hoyo ${p.hole}`,
+  'snake.holderPays': (p) => `Quien termina con ${labelInSentence(p.game)} no cobra`,
+  'snake.survivor': (p) => `Terminó la ronda sin ${labelInSentence(p.game)}: ${p.holder} se quedó con ${labelInSentence(p.game)}`,
+  'snake.survivorGets': (p, f) => `Cada uno de los demás del grupo cobra ${f.money(p.amount)} de la bolsa`,
+  'snake.nobody': (p, f) => `Nadie del grupo hizo ${p.threshold} putts o más: los ${f.money(p.pot)} se reparten entre los ${p.n}`,
+
+  // The Calcutta.
+  'auction.finish': (p) => `${andList(p.names)} ${p.names.length === 1 ? 'termina' : 'terminan'} ${finishText(p.at)}: ${pctText(p.share)} del pozo`,
+  'auction.teamShare': (p) => `Un equipo: ${pctText(p.share)} ÷ ${p.n} = ${pctText(p.share / p.n)} cada uno`,
+  'auction.tie': (p) => `Empate a ${p.places} en el ${finishText(p.at)}: ${p.shares.map(pctText).join(' + ')} = ${pctText(p.share)}`,
+  'auction.tieTeams': (p) => `${pctText(p.share)} ÷ ${p.teams} equipos = ${pctText(p.share / p.teams)} por equipo, repartido entre sus jugadores`,
+  'auction.tieEach': (p) => `${pctText(p.share)} ÷ ${p.n} = ${pctText(p.share / p.n)} cada uno`,
+  'auction.nobodyAt': (p) => `Nadie ocupa el ${ordinal(String(p.place))} lugar`,
+  'auction.tierNone': (p) => (p.any ? `Todos los de la categoría ${p.tier} ya cobran un lugar mejor` : `No hay jugadores de la categoría ${p.tier}`),
+  'auction.bestOfTier': (p) => `Mejor de la categoría ${p.tier} que no cobra otro lugar: ${andList(p.names)} (${ordinal(String(p.place))})`,
+  'auction.tieSplit': (p) => `Empate: se reparte entre ${p.n}`,
+  'auction.lastCashes': () => 'Quien quedó último ya cobra un lugar mejor',
+  'auction.last': (p) => `Último lugar: ${andList(p.names)}`,
+  'auction.staysInBank': () => 'Se queda en el banco hasta que el Comité decida',
+  'auction.shareOf': (p, f) => `${pctText(p.share)} de ${f.money(p.pot)} = ${f.moneyCents(p.raw)}`,
+  'auction.wholeUnfilled': (p, f) => `En pesos enteros: ${f.money(p.amount)}; los centavos van al redondeo`,
+  'auction.whole': (p, f) => `En pesos enteros: ${f.money(p.amount)}`,
+  'auction.plusRounding': (p, f) => `Más ${f.money(p.rounding)} del redondeo de todo el pozo: ${f.money(p.paid)}`,
+  'auction.ownerPct': (p) => `${p.pct}% de ${p.name}`,
+  // Whose owner takes the pot's rounding pesos, and why him.
+  'auction.rounding': (p) => (p.champion ? 'Resto del redondeo al dueño del campeón' : `Resto del redondeo al dueño de ${p.name}, que cobra el premio más alto`),
+  'auction.unfilled': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar (${andList(p.slots)}). El Comité decide.`,
+  'auction.noResult': (p, f) => `${p.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${f.money(p.pot)} sin asignar. El Comité decide.`,
+  // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11).
+  'auction.unsold': (p) => {
+    const n = p.names.length
+    return `${p.label}: ${n} lote${n === 1 ? '' : 's'} sin vender (${andList(p.names)}): no cobra${n === 1 ? '' : 'n'} la Calcutta.`
+  },
+
+  // The instance games.
+  'game.places': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}`,
+  'game.unitsPot': (p, f) =>
+    `${potText(f.money(p.pot), p.side)} se reparte entre ${p.total === 1 ? `el único ${unitWord(p.unit, 1)}` : `los ${p.total} ${unitWord(p.unit, 2)}`} que se ganaron: ${Number.isInteger(p.per) ? f.money(p.per) : `${f.money(Math.floor(p.per))} y centavos`} cada uno`,
+  'game.unitsWon': (p, f) => `${p.name} ganó ${p.units} ${unitWord(p.unit, p.units)}: ${f.money(p.amount)}${p.rounding ? `, con ${f.money(p.rounding)} del redondeo` : ''}`,
+  'game.refund': (p, f) => `Nadie ganó un ${unitWord(p.unit, 1)}: se devuelve a cada quien su entrada, ${f.money(p.buyIn)}`,
+  'game.unwon': (p, f) => `${p.label}: nadie ganó un ${unitWord(p.unit, 1)}; ${f.money(p.pot)} quedan sin asignar. El Comité decide.`,
+  'bet.units': (p, f) => `${p.name}: ${p.units} ${unitWord(p.unit, p.units)} × ${f.money(p.stake)}`,
+  'bet.net': (p, f) => `Neto: ${f.money(p.gross)} − ${f.money(p.back)} que ${p.winner} le debía = ${f.money(p.amount)}`,
+  'bet.pays': (p, f) => `${p.payer} paga ${f.money(p.amount)}`,
+  'match.bet': (p, f) => `${p.day != null ? `Día ${p.day}, ` : ''}${p.segment}${p.press ? `, presión ${p.press} (desde el ${p.from})` : ''}: ${andList(p.side)} ${p.up} arriba${p.decided ? '' : ' (si terminara ahora)'}, ${f.money(p.stake)}`,
+  'match.invalid': (p) => `${p.label}: ${p.n === 1 ? 'un partido tiene' : `${p.n} partidos tienen`} jugadores que no están en el juego.`,
+  'contest.disputed': (p) => `${p.label}: ${p.holes.length === 1 ? 'un hoyo en disputa' : `${p.holes.length} hoyos en disputa`} (${p.holes.join(', ')}). El Comité decide.`,
+
+  // The settlement (MONEY-07): every number people pay by, explained.
+  'settle.part': (p, f) => (p.of ? t.settleWhy.partOf(p.label, f.signedMoney(p.amount), f.money(p.of)) : t.settleWhy.part(p.label, f.signedMoney(p.amount))),
+  'settle.squared': (p) => t.moneyScreen.squared(p.from, p.to),
+  'settle.pays': (p, f) => t.moneyScreen.pays(p.from, p.to, f.money(p.amount), p.bankerSelf),
+  'settle.nets': () => t.settleWhy.nets,
+  'settle.total': (p, f) => t.settleWhy.total(f.money(p.amount)),
+  'settle.owesTotal': (p, f) => t.settleWhy.owesTotal(p.name, f.money(p.amount)),
+  'settle.getsTotal': (p, f) => t.settleWhy.getsTotal(p.name, f.money(p.amount)),
+  'settle.ruleTitle': () => t.settleWhy.ruleTitle,
+  'settle.rule': () => t.settleWhy.rule,
+  'settle.share': (p, f) => t.settleWhy.share(p.from, f.money(p.total), f.money(p.amount), p.to),
+  'settle.bankTitle': () => t.settleWhy.bankTitle,
+  'settle.gross': () => t.settleWhy.gross,
+  'settle.bankIn': (p, f) => t.settleWhy.bankIn(f.msg(p.what), f.money(p.amount)),
+  'settle.bankOut': (p, f) => t.settleWhy.bankOut(f.msg(p.what), f.money(p.amount)),
+  'settle.entries': (p, f) => t.settleWhy.entries(p.n, f.money(p.fee)),
+  'settle.lots': (p) => t.settleWhy.lots(p.n),
+  'settle.mainPrizes': () => t.settleWhy.mainPrizes,
+  'settle.calcuttaShares': () => t.settleWhy.calcuttaShares,
+  'settle.bankInTotal': (p, f) => t.settleWhy.bankInTotal(f.money(p.amount)),
+  'settle.bankOutTotal': (p, f) => t.settleWhy.bankOutTotal(f.money(p.amount)),
+  'settle.houseCut': (p, f) => t.settleWhy.houseCut(f.money(p.amount)),
+  'settle.toHouse': (p, f) => t.settleWhy.toHouse(f.money(p.amount)),
+  'settle.squares': () => t.settleWhy.squares,
+  'settle.left': (p, f) => t.settleWhy.left(f.money(p.amount)),
+  'settle.short': (p, f) => t.settleWhy.short(f.money(p.amount)),
+
+  // Por asignar (MONEY-05, COPY-09).
+  'unassigned.title': (p, f) => t.unassigned.title(f.money(p.amount)),
+  'unassigned.budget': (p, f) => t.unassigned.budget(p.label, f.money(p.amount)),
+  'unassigned.paid': (p, f) => t.unassigned.paid(f.money(p.amount)),
+  'unassigned.left': (p, f) => t.unassigned.left(f.money(p.amount)),
+  'unassigned.decides': () => t.unassigned.decides,
+  'unassigned.heldApart': (p, f) => t.unassigned.heldApart(f.money(p.amount)),
+  'unassigned.poolSurplus': (p, f) => t.unassigned.poolSurplus(f.money(p.entries), f.money(p.prizes)),
+  'unassigned.unplayedRound': (p) => t.unassigned.unplayedRound(p.day),
+  'unassigned.cancelledRound': (p) => t.unassigned.cancelledRound(p.day),
+  'unassigned.own': (p, f) => f.msg(p.warning).replace(/\s*El Comité decide\.$/, ''),
+  'unassigned.heldTitle': (p, f) => t.unassigned.heldTitle(f.money(p.amount)),
+  'unassigned.pendingTiebreak': (p) => t.unassigned.pendingTiebreak(p.day, p.group, p.hole),
+  'unassigned.heldWhy': (p, f) => t.unassigned.heldWhy(f.money(p.amount), p.game),
+  'unassigned.from': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar`,
+  'unassigned.decided': (p) => (p.reason ? `El Comité decidió: ${p.reason}` : 'Lo decidió el Comité'),
+  'unassigned.over': (p, f) => t.unassigned.over(p.label, f.money(p.assigned), f.money(p.left)),
+  'unassigned.orphan': (p, f) => t.unassigned.orphan(p.label, f.money(p.amount)),
+  'unassigned.mismatch': (p, f) => t.unassigned.mismatch(f.money(p.bank), f.money(p.listed)),
+
+  // The tournament's warnings.
+  'outdated.game': (p) => t.outdated.game(p.label),
+  'putts.missing': (p) => t.missingPutts.warning(p.who.map((w) => t.missingPutts.who(w.name, w.days)), p.games),
+  'pool.short': (p, f) => `Los premios suman ${f.money(p.prizes)} y las inscripciones ${f.money(p.entries)}: faltan ${f.money(p.missing)}. El Comité ajusta los premios en Comité, sección Torneo.`,
+  'pool.surplus': (p, f) => `Las inscripciones suman ${f.money(p.entries)} y los premios ${f.money(p.prizes)}: sobran ${f.money(p.left)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
+  'pool.unreachable': (p, f) => `${p.label}: ${p.detail}, ${f.money(p.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`,
+
+  // «Cerrar torneo» (MONEY-05): what blocks, and what only warns.
+  'close.missingRounds': (p) => t.closeGate.missingRounds(p.days),
+  'close.openRounds': (p) => t.closeGate.openRounds(p.days),
+  'close.tiebreaks': (p) => t.closeGate.tiebreaks(p.n, p.game),
+  'close.missingPutts': (p) => t.closeGate.missingPutts(p.n),
+  'close.unsoldLots': (p) => t.closeGate.unsoldLots(andList(p.names)),
+  'close.unassigned': (p, f) => t.closeGate.unassigned(f.money(p.amount)),
+  'close.badAssignments': (p) => t.closeGate.badAssignments(p.n),
+  'close.unsignedCards': (p) => t.closeGate.unsignedCards(p.n),
+  'close.rejectedWrites': (p) => t.closeGate.rejectedWrites(p.n),
+  'close.rejectedUnavailable': () => t.closeGate.rejectedUnavailable,
+  'close.owed': (p, f) => t.closeGate.owed(p.people, f.money(p.amount)),
+
+  'bracket.needsRounds': (p) => `El cuadro necesita ${p.rounds} ${p.rounds === 1 ? 'ronda' : 'rondas'} y el torneo tiene ${p.have}.`,
+}

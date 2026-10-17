@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FIRST_TOURNAMENT_SETTINGS } from '../settings/presets'
 import { makeCourse, makePlayer, makeSnapshot, makeTee, score } from '../testing/fixtures'
 import { computeCore } from './compute'
+import { words } from '../testing/words'
 
 describe('computeCore', () => {
   it('computes per-hole points, thru and totals', () => {
@@ -17,7 +18,7 @@ describe('computeCore', () => {
     expect(pr.points).toBe(4)
     expect(pr.putts).toBe(3)
     expect(core.totals.p1!.points).toBe(4)
-    expect(pr.holes[4]!.why.steps[0]).toContain('índice de golpe 1')
+    expect(words(pr.holes[4]!.why).steps[0]).toContain('índice de golpe 1')
   })
 
   it('applies the Day 2 cut from Day 1 points', () => {
@@ -33,7 +34,7 @@ describe('computeCore', () => {
     expect(core.rounds.r1!.p1!.points).toBe(42)
     expect(core.rounds.r2!.p1!.cut).toBe(3)
     expect(core.rounds.r2!.p1!.playingHcp).toBe(13)
-    expect(core.rounds.r2!.p1!.playingHcpWhy.steps.join(' ')).toContain('16 − 3 = 13')
+    expect(words(core.rounds.r2!.p1!.playingHcpWhy).steps.join(' ')).toContain('16 − 3 = 13')
   })
 
   it('never adds strokes and floors at 0', () => {
@@ -65,7 +66,7 @@ describe('computeCore', () => {
     expect(core.rounds.r1!.p1!.points).toBe(44)
     expect(core.rounds.r2!.p1!.cut).toBe(4)
     expect(core.rounds.r2!.p1!.playingHcp).toBe(0)
-    expect(core.rounds.r2!.p1!.playingHcpWhy.steps.join(' ')).toContain('no baja de 0')
+    expect(words(core.rounds.r2!.p1!.playingHcpWhy).steps.join(' ')).toContain('no baja de 0')
   })
 
   it('an override replaces the playing handicap and is explained', () => {
@@ -74,7 +75,7 @@ describe('computeCore', () => {
     const core = computeCore(snap, FIRST_TOURNAMENT_SETTINGS)
     expect(core.rounds.r1!.p1!.playingHcp).toBe(14)
     expect(core.rounds.r1!.p1!.overridden).toBe(true)
-    expect(core.rounds.r1!.p1!.playingHcpWhy.steps.at(-1)).toContain('Jugó de azules')
+    expect(words(core.rounds.r1!.p1!.playingHcpWhy).steps.at(-1)).toContain('Jugó de azules')
   })
 
   it('uses the WHS course handicap for index players and the tee from round_tees', () => {
@@ -112,13 +113,13 @@ describe('computeCore', () => {
     const pr = core.rounds.r1!.p1!
     expect(pr.courseHcp).toBe(-1)
     expect(pr.playingHcp).toBe(-1)
-    expect(pr.playingHcpWhy.title).toBe('Hándicap de juego +1')
+    expect(words(pr.playingHcpWhy).title).toBe('Hándicap de juego +1')
     const easy = pr.holes.find((x) => x.hole === easiest.number)!
     expect(easy.strokesReceived).toBe(-1)
     // Par there is a net bogey: 1 point, and 35 on a round of pars.
     expect(easy.points).toBe(1)
     expect(easy.net).toBe(easiest.par + 1)
-    expect(easy.why.steps).toEqual([
+    expect(words(easy.why).steps).toEqual([
       `${easiest.par} golpes en un par ${easiest.par}, dando 1 golpe (hándicap por debajo de 0) en este hoyo (índice de golpe 18): ${easiest.par + 1} neto, bogey neto, 1 pt`,
       `${easiest.par} + 1 = ${easiest.par + 1} neto`,
       `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${easiest.par} − 1 − ${easiest.par} + 2 = 1 pt`,
@@ -136,7 +137,7 @@ describe('computeCore', () => {
     const core = computeCore(snap, settings)
     expect(core.rounds.r2!.p1!.cut).toBe(4)
     expect(core.rounds.r2!.p1!.playingHcp).toBe(-2)
-    expect(core.rounds.r2!.p1!.playingHcpWhy.steps).toContain('Juega con +2: no recibe golpes, así que el recorte no le quita nada')
+    expect(words(core.rounds.r2!.p1!.playingHcpWhy).steps).toContain('Juega con +2: no recibe golpes, así que el recorte no le quita nada')
   })
 
   it('a manual handicap is used unchanged even with a rated tee', () => {
@@ -156,7 +157,7 @@ describe('computeCore', () => {
     const snap = makeSnapshot({ players: 1, rounds: 1, courses: [] })
     snap.scores.push(score('r1', 'p1', 1, 4))
     const core = computeCore(snap, snap.tournament.settings as never)
-    expect(core.warnings[0]).toContain('sin campo')
+    expect(words(core.warnings)[0]).toContain('sin campo')
     expect(core.rounds.r1!.p1!.holes[0]!.par).toBe(4)
   })
 })

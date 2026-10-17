@@ -19,9 +19,11 @@ import type { AuctionState } from '../modules/auction'
 import type { Id, PaymentKind, Snapshot } from '../types'
 import { computeMoney, type MoneyState } from './money'
 import { t } from '../../i18n/es-MX'
+import { words } from '../testing/words'
+import { label, type Explanation } from '../messages'
 
 const W = t.settleWhy
-const why = { title: '', steps: [] }
+const why: Explanation = { title: label(''), steps: [] }
 const sum = (xs: Array<{ amount: number }>) => xs.reduce((s, x) => s + x.amount, 0)
 
 function prize(playerId: Id, amount: number, opts: Partial<PrizeAward> = {}): PrizeAward {
@@ -44,8 +46,8 @@ function explained(m: MoneyState) {
     expect(tr.parts, 'a vía-banco line has its parts').toBeDefined()
     expect(sum(tr.parts!), 'its parts add up to the line').toBe(tr.amount)
     expect(tr.why).toHaveLength(1)
-    expect(tr.why[0]!.steps.length).toBeGreaterThan(1)
-    expect(tr.why[0]!.steps.at(-1)).toBe(tr.amount === 0 ? W.nets : W.total(`$${tr.amount.toLocaleString('en-US')}`))
+    expect(words(tr.why)[0]!.steps.length).toBeGreaterThan(1)
+    expect(words(tr.why)[0]!.steps.at(-1)).toBe(tr.amount === 0 ? W.nets : W.total(`$${tr.amount.toLocaleString('en-US')}`))
   }
   for (const p of m.positions) expect(sum(p.parts), 'a position is the sum of its parts').toBe(p.amount)
   const at = new Map(m.positions.map((p) => [p.party, p.amount]))
@@ -59,8 +61,8 @@ function explained(m: MoneyState) {
   }
   // Sin banco pays each position out exactly (when it is shown at all).
   if (m.peerToPeer.length) for (const p of m.positions) expect(moved.get(p.party) ?? 0, `position of ${p.party}`).toBe(p.amount)
-  expect(m.banker.why.steps).toContain(W.bankInTotal(`$${m.banker.receives.toLocaleString('en-US')}`))
-  expect(m.banker.why.steps).toContain(W.bankOutTotal(`$${m.banker.pays.toLocaleString('en-US')}`))
+  expect(words(m.banker.why).steps).toContain(W.bankInTotal(`$${m.banker.receives.toLocaleString('en-US')}`))
+  expect(words(m.banker.why).steps).toContain(W.bankOutTotal(`$${m.banker.pays.toLocaleString('en-US')}`))
 }
 
 describe('every settlement line says where its amount comes from (MONEY-07)', () => {
@@ -74,7 +76,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
       { label: 'Mejor ronda, día 1', amount: 1000 },
       { label: 'Inscripción', amount: -1000 },
     ])
-    expect(line.why[0]!.steps).toEqual(['Individual, 1.º: +$3,000', 'Mejor ronda, día 1: +$1,000', 'Inscripción: −$1,000', 'Total: $3,000'])
+    expect(words(line.why)[0]!.steps).toEqual(['Individual, 1.º: +$3,000', 'Mejor ronda, día 1: +$1,000', 'Inscripción: −$1,000', 'Total: $3,000'])
     explained(m)
   })
 
@@ -85,7 +87,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const p2 = m.viaBank.find((x) => x.from === 'p2')!
     expect(p2.amount).toBe(600)
     expect(p2.parts).toEqual([{ label: 'Inscripción', amount: 600, of: 1000 }])
-    expect(p2.why[0]!.steps[0]).toBe('Inscripción: +$600 (de $1,000; lo demás ya se pagó)')
+    expect(words(p2.why)[0]!.steps[0]).toBe('Inscripción: +$600 (de $1,000; lo demás ya se pagó)')
     explained(m)
   })
 
@@ -108,7 +110,7 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
       { label: 'Inscripción', amount: 1000 },
       { label: 'Individual, 1.º', amount: -1000 },
     ])
-    expect(square.why[0]!.steps.at(-1)).toBe(W.nets)
+    expect(words(square.why)[0]!.steps.at(-1)).toBe(W.nets)
     explained(m)
   })
 
@@ -143,8 +145,8 @@ describe('sin banco: each transfer comes from two positions (MONEY-07)', () => {
       { label: W.bankPays, amount: -4000 },
     ])
     const p3 = m.peerToPeer.find((x) => x.from === 'p3')!
-    expect(p3.why[0]).toEqual({ title: W.owesTotal('J3', '$1,000'), steps: ['Inscripción: −$1,000'] })
-    expect(p3.why[2]!.steps[1]).toBe(W.share('J3', '$1,000', `$${p3.amount.toLocaleString('en-US')}`, p3.to === null ? t.moneyScreen.bank : snap.players.find((p) => p.id === p3.to)!.displayName))
+    expect(words(p3.why)[0]).toEqual({ title: W.owesTotal('J3', '$1,000'), steps: ['Inscripción: −$1,000'] })
+    expect(words(p3.why)[2]!.steps[1]).toBe(W.share('J3', '$1,000', `$${p3.amount.toLocaleString('en-US')}`, p3.to === null ? t.moneyScreen.bank : snap.players.find((p) => p.id === p3.to)!.displayName))
     explained(m)
   })
 
@@ -167,7 +169,7 @@ describe('the bank says what moves its two figures (MONEY-07)', () => {
     const { s, snap } = fourPlayers({ houseCut: 400 })
     const auction = { lots: [{ lotId: 'lot1', playerId: 'p1', lotNumber: 1, status: 'sold', price: 800, ownerId: 'p2', buybackPct: 0, buybackAmount: 0 }] } as unknown as AuctionState
     const m = money(snap, s, [prize('p1', 3000), prize('p2', 800, { moduleId: 'auction', potId: 'calcutta', label: 'Calcutta, campeón' })], auction)
-    expect(m.banker.why.steps).toEqual([
+    expect(words(m.banker.why).steps).toEqual([
       W.gross,
       W.bankIn(W.entries(4, '$1,000'), '$4,000'),
       W.bankIn(W.lots(1), '$800'),

@@ -22,6 +22,7 @@ import type { Backup } from './backup'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import { fakeSupabase, type FakeSupabase } from './testing/fakeSupabase'
 import { asStored, snapshotToRows } from './testing/rows'
+import { words } from '../engine/testing/words'
 
 let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
@@ -228,7 +229,7 @@ describe('golden: the first tournament’s shape (QA-07)', () => {
     expect(data.snapshot.snakeTiebreaks).toEqual([{ roundId: 'r2', groupId: 'r2g1', hole: 5, lastHoledPlayerId: 'p4' }])
     expect(data.snapshot).toEqual(stored)
     expect(data.state).toEqual(own)
-    expect(data.state.core.warnings).toEqual([])
+    expect(words(data.state.core.warnings)).toEqual([])
   })
 
   it('Day 2 strokes follow each player’s own tee: p6 and p10 both play off 13, and the forward tees’ card turns hole 5 and hole 11 around', async () => {
@@ -249,7 +250,7 @@ describe('golden: the first tournament’s shape (QA-07)', () => {
     const { data } = await loadCabos()
     expect(data.snapshot.players.find((p) => p.id === 'p9')!.baseHcp).toBe(21.9)
     expect(data.state.core.handicaps.p9!.base).toBe(21.9)
-    expect(data.state.core.rounds.r1!.p9!.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', 'Se juega con el 80%: 80% de 21.9 = 17.52', 'Redondeado al entero: 18'])
+    expect(words(data.state.core.rounds.r1!.p9!.playingHcpWhy).steps).toEqual(['Hándicap base 21.9', 'Se juega con el 80%: 80% de 21.9 = 17.52', 'Redondeado al entero: 18'])
   })
 
   it('the stored answer decides who holds the snake: p4 holed out last on the 5th, so the pass on the 6th counts too', async () => {

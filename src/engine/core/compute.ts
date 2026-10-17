@@ -6,9 +6,8 @@ import type { TournamentSettings } from '../settings/schema'
 import type { Explanation, Hole, Id, Player, Round, Score, Snapshot, Tee } from '../types'
 import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
-import { netScoreName, stablefordPoints } from './stableford'
-import { withTrueMinus } from '../formats/format'
-import { handicapText, ptsText } from '../../i18n/es-MX'
+import { stablefordPoints } from './stableford'
+import { msg, say, type Msg } from '../messages'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
@@ -24,29 +23,23 @@ export function nineHoleRanks(holes: Hole[]): Map<number, number> {
 
 /**
  * How a hole's points came out, from the hole's own figures: its par and
- * stroke index, the strokes received, the gross, the net and the points.
- *
- * COPY-19: a sentence first, in words («5 golpes en un par 4, con 1 golpe de
- * ventaja: 4 neto, par neto, 2 pts»), then the arithmetic, whose «+ 2» is
- * said once: a net par is worth two points.
+ * stroke index, the strokes received, the gross, the net and the points
+ * (COPY-19's words are `explain`'s `hole.*`).
  */
 export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>): Explanation {
-  const { par, strokesReceived: sr, gross: g, points: pts } = r
-  const golpes = (n: number) => `${n} ${n === 1 ? 'golpe' : 'golpes'}`
-  const raw = par + sr - (g ?? 0) + 2
+  const { par, strokesReceived: received, points } = r
+  const gross = r.gross ?? 0
   return {
-    title: ptsText(pts),
+    title: msg('pts', { n: points }),
     steps: r.played
       ? r.pickedUp
-        ? ['Levantó (dejó el hoyo sin terminarlo): cuenta 0 pts']
+        ? [say('hole.pickedUp')]
         : [
-            // A plus handicap gives a stroke back here (MONEY-21): «dando 1 golpe», «5 + 1 = 6 neto», «4 − 1 − 5 + 2».
-            `${golpes(g ?? 0)} en un par ${par}, ${sr > 0 ? `con ${golpes(sr)} de ventaja` : sr < 0 ? `dando ${golpes(-sr)} (hándicap por debajo de 0)` : 'sin golpes de ventaja'} en este hoyo (índice de golpe ${r.strokeIndex}): ${withTrueMinus(r.net ?? 0)} neto, ${netScoreName(pts)}, ${ptsText(pts)}`,
-            `${g} ${sr < 0 ? '+' : '−'} ${Math.abs(sr)} = ${withTrueMinus(r.net ?? 0)} neto`,
-            // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, que cuenta 0 pts», never «= 0».
-            `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${par} ${sr < 0 ? '−' : '+'} ${Math.abs(sr)} − ${g} + 2 = ${raw < 0 ? `${withTrueMinus(raw)}, que cuenta 0 pts` : ptsText(pts)}`,
+            msg('hole.played', { gross, par, received, si: r.strokeIndex, net: r.net ?? 0, points }),
+            msg('hole.net', { gross, received, net: r.net ?? 0 }),
+            msg('hole.points', { par, received, gross, points }),
           ]
-      : ['Sin capturar'],
+      : [say('hole.unplayed')],
   }
 }
 
@@ -68,6 +61,7 @@ function sharedHoleWhy(par: number, strokeIndex: number, sr: number, g: number |
   let why = HOLE_WHY.get(key)
   if (!why) {
     const built = fresh()
+    for (const m of [built.title, ...built.steps]) Object.freeze(Object.freeze(m).params)
     Object.freeze(built.steps)
     why = Object.freeze(built)
     if (HOLE_WHY.size >= 20_000) HOLE_WHY.clear()
@@ -118,19 +112,19 @@ export function baseHandicap(player: Pick<Player, 'handicapSource' | 'baseHcp' |
       source: 'index',
       base: idx,
       estimated: false,
-      why: { title: `Índice ${handicapText(idx)}`, steps: ['Índice de hándicap capturado por el Comité'] },
+      why: { title: msg('hcp.indexTitle', { value: idx }), steps: [say('hcp.indexTyped')] },
     }
   }
   return {
     source: 'manual',
     base: player.baseHcp,
     estimated: false,
-    why: { title: `Hándicap base ${handicapText(player.baseHcp)}`, steps: ['Capturado por el Comité; se usa tal cual'] },
+    why: { title: msg('hcp.baseTitle', { value: player.baseHcp }), steps: [say('hcp.baseTyped')] },
   }
 }
 
 export function computeCore(snapshot: Snapshot, settings: TournamentSettings): CoreState {
-  const warnings: string[] = []
+  const warnings: Msg[] = []
   const tees = teeById(snapshot)
   const rounds = activeRounds(snapshot)
   const players = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder)
@@ -149,7 +143,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
   }
 
   // Cumulative cut per player as rounds go by.
-  const cutsSoFar: Record<Id, { total: number; steps: string[] }> = {}
+  const cutsSoFar: Record<Id, { total: number; steps: Msg[] }> = {}
   const prevPoints: Record<Id, number | null> = {}
   for (const p of players) {
     cutsSoFar[p.id] = { total: 0, steps: [] }
@@ -163,16 +157,16 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const hc = handicaps[p.id]!
       const tee = teeForPlayerRound(snapshot, round, p, tees)
       if (!tee && !warnedNoCourse) {
-        warnings.push(`Día ${round.number}: sin campo cargado; se usa par 4 en todos los hoyos.`)
+        warnings.push(msg('core.noCourse', { day: round.number }))
         warnedNoCourse = true
       }
       const holes: Hole[] = tee ? tee.holes.slice(0, round.holes) : placeholderHoles(round.holes)
 
       // Base → course handicap.
       let courseHcp = hc.base
-      const steps: string[] = [hc.why.title]
+      const steps: Msg[] = [hc.why.title]
       // A plus handicap typed by the Comité: the arithmetic below uses it below zero.
-      if (hc.source === 'manual' && hc.base < 0) steps.push(`En la cuenta, ${withTrueMinus(hc.base)}`)
+      if (hc.source === 'manual' && hc.base < 0) steps.push(msg('hcp.plusInSum', { value: hc.base }))
       if (hc.source !== 'manual') {
         const useTee = settings.handicap.perRoundSlope
           ? tee
@@ -190,14 +184,14 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const cuts = cutsSoFar[p.id]!
       if (ri > 0) {
         const prev = prevPoints[p.id]
-        const cut = prev == null ? { value: 0, why: { title: '', steps: ['no jugó: sin recorte'] } } : nextRoundCut(prev, settings.day2Cut)
+        const cut = prev == null ? { value: 0, why: { title: msg('cut.title', { value: 0 }), steps: [say('cut.notPlayed')] } } : nextRoundCut(prev, settings.day2Cut)
         // Rounds 3+: `previous` recomputes from the last round alone; `cumulative` adds the cuts up (§5.2 only defines Day 2).
         if (settings.day2Cut.mode === 'cumulative') {
           cuts.total += cut.value
-          cuts.steps.push(`El día ${round.number - 1} ${cut.why.steps.join('; ')}`)
+          cuts.steps.push(msg('cut.day', { day: round.number - 1, steps: cut.why.steps }))
         } else {
           cuts.total = cut.value
-          cuts.steps = [`El día ${round.number - 1} ${cut.why.steps.join('; ')}`]
+          cuts.steps = [msg('cut.day', { day: round.number - 1, steps: cut.why.steps })]
         }
       }
       // A cut takes strokes away and never adds one (§5.2): it stops at 0, and a plus handicap (MONEY-21), which
@@ -208,9 +202,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       if (cuts.total > 0)
         steps.push(
           ...cuts.steps,
-          ph.value < 0
-            ? `Juega con ${handicapText(ph.value)}: no recibe golpes, así que el recorte no le quita nada`
-            : `Con el recorte: ${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`,
+          ph.value < 0 ? msg('cut.plusKeeps', { value: ph.value }) : msg('cut.applied', { playing: ph.value, cut: cuts.total, after: afterCut }),
         )
       else if (ri > 0) steps.push(...cuts.steps)
       let overridden = false
@@ -218,11 +210,11 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       if (ov) {
         overridden = true
         // A link to watch carries no reason (the Comité's free text stays with the members, STRAT-05).
-        steps.push(`Ajuste del Comité: de ${handicapText(playingHcp)} a ${handicapText(ov.playingHcp)}${ov.reason ? ` (${ov.reason})` : ''}`)
+        steps.push(msg('hcp.override', { from: playingHcp, to: ov.playingHcp, reason: ov.reason || null }))
         playingHcp = ov.playingHcp
       }
-      if (round.holes === 9) steps.push(`Ronda de 9 hoyos: la mitad, ${handicapText(roundHalfUp(playingHcp / 2))}, repartida en los nueve hoyos del más difícil al más fácil`)
-      const playingHcpWhy: Explanation = { title: `Hándicap de juego ${handicapText(playingHcp)}`, steps }
+      if (round.holes === 9) steps.push(msg('hcp.nine', { half: roundHalfUp(playingHcp / 2) }))
+      const playingHcpWhy: Explanation = { title: msg('hcp.playingTitle', { value: playingHcp }), steps }
 
       // Holes.
       const results: HoleResult[] = []

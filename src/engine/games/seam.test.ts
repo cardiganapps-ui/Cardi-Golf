@@ -15,6 +15,7 @@ import { GAME_TYPES, type GameConfig } from '../settings/games'
 import { MODULE_IDS } from '../settings/schema'
 import { fillRound, makeFirstTournament } from '../testing/fixtures'
 import { ALL_GAMES, contestStateOf, isGameOf, type GameResultState } from '.'
+import { words } from '../testing/words'
 
 const pts = (arr: number[]) => new Map(arr.map((p, i) => [i + 1, p]))
 
@@ -160,8 +161,8 @@ describe('a game says its own warnings', () => {
     fillRound(snap, 'r1', 2)
     snap.calcuttaLots = snap.players.map((p, i) => ({ id: `lot${i}`, playerId: p.id, lotNumber: i + 1, status: i === 0 ? 'pending' : 'sold', price: i === 0 ? null : 500, ownerId: i === 0 ? null : p.id, soldAt: null }))
     const state = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS)
-    const own = ALL_MODULES.auction.warnings!(state.modules.auction!, { snapshot: snap, settings: FIRST_TOURNAMENT_SETTINGS, core: state.core, tournamentFinal: state.tournamentFinal, roundFinal: { r1: false, r2: false } })
+    const own = words(ALL_MODULES.auction.warnings!(state.modules.auction!, { snapshot: snap, settings: FIRST_TOURNAMENT_SETTINGS, core: state.core, tournamentFinal: state.tournamentFinal, roundFinal: { r1: false, r2: false } }))
     expect(own).toEqual([expect.stringContaining('1 lote sin vender')])
-    expect(state.flags.warnings).toEqual(expect.arrayContaining(own))
+    expect(words(state.flags.warnings)).toEqual(expect.arrayContaining(own))
   })
 })

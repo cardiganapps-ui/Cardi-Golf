@@ -8,8 +8,7 @@ import { playOrder } from '../../core/playOrder'
 import { isFinal, splitEven } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, PrizeAward } from '../module'
-import { pesos } from '../../core/pesos'
-import { labelInSentence } from '../../../i18n/es-MX'
+import { msg } from '../../messages'
 
 export interface SnakePass {
   hole: number
@@ -56,8 +55,8 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
     const { snapshot, core, settings } = ctx
     const threshold = settings.modules.snake.puttsThreshold
     const perSurvivor = settings.prizes.snakePerSurvivor
-    // The game's own name, in a sentence (STRAT-11): «la Víbora», or whatever the organizer called it.
-    const game = labelInSentence(settings.modules.snake.label)
+    // The game's own name (STRAT-11): «la Víbora» in a sentence, or whatever the organizer called it.
+    const game = settings.modules.snake.label
     const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
     const groups: SnakeGroupState[] = []
     const pending: SnakeState['pending'] = []
@@ -114,12 +113,12 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
               if (pid === holderId) {
                 payouts[pid] = {
                   amount: 0,
-                  why: { title: pesos(0), steps: [`Terminó la ronda con ${game}: fue el último en hacer ${threshold} putts o más, en el hoyo ${passes.at(-1)?.hole}`, `Quien termina con ${game} no cobra`] },
+                  why: { title: msg('amount', { amount: 0 }), steps: [msg('snake.holder', { game, threshold, hole: passes.at(-1)!.hole }), msg('snake.holderPays', { game })] },
                 }
               } else {
                 payouts[pid] = {
                   amount: perSurvivor,
-                  why: { title: pesos(perSurvivor), steps: [`Terminó la ronda sin ${game}: ${nameOf(holderId)} se quedó con ${game}`, `Cada uno de los demás del grupo cobra ${pesos(perSurvivor)} de la bolsa`] },
+                  why: { title: msg('amount', { amount: perSurvivor }), steps: [msg('snake.survivor', { game, holder: nameOf(holderId) }), msg('snake.survivorGets', { amount: perSurvivor })] },
                 }
               }
             }
@@ -129,7 +128,7 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
               const { amount } = shares[i]!
               payouts[pid] = {
                 amount,
-                why: { title: pesos(amount), steps: [`Nadie del grupo hizo ${threshold} putts o más: los ${pesos(pot)} se reparten entre los ${n}`] },
+                why: { title: msg('amount', { amount }), steps: [msg('snake.nobody', { threshold, pot, n })] },
               }
             })
           }

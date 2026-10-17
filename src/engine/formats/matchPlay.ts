@@ -12,7 +12,8 @@
 import { playOrder } from '../core/playOrder'
 import type { CountbackInput } from '../core/ranking'
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation, Id } from '../types'
+import { msg, type Msg } from '../messages'
+import type { ExplanationText, Id } from '../types'
 import { playerEntrants, teamEntrants } from './entrants'
 import type { Entrant, Figure, FormatContext, FormatStandings, MainFormat } from './format'
 import { holeStrokes } from './strokePlay'
@@ -78,20 +79,16 @@ function resultText(up: number, toPlay: number, done: boolean): string {
 }
 
 /** Play every match in every round, from both sides. */
-export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: boolean, net: boolean): { results: MatchResult[]; warnings: string[] } {
+export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: boolean, net: boolean): { results: MatchResult[]; warnings: Msg[] } {
   const results: MatchResult[] = []
-  const warnings: string[] = []
+  const warnings: Msg[] = []
   for (const roundId of ctx.core.roundIds) {
     const round = ctx.snapshot.rounds.find((r) => r.id === roundId)
     const holes = round?.holes ?? 18
     for (const group of ctx.snapshot.groups.filter((g) => g.roundId === roundId)) {
       const sides = sidesOf(group.playerIds, entrants, fourball)
       if (!sides) {
-        warnings.push(
-          fourball
-            ? `Día ${round?.number ?? '?'}, grupo ${group.number}: un fourball necesita dos parejas ya sorteadas en ese grupo.`
-            : `Día ${round?.number ?? '?'}, grupo ${group.number}: un partido individual necesita exactamente dos jugadores.`,
-        )
+        warnings.push(msg(fourball ? 'match.needsPairs' : 'match.needsTwo', { day: round?.number ?? null, group: group.number }))
         continue
       }
       const [a, b] = sides
@@ -140,7 +137,7 @@ export const matchPlayFormat: MainFormat = {
   higherIsBetter: () => true,
   figureLabel: () => 'Puntos',
 
-  describe(settings: TournamentSettings): Explanation {
+  describe(settings: TournamentSettings): ExplanationText {
     const o = settings.modules.individual.formatOptions
     const fourball = o.matchMode === 'fourball'
     return {

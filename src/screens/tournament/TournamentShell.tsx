@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
@@ -83,9 +83,13 @@ export function TournamentShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the tabs, by which ones they are
   useEffect(() => (onCard ? undefined : prefetchScreens(tabScreens)), [tabKey, onCard])
 
+  const headerRef = useRef<HTMLElement>(null)
+  const tabbarRef = useRef<HTMLElement>(null)
+  useBarHeights(headerRef, tabbarRef)
+
   return (
     <div className={styles.wrap} data-accent={nearestAccent(accent).id}>
-      <header className={styles.top}>
+      <header ref={headerRef} className={styles.top}>
         <div className={styles.bar}>
           {logo && <TournamentLogo className={styles.logo} url={logo} />}
           <span className={`grow ${styles.name}`}>{tournament?.name ?? lookup.name}</span>
@@ -101,7 +105,7 @@ export function TournamentShell() {
           {here === '/mas' ? <Outlet /> : <SettingsGuard money={here === '/dinero'}><Outlet /></SettingsGuard>}
         </PullToRefresh>
       </div>
-      <TabBar>
+      <TabBar ref={tabbarRef}>
         {tabs.map((tab) => (
           <TabItem
             key={tab.to}
@@ -130,6 +134,29 @@ export function TournamentShell() {
       </TabBar>
     </div>
   )
+}
+
+/**
+ * The sticky bars' heights, as they are (A11Y-07): `--shell-header` and `--shell-tabbar` on <html>. Both grow with
+ * the text, so the Tarjeta's save bar sits on the tab bar and what the keyboard focuses scrolls clear of both
+ * (A11Y-06) at any text size. It was 56 px in four places: at 200 % the tab bar covered «Guardar hoyo».
+ */
+function useBarHeights(header: RefObject<HTMLElement | null>, tabbar: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const root = document.documentElement.style
+    const set = () => {
+      if (header.current) root.setProperty('--shell-header', `${header.current.offsetHeight}px`)
+      if (tabbar.current) root.setProperty('--shell-tabbar', `${tabbar.current.offsetHeight}px`)
+    }
+    set()
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(set) : null
+    for (const el of [header.current, tabbar.current]) if (el) observer?.observe(el)
+    return () => {
+      observer?.disconnect()
+      root.removeProperty('--shell-header')
+      root.removeProperty('--shell-tabbar')
+    }
+  }, [header, tabbar])
 }
 
 /**

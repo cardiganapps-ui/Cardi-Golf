@@ -5,8 +5,8 @@
  *
  * No file may spell a `btn--` class by hand, except the ones below, each at most as often as it does now. The list
  * only shrinks: a file that converts some of its buttons lowers its number here, one that converts all of them
- * leaves the list. What it holds is the Comité's and the profile's screens,
- * plus two of En vivo's and the Tarjeta's save bar, which other work is changing.
+ * leaves the list. What it holds is the Comité's and the profile's screens; every player screen, the organizer's
+ * and the Admin de Polo's have none.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -65,8 +65,6 @@ const STILL: Record<string, number> = {
   'screens/profile/QuickRoundScreen.tsx': 4,
   'screens/profile/VersusScreen.tsx': 9,
   'screens/spectator/SpectatorNote.tsx': 4,
-  'screens/tournament/LiveScreen.tsx': 6,
-  'screens/tournament/scorecard/SaveBar.tsx': 2,
 }
 
 describe('one button (VIS-17)', () => {
@@ -78,8 +76,8 @@ describe('one button (VIS-17)', () => {
     const stale = Object.entries(STILL).filter(([f, n]) => !files.includes(f) || handSpelled(f) < n)
     expect(stale.map(([f, n]) => `${f}: ${files.includes(f) ? handSpelled(f) : 'gone'} (listed ${n})`)).toEqual([])
   })
-  it('leaves the player screens and the shared components with none', () => {
-    const main = Object.keys(STILL).filter((f) => /^(components|app)\//.test(f) || (/^screens\/tournament\//.test(f) && !/(LiveScreen|scorecard\/SaveBar)\.tsx$/.test(f)) || /^screens\/(HomeScreen|NotFoundScreen)\.tsx$/.test(f))
+  it('leaves every player screen and the shared components with none', () => {
+    const main = Object.keys(STILL).filter((f) => /^(components|app)\//.test(f) || /^screens\/tournament\//.test(f) || /^screens\/(HomeScreen|NotFoundScreen)\.tsx$/.test(f))
     expect(main).toEqual([])
   })
 })

@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { computeTournament } from './computeTournament'
 import { FIRST_TOURNAMENT_SETTINGS } from './settings/presets'
 import { PAR_72, makeFirstTournament, score } from './testing/fixtures'
+import { words } from './testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 const ids = Array.from({ length: 12 }, (_, i) => `p${i + 1}`)
@@ -241,7 +242,7 @@ describe('the first tournament, worked out by hand (QA-18)', () => {
     expect(st.money.banker).toMatchObject({ playerId: 'p1', receives: 38500, pays: 38500, difference: 0, balanced: true })
     expect(st.prizes.every((p) => p.final)).toBe(true)
     expect(st.money.unassigned.total).toBe(0)
-    expect(st.flags.warnings).toEqual([])
+    expect(words(st.flags.warnings)).toEqual([])
   })
 
   it('the settlement, on what is still owed: vía banco and sin banco', () => {
