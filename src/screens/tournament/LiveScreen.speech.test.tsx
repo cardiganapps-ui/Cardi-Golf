@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 /**
  * A11Y-11: on En vivo each row's spoken name carries what the row shows: the
- * player's money «si terminara ahora», his Calcutta owners by name, «(tú)» on
- * my own row, the figure's unit.
+ * player's money «si terminara ahora», «(tú)» on my own row and, there only, its
+ * Calcutta owners by name (VIS-22), the figure's unit.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -35,13 +35,18 @@ describe('En vivo rows say what they show (A11Y-11)', () => {
     expect(labels.length).toBeGreaterThan(5)
     // Someone wins money if it ended now, and the board says how much.
     expect(labels.some((l) => /, ganaría \$[\d,]+/.test(l))).toBe(true)
-    // A sold lot's owners are named, never their initials.
-    const sold = data.state.modules.auction!.lots.find((l) => l.status === 'sold')!
-    const owner = data.snapshot.players.find((p) => p.id === sold.owners[0]!.ownerId)!.displayName
-    expect(labels.some((l) => l.includes(owner) && /dueños?: /.test(l))).toBe(true)
-    // My row says it is mine.
+    // VIS-22: the owners are on my own row only, by name (every row carried their initials), and the category
+    // is not on the board while the tournament is under way.
     const me = data.snapshot.players.find((p) => p.id === fx.me.playerId)!
-    expect(labels.some((l) => l.includes(`${me.displayName} (tú)`))).toBe(true)
+    const myLot = data.state.modules.auction!.lots.find((l) => l.playerId === me.id && l.status === 'sold')!
+    const owner = data.snapshot.players.find((p) => p.id === myLot.owners[0]!.ownerId)!.displayName
+    const mine = labels.find((l) => l.includes(`${me.displayName} (tú)`))!
+    expect(mine).toMatch(new RegExp(`dueños?: [^,]*${owner}`))
+    expect(labels.filter((l) => /dueños?: /.test(l))).toEqual([mine])
+    expect(labels.filter((l) => /categoría/.test(l))).toEqual([])
+    const shown = screen.getAllByRole('button').filter((b) => b.getAttribute('aria-label') === mine)[0]!
+    expect(shown.textContent).toMatch(/dueños?: /)
+    expect(document.querySelectorAll('.tierBadge')).toHaveLength(0)
     // Points are said as points.
     expect(labels.every((l) => !/, \d+$/.test(l))).toBe(true)
   })

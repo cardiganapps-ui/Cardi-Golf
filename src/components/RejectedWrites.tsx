@@ -26,6 +26,8 @@ import { ConfirmSheet } from './ConfirmSheet'
 import { Sheet } from './ui'
 import { toast } from './toast'
 import styles from './RejectedWrites.module.css'
+import { Button } from './primitives'
+import { buttonClass } from './buttonClass'
 
 const IB = t.admin.inbox
 
@@ -125,7 +127,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
       </strong>
       <span className={styles.hint}>{hint}</span>
       {!canResend && (
-        <button className={`btn btn--secondary btn--sm ${styles.send}`} type="button" onClick={() => void sendToComite(text, setManual)}>
+        <button className={buttonClass({ size: 'sm' }, styles.send)} type="button" onClick={() => void sendToComite(text, setManual)}>
           {IB.sendToComite}
         </button>
       )}
@@ -140,13 +142,13 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
             </span>
             <span className={styles.actions}>
               {resendable(r) && (
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => void retryRejected(r.key)} aria-label={`${IB.resend}: ${describe(r)}`}>
+                <Button size="sm" onClick={() => void retryRejected(r.key)} aria-label={`${IB.resend}: ${describe(r)}`}>
                   {IB.resend}
-                </button>
+                </Button>
               )}
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setDiscarding(r)} aria-label={`${IB.discard}: ${describe(r)}`}>
+              <Button variant="ghost" size="sm" onClick={() => setDiscarding(r)} aria-label={`${IB.discard}: ${describe(r)}`}>
                 {IB.discard}
-              </button>
+              </Button>
             </span>
           </div>
         ))}

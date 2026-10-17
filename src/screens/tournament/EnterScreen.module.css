@@ -9,54 +9,63 @@
   flex-direction: column;
   gap: var(--s2);
 }
+/*
+ * VIS-18: the faces are ruled rows, two to a line, the name first. They were 132 px tiles led by an 88 px grey
+ * disc over a 14 px name, and twelve did not fit on an iPhone 15 Pro; now twelve fit above the fold of a
+ * 375×667 phone. A player with no photo has his monogram on a tint of his own (Avatar's `seed`).
+ */
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s2);
-}
-.gridDense {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--s3);
+  border-top: var(--hairline);
 }
 .face {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: var(--s2);
-  padding: var(--s3) var(--s1);
-  min-height: 132px;
-  border: var(--hairline);
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
+  min-height: var(--row-h);
+  padding: var(--s1) var(--s1) var(--s1) 0;
+  border: 0;
+  border-bottom: var(--hairline);
+  background: transparent;
   color: var(--ink);
   font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 .gridDense .face {
-  flex-direction: row;
-  justify-content: flex-start;
   min-height: var(--s12);
-  padding: var(--s1) var(--s2);
-  text-align: left;
 }
 .face:active {
   background: var(--surface);
 }
+.faceText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
 .faceName {
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
   line-height: var(--lh-ui);
-  text-align: center;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.faceTier {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  line-height: var(--lh-ui);
 }
 .faceAsk {
   font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--accent);
-}
-.gridDense .faceName {
-  text-align: left;
-  flex: 1;
-  min-width: 0;
 }
 .pinStep {
   display: flex;

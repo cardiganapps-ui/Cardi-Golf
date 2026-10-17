@@ -15,7 +15,7 @@ import { motion, useReducedMotion } from 'motion/react'
 import { useId, useMemo, useRef, useState } from 'react'
 import { netScoreName, t } from '../../i18n/es-MX'
 import { toast } from '../../components/toast'
-import { EmptyState } from '../../components/primitives'
+import { Button, EmptyState } from '../../components/primitives'
 import { IconSnake } from '../../components/icons'
 import { enqueueSignature, useOutbox, type HoleFields } from '../../data/outbox'
 import { RejectedWrites } from '../../components/RejectedWrites'
@@ -284,9 +284,9 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
           {pairsOn && rivalPair && <span>{S.keeping(pairName(rivalPair))}</span>}
           <RivalryLines tournamentId={tournamentId} group={group} />
         </div>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => nav.setView(view === 'hole' ? 'grid' : 'hole')}>
+        <Button variant="ghost" size="sm" onClick={() => nav.setView(view === 'hole' ? 'grid' : 'hole')}>
           {view === 'hole' ? S.grid : S.holeView}
-        </button>
+        </Button>
       </div>
 
       {view === 'grid' ? (

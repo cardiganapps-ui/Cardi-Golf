@@ -13,6 +13,7 @@ import { retryAuth } from '../data/auth'
 import { resetApp } from '../lib/resetApp'
 import { Wordmark } from './Wordmark'
 import styles from './BootProblem.module.css'
+import { buttonClass } from './buttonClass'
 
 /** `saved`: the slug of a tournament whose boards this phone saved (home passes it; the crash screens, outside the router, never do). */
 export function BootProblem({ kind, saved }: { kind: 'timeout' | 'error' | 'crash'; saved?: string }) {
@@ -25,13 +26,13 @@ export function BootProblem({ kind, saved }: { kind: 'timeout' | 'error' | 'cras
       <p className={styles.body}>{kind === 'crash' ? B.crashBody : B.slowBody}</p>
       <div className={styles.actions}>
         {saved && (
-          <Link className="btn btn--primary btn--block" to={`/t/${saved}`}>
+          <Link className={buttonClass({ variant: 'primary', block: true })} to={`/t/${saved}`}>
             {B.openSaved}
           </Link>
         )}
         {kind !== 'crash' && (
           <button
-            className={`btn btn--block ${saved ? 'btn--secondary' : 'btn--primary'}`}
+            className={buttonClass({ variant: saved ? 'secondary' : 'primary', block: true })}
             type="button"
             disabled={busy}
             onClick={() => {
@@ -42,7 +43,7 @@ export function BootProblem({ kind, saved }: { kind: 'timeout' | 'error' | 'cras
             {busy ? B.retrying : B.retry}
           </button>
         )}
-        <button className={`btn btn--block ${kind === 'crash' ? 'btn--primary' : 'btn--secondary'}`} type="button" onClick={() => void resetApp()}>
+        <button className={buttonClass({ variant: kind === 'crash' ? 'primary' : 'secondary', block: true })} type="button" onClick={() => void resetApp()}>
           {B.reset}
         </button>
       </div>

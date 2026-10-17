@@ -18,7 +18,7 @@ import { IconCheck } from '../../components/icons'
 import { ShareCardButton } from '../../components/ShareCard'
 import { Avatar, Segmented, ShareButton } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { EmptyState, Money } from '../../components/primitives'
+import { Button, EmptyState, Money } from '../../components/primitives'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { applyPaidWrites, collectible, markPaidWrites, restorePaidWrites, stillOwes, unmarkPaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
@@ -31,6 +31,7 @@ import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
 import { useCurrency } from '../../components/currency'
+import { buttonClass } from '../../components/buttonClass'
 import { renderMsg } from '../../i18n/explain'
 
 const M = t.moneyScreen
@@ -238,9 +239,9 @@ export function MoneyScreen() {
       <span className={styles.amount}>{formatMoney(a.due, cur)}</span>
       {me.isComite && (
         <span className={styles.action}>
-          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid([a], e.currentTarget)} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
+          <Button size="sm" data-money-action disabled={busy > 0} onClick={(e) => void markPaid([a], e.currentTarget)} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
             {M.markPaid}
-          </button>
+          </Button>
         </span>
       )}
     </div>
@@ -266,10 +267,10 @@ export function MoneyScreen() {
       <span className={styles.amount}>{formatMoney(a.paid, cur)}</span>
       {me.isComite && (
         <span className={styles.action}>
-          <button className="btn btn--ghost btn--sm" type="button" aria-pressed="true" data-money-action disabled={busy > 0} onClick={(e) => void unmarkPaid(a, e.currentTarget)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
+          <Button variant="ghost" size="sm" aria-pressed="true" data-money-action disabled={busy > 0} onClick={(e) => void unmarkPaid(a, e.currentTarget)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
             <IconCheck size={16} />
             {M.paid}
-          </button>
+          </Button>
         </span>
       )}
     </div>
@@ -328,7 +329,7 @@ export function MoneyScreen() {
       <div className={styles.head}>
         <h1>{t.nav.money}</h1>
         <span className={styles.headActions}>
-          <ShareCardButton what={shareWhat} className="btn btn--ghost btn--sm" label={t.common.share} />
+          <ShareCardButton what={shareWhat} className={buttonClass({ variant: 'ghost', size: 'sm' })} label={t.common.share} />
           <ShareButton text={shareText} url={spectator?.url} title={M.shareTitle(snapshot.tournament.name)} />
         </span>
       </div>
@@ -462,7 +463,7 @@ export function MoneyScreen() {
             </section>
           ))}
           {!spectator && (
-            <Link className="btn btn--ghost btn--sm" to={`${base}/reglamento`}>
+            <Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to={`${base}/reglamento`}>
               {M.seeRules}
             </Link>
           )}
@@ -529,9 +530,9 @@ export function MoneyScreen() {
                     {markable && (
                       <span className={styles.action}>
                         {canMark && (
-                          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid(tr.settles!, e.currentTarget)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
+                          <Button size="sm" data-money-action disabled={busy > 0} onClick={(e) => void markPaid(tr.settles!, e.currentTarget)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
                             {M.markPaid}
-                          </button>
+                          </Button>
                         )}
                       </span>
                     )}

@@ -313,3 +313,9 @@
   padding: var(--s2) var(--s3);
   border-radius: var(--r-sm);
 }
+
+/* The «foco» state of a button, shown at rest. */
+.demoFocus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

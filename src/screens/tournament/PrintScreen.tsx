@@ -10,7 +10,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { handicapText, t } from '../../i18n/es-MX'
 import { Segmented } from '../../components/ui'
-import { SiAbbr } from '../../components/primitives'
+import { Button, SiAbbr } from '../../components/primitives'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { useTournamentCtx } from './tournamentContext'
@@ -22,6 +22,7 @@ import { formatMoney } from '../../lib/money'
 import { strokeMarks } from '../../lib/strokeMarks'
 import type { TournamentData } from '../../data/tournamentStore'
 import { useCurrency } from '../../components/currency'
+import { buttonClass } from '../../components/buttonClass'
 
 const P = t.print
 
@@ -48,7 +49,7 @@ export function PrintScreen() {
     // Ink on white in either theme: what is on screen is what prints (VIS-11).
     <div className={styles.page} data-theme="light">
       <div className={`${styles.toolbar} noprint`}>
-        <Link to={`/t/${slug}/admin/datos`} className="btn btn--ghost btn--sm">
+        <Link to={`/t/${slug}/admin/datos`} className={buttonClass({ variant: 'ghost', size: 'sm' })}>
           {t.common.back}
         </Link>
         {auction && (
@@ -63,9 +64,9 @@ export function PrintScreen() {
           />
         )}
         {!sheet && rounds.length > 1 && <Segmented value={current?.id ?? ''} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />}
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => window.print()}>
+        <Button variant="primary" size="sm" onClick={() => window.print()}>
           <IconPrint /> {P.print}
-        </button>
+        </Button>
       </div>
       {sheet && <AuctionSheet data={data} />}
       {!sheet && !current && <p className="help">{t.live.noRounds}</p>}

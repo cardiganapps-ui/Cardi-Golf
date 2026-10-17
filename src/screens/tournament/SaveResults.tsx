@@ -21,6 +21,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './SaveResults.module.css'
+import { buttonClass } from '../../components/buttonClass'
 
 const S = t.saveResults
 
@@ -70,11 +71,11 @@ export function SaveResults({ board = false }: { board?: boolean }) {
         ))}
       </ul>
       {mode === 'convert' ? (
-        <Link className={`btn btn--primary ${board ? styles.bigBtn : 'btn--block'}`} to={`/entrar?next=${encodeURIComponent(back)}`}>
+        <Link className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)} to={`/entrar?next=${encodeURIComponent(back)}`}>
           {S.action}
         </Link>
       ) : (
-        <button className={`btn btn--primary ${board ? styles.bigBtn : 'btn--block'}`} type="button" disabled={busy} onClick={() => void link()}>
+        <button className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)} type="button" disabled={busy} onClick={() => void link()}>
           {busy ? t.common.saving : S.actionHere}
         </button>
       )}

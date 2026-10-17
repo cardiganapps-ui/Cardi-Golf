@@ -11,7 +11,7 @@ import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { EmptyState } from '../../components/primitives'
+import { Button, EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { NoticeNote } from '../../components/LegalLinks'
 import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, verifyCourse, type CatalogCourse, type CourseDraft } from '../../data/api'
@@ -257,16 +257,16 @@ export function AdminCourses() {
       {/* Before the buttons: a photo goes to Anthropic to be read (TRUST-04, TRUST-05). */}
       <NoticeNote note={t.legal.scorecardNote} id={photoNoteId} />
       <div className={a.chipRow}>
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => setMode('search')}>
+        <Button variant="primary" size="sm" onClick={() => setMode('search')}>
           {C.search}
-        </button>
-        <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={reading} aria-describedby={photoNoteId}>
+        </Button>
+        <Button size="sm" onClick={() => fileRef.current?.click()} disabled={reading} aria-describedby={photoNoteId}>
           {C.photo}
-        </button>
+        </Button>
         <input ref={fileRef} type="file" accept="image/*,application/pdf" hidden onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])} />
-        <button
-          className="btn btn--secondary btn--sm"
-          type="button"
+        <Button
+          size="sm"
+         
           onClick={() => {
             pendingPhoto.current = null
             pendingCourseId.current = null
@@ -275,7 +275,7 @@ export function AdminCourses() {
           }}
         >
           {C.manual}
-        </button>
+        </Button>
       </div>
       {reading && <Spinner label={C.photoReading} />}
       {loading && <Spinner />}
@@ -301,14 +301,14 @@ export function AdminCourses() {
                 </span>
               </button>
               {mayVerify && played.has(c.id) && !c.verifiedAt && c.tees > 0 && (
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => setVerifying(c)}>
+                <Button size="sm" onClick={() => setVerifying(c)}>
                   {C.verify}
-                </button>
+                </Button>
               )}
               {c.createdBy === uid ? (
-                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskDelete(c.id)}>
+                <Button variant="ghost" size="sm" onClick={() => setAskDelete(c.id)}>
                   {t.common.delete}
-                </button>
+                </Button>
               ) : (
                 <span className={a.rowSub}>{C.notMine}</span>
               )}
@@ -344,9 +344,9 @@ export function AdminCourses() {
             }}
           >
             <input className="input grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={C.searchPlaceholder} autoFocus />
-            <button className="btn btn--primary" type="submit" disabled={busy || q.trim().length < 2}>
+            <Button variant="primary" type="submit" disabled={busy || q.trim().length < 2}>
               {t.common.search}
-            </button>
+            </Button>
           </form>
           {busy && <Spinner />}
           {searchMsg && <p className={a.help}>{searchMsg}</p>}
@@ -421,9 +421,9 @@ export function AdminCourses() {
                 />
               </label>
             ))}
-            <button className="btn btn--primary" type="button" disabled={pick.size === 0} onClick={importPicked}>
+            <Button variant="primary" disabled={pick.size === 0} onClick={importPicked}>
               {C.import}
-            </button>
+            </Button>
           </div>
         )}
       </Sheet>
