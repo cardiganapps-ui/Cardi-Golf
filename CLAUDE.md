@@ -810,6 +810,7 @@ Tabs: Individual · Matrimonios · Mejor ronda · Víbora · Putts · Calcutta.
 - **Mejor ronda:** today's table.
 - **Víbora:** each group's current holder (animated snake icon on his avatar), pass history hole by hole, and "en juego: $600".
 - **Putts:** totals, with average putts per hole.
+- **No figure is cut off** (2026-10-17, found by PR 229's large-text work): a board row's sub line that carries figures (each day's points beside a pair, «1.69 por hoyo, 11 a uno, 2 a tres») wraps instead of ending in an ellipsis, and so does Dinero's «Pone $6,000, recibe $8,200» (`rowSubWrap`). `e2e/fixtures/figures.spec.ts` holds every box with a digit in its own text to its width on those views at 375 and 393 px.
 - **Calcutta:** owners and shares, the pot, and live "valor si terminara ahora" per owner.
 
 ### 9.5 Jugador (player sheet)
