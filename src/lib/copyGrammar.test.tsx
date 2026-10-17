@@ -20,6 +20,7 @@ import { holeWhy } from '../engine/core/compute'
 import { nextRoundCut } from '../engine/core/handicap'
 import { GAME_ENTRIES } from '../engine/games/catalog'
 import { describeGame } from '../engine/games/describe'
+import { msg } from '../engine/messages'
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import type { GameConfig } from '../engine/settings/games'
 import { ptsText, t } from '../i18n/es-MX'
@@ -98,9 +99,9 @@ describe('the words agree with what happened', () => {
     expect(words(nextRoundCut(37, cut).why).steps[0]).toBe('hizo 37 pts: 37 − 36 = 1 pt de más')
     expect(words(nextRoundCut(37, cut).why).steps[1]).toBe('se recorta 1 golpe por cada punto de más: 1 ÷ 1 = 1 golpe')
     expect(words(nextRoundCut(1, cut).why).steps[0]).toBe('hizo 1 pt, no más de 36: sin recorte')
-    const rules = t.rules.handicaps(80, 54, t.rules.rounding.halfUp, { ...cut, threshold: 1 }, { rounds: 2, points: true, nine: false }).join(' ')
+    const rules = words(msg('rules.cut', { days: 2, threshold: 1, per: 1, max: 4, cumulative: false, points: true }))
     expect(rules).toContain('más de 1 punto, para el día 2 se te recorta 1 golpe por cada punto por encima')
-    expect(t.rules.handicaps(80, 54, t.rules.rounding.halfUp, { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 }, { rounds: 2, points: false, nine: false }).join(' ')).toContain(
+    expect(words(msg('rules.cut', { days: 2, threshold: 36, per: 2, max: 4, cumulative: false, points: false }))).toContain(
       'más de 36 puntos Stableford, para el día 2 se te recorta 1 golpe por cada 2 puntos por encima',
     )
   })
@@ -126,11 +127,11 @@ describe('the words agree with what happened', () => {
 
   it('a contest on one hole says «el hoyo»; the greenie has its verb', () => {
     const closest = GAME_ENTRIES.find((e) => e.key === 'closest')!.create('g1') as Extract<GameConfig, { type: 'contest' }>
-    expect(describeGame({ ...closest, options: { ...closest.options, holes: [14] } }).join(' ')).toContain('en el hoyo 14.')
-    expect(describeGame({ ...closest, options: { ...closest.options, holes: [3, 7] } }).join(' ')).toContain('en los hoyos 3 y 7.')
+    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [14] } })).join(' ')).toContain('en el hoyo 14.')
+    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [3, 7] } })).join(' ')).toContain('en los hoyos 3 y 7.')
     const greenie = GAME_ENTRIES.find((e) => e.key === 'greenies')!
-    expect(describeGame(greenie.create('g2')).join(' ')).toContain('llega al green desde la salida en un par 3 y hace par o mejor')
-    expect(greenie.blurb).toBe('Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.')
+    expect(words(describeGame(greenie.create('g2'))).join(' ')).toContain('llega al green desde la salida en un par 3 y hace par o mejor')
+    expect(t.setup.catalog.games[greenie.key]!.blurb).toBe('Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.')
     expect(t.admin.tournament.selfCounts).toBe('Comprarse a sí mismo cuenta para el máximo')
   })
 })

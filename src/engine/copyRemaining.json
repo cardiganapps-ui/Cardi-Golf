@@ -4,6 +4,12 @@
       "defaultLabel": "a module's, game's or format's default label: what a new tournament stores in its settings, renamed per tournament (§0.5)"
     },
     "files": {
+      "src/engine/games/catalog.ts": [
+        "label"
+      ],
+      "src/engine/games/presets.ts": [
+        "label"
+      ],
       "src/engine/settings/presets.ts": [
         "label",
         "lastPlace",
@@ -16,42 +22,31 @@
     "src/engine/core/money.ts": 1,
     "src/engine/formats/bracket.ts": 6,
     "src/engine/formats/entrants.ts": 1,
-    "src/engine/formats/matchPlay.ts": 12,
-    "src/engine/formats/stableford.ts": 8,
-    "src/engine/formats/strokePlay.ts": 11,
-    "src/engine/formats/team.ts": 16,
-    "src/engine/games/catalog.ts": 40,
+    "src/engine/formats/matchPlay.ts": 3,
+    "src/engine/formats/stableford.ts": 1,
+    "src/engine/formats/strokePlay.ts": 2,
+    "src/engine/formats/team.ts": 3,
     "src/engine/games/contest/index.ts": 8,
     "src/engine/games/custom/index.ts": 5,
-    "src/engine/games/describe.ts": 44,
     "src/engine/games/eventPot/index.ts": 12,
     "src/engine/games/lowScore/index.ts": 8,
     "src/engine/games/match/index.ts": 17,
     "src/engine/games/payout.ts": 3,
-    "src/engine/games/presets.ts": 13,
     "src/engine/games/skins/index.ts": 11,
     "src/engine/modules/auction/index.ts": 4,
     "src/engine/modules/bestRound/index.ts": 1,
-    "src/engine/modules/snake/index.ts": 1,
-    "src/engine/settings/games.ts": 5,
-    "src/engine/settings/prizeCheck.ts": 24,
-    "src/engine/settings/schema.ts": 8
+    "src/engine/modules/snake/index.ts": 1
   },
   "i18nImports": [
     "src/engine/core/money.ts",
     "src/engine/core/unassigned.ts",
     "src/engine/formats/entrants.ts",
     "src/engine/games/contest/index.ts",
-    "src/engine/games/describe.ts",
     "src/engine/games/lowScore/index.ts",
     "src/engine/games/match/index.ts",
     "src/engine/games/payout.ts",
     "src/engine/modules/auction/index.ts",
     "src/engine/modules/individual/index.ts",
-    "src/engine/modules/pairs/index.ts",
-    "src/engine/settings/describeModule.ts",
-    "src/engine/settings/prizeCheck.ts",
-    "src/engine/settings/reglamento.ts",
-    "src/engine/settings/sense.ts"
+    "src/engine/modules/pairs/index.ts"
   ]
 }

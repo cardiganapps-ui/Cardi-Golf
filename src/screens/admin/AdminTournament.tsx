@@ -532,7 +532,7 @@ export function AdminTournament() {
               <span>{t.admin.sense.nearSave}</span>
               <ul>
                 {sense.map((x) => (
-                  <li key={`${x.key}:${x.text}`}>{x.text}</li>
+                  <li key={`${x.key}:${JSON.stringify(x.says.params)}`}>{words(x.says)}</li>
                 ))}
               </ul>
             </div>

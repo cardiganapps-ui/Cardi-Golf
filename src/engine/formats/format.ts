@@ -21,7 +21,7 @@ import type { CountbackInput } from '../core/ranking'
 import type { CoreState } from '../core/types'
 import type { TournamentSettings } from '../settings/schema'
 import type { Msg } from '../messages'
-import type { ExplanationText, Id, Snapshot } from '../types'
+import type { Explanation, Id, Snapshot } from '../types'
 
 export const FORMAT_IDS = ['stableford', 'strokePlay', 'matchPlay', 'team'] as const
 export type FormatId = (typeof FORMAT_IDS)[number]
@@ -99,7 +99,7 @@ export interface MainFormat {
    */
   higherIsBetter(settings: TournamentSettings): boolean
   /** How the format explains itself, for the info sheet and the Reglamento. */
-  describe(settings: TournamentSettings): ExplanationText
+  describe(settings: TournamentSettings): Explanation
   standings(ctx: FormatContext): FormatStandings
 }
 

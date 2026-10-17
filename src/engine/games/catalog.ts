@@ -1,30 +1,21 @@
 /**
  * The game catalog the setup screens show: every game a tournament can turn
- * on, grouped, with a plain-Spanish blurb and a factory for a new instance.
- * The six original games (`settings.modules`) are listed too so the organizer
- * sees one catalog.
+ * on, grouped, with a factory for a new instance. The six original games
+ * (`settings.modules`) are listed too so the organizer sees one catalog.
+ * Each entry's title and blurb are copy, by its id or key (`t.setup.catalog`,
+ * ARCH-05); a factory's `label` is settings data, what a new game stores.
  */
 import type { ModuleId } from '../settings/schema'
 import type { GameConfig, GameMoney, GameType } from '../settings/games'
 
 export type CatalogCategory = 'main' | 'hole' | 'round' | 'matches' | 'specials' | 'free'
 
-export const CATEGORY_LABEL: Record<CatalogCategory, string> = {
-  main: 'Lo principal',
-  hole: 'Por hoyo',
-  round: 'Por ronda',
-  matches: 'Parejas y partidos',
-  specials: 'Premios especiales',
-  free: 'Libres',
-}
-
 export interface ModuleEntry {
   kind: 'module'
   id: ModuleId
   category: CatalogCategory
-  blurb: string
-  /** Needs setup after players exist (draw, auction night). */
-  later?: string
+  /** Needs setup after players exist (draw, auction night): the card says where. */
+  later?: true
 }
 
 export interface GameEntry {
@@ -33,9 +24,8 @@ export interface GameEntry {
   key: string
   type: GameType
   category: CatalogCategory
-  title: string
-  blurb: string
-  later?: string
+  /** Its matches are set up after players exist, in Comité. */
+  later?: true
   create: (id: string) => GameConfig
 }
 
@@ -43,12 +33,12 @@ const m = (over: Partial<GameMoney>): GameMoney => ({ source: 'none', buyIn: 0, 
 const base = { enabled: true, rounds: 'all' as const, entrants: 'all' as const }
 
 export const MODULE_ENTRIES: ModuleEntry[] = [
-  { kind: 'module', id: 'individual', category: 'main', blurb: 'Stableford con hándicap: la tabla principal del torneo.' },
-  { kind: 'module', id: 'bestRound', category: 'round', blurb: 'Un premio cada día para la mejor ronda en puntos.' },
-  { kind: 'module', id: 'pairs', category: 'matches', blurb: 'Parejas fijas que suman sus puntos todo el torneo.', later: 'El sorteo de parejas se hace en Comité.' },
-  { kind: 'module', id: 'snake', category: 'hole', blurb: 'La tiene el último que hizo tres putts en su grupo; los demás cobran.' },
-  { kind: 'module', id: 'fewestPutts', category: 'specials', blurb: 'Premio para quien haga menos putts en todo el torneo.' },
-  { kind: 'module', id: 'auction', category: 'specials', blurb: 'Subasta de jugadores antes del primer día, con su propio pozo.', later: 'La subasta se corre en Comité.' },
+  { kind: 'module', id: 'individual', category: 'main' },
+  { kind: 'module', id: 'bestRound', category: 'round' },
+  { kind: 'module', id: 'pairs', category: 'matches', later: true },
+  { kind: 'module', id: 'snake', category: 'hole' },
+  { kind: 'module', id: 'fewestPutts', category: 'specials' },
+  { kind: 'module', id: 'auction', category: 'specials', later: true },
 ]
 
 export const GAME_ENTRIES: GameEntry[] = [
@@ -57,8 +47,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'skins',
     type: 'skins',
     category: 'hole',
-    title: 'Skins',
-    blurb: 'Cada hoyo lo gana quien hace menos golpes, solo. Empate: se acumula.',
     create: (id) => ({ ...base, id, type: 'skins', label: 'Skins', options: { basis: 'net', carryOver: true }, money: m({ source: 'side', buyIn: 200 }) }),
   },
   {
@@ -66,8 +54,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'birdies',
     type: 'eventPot',
     category: 'hole',
-    title: 'Premio por birdie',
-    blurb: 'Cada birdie o mejor cobra. Águilas también se pueden premiar aparte.',
     create: (id) => ({ ...base, id, type: 'eventPot', label: 'Birdies', options: { event: 'birdie', basis: 'gross' }, money: m({ source: 'direct', stake: 50 }) }),
   },
   {
@@ -75,8 +61,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'threePutts',
     type: 'eventPot',
     category: 'hole',
-    title: 'Multa por tres putts',
-    blurb: 'Cada tres putts le cuesta al que los hace: le paga a cada uno de los demás.',
     create: (id) => ({ ...base, id, type: 'eventPot', label: 'Tres putts', options: { event: 'threePutt', basis: 'gross' }, money: m({ source: 'direct', stake: 20 }) }),
   },
   {
@@ -84,8 +68,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'lowNet',
     type: 'lowScore',
     category: 'round',
-    title: 'Low gross / low neto',
-    blurb: 'La mejor tarjeta del día o del torneo, gross o neta.',
     create: (id) => ({ ...base, id, type: 'lowScore', label: 'Low neto', options: { basis: 'net', scope: 'perRound' }, money: m({ source: 'side', buyIn: 100, split: [100] }) }),
   },
   {
@@ -93,9 +75,7 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'nassau',
     type: 'match',
     category: 'matches',
-    title: 'Nassau / match play',
-    blurb: 'Uno contra uno o parejas: ida, vuelta y total, con presiones.',
-    later: 'Los partidos se arman en Comité, Juegos.',
+    later: true,
     create: (id) => ({ ...base, id, type: 'match', label: 'Nassau', options: { format: 'nassau', basis: 'net', pairScoring: 'bestBall', pressAt: 2, maxPresses: 1, matches: [] }, money: m({ source: 'direct', stake: 100 }) }),
   },
   {
@@ -103,8 +83,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'closest',
     type: 'contest',
     category: 'specials',
-    title: 'Más cerca del hoyo',
-    blurb: 'En los par 3: el grupo marca quién la dejó más cerca.',
     create: (id) => ({ ...base, id, type: 'contest', label: 'Más cerca del hoyo', options: { kind: 'closest', holes: 'par3' }, money: m({ source: 'side', buyIn: 100 }) }),
   },
   {
@@ -112,8 +90,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'longDrive',
     type: 'contest',
     category: 'specials',
-    title: 'Drive más largo',
-    blurb: 'En los hoyos que elijas (en fairway).',
     create: (id) => ({ ...base, id, type: 'contest', label: 'Drive más largo', options: { kind: 'longDrive', holes: [18] }, money: m({ source: 'direct', stake: 50 }) }),
   },
   {
@@ -121,8 +97,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'greenies',
     type: 'contest',
     category: 'specials',
-    title: 'Greenies y sandies',
-    blurb: 'Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.',
     create: (id) => ({ ...base, id, type: 'contest', label: 'Greenies', options: { kind: 'greenie', holes: 'par3' }, money: m({ source: 'direct', stake: 20 }) }),
   },
   {
@@ -130,8 +104,6 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'custom',
     type: 'custom',
     category: 'free',
-    title: 'Apuesta libre',
-    blurb: 'Lo que se les ocurra: el Comité marca al ganador.',
     create: (id) => ({ ...base, id, type: 'custom', label: 'Apuesta libre', options: { description: '' }, money: m({ source: 'direct', stake: 100 }) }),
   },
 ]

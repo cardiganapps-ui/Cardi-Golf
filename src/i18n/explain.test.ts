@@ -11,12 +11,20 @@ import { describe, expect, it } from 'vitest'
 import { FIXTURE_NAMES, getFixture } from '../dev/fixtures'
 import { computeTournament } from '../engine/computeTournament'
 import { closeCheck } from '../engine/close'
-import { strokesWhy } from '../engine/formats'
+import { ALL_FORMATS, strokesWhy } from '../engine/formats'
+import { GAME_ENTRIES } from '../engine/games/catalog'
+import { describeGame } from '../engine/games/describe'
+import { checkPrizePool } from '../engine/settings/prizeCheck'
+import { reglamento } from '../engine/settings/reglamento'
+import { settingsSense } from '../engine/settings/sense'
+import { TournamentSettingsSchema } from '../engine/settings/schema'
+import { stablefordFormat } from '../engine/formats/stableford'
+import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import { msg, type Msg, type MsgCode } from '../engine/messages'
 import { parseSettings } from '../engine/settings/schema'
 import { formatMoney, formatMoneyCents } from '../lib/money'
 import { explain } from './es-MX'
-import { renderExplanation, renderMsg } from './explain'
+import { issueWords, renderExplanation, renderMsg } from './explain'
 
 const isMsg = (x: unknown): x is Msg => !!x && typeof x === 'object' && 'code' in x && 'params' in x
 
@@ -47,7 +55,9 @@ const STATES = FIXTURE_NAMES.map((name) => {
   const settings = parseSettings(snap.tournament.settings)
   const state = computeTournament(snap, settings)
   const holes = Object.values(state.core.rounds).flatMap((byPlayer) => Object.values(byPlayer).flatMap((pr) => pr.holes))
-  return { name, state, extra: { close: closeCheck(snap, settings, { openRejected: null }), strokes: holes.flatMap((h) => [strokesWhy(h, true), strokesWhy(h, false)]) } }
+  // ARCH-05 stage 2: the Reglamento, every format's and catalog game's rules, and the prize statement are codes too.
+  const rules = { reglamento: reglamento(snap, settings), formats: Object.values(ALL_FORMATS).map((f) => f.describe(settings)), catalog: GAME_ENTRIES.map((e) => describeGame(e.create('x'))), pool: checkPrizePool(settings, { players: 2, pairs: 1, teams: 1 }) }
+  return { name, state, extra: { close: closeCheck(snap, settings, { openRejected: null }), strokes: holes.flatMap((h) => [strokesWhy(h, true), strokesWhy(h, false)]), rules } }
 })
 
 describe('the engine says codes, and the renderer writes them (ARCH-05)', () => {
@@ -63,6 +73,20 @@ describe('the engine says codes, and the renderer writes them (ARCH-05)', () => 
       expect(text, `${path} (${m.code})`).not.toBe('')
       expect(text, `${path} (${m.code})`).not.toMatch(/undefined|NaN|\[object Object\]|\$\d{4,}|c\/u/)
     }
+  })
+
+  it('the settings’ refusals and what makes no sense are codes, in words (ARCH-05 stage 2)', () => {
+    const s = structuredClone(DEFAULT_SETTINGS)
+    Object.assign(s, { currency: 'XYZ', timezone: 'Mars/Olympus', houseCut: 100000, entryFee: 100, cardSigning: 'pairs' })
+    s.handicap.cap = 0
+    const sense = settingsSense(s, { players: 4 })
+    expect(sense.map((x) => x.key)).toEqual(['cap', 'houseCut', 'signingPairs', 'currency', 'timezone'])
+    expect(renderMsg(sense[1]!.says, 'MXN')).toBe('Los gastos del grupo se llevan $100,000 y las inscripciones suman $400.')
+    const bad = TournamentSettingsSchema.safeParse({ ...s, tiers: ['A', 'A'] })
+    expect(bad.success).toBe(false)
+    expect(bad.error!.issues.map((i) => issueWords(i, 'MXN'))).toContain('Dos categorías tienen el mismo nombre.')
+    // Zod's own refusal of a value's shape keeps zod's words.
+    expect(issueWords({ message: 'Too small' }, 'MXN')).toBe('Too small')
   })
 
   it('every code the engine says has its words', () => {
@@ -83,9 +107,8 @@ describe('the engine says codes, and the renderer writes them (ARCH-05)', () => 
     expect(formatMoneyCents(6600, 'MXN')).toBe('$6,600')
   })
 
-  it('an explanation in words (a format’s rules) comes back as it is; a code its catalog lacks says nothing', () => {
-    const rules = { title: 'Stableford', steps: ['Cada hoyo da puntos.'] }
-    expect(renderExplanation(rules, 'MXN')).toBe(rules)
+  it('a format’s rules are codes too (ARCH-05 stage 2); a code its catalog lacks says nothing', () => {
+    expect(renderExplanation(stablefordFormat.describe(DEFAULT_SETTINGS), 'MXN').title).toBe('Stableford')
     expect(renderMsg({ code: 'never.heard' as MsgCode, params: {} } as unknown as Msg, 'MXN')).toBe('')
   })
 })

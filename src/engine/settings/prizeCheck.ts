@@ -15,20 +15,20 @@
  * three places to two entrants) leaves its money with the bank. Those are
  * `unreachable`, and `ok` needs both.
  */
-import { t } from '../../i18n/es-MX'
 import type { TournamentSettings } from './schema'
 import type { GameConfig } from './games'
 import type { Snapshot } from '../types'
-import { pesos } from '../core/pesos'
+import { label, msg, say, type Msg, type StakeUnit } from '../messages'
 import { splitEven, splitWhole } from '../core/ranking'
 
 export interface PrizeLine {
   /** A module id, `house`, or `game:<id>` for an instance game on the main pot. */
   moduleId: 'individual' | 'bestRound' | 'pairs' | 'snake' | 'fewestPutts' | 'house' | `game:${string}`
-  label: string
+  /** The game's label as the settings name it, or the house's. */
+  label: Msg
   amount: number
-  /** Plain-Spanish explanation of the amount, e.g. "3 grupos × 2 días × $600". */
-  detail: string
+  /** What the amount is made of, e.g. «3 grupos × 2 días × $600». */
+  detail: Msg
 }
 
 export interface SidePotLine {
@@ -37,14 +37,14 @@ export interface SidePotLine {
   entrants: number
   buyIn: number
   pot: number
-  detail: string
+  detail: Msg
 }
 
 export interface BetLine {
   gameId: string
   label: string
   stake: number
-  detail: string
+  detail: Msg
 }
 
 /** Paid places beyond who can fill them (MONEY-09). */
@@ -58,8 +58,8 @@ export interface UnreachableLine {
   reachable: number
   /** The pesos of the places past the last entrant. */
   amount: number
-  /** e.g. "4 lugares con premio y 3 jugadores". */
-  detail: string
+  /** e.g. «4 lugares con premio y 3 jugadores». */
+  detail: Msg
 }
 
 export interface PrizeCheck {
@@ -100,9 +100,6 @@ export interface FieldShape {
   rounds?: number
 }
 
-/** "$10,000": the engine's one formatter (core/pesos.ts). */
-const fmt = pesos
-
 export function snakePotPerGroup(settings: TournamentSettings): number {
   // A group of N: the N−1 survivors get `snakePerSurvivor` each; with no
   // three-putt at all the N players split the same pot.
@@ -120,26 +117,26 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     const amount = prizes.stableford.reduce((s, x) => s + x, 0)
     lines.push({
       moduleId: 'individual',
-      label: modules.individual.label,
+      label: label(modules.individual.label),
       amount,
-      detail: prizes.stableford.map((p) => fmt(p)).join(' + ') || 'sin premios',
+      detail: msg('pool.amounts', { amounts: prizes.stableford }),
     })
   }
   if (modules.pairs.enabled) {
     const amount = prizes.pairs.reduce((s, x) => s + x, 0)
     lines.push({
       moduleId: 'pairs',
-      label: modules.pairs.label,
+      label: label(modules.pairs.label),
       amount,
-      detail: prizes.pairs.map((p) => fmt(p)).join(' + ') || 'sin premios',
+      detail: msg('pool.amounts', { amounts: prizes.pairs }),
     })
   }
   if (modules.bestRound.enabled) {
     lines.push({
       moduleId: 'bestRound',
-      label: modules.bestRound.label,
+      label: label(modules.bestRound.label),
       amount: prizes.bestRoundPerDay * rounds,
-      detail: `${rounds} ${rounds === 1 ? 'día' : 'días'} × ${fmt(prizes.bestRoundPerDay)}`,
+      detail: msg('pool.perDay', { days: rounds, amount: prizes.bestRoundPerDay }),
     })
   }
   if (modules.snake.enabled) {
@@ -151,25 +148,25 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
       const missing = Math.max(0, rounds - real.length)
       lines.push({
         moduleId: 'snake',
-        label: modules.snake.label,
+        label: label(modules.snake.label),
         amount: known + perGroup * groups * missing,
-        detail: `${t.common.andList(real.map((r) => r.map((n) => `${n}`).join('+')))} jugadores por grupo${missing ? `, ${missing} ${missing === 1 ? 'día' : 'días'} por armar` : ''}`,
+        detail: msg('pool.snakeGroups', { sizes: real, missing }),
       })
     } else {
       lines.push({
         moduleId: 'snake',
-        label: modules.snake.label,
+        label: label(modules.snake.label),
         amount: perGroup * groups * rounds,
-        detail: `${groups} ${groups === 1 ? 'grupo' : 'grupos'} × ${rounds} ${rounds === 1 ? 'día' : 'días'} × ${fmt(perGroup)}`,
+        detail: msg('pool.snakePlanned', { groups, days: rounds, perGroup }),
       })
     }
   }
   if (modules.fewestPutts.enabled) {
     lines.push({
       moduleId: 'fewestPutts',
-      label: modules.fewestPutts.label,
+      label: label(modules.fewestPutts.label),
       amount: prizes.fewestPutts,
-      detail: fmt(prizes.fewestPutts),
+      detail: msg('amount', { amount: prizes.fewestPutts }),
     })
   }
 
@@ -179,16 +176,16 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     if (!g.enabled) continue
     const n = field.entrants?.[g.id] ?? field.players
     if (g.money.source === 'main') {
-      lines.push({ moduleId: `game:${g.id}`, label: g.label, amount: g.money.amount, detail: fmt(g.money.amount) })
+      lines.push({ moduleId: `game:${g.id}`, label: label(g.label), amount: g.money.amount, detail: msg('amount', { amount: g.money.amount }) })
     } else if (g.money.source === 'side') {
-      sidePots.push({ gameId: g.id, label: g.label, entrants: n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, detail: `${n} × ${fmt(g.money.buyIn)} = ${fmt(g.money.buyIn * n)}, ${payoutText(g)}` })
+      sidePots.push({ gameId: g.id, label: g.label, entrants: n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, detail: msg('pool.side', { n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, type: g.type, split: g.money.split }) })
     } else if (g.money.source === 'direct') {
-      bets.push({ gameId: g.id, label: g.label, stake: g.money.stake, detail: `${fmt(g.money.stake)} ${stakeUnit(g)}` })
+      bets.push({ gameId: g.id, label: g.label, stake: g.money.stake, detail: msg('pool.bet', { stake: g.money.stake, per: stakeUnit(g) }) })
     }
   }
   const entryPot = settings.entryFee * field.players
   const houseCut = entryPot > 0 ? settings.houseCut : 0
-  if (houseCut > 0) lines.push({ moduleId: 'house', label: 'Gastos del grupo', amount: houseCut, detail: fmt(houseCut) })
+  if (houseCut > 0) lines.push({ moduleId: 'house', label: say('pool.house'), amount: houseCut, detail: msg('amount', { amount: houseCut }) })
 
   if (percentIndividual) {
     // The individual game takes what is left, split by percentages.
@@ -196,9 +193,9 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     const amounts = percentPlaces(Math.max(0, left), prizes.stableford)
     lines.unshift({
       moduleId: 'individual',
-      label: modules.individual.label,
+      label: label(modules.individual.label),
       amount: Math.max(0, left),
-      detail: `lo que queda: ${prizes.stableford.map((p, i) => `${p}% ${fmt(amounts[i] ?? 0)}`).join(' / ')}`,
+      detail: msg('pool.rest', { split: prizes.stableford.map((pct, i) => ({ pct, amount: amounts[i] ?? 0 })) }),
     })
   }
   const prizesTotal = lines.reduce((s, l) => s + l.amount, 0)
@@ -214,17 +211,15 @@ function beyond(amounts: number[], reachable: number): number {
 }
 
 /** How many entrants the main standings rank: players, or teams in a team format. */
-export function mainEntrants(settings: TournamentSettings, field: FieldShape): { count: number; unit: [string, string] } {
+export function mainEntrants(settings: TournamentSettings, field: FieldShape): { count: number; unit: 'player' | 'team' } {
   const ind = settings.modules.individual
   const teams = ind.format === 'team' || (ind.format === 'matchPlay' && ind.formatOptions.matchMode === 'fourball')
-  if (!teams) return { count: field.players, unit: ['jugador', 'jugadores'] }
+  if (!teams) return { count: field.players, unit: 'player' }
   // Before the draw a team has two players at least, so half the field is the most there can be.
-  return { count: field.teams ?? Math.floor(field.players / 2), unit: ['equipo', 'equipos'] }
+  return { count: field.teams ?? Math.floor(field.players / 2), unit: 'team' }
 }
 
-function placesText(places: number, reachable: number, unit: [string, string]): string {
-  return `${places} ${places === 1 ? 'lugar' : 'lugares'} con premio y ${reachable === 1 ? `1 ${unit[0]}` : `${reachable} ${unit[1]}`}`
-}
+const placesText = (places: number, reachable: number, unit: 'player' | 'team' | 'pair'): Msg => msg('pool.places', { places, reachable, unit })
 
 /**
  * Places with a prize that more places than entrants leave empty (MONEY-09).
@@ -246,7 +241,7 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
   if (modules.pairs.enabled) {
     const count = field.pairs ?? Math.floor(field.players / 2)
     const places = paid(prizes.pairs)
-    if (places > count) out.push({ id: 'pairs', label: modules.pairs.label, places, reachable: count, amount: beyond(prizes.pairs, count), detail: placesText(places, count, ['pareja', 'parejas']) })
+    if (places > count) out.push({ id: 'pairs', label: modules.pairs.label, places, reachable: count, amount: beyond(prizes.pairs, count), detail: placesText(places, count, 'pair') })
   }
   for (const g of settings.games) {
     if (!g.enabled || g.type !== 'lowScore' || (g.money.source !== 'main' && g.money.source !== 'side')) continue
@@ -258,7 +253,7 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
     const days = g.options.scope === 'perRound' ? Math.max(1, rounds) : 1
     let amount = 0
     for (const day of splitEven(pot, days, 'first')) amount += beyond(percentPlaces(day.amount, g.money.split), n)
-    out.push({ id: `game:${g.id}`, label: g.label, places, reachable: n, amount, detail: placesText(places, n, ['jugador', 'jugadores']) })
+    out.push({ id: `game:${g.id}`, label: g.label, places, reachable: n, amount, detail: placesText(places, n, 'player') })
   }
   return out
 }
@@ -275,20 +270,13 @@ export function individualPrizeAmounts(settings: TournamentSettings, field: Fiel
   return percentPlaces(line?.amount ?? 0, settings.prizes.stableford)
 }
 
-function payoutText(g: GameConfig): string {
-  if (g.type === 'lowScore') return `reparte ${g.money.split.map((p) => `${p}%`).join(' / ')}`
-  if (g.type === 'skins') return 'se reparte por skin'
-  if (g.type === 'contest') return 'se reparte por hoyo ganado'
-  if (g.type === 'eventPot') return 'se reparte por cada uno'
-  return 'se reparte entre los ganadores'
-}
-
-function stakeUnit(g: GameConfig): string {
-  if (g.type === 'match') return g.options.format === 'nassau' ? 'por vuelta (ida, vuelta y total)' : 'por partido'
-  if (g.type === 'skins') return 'por skin, de cada jugador'
-  if (g.type === 'eventPot') return g.options.event === 'threePutt' ? 'a cada jugador por cada tres putts' : 'de cada jugador, por cada uno'
-  if (g.type === 'contest') return 'de cada jugador, por hoyo ganado'
-  return 'de cada perdedor'
+/** What a direct bet's stake is per. */
+function stakeUnit(g: GameConfig): StakeUnit {
+  if (g.type === 'match') return g.options.format === 'nassau' ? 'segment' : 'match'
+  if (g.type === 'skins') return 'skin'
+  if (g.type === 'eventPot') return g.options.event === 'threePutt' ? 'threePutt' : 'each'
+  if (g.type === 'contest') return 'holeWon'
+  return 'loser'
 }
 
 /** The field of a live tournament: players, real group sizes, and game entrants. */

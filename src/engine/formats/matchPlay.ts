@@ -12,8 +12,8 @@
 import { playOrder } from '../core/playOrder'
 import type { CountbackInput } from '../core/ranking'
 import type { TournamentSettings } from '../settings/schema'
-import { msg, type Msg } from '../messages'
-import type { ExplanationText, Id } from '../types'
+import { msg, say, type Msg } from '../messages'
+import type { Explanation, Id } from '../types'
 import { playerEntrants, teamEntrants } from './entrants'
 import type { Entrant, Figure, FormatContext, FormatStandings, MainFormat } from './format'
 import { holeStrokes } from './strokePlay'
@@ -137,20 +137,12 @@ export const matchPlayFormat: MainFormat = {
   higherIsBetter: () => true,
   figureLabel: () => 'Puntos',
 
-  describe(settings: TournamentSettings): ExplanationText {
+  describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions
     const fourball = o.matchMode === 'fourball'
     return {
-      title: fourball ? 'Match play, fourball' : 'Match play, individual',
-      steps: [
-        fourball
-          ? 'Dos parejas por grupo. En cada hoyo cuenta la mejor bola de cada pareja.'
-          : 'Uno contra uno: el grupo de dos jugadores es el partido.',
-        'Gana el hoyo quien menos golpes haga; el partido se gana por hoyos, no por golpes.',
-        o.scoring === 'gross' ? 'Sin hándicap: palo contra palo.' : 'Con los golpes de ventaja de cada quien.',
-        'Un partido ganado vale 1 punto, uno empatado ½, uno perdido 0.',
-        'El partido se acaba cuando alguien va más arriba que los hoyos que quedan: eso es un «3&2».',
-      ],
+      title: msg('format.matchPlay', { fourball }),
+      steps: [msg('format.matchSides', { fourball }), say('format.matchHoles'), msg('format.matchStrokes', { net: o.scoring !== 'gross' }), say('format.matchPoints'), say('format.matchOver')],
     }
   },
 

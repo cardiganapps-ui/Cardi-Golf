@@ -5,6 +5,7 @@
  */
 import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
+import { useWords } from '../../components/currency'
 import { reglamento } from '../../engine/settings/reglamento'
 import styles from './RulesScreen.module.css'
 
@@ -12,6 +13,7 @@ const R = t.rules
 
 export function RulesScreen() {
   const data = useTournament((s) => s.data)
+  const words = useWords()
   if (!data) return null
   const { snapshot, settings } = data
   const sections = reglamento(snapshot, settings)
@@ -23,11 +25,11 @@ export function RulesScreen() {
       {sections.map((s) => (
         <section key={s.id} className={styles.section} data-section={s.id}>
           <div className={styles.head}>
-            <h2>{s.title}</h2>
+            <h2>{words(s.title)}</h2>
           </div>
           <ul className={styles.lines}>
             {s.lines.map((l, j) => (
-              <li key={j}>{l}</li>
+              <li key={j}>{words(l)}</li>
             ))}
           </ul>
         </section>

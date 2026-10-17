@@ -12,8 +12,8 @@ const isMsg = (x: unknown): x is Msg => !!x && typeof x === 'object' && 'code' i
 /** A message, a list of them, an explanation or a list of explanations, in words. */
 export function words(x: Msg): string
 export function words(x: readonly Msg[]): string[]
-export function words(x: Explanation | ExplanationText): ExplanationText
-export function words(x: ReadonlyArray<Explanation | ExplanationText>): ExplanationText[]
+export function words(x: Explanation): ExplanationText
+export function words(x: readonly Explanation[]): ExplanationText[]
 export function words(x: Msg | null | undefined): string | null | undefined
 export function words(x: Explanation | null | undefined): ExplanationText | null | undefined
 export function words(x: unknown): unknown {

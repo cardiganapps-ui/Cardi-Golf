@@ -134,7 +134,7 @@ describe('a hole explained in strokes', () => {
 describe('the Reglamento says what the format does', () => {
   it('match play states its own tiebreak, and no «gana Último lugar» without a name of its own', () => {
     const { snap, settings } = run('match8')
-    const lines = moduleRules('individual', settings, fieldShape(snap, settings), null)
+    const lines = words(moduleRules('individual', settings, fieldShape(snap, settings), null))
     expect(lines.join('\n')).toContain('va adelante quien terminó mejor su partido')
     expect(lines.join('\n')).not.toMatch(/gana Último lugar/)
   })

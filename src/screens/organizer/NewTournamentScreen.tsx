@@ -34,6 +34,7 @@ import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
 import { newTournamentCardSigning } from '../../engine/core/cardSigning'
 import { safeParseSettings } from '../../engine/settings/schema'
+import { renderMsg } from '../../i18n/explain'
 import { PlayStep } from './setup/PlayStep'
 import { ReviewCard } from './setup/ReviewCard'
 import { WizardPreview } from './setup/WizardPreview'
@@ -306,7 +307,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
           {sense.length > 0 && (
             <ul className="error">
               {sense.map((x) => (
-                <li key={`${x.key}:${x.text}`}>{x.text}</li>
+                <li key={`${x.key}:${JSON.stringify(x.says.params)}`}>{renderMsg(x.says, settings.currency)}</li>
               ))}
             </ul>
           )}

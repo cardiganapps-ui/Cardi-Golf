@@ -13,17 +13,33 @@ import { FIXTURE_NAMES, getFixture } from '../../dev/fixtures'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { cardSigningMode } from '../core/cardSigning'
+import { msg, say, type GlossaryWord } from '../messages'
 import { makeFirstTournament, makeRound, makeSnapshot } from '../testing/fixtures'
+import { words } from '../testing/words'
 import type { Snapshot } from '../types'
 import { cutApplies } from './describeModule'
 import { individualPrizeAmounts, fieldShape, snakePotPerGroup } from './prizeCheck'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './presets'
-import { reglamento, type RulesSection } from './reglamento'
+import { reglamento as reglamentoCodes } from './reglamento'
 import { MODULE_IDS, parseSettings, type TournamentSettings } from './schema'
 
-const R = t.rules
+/** The Reglamento as a person reads it: its codes in words (ARCH-05). */
+interface RulesSection {
+  id: string
+  title: string
+  lines: string[]
+}
+const reglamento = (snapshot: Snapshot, settings: TournamentSettings): RulesSection[] => reglamentoCodes(snapshot, settings).map((s) => ({ id: s.id, title: words(s.title), lines: words(s.lines) }))
 const text = (sections: RulesSection[]) => sections.flatMap((s) => s.lines).join('\n')
 const section = (sections: RulesSection[], id: string) => sections.find((s) => s.id === id)
+const glossary = (word: GlossaryWord) => words(msg('rules.glossary', { word }))
+const ROUNDING = {
+  halfUp: 'redondeado al entero, el medio hacia arriba (17.5 queda en 18)',
+  halfDown: 'redondeado al entero, el medio hacia abajo (17.5 queda en 17)',
+  nearestEven: 'redondeado al entero, el medio al par más cercano (17.5 queda en 18 y 16.5 en 16)',
+  floor: 'redondeado hacia abajo (17.9 queda en 17)',
+  ceil: 'redondeado hacia arriba (17.1 queda en 18)',
+}
 
 const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: TournamentSettings }> = FIXTURE_NAMES.map((name) => {
   const f = getFixture(name)!
@@ -83,13 +99,13 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
         const hcp = section(doc, 'handicaps')!.lines.join(' ')
         if (settings.handicap.allowance > 0) {
           expect(hcp).toContain(`${Math.round(settings.handicap.allowance * 100)}% del hándicap base, con tope de ${settings.handicap.cap}`)
-          expect(hcp).toContain(R.rounding[settings.handicap.rounding])
+          expect(hcp).toContain(ROUNDING[settings.handicap.rounding])
         }
         if (m.individual.enabled) {
           const amounts = individualPrizeAmounts(settings, fieldShape(snapshot, settings)).filter((x) => x > 0)
           const ind = section(doc, 'individual')!.lines.join(' ')
           for (const a of amounts) expect(ind).toContain(formatMoney(a, 'MXN'))
-          if (!amounts.length) expect(ind).toContain(R.noPrize)
+          if (!amounts.length) expect(ind).toContain(words(say('rules.noPrize')))
           expect(ind).not.toContain('Premios: .')
         }
         if (m.snake.enabled) {
@@ -110,7 +126,7 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
       })
 
       it('says who signs the cards by the tournament’s rule', () => {
-        expect(section(doc, 'cards')!.lines).toEqual([R.cards.enter, R.cards[cardSigningMode(settings)]])
+        expect(section(doc, 'cards')!.lines).toEqual([words(say('rules.cardsEnter')), words(msg('rules.cards', { mode: cardSigningMode(settings) }))])
       })
 
       it('leaves out the platform’s generic last place, and says the precedence plainly (COPY-12)', () => {
@@ -120,12 +136,12 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
       })
 
       it('defines the golf words its rules use, and only those (COPY-12)', () => {
-        const words = section(doc, 'glossary')!.lines
-        expect(words).toContain(R.glossary.par)
-        expect(words.includes(R.glossary.auction(m.auction.label))).toBe(m.auction.enabled)
+        const said = section(doc, 'glossary')!.lines
+        expect(said).toContain(glossary('par'))
+        expect(said.includes(words(msg('rules.glossaryAuction', { game: m.auction.label })))).toBe(m.auction.enabled)
         const putting = m.snake.enabled || m.fewestPutts.enabled || settings.games.some((g) => g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt')
-        expect(words.includes(R.glossary.putts)).toBe(putting)
-        expect(words.includes(R.glossary.handicap)).toBe(settings.handicap.allowance > 0)
+        expect(said.includes(glossary('putts'))).toBe(putting)
+        expect(said.includes(glossary('handicap'))).toBe(settings.handicap.allowance > 0)
       })
     })
   }
@@ -135,7 +151,7 @@ describe('a tournament with no money at all reads as one (COPY-12)', () => {
   it('gloria4: «En corto» is one sentence and no figure is a peso', () => {
     const f = getFixture('gloria4')!
     const doc = reglamento(f.snapshot, parseSettings(f.snapshot.tournament.settings))
-    expect(section(doc, 'summary')!.lines).toEqual([R.summary.noMoney])
+    expect(section(doc, 'summary')!.lines).toEqual([words(say('rules.noMoney'))])
     expect(text(doc)).not.toMatch(/\$/)
   })
 })
@@ -150,7 +166,7 @@ describe('«En corto» on the first tournament (COPY-12)', () => {
     expect(S[1]).toBe('De la bolsa salen los premios: Individual ($20,000), Los Matrimonios ($3,000), Mejor ronda ($2,400), La Víbora ($3,600) y Menos putts ($1,000).')
     expect(S[2]).toContain('La Calcutta va aparte de la bolsa')
     expect(S.some((l) => l.endsWith('es el banquero: junta el dinero y paga los premios.'))).toBe(true)
-    expect(S.at(-1)).toBe(R.summary.settle)
+    expect(S.at(-1)).toBe(words(say('rules.settle')))
   })
 
   it('the snake is paid from the bolsa, never the pozo (COPY-14)', () => {
@@ -186,14 +202,14 @@ describe('settings no fixture has', () => {
   it('the rounding is the setting’s', () => {
     for (const rounding of ['floor', 'ceil', 'halfDown', 'nearestEven', 'halfUp'] as const) {
       const { doc } = base({ handicap: { ...DEFAULT_SETTINGS.handicap, rounding } })
-      expect(section(doc, 'handicaps')!.lines.join(' ')).toContain(R.rounding[rounding])
+      expect(section(doc, 'handicaps')!.lines.join(' ')).toContain(ROUNDING[rounding])
     }
   })
 
   it('a scratch event says so and nothing about strokes received', () => {
     const { doc } = base({ handicap: { ...DEFAULT_SETTINGS.handicap, allowance: 0 } })
     expect(section(doc, 'handicaps')!.lines).toEqual(['Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.'])
-    expect(section(doc, 'glossary')!.lines).not.toContain(R.glossary.handicap)
+    expect(section(doc, 'glossary')!.lines).not.toContain(glossary('handicap'))
   })
 
   it('9-hole days: the tiebreak reads the last nine’s holes, and half the handicap', () => {

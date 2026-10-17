@@ -14,8 +14,10 @@
  */
 import { t } from '../../../i18n/es-MX'
 import type { PrizeCheck } from '../../../engine/settings/prizeCheck'
+import type { Msg } from '../../../engine/messages'
 import type { TournamentSettings } from '../../../engine/settings/schema'
 import { formatMoney } from '../../../lib/money'
+import { renderMsg } from '../../../i18n/explain'
 
 export interface ReviewLine {
   key: string
@@ -31,14 +33,15 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
   const W = t.organizer.wizard
   const m = settings.modules
   const out: ReviewLine[] = []
-  const unreachable = new Map((check?.unreachable ?? []).map((u) => [u.id, u.detail]))
+  const words = (x: Msg) => renderMsg(x, cur)
+  const unreachable = new Map((check?.unreachable ?? []).map((u) => [u.id, words(u.detail)]))
   if (check) {
     for (const l of check.lines) {
       out.push({
         key: l.moduleId,
-        label: l.label,
+        label: words(l.label),
         value: l.amount > 0 ? formatMoney(l.amount, cur) : W.reviewNoPrize,
-        detail: l.amount > 0 ? l.detail : undefined,
+        detail: l.amount > 0 ? words(l.detail) : undefined,
         warn: unreachable.get(l.moduleId),
       })
     }
@@ -61,10 +64,10 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
     out.push({ key: 'auction', label: m.auction.label, value: W.reviewAuctionPot, detail: W.reviewAuction(slots) })
   }
   for (const p of check?.sidePots ?? []) {
-    out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot, cur), detail: W.reviewSidePot(p.detail), warn: unreachable.get(`game:${p.gameId}`) })
+    out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot, cur), detail: W.reviewSidePot(words(p.detail)), warn: unreachable.get(`game:${p.gameId}`) })
   }
   for (const b of check?.bets ?? []) {
-    out.push({ key: `bet:${b.gameId}`, label: b.label, value: W.reviewBet, detail: b.detail })
+    out.push({ key: `bet:${b.gameId}`, label: b.label, value: W.reviewBet, detail: words(b.detail) })
   }
   // A game for the glory is in no statement; a game the check already wrote is not repeated.
   const listed = new Set(out.map((l) => l.key.replace(/^(side|bet):/, 'game:')))

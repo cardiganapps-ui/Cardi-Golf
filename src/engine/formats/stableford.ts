@@ -6,7 +6,8 @@
  * exactly what it did before the seam existed.
  */
 import type { TournamentSettings } from '../settings/schema'
-import type { ExplanationText } from '../types'
+import { msg, say } from '../messages'
+import type { Explanation } from '../types'
 import { countbackFrom, emptyCountback, playerEntrants, playerRound } from './entrants'
 import type { Figure, FormatContext, FormatStandings, MainFormat } from './format'
 
@@ -16,18 +17,11 @@ export const stablefordFormat: MainFormat = {
   higherIsBetter: () => true,
   figureLabel: () => 'Puntos',
 
-  describe(settings: TournamentSettings): ExplanationText {
-    const pct = Math.round(settings.handicap.allowance * 100)
+  describe(settings: TournamentSettings): Explanation {
+    // COPY-12: the whole table, albatross included (§5.3), and one hole worked through.
     return {
-      title: 'Stableford',
-      steps: [
-        'Cada hoyo da puntos según lo que hagas contra el par, ya restados tus golpes de ventaja (eso es el neto).',
-        // COPY-12: the whole table, albatross included (§5.3), and one hole worked through.
-        'En neto, doble bogey o peor da 0 puntos, bogey 1, par 2, birdie 3, águila 4 y albatros 5.',
-        'Por ejemplo: si haces 5 en un par 4 y tienes un golpe de ventaja en ese hoyo, cuentas 4, par neto: 2 puntos.',
-        'Levantar (recoger la bola cuando ya no vas a sumar) cuenta 0 puntos, así que levantar no arruina la tarjeta.',
-        `Gana quien más puntos sume${pct === 100 ? '' : `, jugando al ${pct}% del hándicap`}.`,
-      ],
+      title: say('format.stableford'),
+      steps: [say('format.stablefordPoints'), say('format.stablefordTable'), say('format.stablefordExample'), say('format.stablefordPickUp'), msg('format.stablefordWins', { pct: Math.round(settings.handicap.allowance * 100) })],
     }
   },
 
