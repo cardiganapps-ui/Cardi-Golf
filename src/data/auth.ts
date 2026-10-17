@@ -9,6 +9,7 @@ import { REQUEST_TIMEOUT_MS } from '../lib/fetchWithTimeout'
 import { withTimeout } from '../lib/timeout'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
+import { forgetServerState } from './serverCache'
 
 /** How long startup waits for the stored session before showing a way out. */
 export const SESSION_TIMEOUT_MS = 8000
@@ -72,6 +73,16 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 }))
+
+// Another account on this phone, or none: what the last one read from the server is not the next one's to see,
+// in memory either (ARCH-18). The first account a startup brings clears nothing; converting in place keeps the uid.
+let shownUid: string | null = null
+useAuth.subscribe((s) => {
+  const uid = s.user?.id ?? null
+  if (uid === shownUid) return
+  if (shownUid) forgetServerState()
+  shownUid = uid
+})
 
 /** Try startup again, from BootProblem's «Reintentar». */
 export async function retryAuth() {

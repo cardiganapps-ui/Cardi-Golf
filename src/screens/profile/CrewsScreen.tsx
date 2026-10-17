@@ -2,17 +2,19 @@
  * `/crews`: my crews, create one, or enter one with its code. And
  * `/c/unirme/:code`: the link a crew shares; it shows the crew and joins.
  */
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Field, Spinner } from '../../components/ui'
+import { ErrorBox, Field, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { EmptyState } from '../../components/primitives'
 import { IconChevronLeft, IconChevronRight } from '../../components/icons'
 import { createCrew, crewPreview, joinCrewRequest, myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
 import styles from './Profile.module.css'
-import { humanError, UserError } from '../../lib/humanError'
+import { UserError } from '../../lib/humanError'
 
 const C = t.crews
 const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
@@ -20,28 +22,11 @@ const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice
 export function CrewsScreen() {
   const ok = useRequireAccount('/crews')
   const navigate = useNavigate()
-  const [list, setList] = useState<MyCrew[] | null>(null)
+  const crews = useServerQuery(['crews', 'mine'], () => myCrews(), { enabled: ok })
+  const list: MyCrew[] | null = crews.data ?? null
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    if (!ok) return
-    myCrews()
-      .then(setList)
-      .catch(() => setList([]))
-  }, [ok])
-
-  async function run(fn: () => Promise<void>) {
-    setBusy(true)
-    try {
-      await fn()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { run, busy } = useServerMutation({ invalidates: [['crews']] })
 
   const onCreate = (e: FormEvent) => {
     e.preventDefault()
@@ -63,6 +48,7 @@ export function CrewsScreen() {
     })
   }
 
+  if (ok && !list && crews.error) return <ErrorBox error={crews.error} onRetry={() => void crews.refetch()} />
   if (!ok || !list) return <Spinner />
   return (
     <div className={styles.screen}>
@@ -128,16 +114,12 @@ export function CrewJoinScreen() {
   const { code = '' } = useParams()
   const ok = useRequireAccount(`/c/unirme/${code}`)
   const navigate = useNavigate()
-  const [crew, setCrew] = useState<Awaited<ReturnType<typeof crewPreview>> | undefined>(undefined)
-  const [busy, setBusy] = useState(false)
+  const preview = useServerQuery(['crews', 'preview', code], () => crewPreview(code), { enabled: ok })
+  const crew = preview.data
+  // A request leaves the preview saying so (it is read again); joining takes the phone to the crew.
+  const { run, busy } = useServerMutation({ invalidates: [['crews']] })
 
-  useEffect(() => {
-    if (!ok) return
-    crewPreview(code)
-      .then(setCrew)
-      .catch(() => setCrew(null))
-  }, [ok, code])
-
+  if (ok && crew === undefined && preview.error) return <ErrorBox error={preview.error} onRetry={() => void preview.refetch()} />
   if (!ok || crew === undefined) return <Spinner />
   if (!crew) return <EmptyState title={C.badCode} body={C.lede} action={<Link className="btn btn--secondary" to="/crews">{C.title}</Link>} />
   return (
@@ -155,25 +137,15 @@ export function CrewJoinScreen() {
           className="btn btn--primary"
           type="button"
           disabled={busy}
-          onClick={() => {
-            setBusy(true)
-            joinCrewRequest(code)
-              .then((r) => {
-                if (r.status === 'requested') {
-                  toast(C.requested(crew.name))
-                  setCrew({ ...crew, requested: true })
-                  setBusy(false)
-                  return
-                }
-                if (r.status !== 'joined' || !r.slug) throw new UserError(C.badCode)
-                toast(C.joined(crew.name))
-                navigate(`/c/${r.slug}`, { replace: true })
-              })
-              .catch((e) => {
-                toast(humanError(e))
-                setBusy(false)
-              })
-          }}
+          onClick={() =>
+            void run(async () => {
+              const r = await joinCrewRequest(code)
+              if (r.status === 'requested') return toast(C.requested(crew.name))
+              if (r.status !== 'joined' || !r.slug) throw new UserError(C.badCode)
+              toast(C.joined(crew.name))
+              navigate(`/c/${r.slug}`, { replace: true })
+            })
+          }
         >
           {crew.approval ? C.joinAsk : C.joinCta}
         </button>

@@ -4,10 +4,10 @@
  * app's notices never carry an amount (money stays on your own profile); a
  * notice from the Admin de Polo is his own text (platform_broadcast).
  */
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Spinner } from '../../components/ui'
+import { Avatar, ErrorBox, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { IconBell, IconChevronLeft, IconChevronRight } from '../../components/icons'
 import { markNotificationsRead, myNotifications, useUnread, type Notice } from '../../data/social'
@@ -16,6 +16,7 @@ import { clearAppBadge } from '../../data/push'
 import { PushToggle } from './PushToggle'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { useServerQuery } from '../../data/query'
 import { humanError } from '../../lib/humanError'
 
 const S = t.social
@@ -23,29 +24,23 @@ const stamp = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short',
 
 export function InboxScreen({ fixture }: { fixture?: Notice[] }) {
   const ok = useRequireAccount('/avisos', !!fixture)
-  const [list, setList] = useState<Notice[] | null>(fixture ?? null)
+  const q = useServerQuery(['notices'], () => myNotifications(), { enabled: ok && !fixture, staleMs: 0 })
+  const list = fixture ?? q.data ?? null
   const clear = useUnread((s) => s.clear)
+  const unread = !fixture && !!q.data?.some((n) => !n.read)
 
+  // Shown once as new, then read: the list keeps its accent rules until it is read again.
   useEffect(() => {
-    if (!ok || fixture) return
-    let live = true
-    myNotifications()
-      .then(async (l) => {
-        if (!live) return
-        setList(l)
-        // Shown once as new, then read.
-        if (l.some((n) => !n.read)) {
-          await markNotificationsRead()
-          clear()
-          clearAppBadge()
-        }
+    if (!unread) return
+    void markNotificationsRead()
+      .then(() => {
+        clear()
+        clearAppBadge()
       })
-      .catch((e) => toast(humanError(e)))
-    return () => {
-      live = false
-    }
-  }, [ok, fixture, clear])
+      .catch((e: unknown) => toast(humanError(e)))
+  }, [unread, clear])
 
+  if (ok && !list && q.error) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
   if (!ok || !list) return <Spinner />
   return (
     <div className={styles.screen}>

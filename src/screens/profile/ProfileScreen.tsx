@@ -5,7 +5,7 @@
  * their money. Strangers with an account see the card; people who shared a
  * tournament see the rest.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -32,6 +32,8 @@ import {
 import { BadgesSection, RecapButton, RecordsSection } from './Achievements'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const P = t.profile
 const monthYear = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' })
@@ -409,47 +411,36 @@ export function ProfileScreen() {
 
 function ProfilePage({ handle }: { handle: string }) {
   const { ready, user, isAnonymous } = useAuth()
-  const [card, setCard] = useState<ProfileCard | null | undefined>(undefined)
-  const [extra, setExtra] = useState<{ tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }>({})
-  const [friendship, setFriendship] = useState<Friendship | undefined>(undefined)
-  const [friendBusy, setFriendBusy] = useState(false)
-  const [version, setVersion] = useState(0)
-  const [error, setError] = useState<string | null>(null)
   const account = !!user && !isAnonymous
-
-  useEffect(() => {
-    if (!ready) return
-    let live = true
-    void (async () => {
-      try {
-        // No session on this browser: nobody to show a card to, and no anonymous user is started for it (TRUST-05).
-        if (!(await sessionIfAny())) {
-          if (live) setCard(null)
-          return
-        }
-        const [c, f] = await Promise.all([profileCard(handle), account ? friendshipWith(handle) : Promise.resolve(undefined)])
-        if (!live) return
-        setCard(c)
-        setFriendship(c && !c.isMe ? f : undefined)
-        setExtra({})
-        // History and finishes: only for people who may see the full profile. Money: only the owner's own.
-        if (c?.related) {
-          const [tournaments, rounds, money] = await Promise.all([profileTournaments(handle), profileRounds(handle), c.isMe ? myMoney() : Promise.resolve(undefined)])
-          if (live) setExtra({ tournaments, rounds, money })
-        }
-      } catch (e) {
-        if (live) setError(humanError(e))
-      }
-    })()
-    return () => {
-      live = false
-    }
-  }, [ready, handle, user?.id, account, version])
+  const top = useServerQuery(
+    ['profile', 'card', handle, account],
+    async () => {
+      // No session on this browser: nobody to show a card to, and no anonymous user is started for it (TRUST-05).
+      if (!(await sessionIfAny())) return { card: null, friendship: undefined }
+      const [c, f] = await Promise.all([profileCard(handle), account ? friendshipWith(handle) : Promise.resolve(undefined)])
+      return { card: c, friendship: c && !c.isMe ? f : undefined }
+    },
+    { enabled: ready },
+  )
+  const card: ProfileCard | null | undefined = top.data?.card
+  const friendship: Friendship | undefined = top.data?.friendship
+  // History and finishes: only for people who may see the full profile. Money: only the owner's own.
+  const more = useServerQuery(
+    ['profile', 'history', handle, !!card?.isMe],
+    async () => {
+      const [tournaments, rounds, money] = await Promise.all([profileTournaments(handle), profileRounds(handle), card?.isMe ? myMoney() : Promise.resolve(undefined)])
+      return { tournaments, rounds, money }
+    },
+    { enabled: !!card?.related },
+  )
+  const extra: { tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] } = (card?.related && more.data) || {}
+  // Either read failing with nothing to show is the screen's error, as when they were one.
+  const error = (top.error && !top.data) || (more.error && !more.data) ? (top.error ?? more.error) : null
+  const friend = useServerMutation({ invalidates: [['profile'], ['friends']] })
 
   async function onFriend(a: FriendAction) {
     if (!card) return
-    setFriendBusy(true)
-    try {
+    await friend.run(async () => {
       if (a === 'add') {
         const r = await friendRequest(handle)
         toast(r === 'accepted' ? t.social.nowFriends(card.displayName) : r === 'not_found' ? t.social.notFound : t.social.sent)
@@ -458,15 +449,11 @@ function ProfilePage({ handle }: { handle: string }) {
         toast(t.social.nowFriends(card.displayName))
       } else if (a === 'remove') await friendRemove(handle)
       else await friendBlock(handle)
-      setVersion((v) => v + 1)
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setFriendBusy(false)
-    }
+    })
   }
+  const friendBusy = friend.busy
 
-  if (error) return <EmptyState title={t.common.error} body={error} />
+  if (error) return <EmptyState title={t.common.error} body={humanError(error)} />
   if (card === undefined) return <Spinner />
   if (card === null) {
     const anonymous = !user || isAnonymous

@@ -5,11 +5,10 @@
  * (0071, TRUST-11): «Sacar» a member, «Aprobar solicitudes» (the code then
  * leaves a request he accepts or declines), and how long a new code lasts.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, CopyButton, Segmented, ShareButton, Spinner, Toggle } from '../../components/ui'
-import { toast } from '../../components/toast'
+import { Avatar, CopyButton, ErrorBox, Segmented, ShareButton, Spinner, Toggle } from '../../components/ui'
 import { leaveSheetHistory } from '../../components/sheetHistory'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
@@ -19,7 +18,8 @@ import { formatIndex } from '../../data/profiles'
 import { seasons, seasonTable } from '../../engine/profile/season'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const C = t.crews
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -51,7 +51,7 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
   const [year, setYear] = useState(() => years[0] ?? now.getFullYear())
   const rows = useMemo(() => seasonTable(page.results, year), [page.results, year])
   const [ask, setAsk] = useState<'rotate' | 'leave' | null>(null)
-  const [busy, setBusy] = useState(false)
+  const { run, busy } = useServerMutation({ invalidates: [['crews', 'mine']] })
   const [days, setDays] = useState<Days>('never')
   const [removing, setRemoving] = useState<CrewMember | null>(null)
   const owner = page.crew.role === 'owner'
@@ -65,37 +65,26 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
 
   async function act(which: 'rotate' | 'leave') {
     if (!onChanged) return
-    setBusy(true)
-    try {
-      if (which === 'rotate') await rotateCrewCode(crew.id, DAYS[days])
-      else {
-        await leaveCrew(crew.id)
-        // From the confirm sheet: its history entry goes first, so the replace lands on this page's entry (PWA-05).
-        await leaveSheetHistory()
-        navigate('/crews', { replace: true })
+    await run(async () => {
+      if (which === 'rotate') {
+        await rotateCrewCode(crew.id, DAYS[days])
+        onChanged()
         return
       }
-      onChanged()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-      setAsk(null)
-    }
+      await leaveCrew(crew.id)
+      // From the confirm sheet: its history entry goes first, so the replace lands on this page's entry (PWA-05).
+      await leaveSheetHistory()
+      navigate('/crews', { replace: true })
+    })
+    setAsk(null)
   }
 
   /** One owner's step, then the page read again; the toast says how it went. */
   async function own(step: () => Promise<unknown>, done: string) {
-    setBusy(true)
-    try {
+    await run(async () => {
       await step()
-      toast(done)
       onChanged?.()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-    }
+    }, { done })
   }
 
   return (
@@ -294,15 +283,11 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
 export function CrewScreen() {
   const { slug = '' } = useParams()
   const ok = useRequireAccount(`/c/${slug}`)
-  const [page, setPage] = useState<CrewPage | null | undefined>(undefined)
-  const load = useCallback(() => {
-    crewPage(slug)
-      .then(setPage)
-      .catch(() => setPage(null))
-  }, [slug])
-  useEffect(() => {
-    if (ok) load()
-  }, [ok, load])
+  const q = useServerQuery(['crews', 'page', slug], () => crewPage(slug), { enabled: ok })
+  const page: CrewPage | null | undefined = q.data
+  const { refetch } = q
+  const load = useCallback(() => void refetch(), [refetch])
+  if (ok && page === undefined && q.error) return <ErrorBox error={q.error} onRetry={load} />
   if (!ok || page === undefined) return <Spinner />
   if (!page) return <EmptyState title={t.social.notFound} body={C.none} action={<Link className="btn btn--secondary" to="/crews">{C.title}</Link>} />
   return <CrewView key={page.crew.id} page={page} onChanged={load} />

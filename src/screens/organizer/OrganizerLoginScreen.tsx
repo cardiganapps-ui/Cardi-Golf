@@ -9,7 +9,8 @@ import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
 import { acceptLegal, sayAdult } from '../../data/legal'
 import { LegalConsent } from '../../components/LegalLinks'
-import { humanError, UserError } from '../../lib/humanError'
+import { UserError } from '../../lib/humanError'
+import { useServerMutation } from '../../components/useServerMutation'
 
 /** Organizer sign-in. One primary path (email + password); the alternatives are quiet. */
 export function OrganizerLoginScreen() {
@@ -19,8 +20,9 @@ export function OrganizerLoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // A failure is said by the form, not in a toast.
+  const write = useServerMutation({ errors: 'inline' })
+  const { busy, error } = write
   const [info, setInfo] = useState<string | null>(null)
   /** Waiting for the emailed code: after sign-up (`signup`) or a magic-link request (`email`). */
   const [awaiting, setAwaiting] = useState<'signup' | 'email' | null>(null)
@@ -34,22 +36,14 @@ export function OrganizerLoginScreen() {
   }, [signedIn, navigate])
   if (signedIn) return null
 
-  async function run(action: () => Promise<void>) {
-    setBusy(true)
-    setError(null)
+  function attempt(action: () => Promise<void>) {
     setInfo(null)
-    try {
-      await action()
-    } catch (err) {
-      setError(humanError(err))
-    } finally {
-      setBusy(false)
-    }
+    return write.run(action)
   }
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    void run(async () => {
+    void attempt(async () => {
       // Signing in makes this phone another account: not while it holds writes that would then wait for a PIN.
       await refuseWithUnsent('switch')
       if (mode === 'in') {
@@ -93,7 +87,7 @@ export function OrganizerLoginScreen() {
           className={styles.form}
           onSubmit={(e) => {
             e.preventDefault()
-            void run(async () => {
+            void attempt(async () => {
               // The code is what switches the phone: anything saved since the email went out counts too.
               await refuseWithUnsent('switch')
               try {
@@ -128,7 +122,7 @@ export function OrganizerLoginScreen() {
              
               disabled={busy}
               onClick={() =>
-                void run(async () => {
+                void attempt(async () => {
                   await resendEmailCode(email.trim(), awaiting)
                   setInfo(t.auth.resent)
                 })
@@ -142,7 +136,7 @@ export function OrganizerLoginScreen() {
               onClick={() => {
                 setAwaiting(null)
                 setCode('')
-                setError(null)
+                write.clearError()
                 setInfo(null)
               }}
             >
@@ -186,7 +180,7 @@ export function OrganizerLoginScreen() {
                 variant="ghost" size="sm"
                
                 onClick={() =>
-                  void run(async () => {
+                  void attempt(async () => {
                     await refuseWithUnsent('switch')
                     await signInWithMagicLink(email.trim())
                     setAwaiting('email')
@@ -200,7 +194,7 @@ export function OrganizerLoginScreen() {
                 variant="ghost" size="sm"
                
                 onClick={() =>
-                  void run(async () => {
+                  void attempt(async () => {
                     await requestPasswordReset(email.trim())
                     setInfo(t.auth.resetSent)
                   })

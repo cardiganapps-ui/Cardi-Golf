@@ -15,8 +15,8 @@ import { useTournament } from '../../data/tournamentStore'
 import { publishFromStore } from '../../data/publish'
 import { useCloseGate } from '../../components/CloseGate'
 import { useTournamentCtx } from '../tournament/tournamentContext'
-import { humanError } from '../../lib/humanError'
 import { localWhen } from '../../lib/localWhen'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const D = t.admin.data
 
@@ -25,23 +25,13 @@ export function AdminData() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const navigate = useNavigate()
-  const [busy, setBusy] = useState(false)
   const [dupName, setDupName] = useState(`${data.snapshot.tournament.name} ${t.common.copySuffix}`)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null)
   const closeGate = useCloseGate(tournamentId)
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
 
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true)
-    try {
-      await fn()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { run, busy } = useServerMutation()
 
   function exportCsv() {
     const { snapshot, state } = data
@@ -112,12 +102,12 @@ export function AdminData() {
             disabled={busy || !finished || closeGate.checking}
             onClick={() =>
               // «Cerrar torneo» (MONEY-05): results are published only once nothing is left open.
-              void closeGate.guard({ confirmLabel: D.publishButton }, () =>
-                run(async () => {
+              void closeGate.guard({ confirmLabel: D.publishButton }, async () => {
+                await run(async () => {
                   const r = await publishFromStore(tournamentId)
                   toast(t.admin.tournament.published(r.players))
-                }),
-              )
+                })
+              })
             }
           >
             {D.publishButton}

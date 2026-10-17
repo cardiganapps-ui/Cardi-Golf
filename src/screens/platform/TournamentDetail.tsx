@@ -8,7 +8,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner } from '../../components/ui'
-import { toast } from '../../components/toast'
 import { Button, Field, Input } from '../../components/primitives'
 import { IconChevronLeft, IconLock, IconShield } from '../../components/icons'
 import { ReasonSheet } from '../../components/ReasonSheet'
@@ -20,6 +19,8 @@ import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
 import { ViewReasonForm } from './ViewReason'
 import { useAdminView } from './useAdminView'
+import { useServerMutation } from '../../components/useServerMutation'
+import { usePlatformKey } from './platformKey'
 import { buttonClass } from '../../components/buttonClass'
 
 const P = t.platform
@@ -32,28 +33,15 @@ export function TournamentDetail() {
   const api = usePlatformApi()
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
   const open = useCallback((reason?: string) => api.tournament(id, reason), [api, id])
-  const { data, error, asking, load } = useAdminView<PlatformTournament>(open)
+  const { data, error, asking, load } = useAdminView<PlatformTournament>(usePlatformKey('tournament', id), open)
   const [sheet, setSheet] = useState<'unlock' | 'unprotect' | 'organizer' | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
 
   const changed = async () => {
     await load()
     outlet?.onChanged()
   }
-
-  async function run(fn: () => Promise<unknown>) {
-    setBusy(true)
-    try {
-      await fn()
-      await changed()
-      toast(P.saved)
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { run, busy } = useServerMutation({ after: changed })
 
   const back = (
     <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
@@ -96,7 +84,7 @@ export function TournamentDetail() {
         {d.unlockedUntil && <span className={s.help}>{P.unlockedUntil(clock(d.unlockedUntil))}</span>}
         <div className={s.actions}>
           {!d.protected && (
-            <Button size="sm" disabled={busy} onClick={() => void run(() => api.setProtected(d.id, true))}>
+            <Button size="sm" disabled={busy} onClick={() => void run(() => api.setProtected(d.id, true), { done: P.saved })}>
               {P.protect}
             </Button>
           )}
@@ -106,7 +94,7 @@ export function TournamentDetail() {
             </Button>
           )}
           {d.protected && d.unlockedUntil && (
-            <Button size="sm" disabled={busy} onClick={() => void run(() => api.relock(d.id))}>
+            <Button size="sm" disabled={busy} onClick={() => void run(() => api.relock(d.id), { done: P.saved })}>
               {P.relock}
             </Button>
           )}

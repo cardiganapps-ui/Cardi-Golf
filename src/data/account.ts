@@ -23,6 +23,7 @@ import { acceptLegal, forgetLegal } from './legal'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
+import { forgetServerState } from './serverCache'
 
 /**
  * Only same-app paths are followed after signing in (`?next=`, kept through the code, Google's return and the
@@ -212,9 +213,10 @@ export type SignOutResult = { done: true } | { done: false; reason: string }
  */
 export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null }))
 
-/** What a signed-out person leaves on the phone goes with them: the profile in memory, «Tu último torneo», the saved boards. Also after deleting the account (myData.ts). */
+/** What a signed-out person leaves on the phone goes with them: the profile in memory, what the screens read from the server (ARCH-18), «Tu último torneo», the saved boards. Also after deleting the account (myData.ts). */
 export async function forgetSignedOut() {
   useMyProfile.getState().clear()
+  forgetServerState()
   setLastTournament(null)
   forgetLegal()
   await clearAllCached()

@@ -27,6 +27,8 @@ import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/
 import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneRounds, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
+import { REQUEST_TIMEOUT_MS } from '../../lib/fetchWithTimeout'
+import { withTimeout } from '../../lib/timeout'
 import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
 import { TournamentContext as Ctx, type Me } from './tournamentContext'
@@ -41,6 +43,16 @@ import { buttonClass } from '../../components/buttonClass'
 const CACHE_RETRY_MS = 20_000
 /** After an ask that failed with signal, the next one comes this soon, doubling up to CACHE_RETRY_MS. */
 const RETRY_SOON_MS = 2_000
+/**
+ * Each step's own deadline (ARCH-18). The client's (REL-14) starts with a
+ * request; what holds a step up before its request goes out (auth-js waiting
+ * on a token refresh) had none, and an ask still out keeps every retry away,
+ * so the phone's copy said «Conectando…» for good. The session has its own
+ * (SESSION_TIMEOUT_MS); the lookup and the membership are a request each,
+ * given a little past the client's; the boards are several pages of them.
+ */
+const STEP_TIMEOUT_MS = REQUEST_TIMEOUT_MS + 3_000
+const LOAD_TIMEOUT_MS = 2 * REQUEST_TIMEOUT_MS + 6_000
 
 /** `dropped`: writes this phone still had for the tournament that is gone, moved to the rejected list. */
 type Phase = { kind: 'loading' } | { kind: 'notFound'; dropped: number } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
@@ -143,7 +155,7 @@ export function TournamentGate() {
     try {
       const session = await sessionIfAny()
       if (stale()) return
-      const lookup = await lookupTournament(slug)
+      const lookup = await withTimeout(lookupTournament(slug), STEP_TIMEOUT_MS, 'torneo')
       if (stale()) return
       if (!lookup) {
         settled.current = true
@@ -174,7 +186,7 @@ export function TournamentGate() {
         setPhase({ kind: 'enter', lookup })
         return
       }
-      const m = await myMembership(lookup.id)
+      const m = await withTimeout(myMembership(lookup.id), STEP_TIMEOUT_MS, 'jugador')
       if (stale()) return
       const platform = m.via === 'platform'
       if (m.isOrganizer || m.playerId || platform) {
@@ -200,7 +212,8 @@ export function TournamentGate() {
           // «Tu último torneo» opens /t/<slug>, and with no signal the boards must be there.
           void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })
         }
-        await load(lookup.id, { keepOnPhone: !platform })
+        // A load given up on goes on in the store, whose own order (fetchSeq) keeps a newer one's boards.
+        await withTimeout(load(lookup.id, { keepOnPhone: !platform }), LOAD_TIMEOUT_MS, 'tablero')
         if (stale()) return
         // The boards as a confirmed member reads them: a hole of a day the Comité deleted can never go out (V2).
         // Not waited for: it asks the server again before it rejects anything (NEW-1), and publishes what it moved.

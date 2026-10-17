@@ -4,11 +4,10 @@
  * friends, the rivalry: strokes that slide after each shared round (the
  * loser receives one more), replayed from scratch whenever a score changes.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Segmented, Spinner } from '../../components/ui'
-import { toast } from '../../components/toast'
+import { Avatar, ErrorBox, Segmented, Spinner } from '../../components/ui'
 import { EmptyState, Stepper } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconChevronLeft } from '../../components/icons'
@@ -16,7 +15,8 @@ import { profileCard, useMyProfile, type ProfileCard } from '../../data/profiles
 import { h2hRecord, headToHead, proposedStrokes, rivalryEnd, rivalryPropose, rivalryRespond, type HeadToHead, type H2HRound } from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const S = t.social
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -37,25 +37,27 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
   const { handle = '' } = useParams()
   const ok = useRequireAccount(`/p/${handle}/vs`, !!fixture)
   const { profile, load: loadProfile } = useMyProfile()
-  const [them, setThem] = useState<ProfileCard | null | undefined>(fixture?.them)
-  const [h2h, setH2h] = useState<HeadToHead | null | undefined>(fixture?.h2h)
+  const q = useServerQuery(
+    ['friends', 'versus', handle],
+    async () => {
+      const [card, h] = await Promise.all([profileCard(handle), headToHead(handle)])
+      return { them: card, h2h: h }
+    },
+    { enabled: ok && !fixture },
+  )
+  const them: ProfileCard | null | undefined = fixture ? fixture.them : q.data?.them
+  const h2h: HeadToHead | null | undefined = fixture ? fixture.h2h : q.data?.h2h
   const [basis, setBasis] = useState<'net' | 'gross'>('net')
-  const [busy, setBusy] = useState(false)
   const [ending, setEnding] = useState(false)
   const [strokes, setStrokes] = useState(0)
   const [side, setSide] = useState<'receive' | 'give'>('receive')
+  // A rivalry step changes this screen and the friends' lists; the confirm sheet closes either way.
+  const write = useServerMutation({ invalidates: [['friends']], onError: () => setEnding(false) })
+  const busy = write.busy
 
-  const load = useCallback(async () => {
-    if (fixture) return
-    const [c, h] = await Promise.all([profileCard(handle), headToHead(handle)])
-    setThem(c)
-    setH2h(h)
-  }, [fixture, handle])
   useEffect(() => {
-    if (!ok || fixture) return
-    if (!profile) void loadProfile()
-    load().catch((e) => toast(humanError(e)))
-  }, [ok, fixture, profile, loadProfile, load])
+    if (ok && !fixture && !profile) void loadProfile()
+  }, [ok, fixture, profile, loadProfile])
   // Start the proposal from the index difference.
   useEffect(() => {
     const s = proposedStrokes(h2h?.suggestion ?? null)
@@ -66,21 +68,12 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
   const me = fixture?.me ?? (profile ? { displayName: profile.displayName, avatarUrl: profile.avatarUrl } : null)
   const record = useMemo(() => (h2h ? h2hRecord(h2h.rounds, basis) : null), [h2h, basis])
 
-  async function run(fn: () => Promise<unknown>, done?: string) {
+  async function step(fn: () => Promise<unknown>, done?: string) {
     if (fixture) return
-    setBusy(true)
-    try {
-      await fn()
-      if (done) toast(done)
-      await load()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
-      setEnding(false)
-    }
+    if (await write.run(fn, { done })) setEnding(false)
   }
 
+  if (ok && !fixture && q.error && !q.data) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
   if (!ok || them === undefined || h2h === undefined) return <Spinner />
   if (!them || !h2h || them.isMe) return <EmptyState title={S.notFound} body={t.profile.notFoundHint} />
 
@@ -146,7 +139,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
           <div className={styles.ask}>
             <span>{S.waiting(first)}</span>
             <div className={styles.askActions}>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void run(() => rivalryEnd(open.id))}>
+              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryEnd(open.id))}>
                 {S.cancel}
               </button>
             </div>
@@ -155,10 +148,10 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
           <div className={styles.ask}>
             <span>{S.theyPropose(first, S.strokesMine(open.startStrokes, first).toLowerCase())}</span>
             <div className={styles.askActions}>
-              <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void run(() => rivalryRespond(open.id, true))}>
+              <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryRespond(open.id, true))}>
                 {S.acceptRivalry}
               </button>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void run(() => rivalryRespond(open.id, false))}>
+              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryRespond(open.id, false))}>
                 {S.decline}
               </button>
             </div>
@@ -179,7 +172,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
               <Stepper value={strokes} min={0} max={18} label={S.startStrokes} onChange={setStrokes} />
             </div>
             <p className={styles.help}>{[S.strokesMine(signed, first), S.suggest(h2h.suggestion)].join('. ')}</p>
-            <button className={`btn btn--primary ${styles.start}`} type="button" disabled={busy} onClick={() => void run(() => rivalryPropose(them.handle, signed), S.proposed(first))}>
+            <button className={`btn btn--primary ${styles.start}`} type="button" disabled={busy} onClick={() => void step(() => rivalryPropose(them.handle, signed), S.proposed(first))}>
               {S.propose}
             </button>
           </div>
@@ -243,7 +236,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
         )}
       </section>
 
-      <ConfirmSheet open={ending} title={S.endRivalry} body={S.endConfirm} danger busy={busy} confirmLabel={S.endRivalry} onConfirm={() => open && void run(() => rivalryEnd(open.id))} onClose={() => setEnding(false)} />
+      <ConfirmSheet open={ending} title={S.endRivalry} body={S.endConfirm} danger busy={busy} confirmLabel={S.endRivalry} onConfirm={() => open && void step(() => rivalryEnd(open.id))} onClose={() => setEnding(false)} />
     </div>
   )
 }

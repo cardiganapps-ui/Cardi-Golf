@@ -20,6 +20,7 @@ import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
 import { ViewReasonForm } from './ViewReason'
 import { useAdminView } from './useAdminView'
+import { usePlatformKey } from './platformKey'
 import { buttonClass } from '../../components/buttonClass'
 
 const K = t.platform.crews
@@ -29,8 +30,7 @@ export function CatalogCrews() {
   const outlet = useOutlet()
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
-  const fetch = useCallback((offset: number) => api.crews({ q, limit: 50, offset }), [api, q])
-  const { rows, total, error, loadingMore, reload, more } = usePaged(fetch, !!q)
+  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('crews'), { q }, (p, offset) => api.crews({ ...p, limit: 50, offset }), !!q)
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
@@ -84,7 +84,7 @@ export function CrewDetail() {
   const navigate = useNavigate()
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
   const open = useCallback((reason?: string) => api.crew(id, reason), [api, id])
-  const { data: c, error, asking, load } = useAdminView<PlatformCrew>(open)
+  const { data: c, error, asking, load } = useAdminView<PlatformCrew>(usePlatformKey('crew', id), open)
   const [removing, setRemoving] = useState<PlatformCrew['members'][number] | null>(null)
   const [deleting, setDeleting] = useState(false)
 

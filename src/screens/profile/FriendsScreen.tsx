@@ -3,19 +3,22 @@
  * people you already played with. A friend sees your whole profile and can
  * start a rivalry with you.
  */
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Spinner } from '../../components/ui'
+import { Avatar, ErrorBox, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { IconChevronLeft, IconChevronRight, IconSearch } from '../../components/icons'
 import { formatIndex, searchProfiles, type ProfileHit } from '../../data/profiles'
 import { friendRemove, friendRequest, friendRespond, myFriends, type FriendCard, type MyFriends } from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
+import { useDebounced } from '../../lib/useDebounced'
 
 const S = t.social
+const NO_HITS: ProfileHit[] = []
 
 function Person({ p, sub, children }: { p: Pick<FriendCard, 'handle' | 'displayName' | 'avatarUrl'>; sub?: string | null; children?: ReactNode }) {
   return (
@@ -36,54 +39,25 @@ const subOf = (f: FriendCard) => [f.homeClub, f.index != null ? `${t.profile.ind
 
 export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
   const ok = useRequireAccount('/amigos', !!fixture)
-  const [data, setData] = useState<MyFriends | null>(fixture ?? null)
+  const friends = useServerQuery(['friends', 'mine'], () => myFriends(), { enabled: ok && !fixture })
+  const data: MyFriends | null = fixture ?? friends.data ?? null
   const [q, setQ] = useState('')
-  const [hits, setHits] = useState<ProfileHit[] | null>(null)
+  // Search as you type, after two characters, once the typing holds still.
+  const clean = q.trim().replace(/^@/, '')
+  const asked = useDebounced(clean, 250)
+  const searching = !fixture && clean.length >= 2
+  const search = useServerQuery(['friends', 'search', asked], () => searchProfiles(asked), { enabled: searching && asked.length >= 2, keepPrevious: true })
+  // A search that can't be read shows no one, as before; the friends' list is the screen's error.
+  const hits: ProfileHit[] | null = !searching ? null : (search.data ?? (search.isError ? NO_HITS : null))
+  /** The person being acted on: their buttons wait. */
   const [busy, setBusy] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    if (fixture) return
-    try {
-      setData(await myFriends())
-    } catch (e) {
-      toast(humanError(e))
-    }
-  }, [fixture])
-  useEffect(() => {
-    if (ok) void load()
-  }, [ok, load])
-
-  // Search as you type, after two characters.
-  useEffect(() => {
-    const clean = q.trim().replace(/^@/, '')
-    if (fixture || clean.length < 2) {
-      setHits(null)
-      return
-    }
-    let live = true
-    const timer = window.setTimeout(() => {
-      searchProfiles(clean)
-        .then((r) => live && setHits(r))
-        .catch(() => live && setHits([]))
-    }, 250)
-    return () => {
-      live = false
-      window.clearTimeout(timer)
-    }
-  }, [q, fixture])
+  const write = useServerMutation({ invalidates: [['friends']] })
 
   async function act(handle: string, fn: () => Promise<unknown>, done?: string) {
     if (fixture) return
     setBusy(handle)
-    try {
-      await fn()
-      if (done) toast(done)
-      await load()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(null)
-    }
+    await write.run(fn, { done })
+    setBusy(null)
   }
 
   const add = (h: { handle: string; displayName: string }) =>
@@ -92,6 +66,7 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
       toast(r === 'accepted' ? S.nowFriends(h.displayName) : r === 'not_found' ? S.notFound : S.sent)
     })
 
+  if (ok && !data && friends.error) return <ErrorBox error={friends.error} onRetry={() => void friends.refetch()} />
   if (!ok || !data) return <Spinner />
   const known = new Set([...data.friends, ...data.incoming, ...data.outgoing].map((f) => f.handle))
 

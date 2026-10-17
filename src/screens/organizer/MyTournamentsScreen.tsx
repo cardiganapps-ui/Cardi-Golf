@@ -13,7 +13,7 @@ import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import styles from './Organizer.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
 import { buttonClass } from '../../components/buttonClass'
 
 const GROUPS: Array<{ key: 'live' | 'setup' | 'finished'; statuses: string[]; label: string; quiet?: boolean }> = [
@@ -25,20 +25,15 @@ const GROUPS: Array<{ key: 'live' | 'setup' | 'finished'; statuses: string[]; la
 export function MyTournamentsScreen() {
   const navigate = useNavigate()
   const { ready, user, isAnonymous } = useAuth()
-  const [items, setItems] = useState<MyTournament[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const signedIn = ready && !!user && !isAnonymous
+  const q = useServerQuery(['organizer', 'tournaments'], () => listMyTournaments(), { enabled: signedIn })
+  const items = q.data ?? null
+  const error = items ? null : q.error
   /** Waiting for the server to end the session: on lie-fi that takes until auth-js's own deadline. */
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
-    if (!ready) return
-    if (!user || isAnonymous) {
-      navigate('/organizer/login', { replace: true })
-      return
-    }
-    listMyTournaments()
-      .then(setItems)
-      .catch((e) => setError(humanError(e)))
+    if (ready && (!user || isAnonymous)) navigate('/organizer/login', { replace: true })
   }, [ready, user, isAnonymous, navigate])
 
   // One row per tournament even when the account holds several organizer rows (logged in DESIGN_NOTES.md).
@@ -79,7 +74,7 @@ export function MyTournamentsScreen() {
           {t.organizer.newTournament}
         </Link>
       </div>
-      {error && <ErrorBox error={error} />}
+      {error && <ErrorBox error={error} onRetry={() => void q.refetch()} />}
       {!items && !error && <Spinner />}
       {items && unique.length === 0 && (
         <EmptyState
