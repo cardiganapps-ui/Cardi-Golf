@@ -20,7 +20,10 @@ vi.mock('../../data/api', async (importOriginal) => ({
   }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { _outboxTest, applyFields, baseRow, enqueueScore, startOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -37,7 +40,7 @@ let clock = 0
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 let base: Snapshot
@@ -45,17 +48,31 @@ const fx = () => getFixture('minimal4-live')!
 
 /** The phone's saved boards: the server's rows only (what the cache keeps). */
 function seedBoards(s: Snapshot) {
-  useTournament.setState({ tournamentId: s.tournament.id, data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: s.tournament.id,
+    data: dataFromSnapshot(structuredClone(s)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
 }
 /** What Tarjeta's save writes through: the outbox overlays it, as the store's compute does. */
-const refresh = () => useTournament.getState().refresh()
 
 function mount(opts: { isComite?: boolean } = {}) {
   const f = fx()
   const me = { ...f.me, isComite: opts.isComite ?? false }
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: base.tournament.id, slug: '_/minimal4-live', lookup: f.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: base.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: f.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -64,7 +81,8 @@ function mount(opts: { isComite?: boolean } = {}) {
 
 const holeOnScreen = () => Number(document.querySelector('[class*="holeNum"]')?.textContent)
 const nameOf = (pid: string) => base.players.find((p) => p.id === pid)!.displayName
-const strokesUp = (pid: string) => screen.getByRole('button', { name: `${S.strokesOf(nameOf(pid))}: ${t.common.stepUp}` })
+const strokesUp = (pid: string) =>
+  screen.getByRole('button', { name: `${S.strokesOf(nameOf(pid))}: ${t.common.stepUp}` })
 const saveButton = () => screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) })
 async function tapSave(at: number) {
   clock = at
@@ -83,10 +101,13 @@ function queuedAt(hole: number): Record<string, string> {
   for (const it of _outboxTest.queue()) {
     if (it.kind === 'score' && it.payload.hole === hole) rows[it.payload.player_id] = it.payload
     if (it.kind === 'hole' && it.payload.hole === hole) {
-      for (const e of it.payload.entries) rows[e.player_id] = applyFields(rows[e.player_id] ?? baseRow(e.base), e.fields)
+      for (const e of it.payload.entries)
+        rows[e.player_id] = applyFields(rows[e.player_id] ?? baseRow(e.base), e.fields)
     }
   }
-  return Object.fromEntries(Object.entries(rows).map(([pid, p]) => [pid, `${p.strokes}/${p.putts}${p.picked_up ? '/L' : ''}`]))
+  return Object.fromEntries(
+    Object.entries(rows).map(([pid, p]) => [pid, `${p.strokes}/${p.putts}${p.picked_up ? '/L' : ''}`]),
+  )
 }
 /** The phone restarts: the queue in memory is gone, IndexedDB keeps it. */
 function coldRestart() {
@@ -99,14 +120,31 @@ async function readQueue() {
 }
 
 /** Before the restart, offline: hole `hole` saved for all four with what was typed. */
-async function queueHole(hole: number, values: Record<string, { strokes: number | null; putts: number; pickedUp?: boolean }>) {
+async function queueHole(
+  hole: number,
+  values: Record<string, { strokes: number | null; putts: number; pickedUp?: boolean }>,
+) {
   seedBoards(base)
   for (const pid of Object.keys(values)) {
     const v = values[pid]!
-    await enqueueScore(base.tournament.id, { round_id: 'r1', player_id: pid, hole, strokes: v.pickedUp ? null : v.strokes, putts: v.putts, picked_up: !!v.pickedUp, entered_by: 'p1', client_ts: new Date(Date.UTC(2027, 4, 15, 15, hole)).toISOString() })
+    await enqueueScore(base.tournament.id, {
+      round_id: 'r1',
+      player_id: pid,
+      hole,
+      strokes: v.pickedUp ? null : v.strokes,
+      putts: v.putts,
+      picked_up: !!v.pickedUp,
+      entered_by: 'p1',
+      client_ts: new Date(Date.UTC(2027, 4, 15, 15, hole)).toISOString(),
+    })
   }
 }
-const TYPED = { p1: { strokes: 7, putts: 3 }, p2: { strokes: 6, putts: 1 }, p3: { strokes: null, putts: 2, pickedUp: true }, p4: { strokes: 3, putts: 0 } }
+const TYPED = {
+  p1: { strokes: 7, putts: 3 },
+  p2: { strokes: 6, putts: 1 },
+  p3: { strokes: null, putts: 2, pickedUp: true },
+  p4: { strokes: 3, putts: 0 },
+}
 const TYPED_Q = { p1: '7/3', p2: '6/1', p3: 'null/2/L', p4: '3/0' }
 
 beforeAll(async () => {
@@ -194,7 +232,10 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
   it('a kept draft (PWA-05) on the queued hole survives the race', async () => {
     await queueHole(10, TYPED)
     // Before the restart: back on hole 10, p1 corrected to 8 and the app was killed before saving.
-    const kept = { at: Date.now(), players: { p1: { draft: { strokes: 8, putts: 3, pickedUp: false }, server: '7:3:false' } } }
+    const kept = {
+      at: Date.now(),
+      players: { p1: { draft: { strokes: 8, putts: 3, pickedUp: false }, server: '7:3:false' } },
+    }
     const key = 'cardi-golf:tarjeta:r1|r1g1|10'
     localStorage.setItem(key, JSON.stringify(kept))
     coldRestart()
@@ -206,14 +247,27 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
     expect(holeOnScreen()).toBe(10)
     expect(localStorage.getItem(key), 'the kept correction is still on the phone').not.toBeNull()
-    const shown = Number(screen.getByRole('group', { name: S.strokesOf(nameOf('p1')) }).textContent?.replace(/\D+/g, ''))
+    const shown = Number(
+      screen.getByRole('group', { name: S.strokesOf(nameOf('p1')) }).textContent?.replace(/\D+/g, ''),
+    )
     expect(shown).toBe(8)
   })
 
   it('a 10-start group (10–18, 1–9): hole 3 queued, then the race', async () => {
     base.groups = base.groups.map((g) => ({ ...g, startHole: 10 }))
     base.scores = []
-    for (const pid of PIDS) for (const h of [10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2]) base.scores.push({ roundId: 'r1', playerId: pid, hole: h, strokes: 5, putts: 2, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+    for (const pid of PIDS)
+      for (const h of [10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2])
+        base.scores.push({
+          roundId: 'r1',
+          playerId: pid,
+          hole: h,
+          strokes: 5,
+          putts: 2,
+          pickedUp: false,
+          enteredBy: 'p1',
+          updatedAt: '2027-05-15T15:00:00Z',
+        })
     await queueHole(3, TYPED)
     coldRestart()
     seedBoards(base)
@@ -239,13 +293,24 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
     await tapSave(20_000)
     expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
     await readQueue()
-    const direct = admin.saves.map((s) => `${s.row.player_id}@${s.row.hole}=${s.row.strokes}/${s.row.putts}`)
+    const direct = admin.saves.map(
+      (s) => `${String(s.row.player_id)}@${String(s.row.hole)}=${String(s.row.strokes)}/${String(s.row.putts)}`,
+    )
     expect({ direct, q: queuedAt(10) }).toEqual({ direct: [], q: TYPED_Q })
   })
 
   it('no «¿Seguro?» sheet opens before the queue is read: the queued hole is never confirmed over', async () => {
     // p2 has a 10 on hole 10 on the server; p1, p3, p4 wait in the queue.
-    base.scores.push({ roundId: 'r1', playerId: 'p2', hole: 10, strokes: 10, putts: 2, pickedUp: false, enteredBy: 'p3', updatedAt: '2027-05-15T15:00:00Z' })
+    base.scores.push({
+      roundId: 'r1',
+      playerId: 'p2',
+      hole: 10,
+      strokes: 10,
+      putts: 2,
+      pickedUp: false,
+      enteredBy: 'p3',
+      updatedAt: '2027-05-15T15:00:00Z',
+    })
     await queueHole(10, { p1: TYPED.p1, p3: TYPED.p3, p4: TYPED.p4 })
     coldRestart()
     seedBoards(base)
@@ -293,7 +358,17 @@ describe('the hole-following, under a user who has not touched anything', () => 
     expect(holeOnScreen()).toBe(10)
     // Another phone in the group saves hole 10 for all four (Realtime).
     const next = structuredClone(base)
-    for (const pid of PIDS) next.scores.push({ roundId: 'r1', playerId: pid, hole: 10, strokes: 5, putts: 2, pickedUp: false, enteredBy: 'p3', updatedAt: '2027-05-15T15:00:00Z' })
+    for (const pid of PIDS)
+      next.scores.push({
+        roundId: 'r1',
+        playerId: pid,
+        hole: 10,
+        strokes: 5,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: 'p3',
+        updatedAt: '2027-05-15T15:00:00Z',
+      })
     base = next
     act(() => seedBoards(next))
     const after = holeOnScreen()
@@ -302,5 +377,3 @@ describe('the hole-following, under a user who has not touched anything', () => 
     expect({ after, hole11: queuedAt(11) }).toEqual({ after: 10, hole11: {} })
   })
 })
-
-void refresh

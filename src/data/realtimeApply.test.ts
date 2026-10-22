@@ -14,9 +14,24 @@ import { applyAdjustments } from '../engine/core/unassigned'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
-const ins = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'INSERT', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const upd = (table: string, row: Record<string, unknown>): LiveChange => ({ table, eventType: 'UPDATE', new: row as LiveChange['new'], old: {} as LiveChange['old'] })
-const del = (table: string, key: Record<string, unknown>): LiveChange => ({ table, eventType: 'DELETE', new: {} as LiveChange['new'], old: key as LiveChange['old'] })
+const ins = (table: string, row: Record<string, unknown>): LiveChange => ({
+  table,
+  eventType: 'INSERT',
+  new: row,
+  old: {},
+})
+const upd = (table: string, row: Record<string, unknown>): LiveChange => ({
+  table,
+  eventType: 'UPDATE',
+  new: row,
+  old: {},
+})
+const del = (table: string, key: Record<string, unknown>): LiveChange => ({
+  table,
+  eventType: 'DELETE',
+  new: {},
+  old: key,
+})
 
 describe('scores', () => {
   it('a hole saved on another phone replaces that hole, in its place, and only that hole', () => {
@@ -24,20 +39,74 @@ describe('scores', () => {
     const before = s.scores.length
     const i = 3
     const target = s.scores[i]!
-    const r = applyChange(s, T(s), upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes: 9, putts: 3, picked_up: false, updated_at: '2027-04-12T10:00:00Z', disputed: false }))
+    const r = applyChange(
+      s,
+      T(s),
+      upd('scores', {
+        id: target.id,
+        round_id: target.roundId,
+        player_id: target.playerId,
+        hole: target.hole,
+        strokes: 9,
+        putts: 3,
+        picked_up: false,
+        updated_at: '2027-04-12T10:00:00Z',
+        disputed: false,
+      }),
+    )
     expect(r).toBe('applied')
     expect(s.scores).toHaveLength(before)
-    expect(s.scores[i]).toMatchObject({ roundId: target.roundId, playerId: target.playerId, hole: target.hole, strokes: 9, putts: 3 })
+    expect(s.scores[i]).toMatchObject({
+      roundId: target.roundId,
+      playerId: target.playerId,
+      hole: target.hole,
+      strokes: 9,
+      putts: 3,
+    })
   })
 
   it('a new hole is added where a fetch would put it (by its id)', () => {
     const s = fx()
     const round = s.rounds.find((r) => r.status === 'live')!
     s.scores = [
-      { id: 'b', roundId: round.id, playerId: s.players[0]!.id, hole: 1, strokes: 4, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null },
-      { id: 'd', roundId: round.id, playerId: s.players[0]!.id, hole: 2, strokes: 4, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null },
+      {
+        id: 'b',
+        roundId: round.id,
+        playerId: s.players[0]!.id,
+        hole: 1,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
+      {
+        id: 'd',
+        roundId: round.id,
+        playerId: s.players[0]!.id,
+        hole: 2,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
     ]
-    expect(applyChange(s, T(s), ins('scores', { id: 'c', round_id: round.id, player_id: s.players[1]!.id, hole: 1, strokes: 5, putts: 2, picked_up: false }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('scores', {
+          id: 'c',
+          round_id: round.id,
+          player_id: s.players[1]!.id,
+          hole: 1,
+          strokes: 5,
+          putts: 2,
+          picked_up: false,
+        }),
+      ),
+    ).toBe('applied')
     expect(s.scores.map((x) => x.id)).toEqual(['b', 'c', 'd'])
   })
 
@@ -46,18 +115,55 @@ describe('scores', () => {
     const round = s.rounds.find((r) => r.status === 'live')!
     const p = s.players[2]!.id
     s.scores = [
-      { id: 'a', roundId: round.id, playerId: p, hole: 1, strokes: 4, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null },
-      { id: 'z', roundId: round.id, playerId: p, hole: 3, strokes: 4, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null },
-      { roundId: round.id, playerId: p, hole: 2, strokes: 5, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null },
+      {
+        id: 'a',
+        roundId: round.id,
+        playerId: p,
+        hole: 1,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
+      {
+        id: 'z',
+        roundId: round.id,
+        playerId: p,
+        hole: 3,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
+      {
+        roundId: round.id,
+        playerId: p,
+        hole: 2,
+        strokes: 5,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
     ]
-    expect(applyChange(s, T(s), upd('scores', { id: 'm', round_id: round.id, player_id: p, hole: 2, strokes: 5, putts: 2, picked_up: false }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        upd('scores', { id: 'm', round_id: round.id, player_id: p, hole: 2, strokes: 5, putts: 2, picked_up: false }),
+      ),
+    ).toBe('applied')
     expect(s.scores.map((x) => x.id)).toEqual(['a', 'm', 'z'])
   })
 
   it("a score of a round this phone has not loaded (a new day, another tournament's) waits, and changes nothing", () => {
     const s = fx()
     const copy = JSON.stringify(s.scores)
-    expect(applyChange(s, T(s), ins('scores', { id: 'n', round_id: 'elsewhere', player_id: 'p1', hole: 1, strokes: 4 }))).toBe('unknown')
+    expect(
+      applyChange(s, T(s), ins('scores', { id: 'n', round_id: 'elsewhere', player_id: 'p1', hole: 1, strokes: 4 })),
+    ).toBe('unknown')
     expect(JSON.stringify(s.scores)).toBe(copy)
   })
 
@@ -71,13 +177,26 @@ describe('scores', () => {
     expect(s.scores).toHaveLength(before)
     expect(applyChange(s, T(s), del('scores', { id: target.id }))).toBe('applied')
     expect(s.scores).toHaveLength(before - 1)
-    expect(s.scores.some((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)).toBe(false)
+    expect(
+      s.scores.some((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole),
+    ).toBe(false)
   })
 
   it('a hole only on this phone (no id) is never what a delete names', () => {
     const s = fx()
     const round = s.rounds[0]!
-    s.scores = [{ roundId: round.id, playerId: s.players[0]!.id, hole: 1, strokes: 4, putts: 2, pickedUp: false, enteredBy: null, updatedAt: null }]
+    s.scores = [
+      {
+        roundId: round.id,
+        playerId: s.players[0]!.id,
+        hole: 1,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: null,
+        updatedAt: null,
+      },
+    ]
     expect(applyChange(s, T(s), del('scores', { id: undefined }))).toBe('ignored')
     expect(s.scores).toHaveLength(1)
   })
@@ -87,7 +206,21 @@ describe("another tournament's rows", () => {
   it('an insert of another tournament (an account in two of them hears both) is left alone', () => {
     const s = fx()
     const copy = JSON.stringify(s.payments)
-    expect(applyChange(s, T(s), ins('payments', { id: 'pay-x', tournament_id: 'other', from_player_id: 'p1', to_player_id: null, amount: 100, kind: 'entry', paid: true }))).toBe('ignored')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('payments', {
+          id: 'pay-x',
+          tournament_id: 'other',
+          from_player_id: 'p1',
+          to_player_id: null,
+          amount: 100,
+          kind: 'entry',
+          paid: true,
+        }),
+      ),
+    ).toBe('ignored')
     expect(JSON.stringify(s.payments)).toBe(copy)
   })
 
@@ -104,23 +237,95 @@ describe("another tournament's rows", () => {
     const s = fx()
     const copy = JSON.stringify(s)
     const elsewhere = { round_id: 'elsewhere', tournament_id: 'other' }
-    expect(applyChange(s, T(s), ins('scores', { id: 'n', ...elsewhere, player_id: 'p1', hole: 1, strokes: 4 }))).toBe('ignored')
-    expect(applyChange(s, T(s), ins('snake_tiebreaks', { ...elsewhere, group_id: 'g', hole: 3, last_holed_player_id: 'p1' }))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('scores', { id: 'n', ...elsewhere, player_id: 'p1', hole: 1, strokes: 4 }))).toBe(
+      'ignored',
+    )
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('snake_tiebreaks', { ...elsewhere, group_id: 'g', hole: 3, last_holed_player_id: 'p1' }),
+      ),
+    ).toBe('ignored')
     expect(applyChange(s, T(s), ins('round_tees', { ...elsewhere, player_id: 'p1', tee_id: 't' }))).toBe('ignored')
-    expect(applyChange(s, T(s), ins('calcutta_bids', { id: 'b-x', lot_id: 'another-lot', tournament_id: 'other', bidder_id: 'p1', amount: 500 }))).toBe('ignored')
-    expect(applyChange(s, T(s), ins('calcutta_buybacks', { lot_id: 'another-lot', tournament_id: 'other', pct: 25, amount: 125, paid: false }))).toBe('ignored')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('calcutta_bids', {
+          id: 'b-x',
+          lot_id: 'another-lot',
+          tournament_id: 'other',
+          bidder_id: 'p1',
+          amount: 500,
+        }),
+      ),
+    ).toBe('ignored')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('calcutta_buybacks', { lot_id: 'another-lot', tournament_id: 'other', pct: 25, amount: 125, paid: false }),
+      ),
+    ).toBe('ignored')
     // Even with a round this phone holds, the row's own tenant decides (the composite key never lets the two disagree).
-    expect(applyChange(s, T(s), upd('scores', { id: 'n', round_id: s.rounds[0]!.id, tournament_id: 'other', player_id: s.players[0]!.id, hole: 1, strokes: 9 }))).toBe('ignored')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        upd('scores', {
+          id: 'n',
+          round_id: s.rounds[0]!.id,
+          tournament_id: 'other',
+          player_id: s.players[0]!.id,
+          hole: 1,
+          strokes: 9,
+        }),
+      ),
+    ).toBe('ignored')
     expect(JSON.stringify(s)).toBe(copy)
-    expect(applyChange(s, T(s), ins('scores', { id: 'n', round_id: 'a-new-day', tournament_id: T(s), player_id: 'p1', hole: 1, strokes: 4 }))).toBe('unknown')
-    expect(applyChange(s, T(s), ins('scores', { id: 'n', round_id: s.rounds[0]!.id, tournament_id: T(s), player_id: s.players[0]!.id, hole: 1, strokes: 9 }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('scores', { id: 'n', round_id: 'a-new-day', tournament_id: T(s), player_id: 'p1', hole: 1, strokes: 4 }),
+      ),
+    ).toBe('unknown')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('scores', {
+          id: 'n',
+          round_id: s.rounds[0]!.id,
+          tournament_id: T(s),
+          player_id: s.players[0]!.id,
+          hole: 1,
+          strokes: 9,
+        }),
+      ),
+    ).toBe('applied')
   })
 
   it('a bid or buyback of a lot this phone has not loaded waits; it is never applied', () => {
     const s = fx()
     const copy = JSON.stringify([s.calcuttaBids, s.calcuttaBuybacks])
-    expect(applyChange(s, T(s), ins('calcutta_bids', { id: 'b-x', lot_id: 'another-lot', bidder_id: 'p1', amount: 500, created_at: '2027-04-08T22:00:00Z' }))).toBe('unknown')
-    expect(applyChange(s, T(s), ins('calcutta_buybacks', { lot_id: 'another-lot', pct: 25, amount: 125, paid: false }))).toBe('unknown')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('calcutta_bids', {
+          id: 'b-x',
+          lot_id: 'another-lot',
+          bidder_id: 'p1',
+          amount: 500,
+          created_at: '2027-04-08T22:00:00Z',
+        }),
+      ),
+    ).toBe('unknown')
+    expect(
+      applyChange(s, T(s), ins('calcutta_buybacks', { lot_id: 'another-lot', pct: 25, amount: 125, paid: false })),
+    ).toBe('unknown')
     expect(JSON.stringify([s.calcuttaBids, s.calcuttaBuybacks])).toBe(copy)
   })
 })
@@ -128,7 +333,16 @@ describe("another tournament's rows", () => {
 describe('the other tables applied in place', () => {
   it('a payment marked paid, then taken back', () => {
     const s = fx()
-    const pay = { id: 'pay-new', tournament_id: T(s), from_player_id: s.players[0]!.id, to_player_id: null, amount: 2500, kind: 'entry', paid: true, note: null }
+    const pay = {
+      id: 'pay-new',
+      tournament_id: T(s),
+      from_player_id: s.players[0]!.id,
+      to_player_id: null,
+      amount: 2500,
+      kind: 'entry',
+      paid: true,
+      note: null,
+    }
     expect(applyChange(s, T(s), ins('payments', pay))).toBe('applied')
     expect(s.payments.find((p) => p.id === 'pay-new')).toMatchObject({ amount: 2500, paid: true })
     expect(applyChange(s, T(s), upd('payments', { ...pay, paid: false }))).toBe('applied')
@@ -140,7 +354,19 @@ describe('the other tables applied in place', () => {
   it('a bid, and its undo (the delete names only its id)', () => {
     const s = fx()
     const lot = s.calcuttaLots[0]!
-    expect(applyChange(s, T(s), ins('calcutta_bids', { id: 'b-new', lot_id: lot.id, bidder_id: s.players[1]!.id, amount: 750, created_at: '2027-04-08T22:00:00Z' }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('calcutta_bids', {
+          id: 'b-new',
+          lot_id: lot.id,
+          bidder_id: s.players[1]!.id,
+          amount: 750,
+          created_at: '2027-04-08T22:00:00Z',
+        }),
+      ),
+    ).toBe('applied')
     expect(s.calcuttaBids.some((b) => b.id === 'b-new')).toBe(true)
     expect(applyChange(s, T(s), del('calcutta_bids', { id: 'b-new' }))).toBe('applied')
     expect(s.calcuttaBids.some((b) => b.id === 'b-new')).toBe(false)
@@ -150,9 +376,33 @@ describe('the other tables applied in place', () => {
     const s = fx()
     const round = s.rounds[0]!
     const group = s.groups.find((g) => g.roundId === round.id)!
-    expect(applyChange(s, T(s), ins('snake_tiebreaks', { round_id: round.id, group_id: group.id, hole: 7, last_holed_player_id: group.playerIds[0] }))).toBe('applied')
-    expect(applyChange(s, T(s), upd('snake_tiebreaks', { round_id: round.id, group_id: group.id, hole: 7, last_holed_player_id: group.playerIds[1] }))).toBe('applied')
-    expect(s.snakeTiebreaks.filter((x) => x.roundId === round.id && x.groupId === group.id && x.hole === 7)).toEqual([expect.objectContaining({ lastHoledPlayerId: group.playerIds[1] })])
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('snake_tiebreaks', {
+          round_id: round.id,
+          group_id: group.id,
+          hole: 7,
+          last_holed_player_id: group.playerIds[0],
+        }),
+      ),
+    ).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        upd('snake_tiebreaks', {
+          round_id: round.id,
+          group_id: group.id,
+          hole: 7,
+          last_holed_player_id: group.playerIds[1],
+        }),
+      ),
+    ).toBe('applied')
+    expect(s.snakeTiebreaks.filter((x) => x.roundId === round.id && x.groupId === group.id && x.hole === 7)).toEqual([
+      expect.objectContaining({ lastHoledPlayerId: group.playerIds[1] }),
+    ])
   })
 
   it('a card signed on each day: signing or unsigning one day never touches the other', () => {
@@ -160,8 +410,30 @@ describe('the other tables applied in place', () => {
     const [r1, r2] = s.rounds
     const pair = s.pairs[0]!
     s.cardSignatures = []
-    expect(applyChange(s, T(s), ins('card_signatures', { round_id: r1!.id, pair_id: pair.id, signed_by: pair.player1Id, signed_at: '2027-04-09T15:00:00Z' }))).toBe('applied')
-    expect(applyChange(s, T(s), ins('card_signatures', { round_id: r2!.id, pair_id: pair.id, signed_by: pair.player1Id, signed_at: '2027-04-10T15:00:00Z' }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('card_signatures', {
+          round_id: r1!.id,
+          pair_id: pair.id,
+          signed_by: pair.player1Id,
+          signed_at: '2027-04-09T15:00:00Z',
+        }),
+      ),
+    ).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('card_signatures', {
+          round_id: r2!.id,
+          pair_id: pair.id,
+          signed_by: pair.player1Id,
+          signed_at: '2027-04-10T15:00:00Z',
+        }),
+      ),
+    ).toBe('applied')
     expect(s.cardSignatures).toHaveLength(2)
     expect(applyChange(s, T(s), del('card_signatures', { round_id: r1!.id, pair_id: pair.id }))).toBe('applied')
     expect(s.cardSignatures).toEqual([expect.objectContaining({ roundId: r2!.id, pairId: pair.id })])
@@ -173,24 +445,70 @@ describe('the other tables applied in place', () => {
     const group = s.groups.find((g) => g.roundId === round.id)!
     const [a, b] = group.playerIds
     s.holeAwards = []
-    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: a }))).toBe('applied')
-    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: b }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: a }),
+      ),
+    ).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: b }),
+      ),
+    ).toBe('applied')
     expect(s.holeAwards).toHaveLength(2)
-    expect(applyChange(s, T(s), del('hole_awards', { round_id: round.id, game_id: 'ctp', hole: 3, player_id: a }))).toBe('applied')
+    expect(
+      applyChange(s, T(s), del('hole_awards', { round_id: round.id, game_id: 'ctp', hole: 3, player_id: a })),
+    ).toBe('applied')
     expect(s.holeAwards).toEqual([expect.objectContaining({ playerId: b })])
   })
 
-  it('a Comité ruling and the same player\'s claim are two rows: taking the ruling away keeps the claim (0042, DB-04)', () => {
+  it("a Comité ruling and the same player's claim are two rows: taking the ruling away keeps the claim (0042, DB-04)", () => {
     const s = fx()
     const round = s.rounds[0]!
     const group = s.groups.find((g) => g.roundId === round.id)!
     const [a] = group.playerIds
     s.holeAwards = []
-    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: a, source: 'group' }))).toBe('applied')
-    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: null, hole: 3, game_id: 'ctp', player_id: a, source: 'comite' }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('hole_awards', {
+          round_id: round.id,
+          group_id: group.id,
+          hole: 3,
+          game_id: 'ctp',
+          player_id: a,
+          source: 'group',
+        }),
+      ),
+    ).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        ins('hole_awards', {
+          round_id: round.id,
+          group_id: null,
+          hole: 3,
+          game_id: 'ctp',
+          player_id: a,
+          source: 'comite',
+        }),
+      ),
+    ).toBe('applied')
     expect(s.holeAwards.map((x) => x.source)).toEqual(['comite', 'group'])
     // A delete names the key, `source` with it.
-    expect(applyChange(s, T(s), del('hole_awards', { round_id: round.id, game_id: 'ctp', hole: 3, player_id: a, source: 'comite' }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        del('hole_awards', { round_id: round.id, game_id: 'ctp', hole: 3, player_id: a, source: 'comite' }),
+      ),
+    ).toBe('applied')
     expect(s.holeAwards).toEqual([expect.objectContaining({ playerId: a, groupId: group.id, source: 'group' })])
   })
 
@@ -199,7 +517,17 @@ describe('the other tables applied in place', () => {
     const shown = s.scores
     const copy = JSON.stringify(shown)
     const target = s.scores[0]!
-    applyChange(s, T(s), upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes: 12 }))
+    applyChange(
+      s,
+      T(s),
+      upd('scores', {
+        id: target.id,
+        round_id: target.roundId,
+        player_id: target.playerId,
+        hole: target.hole,
+        strokes: 12,
+      }),
+    )
     expect(JSON.stringify(shown)).toBe(copy)
     expect(s.scores).not.toBe(shown)
   })
@@ -212,7 +540,20 @@ describe('tables that are not applied in place', () => {
     const group = s.groups.find((g) => g.roundId === round.id)!
     const copy = JSON.stringify(s)
     for (const table of ['tournaments', 'players', 'rounds', 'groups', 'group_members', 'pairs', 'teams']) {
-      expect(applyChange(s, T(s), upd(table, { id: group.id, round_id: round.id, group_id: group.id, tournament_id: T(s), player_id: s.players[0]!.id })), table).toBe('reload')
+      expect(
+        applyChange(
+          s,
+          T(s),
+          upd(table, {
+            id: group.id,
+            round_id: round.id,
+            group_id: group.id,
+            tournament_id: T(s),
+            player_id: s.players[0]!.id,
+          }),
+        ),
+        table,
+      ).toBe('reload')
     }
     expect(JSON.stringify(s)).toBe(copy)
   })
@@ -228,7 +569,15 @@ describe('the structural tables reload only for a change that concerns these boa
   const OTHER = 'ffffffff-0000-4000-8000-000000000000'
   const withTeam = () => {
     const s = fx()
-    s.teams = [{ id: 'team-1', name: 'Los de arriba', number: 1, playerIds: [s.players[0]!.id, s.players[1]!.id], drawnAt: null }]
+    s.teams = [
+      {
+        id: 'team-1',
+        name: 'Los de arriba',
+        number: 1,
+        playerIds: [s.players[0]!.id, s.players[1]!.id],
+        drawnAt: null,
+      },
+    ]
     return s
   }
 
@@ -244,8 +593,17 @@ describe('the structural tables reload only for a change that concerns these boa
 
   it("a team member names its tournament (since 0020): this one's insert reloads, another's does not", () => {
     const s = withTeam()
-    expect(concernsBoards(s, T(s), ins('team_members', { tournament_id: T(s), team_id: 'team-9', player_id: s.players[2]!.id }), false)).toBe(true)
-    expect(concernsBoards(s, T(s), ins('team_members', { tournament_id: OTHER, team_id: 'team-9', player_id: 'p' }), false)).toBe(false)
+    expect(
+      concernsBoards(
+        s,
+        T(s),
+        ins('team_members', { tournament_id: T(s), team_id: 'team-9', player_id: s.players[2]!.id }),
+        false,
+      ),
+    ).toBe(true)
+    expect(
+      concernsBoards(s, T(s), ins('team_members', { tournament_id: OTHER, team_id: 'team-9', player_id: 'p' }), false),
+    ).toBe(false)
   })
 
   it("a team draw elsewhere deletes its members: a key these boards don't hold reloads nothing; one they hold does", () => {
@@ -269,8 +627,12 @@ describe('the structural tables reload only for a change that concerns these boa
     expect(concernsBoards(s, T(s), del('rounds', { id: s.rounds[0]!.id }), false)).toBe(true)
     expect(concernsBoards(s, T(s), del('groups', { id: 'nope' }), false)).toBe(false)
     expect(concernsBoards(s, T(s), del('groups', { id: g.id }), false)).toBe(true)
-    expect(concernsBoards(s, T(s), del('group_members', { group_id: 'nope', player_id: g.playerIds[0] }), false)).toBe(false)
-    expect(concernsBoards(s, T(s), del('group_members', { group_id: g.id, player_id: g.playerIds[0] }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('group_members', { group_id: 'nope', player_id: g.playerIds[0] }), false)).toBe(
+      false,
+    )
+    expect(concernsBoards(s, T(s), del('group_members', { group_id: g.id, player_id: g.playerIds[0] }), false)).toBe(
+      true,
+    )
     expect(concernsBoards(s, T(s), del('tournaments', { id: OTHER }), false)).toBe(false)
     expect(concernsBoards(s, T(s), del('tournaments', { id: T(s) }), false)).toBe(true)
   })
@@ -308,9 +670,20 @@ describe('the same lists whichever way the rows came', () => {
   })
 
   it('sameChange knows a write’s echo: same table, same row, every value the server stored', () => {
-    const row = { id: 's1', round_id: 'r1', player_id: 'p1', hole: 4, strokes: 5, putts: 2, updated_at: '2027-04-09T12:00:01.5+00:00', previous: { strokes: 4 } }
+    const row = {
+      id: 's1',
+      round_id: 'r1',
+      player_id: 'p1',
+      hole: 4,
+      strokes: 5,
+      putts: 2,
+      updated_at: '2027-04-09T12:00:01.5+00:00',
+      previous: { strokes: 4 },
+    }
     // The channel and PostgREST may write the same instant differently.
-    expect(sameChange(upd('scores', { ...row, updated_at: '2027-04-09 12:00:01.500000+00' }), upd('scores', row))).toBe(true)
+    expect(sameChange(upd('scores', { ...row, updated_at: '2027-04-09 12:00:01.500000+00' }), upd('scores', row))).toBe(
+      true,
+    )
     expect(sameChange(ins('scores', row), upd('scores', row))).toBe(true)
     expect(sameChange(upd('scores', { ...row, strokes: 6 }), upd('scores', row))).toBe(false)
     expect(sameChange(upd('scores', { ...row, previous: { strokes: 3 } }), upd('scores', row))).toBe(false)
@@ -324,7 +697,13 @@ describe('the same lists whichever way the rows came', () => {
   })
 
   it('sameChange reads jsonb whatever order its keys come in: PostgREST and the Realtime server may list them differently (R4)', () => {
-    const previous = { strokes: 4, putts: 2, picked_up: false, entered_by: 'p2', updated_at: '2027-04-09T12:00:00+00:00' }
+    const previous = {
+      strokes: 4,
+      putts: 2,
+      picked_up: false,
+      entered_by: 'p2',
+      updated_at: '2027-04-09T12:00:00+00:00',
+    }
     const row = { id: 's1', round_id: 'r1', player_id: 'p1', hole: 4, strokes: 5, disputed: true, previous }
     const shuffled = { updated_at: previous.updated_at, entered_by: 'p2', picked_up: false, putts: 2, strokes: 4 }
     expect(sameChange(upd('scores', { ...row, previous: shuffled }), upd('scores', row))).toBe(true)
@@ -343,11 +722,23 @@ describe('the same lists whichever way the rows came', () => {
   it('a score this phone’s own write brought back, stamped earlier than the one held, is not applied over it', () => {
     const s = fx()
     const target = s.scores[2]!
-    const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: false })
+    const at = (stamp: string, strokes: number) =>
+      upd('scores', {
+        id: target.id,
+        round_id: target.roundId,
+        player_id: target.playerId,
+        hole: target.hole,
+        strokes,
+        putts: 2,
+        picked_up: false,
+        updated_at: stamp,
+        disputed: false,
+      })
     expect(applyChange(s, T(s), at('2027-04-12T12:00:05+00:00', 7))).toBe('applied')
     // A write this phone landed, its answer after a fetch that read the later one.
     expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4), { landed: true })).toBe('stale')
-    const held = () => s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)
+    const held = () =>
+      s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)
     expect(held()).toMatchObject({ strokes: 7 })
     expect(applyChange(s, T(s), at('2027-04-12T12:00:06+00:00', 8), { landed: true })).toBe('applied')
     expect(held()).toMatchObject({ strokes: 8 })
@@ -356,23 +747,79 @@ describe('the same lists whichever way the rows came', () => {
   it('the channel’s changes apply in the order they come, whatever their stamps: a write that waited on the row’s lock commits last with the earlier stamp (R1)', () => {
     const s = fx()
     const target = s.scores[2]!
-    const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: true })
+    const at = (stamp: string, strokes: number) =>
+      upd('scores', {
+        id: target.id,
+        round_id: target.roundId,
+        player_id: target.playerId,
+        hole: target.hole,
+        strokes,
+        putts: 2,
+        picked_up: false,
+        updated_at: stamp,
+        disputed: true,
+      })
     // B's transaction began later and committed first; A's began first, waited on B's lock, and committed last.
     expect(applyChange(s, T(s), at('2027-10-03T10:48:28.840158+00:00', 4))).toBe('applied')
     expect(applyChange(s, T(s), at('2027-10-03T10:48:28.534263+00:00', 7))).toBe('applied')
-    expect(s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)).toMatchObject({ strokes: 7 })
+    expect(
+      s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole),
+    ).toMatchObject({ strokes: 7 })
   })
 
   it('a payment Dinero laid with a local id is the row the server made for that flow, not a second one', () => {
     const s = fx()
     const tid = T(s)
-    s.payments = [...s.payments, { id: 'local:entry|pX|', kind: 'entry', fromPlayerId: 'pX', toPlayerId: null, amount: 2500, paid: true, note: null }]
+    s.payments = [
+      ...s.payments,
+      {
+        id: 'local:entry|pX|',
+        kind: 'entry',
+        fromPlayerId: 'pX',
+        toPlayerId: null,
+        amount: 2500,
+        paid: true,
+        note: null,
+      },
+    ]
     const before = s.payments.length
-    expect(applyChange(s, tid, ins('payments', { id: 'f0000000-0000-0000-0000-000000000001', tournament_id: tid, kind: 'entry', from_player_id: 'pX', to_player_id: null, amount: 2500, paid: true, note: null }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        tid,
+        ins('payments', {
+          id: 'f0000000-0000-0000-0000-000000000001',
+          tournament_id: tid,
+          kind: 'entry',
+          from_player_id: 'pX',
+          to_player_id: null,
+          amount: 2500,
+          paid: true,
+          note: null,
+        }),
+      ),
+    ).toBe('applied')
     expect(s.payments).toHaveLength(before)
-    expect(s.payments.filter((x) => x.fromPlayerId === 'pX').map((x) => x.id)).toEqual(['f0000000-0000-0000-0000-000000000001'])
+    expect(s.payments.filter((x) => x.fromPlayerId === 'pX').map((x) => x.id)).toEqual([
+      'f0000000-0000-0000-0000-000000000001',
+    ])
     // Another flow of the same player is its own row.
-    expect(applyChange(s, tid, ins('payments', { id: 'f0000000-0000-0000-0000-000000000002', tournament_id: tid, kind: 'calcutta', from_player_id: 'pX', to_player_id: null, amount: 750, paid: false, note: null }))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        tid,
+        ins('payments', {
+          id: 'f0000000-0000-0000-0000-000000000002',
+          tournament_id: tid,
+          kind: 'calcutta',
+          from_player_id: 'pX',
+          to_player_id: null,
+          amount: 750,
+          paid: false,
+          note: null,
+        }),
+      ),
+    ).toBe('applied')
     expect(s.payments).toHaveLength(before + 1)
   })
 })
@@ -401,19 +848,38 @@ describe('money_adjustments (0027, MONEY-05)', () => {
     expect(applyChange(s, T(s), ins('money_adjustments', row(s)))).toBe('applied')
     expect(s.moneyAdjustments.map((x) => x.id)).toEqual(['adj-b', 'adj-c'])
     expect(s.moneyAdjustments[0]).toMatchObject({ sourceKey: 'bestRound', kind: 'award', amount: 1200, voidedAt: null })
-    expect(applyChange(s, T(s), upd('money_adjustments', row(s, { voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' })))).toBe('applied')
+    expect(
+      applyChange(
+        s,
+        T(s),
+        upd(
+          'money_adjustments',
+          row(s, { voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' }),
+        ),
+      ),
+    ).toBe('applied')
     expect(s.moneyAdjustments.map((x) => [x.id, x.voidReason])).toEqual([
       ['adj-b', 'Error'],
       ['adj-c', null],
     ])
-    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-x', tournament_id: 'otro' })))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-x', tournament_id: 'otro' })))).toBe(
+      'ignored',
+    )
     expect(s.moneyAdjustments).toHaveLength(2)
   })
 
   it('the rows of one call arrive one event each and still form one assignment (its `call_id`)', () => {
     const s = fx()
     s.moneyAdjustments = []
-    const refund = (id: string, player: number) => row(s, { id, call_id: 'call-r', source_key: 'snake', kind: 'refund', to_player_id: s.players[player]!.id, amount: 150 })
+    const refund = (id: string, player: number) =>
+      row(s, {
+        id,
+        call_id: 'call-r',
+        source_key: 'snake',
+        kind: 'refund',
+        to_player_id: s.players[player]!.id,
+        amount: 150,
+      })
     expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r2', 1)))).toBe('applied')
     expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r1', 0)))).toBe('applied')
     expect(s.moneyAdjustments.map((x) => [x.id, x.callId])).toEqual([
@@ -421,16 +887,30 @@ describe('money_adjustments (0027, MONEY-05)', () => {
       ['adj-r2', 'call-r'],
     ])
     const { assignments } = applyAdjustments([], s.moneyAdjustments, false)
-    expect(assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])).toEqual([['call-r', ['adj-r1', 'adj-r2'], 300]])
+    expect(assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])).toEqual([
+      ['call-r', ['adj-r1', 'adj-r2'], 300],
+    ])
   })
 
   it('a void of one call voids both of its rows, one event each, and the assignment leaves the money', () => {
     const s = fx()
-    const two = (over: Record<string, unknown> = {}) => [row(s, { id: 'adj-v1', call_id: 'call-v', source_key: 'snake', kind: 'refund', amount: 150, ...over }), row(s, { id: 'adj-v2', call_id: 'call-v', source_key: 'snake', kind: 'refund', to_player_id: s.players[1]!.id, amount: 150, ...over })]
+    const two = (over: Record<string, unknown> = {}) => [
+      row(s, { id: 'adj-v1', call_id: 'call-v', source_key: 'snake', kind: 'refund', amount: 150, ...over }),
+      row(s, {
+        id: 'adj-v2',
+        call_id: 'call-v',
+        source_key: 'snake',
+        kind: 'refund',
+        to_player_id: s.players[1]!.id,
+        amount: 150,
+        ...over,
+      }),
+    ]
     s.moneyAdjustments = []
     for (const r of two()) expect(applyChange(s, T(s), ins('money_adjustments', r))).toBe('applied')
     expect(applyAdjustments([], s.moneyAdjustments, false).assignments.map((a) => a.total)).toEqual([300])
-    for (const r of two({ voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' })) expect(applyChange(s, T(s), upd('money_adjustments', r))).toBe('applied')
+    for (const r of two({ voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' }))
+      expect(applyChange(s, T(s), upd('money_adjustments', r))).toBe('applied')
     expect(s.moneyAdjustments.map((x) => [x.id, x.voidReason])).toEqual([
       ['adj-v1', 'Error'],
       ['adj-v2', 'Error'],

@@ -6,7 +6,13 @@
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { AuthApiError, AuthRetryableFetchError, AuthSessionMissingError, AuthWeakPasswordError, PostgrestError } from '@supabase/supabase-js'
+import {
+  AuthApiError,
+  AuthRetryableFetchError,
+  AuthSessionMissingError,
+  AuthWeakPasswordError,
+  PostgrestError,
+} from '@supabase/supabase-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../data/api'
 import { t } from '../i18n/es-MX'
@@ -18,7 +24,13 @@ import { TimeoutError } from './timeout'
 const E = t.errors
 
 /** How postgrest-js reports a fetch that never got an answer (toTransportFailure / the builder's catch). */
-const transport = (name: string, message: string) => new PostgrestError({ message: `${name}: ${message}`, details: `${name}: ${message}\n    at fetch`, hint: '', code: '' })
+const transport = (name: string, message: string) =>
+  new PostgrestError({
+    message: `${name}: ${message}`,
+    details: `${name}: ${message}\n    at fetch`,
+    hint: '',
+    code: '',
+  })
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -44,7 +56,9 @@ describe('no signal', () => {
     vi.stubGlobal('navigator', { onLine: false })
     expect(humanError(new Error('something odd'))).toBe(E.network)
     // An answer from the server proves there is signal: its copy stands.
-    expect(humanError(new ApiError('Solo el Comité puede corregir tarjetas', '42501'))).toBe('Solo el Comité puede corregir tarjetas')
+    expect(humanError(new ApiError('Solo el Comité puede corregir tarjetas', '42501'))).toBe(
+      'Solo el Comité puede corregir tarjetas',
+    )
     // A line of copy is not an error to reclassify.
     expect(humanError(t.errors.offlineFirstOpen)).toBe(t.errors.offlineFirstOpen)
   })
@@ -69,12 +83,23 @@ describe('no answer in time', () => {
 
 describe('an expired or missing session', () => {
   it.each([
-    ['PostgREST JWT expired', new PostgrestError({ message: 'JWT expired', details: null as unknown as string, hint: null as unknown as string, code: 'PGRST303' })],
+    [
+      'PostgREST JWT expired',
+      new PostgrestError({
+        message: 'JWT expired',
+        details: null as unknown as string,
+        hint: null as unknown as string,
+        code: 'PGRST303',
+      }),
+    ],
     ['Auth session missing', new AuthSessionMissingError()],
     ['our raise', new ApiError('Sin sesión', '42501')],
     ['a 401', { status: 401, message: 'Unauthorized' }],
     ['unauthenticated', new Error('unauthenticated')],
-    ['refresh token gone', new AuthApiError('Invalid Refresh Token: Refresh Token Not Found', 400, 'refresh_token_not_found')],
+    [
+      'refresh token gone',
+      new AuthApiError('Invalid Refresh Token: Refresh Token Not Found', 400, 'refresh_token_not_found'),
+    ],
   ])('%s', (_label, e) => {
     expect(humanError(e)).toBe(E.session)
   })
@@ -82,7 +107,12 @@ describe('an expired or missing session', () => {
 
 describe('Postgres codes', () => {
   it('42501: RLS and privileges', () => {
-    const rls = { code: '42501', message: 'new row violates row-level security policy for table "scores"', details: null, hint: null }
+    const rls = {
+      code: '42501',
+      message: 'new row violates row-level security policy for table "scores"',
+      details: null,
+      hint: null,
+    }
     expect(humanError(rls)).toBe(E.permission)
     expect(humanError(ApiError.from(rls))).toBe(E.permission)
     expect(humanError(new ApiError('permission denied for function tournament_audit', '42501'))).toBe(E.permission)
@@ -91,18 +121,37 @@ describe('Postgres codes', () => {
   })
 
   it('23505: a duplicate, with the copy of the form that hit it', () => {
-    const dup = new ApiError('duplicate key value violates unique constraint "rounds_tournament_id_number_key"', '23505')
+    const dup = new ApiError(
+      'duplicate key value violates unique constraint "rounds_tournament_id_number_key"',
+      '23505',
+    )
     expect(humanError(dup)).toBe(E.duplicate)
     expect(humanError(dup, { '23505': t.admin.rounds.duplicateNumber(2) })).toBe(t.admin.rounds.duplicateNumber(2))
-    const body = new PostgrestError({ code: '23505', message: 'duplicate key value violates unique constraint "profiles_handle_key"', details: 'Key (handle)=(diego) already exists.', hint: null as unknown as string })
+    const body = new PostgrestError({
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "profiles_handle_key"',
+      details: 'Key (handle)=(diego) already exists.',
+      hint: null as unknown as string,
+    })
     expect(humanError(body)).toBe(E.duplicate)
   })
 
   it('23503 and the invalid-value family', () => {
-    expect(humanError(new ApiError('update or delete on table "courses" violates foreign key constraint "rounds_course_id_fkey" on table "rounds"', '23503'))).toBe(E.linked)
+    expect(
+      humanError(
+        new ApiError(
+          'update or delete on table "courses" violates foreign key constraint "rounds_course_id_fkey" on table "rounds"',
+          '23503',
+        ),
+      ),
+    ).toBe(E.linked)
     expect(humanError(new ApiError('invalid input syntax for type uuid: "x"', '22P02'))).toBe(E.invalid)
     expect(humanError(new ApiError('cannot extract elements from a scalar', '22023'))).toBe(E.invalid)
-    expect(humanError(new ApiError('new row for relation "players" violates check constraint "players_base_hcp_check"', '23514'))).toBe(E.invalid)
+    expect(
+      humanError(
+        new ApiError('new row for relation "players" violates check constraint "players_base_hcp_check"', '23514'),
+      ),
+    ).toBe(E.invalid)
   })
 
   it('a short raise code keeps its own copy, from the server or the client', () => {
@@ -121,7 +170,9 @@ describe('copy written for people passes through', () => {
     .filter((f) => f.endsWith('.sql'))
     .map((f) => readFileSync(join(dir, f), 'utf8'))
     .join('\n')
-  const raises = [...sql.matchAll(/raise exception '((?:[^']|'')*)'(?:\s*,[^;]*?)?\s+using errcode\s*=\s*'([0-9A-Z]{5})'/gi)].map((m) => ({
+  const raises = [
+    ...sql.matchAll(/raise exception '((?:[^']|'')*)'(?:\s*,[^;]*?)?\s+using errcode\s*=\s*'([0-9A-Z]{5})'/gi),
+  ].map((m) => ({
     message: m[1]!.replace(/''/g, "'").replace(/%/g, 'Blancas'),
     code: m[2]!,
   }))
@@ -133,20 +184,33 @@ describe('copy written for people passes through', () => {
 
   it('every sentence our SQL raises reaches the person as written', () => {
     const wrong = raises
-      .map(({ message, code }) => ({ message, got: humanError(new ApiError(message, code)), want: mapped[message] ?? message }))
+      .map(({ message, code }) => ({
+        message,
+        got: humanError(new ApiError(message, code)),
+        want: mapped[message] ?? message,
+      }))
       .filter((r) => r.got !== r.want)
     expect(wrong).toEqual([])
   })
 
   it('also as the PostgrestError supabase-js returns', () => {
-    const e = new PostgrestError({ message: 'Ya hay tarjetas firmadas; el sorteo no se puede rehacer', code: '22023', details: null as unknown as string, hint: null as unknown as string })
+    const e = new PostgrestError({
+      message: 'Ya hay tarjetas firmadas; el sorteo no se puede rehacer',
+      code: '22023',
+      details: null as unknown as string,
+      hint: null as unknown as string,
+    })
     expect(humanError(e)).toBe('Ya hay tarjetas firmadas; el sorteo no se puede rehacer')
   })
 
   it("the client's own copy: UserError, a 22023 from api.ts, a route's line", () => {
     expect(humanError(new UserError(t.account.signOutUnconfirmed))).toBe(t.account.signOutUnconfirmed)
-    expect(humanError(new ApiError('Ese tee lo juega alguien en una ronda; cámbialo primero', '22023'))).toBe('Ese tee lo juega alguien en una ronda; cámbialo primero')
-    expect(humanError(new RouteError('Muchas búsquedas seguidas; espera un minuto.', 429, null))).toBe('Muchas búsquedas seguidas; espera un minuto.')
+    expect(humanError(new ApiError('Ese tee lo juega alguien en una ronda; cámbialo primero', '22023'))).toBe(
+      'Ese tee lo juega alguien en una ronda; cámbialo primero',
+    )
+    expect(humanError(new RouteError('Muchas búsquedas seguidas; espera un minuto.', 429, null))).toBe(
+      'Muchas búsquedas seguidas; espera un minuto.',
+    )
   })
 })
 
@@ -155,13 +219,21 @@ describe('Supabase Auth', () => {
     expect(humanError(new AuthApiError('Invalid login credentials', 400, 'invalid_credentials'))).toBe(E.wrongPassword)
     expect(humanError(new AuthApiError('Email not confirmed', 400, 'email_not_confirmed'))).toBe(E.emailNotConfirmed)
     expect(humanError(new AuthApiError('Token has expired or is invalid', 403, 'otp_expired'))).toBe(t.auth.badCode)
-    expect(humanError(new AuthApiError('email rate limit exceeded', 429, 'over_email_send_rate_limit'))).toBe(t.account.tooFast)
-    expect(humanError(new AuthWeakPasswordError('Password should be at least 8 characters.', 422, ['length']))).toBe(E.weakPassword)
+    expect(humanError(new AuthApiError('email rate limit exceeded', 429, 'over_email_send_rate_limit'))).toBe(
+      t.account.tooFast,
+    )
+    expect(humanError(new AuthWeakPasswordError('Password should be at least 8 characters.', 422, ['length']))).toBe(
+      E.weakPassword,
+    )
     expect(humanError(new AuthApiError('User is banned', 400, 'user_banned'))).toBe(E.banned)
   })
 
   it('a context can say it its own way', () => {
-    expect(humanError(new AuthApiError('Invalid login credentials', 400, 'invalid_credentials'), { invalid_credentials: t.auth.badCode })).toBe(t.auth.badCode)
+    expect(
+      humanError(new AuthApiError('Invalid login credentials', 400, 'invalid_credentials'), {
+        invalid_credentials: t.auth.badCode,
+      }),
+    ).toBe(t.auth.badCode)
   })
 
   it('a server error behind auth', () => {
@@ -173,9 +245,15 @@ describe('anything else', () => {
   it.each([
     [new TypeError("Cannot read properties of undefined (reading 'id')"), E.unknownRef('TypeError')],
     [new Error('Could not compute: something exploded'), E.unknown],
-    [new ApiError('Could not find the function public.snapshot(tid) in the schema cache', 'PGRST202'), E.unknownRef('PGRST202')],
+    [
+      new ApiError('Could not find the function public.snapshot(tid) in the schema cache', 'PGRST202'),
+      E.unknownRef('PGRST202'),
+    ],
     [new ApiError('relation "public.teams" does not exist', '42P01'), E.unknownRef('42P01')],
-    [new AuthApiError('Anonymous sign-ins are disabled', 422, 'anonymous_provider_disabled'), E.unknownRef('anonymous_provider_disabled')],
+    [
+      new AuthApiError('Anonymous sign-ins are disabled', 422, 'anonymous_provider_disabled'),
+      E.unknownRef('anonymous_provider_disabled'),
+    ],
     [{ status: 404 }, E.unknownRef('HTTP 404')],
     // Lookups are not fooled by Object.prototype names.
     [Object.assign(new Error('toString'), { code: 'constructor' }), E.unknownRef('constructor')],
@@ -227,12 +305,14 @@ describe('copy stays copy', () => {
 })
 
 describe('found by the verifier on PR 80', () => {
-  it.each(['The network connection was lost.', 'The Internet connection appears to be offline.', 'A server with the specified hostname could not be found.', 'Could not connect to the server.'])(
-    'iPhone, «%s», is no signal',
-    (message) => {
-      expect(humanError(new TypeError(message))).toBe(E.network)
-    },
-  )
+  it.each([
+    'The network connection was lost.',
+    'The Internet connection appears to be offline.',
+    'A server with the specified hostname could not be found.',
+    'Could not connect to the server.',
+  ])('iPhone, «%s», is no signal', (message) => {
+    expect(humanError(new TypeError(message))).toBe(E.network)
+  })
 
   it('a raise that quotes a tee called «blue_tees» or «null» stays as written', () => {
     for (const name of ['blue_tees', 'null', 'tees_rojas_2']) {
@@ -241,7 +321,7 @@ describe('found by the verifier on PR 80', () => {
     }
   })
 
-  it('the generic line does not repeat ErrorBox\'s heading', () => {
+  it("the generic line does not repeat ErrorBox's heading", () => {
     expect(E.unknown).not.toMatch(/Algo salió mal/)
     expect(humanError(new Error('boom'))).not.toMatch(/Algo salió mal/)
   })
@@ -249,11 +329,19 @@ describe('found by the verifier on PR 80', () => {
 
 describe('what is worth trying again (REL-10)', () => {
   it('no signal, no answer in time, the server down or busy', () => {
-    for (const e of [new TypeError('Failed to fetch'), new TypeError('Load failed'), transport('TypeError', 'Failed to fetch'), new RequestTimeoutError(10_000), new TimeoutError('perfil', 10_000), { message: 'Service Unavailable', status: 503 }, { message: 'Too Many Requests', status: 429 }])
+    for (const e of [
+      new TypeError('Failed to fetch'),
+      new TypeError('Load failed'),
+      transport('TypeError', 'Failed to fetch'),
+      new RequestTimeoutError(10_000),
+      new TimeoutError('perfil', 10_000),
+      { message: 'Service Unavailable', status: 503 },
+      { message: 'Too Many Requests', status: 429 },
+    ])
       expect(isTransient(e), String((e as Error).message)).toBe(true)
   })
 
-  it('not a refusal, a missing row, a lapsed session or the app\'s own copy: they answer the same until something else changes', () => {
+  it("not a refusal, a missing row, a lapsed session or the app's own copy: they answer the same until something else changes", () => {
     for (const e of [
       { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' },
       { message: 'new row violates row-level security policy', code: '42501' },

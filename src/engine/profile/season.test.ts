@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { placePoints, seasons, seasonTable, type SeasonResult } from './season'
 
-const r = (tournamentId: string, handle: string, rank: number | null, date = '2026-05-10'): SeasonResult => ({ tournamentId, date, handle, rank, rankLabel: rank == null ? null : String(rank), field: 4 })
+const r = (tournamentId: string, handle: string, rank: number | null, date = '2026-05-10'): SeasonResult => ({
+  tournamentId,
+  date,
+  handle,
+  rank,
+  rankLabel: rank == null ? null : String(rank),
+  field: 4,
+})
 
 describe('placePoints', () => {
   it('pays the place plus one for playing; ties average the places they fill', () => {
@@ -18,7 +25,18 @@ describe('seasonTable', () => {
     // E1: A 1st 26, B 2nd 19, C 3rd 16, D 4th 13.
     // E2 (C absent): A and B tie for 1st, 22.5 each; D 3rd 16.
     // A 48.5, B 41.5, D 29, C 16.
-    const rows = seasonTable([r('e1', 'a', 1), r('e1', 'b', 2), r('e1', 'c', 3), r('e1', 'd', 4), r('e2', 'a', 1), r('e2', 'b', 1), r('e2', 'd', 3)], 2026)
+    const rows = seasonTable(
+      [
+        r('e1', 'a', 1),
+        r('e1', 'b', 2),
+        r('e1', 'c', 3),
+        r('e1', 'd', 4),
+        r('e2', 'a', 1),
+        r('e2', 'b', 1),
+        r('e2', 'd', 3),
+      ],
+      2026,
+    )
     expect(rows.map((x) => [x.handle, x.points, x.events, x.wins, x.label])).toEqual([
       ['a', 48.5, 2, 2, '1'],
       ['b', 41.5, 2, 1, '2'],

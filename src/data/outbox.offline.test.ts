@@ -38,7 +38,17 @@ interface App {
 }
 let app: App | null = null
 
-const LOOKUP: LookupResult = { id: 't1', slug: 'ensayo', name: 'Ensayo', tagline: null, logoUrl: null, accentColor: null, status: 'live', joinCode: 'ABC123', players: [] }
+const LOOKUP: LookupResult = {
+  id: 't1',
+  slug: 'ensayo',
+  name: 'Ensayo',
+  tagline: null,
+  logoUrl: null,
+  accentColor: null,
+  status: 'live',
+  joinCode: 'ABC123',
+  players: [],
+}
 const ME: Me = { playerId: 'p1', isOrganizer: false, isComite: false, via: 'device' }
 
 /**
@@ -105,7 +115,7 @@ function deleteDatabase(name: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(name)
     req.onsuccess = () => resolve()
-    req.onerror = () => reject(req.error)
+    req.onerror = () => reject(req.error ?? new Error('request'))
   })
 }
 
@@ -155,7 +165,9 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     // The boards it opened from its saved copy show them at once.
     expect(shown(after, 'p1', 7)).toEqual({ strokes: 5, gross: 5 })
     expect(shown(after, 'p2', 7)).toEqual({ strokes: 6, gross: 6 })
-    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' })])
+    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([
+      expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' }),
+    ])
 
     // The signal comes back while the app is open: it sends everything by itself, as the player.
     phone.goOnline()
@@ -308,6 +320,8 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     await Promise.all([after.auth.useAuth.getState().init(), after.outbox.startOutbox()])
     expect(after.outbox._outboxTest.queue()).toHaveLength(2)
     expect(shown(after, 'p1', 7)).toEqual({ strokes: 5, gross: 5 })
-    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' })])
+    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([
+      expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' }),
+    ])
   })
 })

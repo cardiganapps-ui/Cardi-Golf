@@ -39,7 +39,12 @@ const check = (ok, label, detail) => {
     if (detail !== undefined) console.log('    ', JSON.stringify(detail))
   }
 }
-/** The endpoints left in `table` for `col = id` once the route has had its time (a pruned one goes). */
+/**
+ * The endpoints left in `table` for `col = id` once the route has had its time (a pruned one goes).
+ * @param {string} table
+ * @param {string} col
+ * @param {string} id
+ */
 async function settle(table, col, id) {
   let left = null
   for (let i = 0; i < 20; i++) {
@@ -56,7 +61,11 @@ const users = []
 let tournamentId = null
 try {
   console.log('an account’s notice:')
-  const { data: made, error } = await admin.auth.admin.createUser({ email: `push-${rand}@cardi-golf.test`, email_confirm: true, user_metadata: { display_name: 'Push Prueba' } })
+  const { data: made, error } = await admin.auth.admin.createUser({
+    email: `push-${rand}@cardi-golf.test`,
+    email_confirm: true,
+    user_metadata: { display_name: 'Push Prueba' },
+  })
   if (error) throw error
   const uid = made.user.id
   users.push(uid)
@@ -70,20 +79,37 @@ try {
     { profile_id: uid, endpoint: gone, ...keys() },
   ])
   // What a friend request would write (notify() is internal; the service key stands in for it here).
-  await admin.from('notifications').insert({ profile_id: uid, kind: 'friend_request', key: `push-check:${rand}`, data: {} })
+  await admin
+    .from('notifications')
+    .insert({ profile_id: uid, kind: 'friend_request', key: `push-check:${rand}`, data: {} })
   const left = await settle('push_subscriptions', 'profile_id', uid)
-  check(left?.length === 1 && left[0] === ok, 'a notification reaches the dispatch route; the gone endpoint is pruned, the live one stays', left)
+  check(
+    left?.length === 1 && left[0] === ok,
+    'a notification reaches the dispatch route; the gone endpoint is pruned, the live one stays',
+    left,
+  )
 
   console.log('a PIN phone’s notice (0052):')
-  const { data: phone, error: phoneErr } = await admin.auth.admin.createUser({ email: `push-pin-${rand}@cardi-golf.test`, email_confirm: true })
+  const { data: phone, error: phoneErr } = await admin.auth.admin.createUser({
+    email: `push-pin-${rand}@cardi-golf.test`,
+    email_confirm: true,
+  })
   if (phoneErr) throw phoneErr
   users.push(phone.user.id)
   const slug = `push-check-${rand}`
   const code = Array.from(randomBytes(6), (b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('')
-  const { data: t, error: tErr } = await admin.from('tournaments').insert({ slug, name: 'Push check', join_code: code }).select('id').single()
+  const { data: t, error: tErr } = await admin
+    .from('tournaments')
+    .insert({ slug, name: 'Push check', join_code: code })
+    .select('id')
+    .single()
   if (tErr) throw tErr
   tournamentId = t.id
-  const { data: p, error: pErr } = await admin.from('players').insert({ tournament_id: t.id, full_name: 'Push Prueba', display_name: 'Push' }).select('id').single()
+  const { data: p, error: pErr } = await admin
+    .from('players')
+    .insert({ tournament_id: t.id, full_name: 'Push Prueba', display_name: 'Push' })
+    .select('id')
+    .single()
   if (pErr) throw pErr
   await admin.from('device_sessions').insert({ auth_user_id: phone.user.id, player_id: p.id, tournament_id: t.id })
   const pinOk = `https://web.push.apple.com/QPoloCheckPin${rand}`
@@ -94,10 +120,20 @@ try {
   ])
   if (subErr) throw subErr
   // What a day going live would write (notify_player is internal; the service key stands in for it here).
-  const { error: nErr } = await admin.from('player_notices').insert({ tournament_id: t.id, player_id: p.id, kind: 'round_live', key: `push-check:${rand}`, data: { tournament: 'Push check', slug, round: 1 } })
+  const { error: nErr } = await admin.from('player_notices').insert({
+    tournament_id: t.id,
+    player_id: p.id,
+    kind: 'round_live',
+    key: `push-check:${rand}`,
+    data: { tournament: 'Push check', slug, round: 1 },
+  })
   if (nErr) throw nErr
   const pinLeft = await settle('pin_push_subscriptions', 'player_id', p.id)
-  check(pinLeft?.length === 1 && pinLeft[0] === pinOk, 'a player’s notice reaches the dispatch route; the gone endpoint is pruned, the live one stays', pinLeft)
+  check(
+    pinLeft?.length === 1 && pinLeft[0] === pinOk,
+    'a player’s notice reaches the dispatch route; the gone endpoint is pruned, the live one stays',
+    pinLeft,
+  )
 } finally {
   if (tournamentId) await admin.from('tournaments').delete().eq('id', tournamentId)
   for (const id of users) await admin.auth.admin.deleteUser(id)

@@ -48,7 +48,9 @@ describe('stylesheets that others compose from', () => {
 
   it('hold no url(): their copies would ship it unresolved', () => {
     const urls = [...sources.keys()].flatMap((file) =>
-      [...noComments(readFileSync(file, 'utf8')).matchAll(/\burl\(\s*([^)]*)\)/g)].map((m) => `${relative(SRC, file)}: url(${m[1]})`),
+      [...noComments(readFileSync(file, 'utf8')).matchAll(/\burl\(\s*([^)]*)\)/g)].map(
+        (m) => `${relative(SRC, file)}: url(${m[1]})`,
+      ),
     )
     expect(urls).toEqual([])
   })

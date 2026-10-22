@@ -10,38 +10,78 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const rpc = vi.fn()
 const maybeSingle = vi.fn()
 const from = vi.fn(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }))
-vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, from }), authSettings: async () => null }))
+vi.mock('../lib/supabase', () => ({
+  supabaseConfigured: true,
+  supabase: () => ({ rpc, from }),
+  authSettings: async () => null,
+}))
 
-const { ACCOUNT, deniedHelp, disablePush, enablePush, pushState, startBadgeSync, unsupportedHelp, usePushFixture, _pushTest } = await import('./push')
+const {
+  ACCOUNT,
+  deniedHelp,
+  disablePush,
+  enablePush,
+  pushState,
+  startBadgeSync,
+  unsupportedHelp,
+  usePushFixture,
+  _pushTest,
+} = await import('./push')
 const { useAuth } = await import('./auth')
 const { useUnread } = await import('./social')
 const { t } = await import('../i18n/es-MX')
 
-const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 /** iPadOS Safari asks for the desktop site: a Mac's user agent, with a touch screen. */
-const IPAD = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
-const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'
-const LAPTOP = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+const IPAD =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
+const ANDROID =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'
+const LAPTOP =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
 const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/this-phone'
 
-const sub = { endpoint: ENDPOINT, toJSON: () => ({ endpoint: ENDPOINT, keys: { p256dh: 'p256', auth: 'auth' } }), unsubscribe: vi.fn(async () => true) }
+const sub = {
+  endpoint: ENDPOINT,
+  toJSON: () => ({ endpoint: ENDPOINT, keys: { p256dh: 'p256', auth: 'auth' } }),
+  unsubscribe: vi.fn(async () => true),
+}
 const pushManager = { getSubscription: vi.fn(async () => null as typeof sub | null), subscribe: vi.fn(async () => sub) }
 const badge = { set: vi.fn(async () => undefined), clear: vi.fn(async () => undefined) }
 
 /** This phone: its user agent, a touch screen or not, opened from the icon or not, and what its browser has. */
-function phone(o: { ua: string; touch?: number; standalone?: boolean; push?: boolean; permission?: NotificationPermission; subscribed?: boolean }) {
+function phone(o: {
+  ua: string
+  touch?: number
+  standalone?: boolean
+  push?: boolean
+  permission?: NotificationPermission
+  subscribed?: boolean
+}) {
   vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'BAAA')
   Object.defineProperty(navigator, 'userAgent', { value: o.ua, configurable: true })
   Object.defineProperty(navigator, 'maxTouchPoints', { value: o.touch ?? 0, configurable: true })
-  Object.defineProperty(navigator, 'serviceWorker', { value: { getRegistration: async () => ({ pushManager }), ready: Promise.resolve({ pushManager }) }, configurable: true })
+  Object.defineProperty(navigator, 'serviceWorker', {
+    value: { getRegistration: async () => ({ pushManager }), ready: Promise.resolve({ pushManager }) },
+    configurable: true,
+  })
   Object.defineProperty(navigator, 'setAppBadge', { value: badge.set, configurable: true })
   Object.defineProperty(navigator, 'clearAppBadge', { value: badge.clear, configurable: true })
-  window.matchMedia = ((q: string) => ({ matches: !!o.standalone && q.includes('standalone'), media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: !!o.standalone && q.includes('standalone'),
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+  })) as unknown as typeof window.matchMedia
   if (o.push === false) {
     vi.stubGlobal('PushManager', undefined)
     delete (window as { PushManager?: unknown }).PushManager
   } else vi.stubGlobal('PushManager', function PushManager() {})
-  vi.stubGlobal('Notification', { permission: o.permission ?? 'default', requestPermission: vi.fn(async () => o.permission ?? 'granted') })
+  vi.stubGlobal('Notification', {
+    permission: o.permission ?? 'default',
+    requestPermission: vi.fn(async () => o.permission ?? 'granted'),
+  })
   pushManager.getSubscription.mockResolvedValue(o.subscribed ? sub : null)
 }
 const PLAYER = { kind: 'player', tournamentId: 't1' } as const
@@ -134,9 +174,20 @@ describe('turning them on and off', () => {
     phone({ ua: ANDROID, touch: 5, permission: 'granted' })
     rpc.mockResolvedValue({ data: null, error: null })
     expect(await enablePush(PLAYER)).toBe('on')
-    expect(rpc).toHaveBeenLastCalledWith('save_pin_push', { p_tournament_id: 't1', p_endpoint: ENDPOINT, p_p256dh: 'p256', p_auth: 'auth', p_user_agent: ANDROID })
+    expect(rpc).toHaveBeenLastCalledWith('save_pin_push', {
+      p_tournament_id: 't1',
+      p_endpoint: ENDPOINT,
+      p_p256dh: 'p256',
+      p_auth: 'auth',
+      p_user_agent: ANDROID,
+    })
     expect(await enablePush(ACCOUNT)).toBe('on')
-    expect(rpc).toHaveBeenLastCalledWith('save_push_subscription', { p_endpoint: ENDPOINT, p_p256dh: 'p256', p_auth: 'auth', p_user_agent: ANDROID })
+    expect(rpc).toHaveBeenLastCalledWith('save_push_subscription', {
+      p_endpoint: ENDPOINT,
+      p_p256dh: 'p256',
+      p_auth: 'auth',
+      p_user_agent: ANDROID,
+    })
   })
 
   it('a refusal at the prompt saves nothing; a refusal at the server says why', async () => {
@@ -144,7 +195,10 @@ describe('turning them on and off', () => {
     expect(await enablePush(PLAYER)).toBe('denied')
     expect(rpc).not.toHaveBeenCalled()
     phone({ ua: ANDROID, touch: 5, permission: 'granted' })
-    rpc.mockResolvedValueOnce({ data: null, error: { code: '42501', message: 'Entra con tu PIN para recibir los avisos del torneo' } })
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: '42501', message: 'Entra con tu PIN para recibir los avisos del torneo' },
+    })
     await expect(enablePush(PLAYER)).rejects.toThrow('Entra con tu PIN para recibir los avisos del torneo')
   })
 

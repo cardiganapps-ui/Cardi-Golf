@@ -9,9 +9,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), claimPlayer: vi.fn() }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  claimPlayer: vi.fn(),
+}))
 // The PIN starts the browser's user when it has none (TRUST-05): here it has one.
-vi.mock('../../data/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/auth')>()), ensureSession: vi.fn(async () => ({ user: { id: 'u' } })) }))
+vi.mock('../../data/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/auth')>()),
+  ensureSession: vi.fn(async () => ({ user: { id: 'u' } })),
+}))
 
 import { ApiError, claimPlayer, type LookupResult } from '../../data/api'
 import { ensureSession, useAuth } from '../../data/auth'
@@ -29,7 +35,17 @@ const lookup: LookupResult = {
   accentColor: null,
   status: 'live',
   joinCode: 'ABC123',
-  players: [{ id: 'p1', displayName: 'Mauricio', fullName: 'Mauricio Lozano', tier: 'B', avatarUrl: null, isHonoree: false, hasPin: true }],
+  players: [
+    {
+      id: 'p1',
+      displayName: 'Mauricio',
+      fullName: 'Mauricio Lozano',
+      tier: 'B',
+      avatarUrl: null,
+      isHonoree: false,
+      hasPin: true,
+    },
+  ],
 }
 
 async function typePin(error: unknown) {
@@ -45,7 +61,7 @@ async function typePin(error: unknown) {
 
 afterEach(cleanup)
 
-describe('the PIN starts the browser\'s user (TRUST-05)', () => {
+describe("the PIN starts the browser's user (TRUST-05)", () => {
   it('before the claim, so a link opened shows the faces and the consent line with no user behind them', async () => {
     const order: string[] = []
     vi.mocked(ensureSession).mockImplementationOnce(async () => {
@@ -130,14 +146,23 @@ describe('EnterScreen PIN error', () => {
  * before, and that one's holes still on the phone went out and were refused
  * for good. The PIN waits for them, like a sign-out or a change of account.
  */
-describe('entering with a PIN while another tournament\'s writes are still on the phone', () => {
+describe("entering with a PIN while another tournament's writes are still on the phone", () => {
   /** A hole of `tournamentId` this phone saved (as itself, unless `actingUid`), waiting for signal. */
   const hole = (tournamentId: string, n: number, extra: Record<string, unknown> = {}) =>
     _outboxTest.enqueue({
       key: `score:${tournamentId}:p9:${n}`,
       kind: 'score',
       tournamentId,
-      payload: { round_id: `r-${tournamentId}`, player_id: 'p9', hole: n, strokes: 5, putts: 2, picked_up: false, entered_by: 'p9', client_ts: 'x' },
+      payload: {
+        round_id: `r-${tournamentId}`,
+        player_id: 'p9',
+        hole: n,
+        strokes: 5,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p9',
+        client_ts: 'x',
+      },
       attempts: 0,
       createdAt: n,
       ...extra,
@@ -171,7 +196,7 @@ describe('entering with a PIN while another tournament\'s writes are still on th
     expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:t-ensayo:p9:7'])
   })
 
-  it('goes ahead when what waits is this tournament\'s (the PIN sends it) or held for a PIN elsewhere (it waits for that one either way)', async () => {
+  it("goes ahead when what waits is this tournament's (the PIN sends it) or held for a PIN elsewhere (it waits for that one either way)", async () => {
     await hole('t1', 3, { actingUid: 'uid-viejo' })
     await hole('t-ensayo', 7, { tournamentName: 'Ensayo', actingUid: 'uid-viejo' })
     typeThePin()

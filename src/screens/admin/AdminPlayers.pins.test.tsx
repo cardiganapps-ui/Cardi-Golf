@@ -18,7 +18,11 @@ import { TournamentContext } from '../tournament/tournamentContext'
 
 const fx = getFixture('full12-live')!
 const players = fx.snapshot.players
-const server = vi.hoisted(() => ({ withPin: new Set<string>(), set: [] as Array<[string, string]>, failFor: null as string | null }))
+const server = vi.hoisted(() => ({
+  withPin: new Set<string>(),
+  set: [] as Array<[string, string]>,
+  failFor: null as string | null,
+}))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
   playersWithPin: vi.fn(async () => new Set(server.withPin)),
@@ -28,22 +32,48 @@ vi.mock('../../data/api', async (importOriginal) => ({
     server.withPin.add(id)
   }),
 }))
-vi.mock('../../data/pinPhones', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/pinPhones')>()), playerPhones: vi.fn(async () => []), pinLocks: vi.fn(async () => []) }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+vi.mock('../../data/pinPhones', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/pinPhones')>()),
+  playerPhones: vi.fn(async () => []),
+  pinLocks: vi.fn(async () => []),
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 const toast = vi.hoisted(() => vi.fn())
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast,
+}))
 const share = vi.hoisted(() => vi.fn(async (_text: string) => undefined))
-vi.mock('../../lib/pins', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/pins')>()), shareToWhatsApp: share }))
+vi.mock('../../lib/pins', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/pins')>()),
+  shareToWhatsApp: share,
+}))
 const { AdminPlayers } = await import('./AdminPlayers')
 
 const P = t.admin.players
 const N = P.pins
 
 function mount() {
-  useTournament.setState({ tournamentId: 't-pins', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
+  useTournament.setState({
+    tournamentId: 't-pins',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-pins', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-pins',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -85,7 +115,11 @@ describe('«Generar PINs» (UX-20)', () => {
     mount()
     await screen.findByText(N.missing(10))
     await act(async () => fireEvent.click(screen.getByRole('button', { name: N.generate })))
-    await act(async () => fireEvent.click(within(screen.getByRole('dialog', { name: N.generateTitle })).getByRole('button', { name: N.generate })))
+    await act(async () =>
+      fireEvent.click(
+        within(screen.getByRole('dialog', { name: N.generateTitle })).getByRole('button', { name: N.generate }),
+      ),
+    )
     const [id, pin] = server.set[0]!
     const p = players.find((x) => x.id === id)!
     await act(async () => fireEvent.click(screen.getByRole('button', { name: N.whatsappTo(p.displayName) })))
@@ -94,7 +128,11 @@ describe('«Generar PINs» (UX-20)', () => {
     expect(text).toContain(`/t/nacho?soy=${p.id}`)
     // The link itself never carries the PIN.
     expect(/https?:\/\/\S+/.exec(text)![0]).not.toContain(pin)
-    await act(async () => fireEvent.click(within(screen.getByRole('dialog', { name: N.list })).getByRole('button', { name: t.common.close })))
+    await act(async () =>
+      fireEvent.click(
+        within(screen.getByRole('dialog', { name: N.list })).getByRole('button', { name: t.common.close }),
+      ),
+    )
     await act(async () => new Promise((r) => setTimeout(r, 400)))
     expect(screen.queryByText(pin)).toBeNull()
   })
@@ -104,7 +142,11 @@ describe('«Generar PINs» (UX-20)', () => {
     mount()
     await screen.findByText(N.missing(10))
     await act(async () => fireEvent.click(screen.getByRole('button', { name: N.generate })))
-    await act(async () => fireEvent.click(within(screen.getByRole('dialog', { name: N.generateTitle })).getByRole('button', { name: N.generate })))
+    await act(async () =>
+      fireEvent.click(
+        within(screen.getByRole('dialog', { name: N.generateTitle })).getByRole('button', { name: N.generate }),
+      ),
+    )
     expect(server.set).toHaveLength(9)
     expect(toast).toHaveBeenCalledWith(N.failed(1))
     // Never the error's text: nothing about a PIN goes to a toast.

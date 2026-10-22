@@ -13,7 +13,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
-  return { ...real, enqueueHole: vi.fn(async () => undefined), enqueueScore: vi.fn(async () => undefined), enqueueAward: vi.fn(async () => undefined), enqueueTiebreak: vi.fn(async () => undefined), enqueueSignature: vi.fn(async () => undefined) }
+  return {
+    ...real,
+    enqueueHole: vi.fn(async () => undefined),
+    enqueueScore: vi.fn(async () => undefined),
+    enqueueAward: vi.fn(async () => undefined),
+    enqueueTiebreak: vi.fn(async () => undefined),
+    enqueueSignature: vi.fn(async () => undefined),
+  }
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
@@ -31,7 +38,7 @@ const S = t.card
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 let snap: Snapshot
@@ -39,10 +46,25 @@ function mount(name: string, screenEl: React.ReactNode, edit?: (s: Snapshot) => 
   const fx = getFixture(name)!
   snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: `fixture:${name}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${name}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${name}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         {screenEl}
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -95,13 +117,27 @@ describe('Tarjeta: the hole and the grid swap with focus kept (A11Y-12)', () => 
   const allPlayed = (s: Snapshot) => {
     for (const pid of ['p1', 'p2', 'p3', 'p4'])
       for (let h = 1; h <= 18; h++)
-        if (!s.scores.some((x) => x.roundId === 'r1' && x.playerId === pid && x.hole === h)) s.scores.push({ roundId: 'r1', playerId: pid, hole: h, strokes: 5, putts: 2, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+        if (!s.scores.some((x) => x.roundId === 'r1' && x.playerId === pid && x.hole === h))
+          s.scores.push({
+            roundId: 'r1',
+            playerId: pid,
+            hole: h,
+            strokes: 5,
+            putts: 2,
+            pickedUp: false,
+            enteredBy: 'p1',
+            updatedAt: '2027-05-15T15:00:00Z',
+          })
   }
 
   it('a save that turns the card to its grid focuses the grid’s heading', async () => {
     mount('minimal4-live', <ScorecardScreen />, allPlayed)
     fireEvent.click(screen.getByRole('button', { name: S.prev }))
-    fireEvent.click(screen.getByRole('button', { name: `${S.strokesOf(snap.players.find((p) => p.id === 'p1')!.displayName)}: ${t.common.stepUp}` }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${S.strokesOf(snap.players.find((p) => p.id === 'p1')!.displayName)}: ${t.common.stepUp}`,
+      }),
+    )
     clock = 11_000
     await act(async () => {
       press(screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) }))

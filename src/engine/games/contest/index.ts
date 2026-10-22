@@ -20,7 +20,13 @@ import { holeOf, moneyByPlayer, namer, rankedUnits, roundHoles, roundNumberOf } 
 
 type Cfg = GameOf<'contest'>
 
-export const CONTEST_SINGLE: Record<Cfg['options']['kind'], boolean> = { closest: true, longDrive: true, custom: true, greenie: false, sandy: false }
+export const CONTEST_SINGLE: Record<Cfg['options']['kind'], boolean> = {
+  closest: true,
+  longDrive: true,
+  custom: true,
+  greenie: false,
+  sandy: false,
+}
 
 export interface ContestHole {
   roundId: Id
@@ -67,7 +73,9 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
     const holes: ContestHole[] = []
     for (const rid of ctx.roundIds) {
       for (const hole of contestHoles(ctx, rid)) {
-        const rows = ctx.snapshot.holeAwards.filter((a) => a.roundId === rid && a.gameId === ctx.config.id && a.hole === hole && inGame.has(a.playerId))
+        const rows = ctx.snapshot.holeAwards.filter(
+          (a) => a.roundId === rid && a.gameId === ctx.config.id && a.hole === hole && inGame.has(a.playerId),
+        )
         // A Comité ruling overrides the groups' claims.
         const comite = rows.filter(isRuling)
         const claims = [...new Set((comite.length ? comite : rows).map((a) => a.playerId))]
@@ -101,14 +109,24 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
   board(state, ctx) {
     const name = namer(ctx)
     const money = moneyByPlayer(contestGame.prizes(state, ctx))
-    const rows = rankedUnits(Object.entries(state.units).filter(([, u]) => u > 0)).map(({ id, units: u, label }) => ({ playerIds: [id], pos: label, figure: msg('board.units', { n: u, unit: 'hole' }), money: money.get(id) ?? 0 }))
+    const rows = rankedUnits(Object.entries(state.units).filter(([, u]) => u > 0)).map(({ id, units: u, label }) => ({
+      playerIds: [id],
+      pos: label,
+      figure: msg('board.units', { n: u, unit: 'hole' }),
+      money: money.get(id) ?? 0,
+    }))
     const multi = ctx.roundIds.length > 1
     const log = state.holes.map((h) => ({
       title: msg('board.hole', { day: multi ? h.roundNumber : null, hole: h.hole }),
       playerIds: h.status === 'won' ? h.winners : [],
       pos: null,
       figure: say(h.status === 'won' ? 'board.won' : h.status === 'disputed' ? 'board.disputed' : 'board.pending'),
-      sub: h.status === 'disputed' ? msg('board.claims', { names: h.claims.map(name) }) : h.voided.length ? msg('board.voided', { names: h.voided.map(name) }) : undefined,
+      sub:
+        h.status === 'disputed'
+          ? msg('board.claims', { names: h.claims.map(name) })
+          : h.voided.length
+            ? msg('board.voided', { names: h.voided.map(name) })
+            : undefined,
     }))
     const notes: Msg[] = []
     if (ctx.config.money.source === 'direct') notes.push(msg('board.holeStake', { stake: ctx.config.money.stake }))

@@ -13,9 +13,16 @@ const getSession = vi.fn()
 /** This phone's PIN claim (`device_sessions`, RLS: its own row): none unless a test says so. */
 const claim = vi.fn(async () => ({ data: null as { player_id: string } | null, error: null }))
 const from = vi.fn(() => ({ select: () => ({ maybeSingle: claim }) }))
-vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession }, from }), authSettings: async () => null }))
+vi.mock('../lib/supabase', () => ({
+  supabaseConfigured: true,
+  supabase: () => ({ rpc, auth: { getSession }, from }),
+  authSettings: async () => null,
+}))
 
-vi.mock('./legalUpdateState', async (orig) => ({ ...(await orig<typeof import('./legalUpdateState')>()), SETTLE_MS: 0 }))
+vi.mock('./legalUpdateState', async (orig) => ({
+  ...(await orig<typeof import('./legalUpdateState')>()),
+  SETTLE_MS: 0,
+}))
 const { LegalUpdate } = await import('./LegalUpdate')
 const { QUIET_ROUTE, resetLegalUpdateForTests } = await import('./legalUpdateState')
 const { useAuth } = await import('../data/auth')
@@ -24,7 +31,10 @@ const { t } = await import('../i18n/es-MX')
 
 const cur = currentVersions()
 const mine = (privacy: string | null, terms: string | null) => ({
-  data: { privacy: privacy && { version: privacy, acceptedAt: 'x' }, terms: terms && { version: terms, acceptedAt: 'x' } },
+  data: {
+    privacy: privacy && { version: privacy, acceptedAt: 'x' },
+    terms: terms && { version: terms, acceptedAt: 'x' },
+  },
   error: null,
 })
 
@@ -50,15 +60,25 @@ afterEach(cleanup)
 
 describe('LegalUpdate', () => {
   it('names the changed notice, links to it, and «Entendido» records the new version', async () => {
-    rpc.mockImplementation(async (name: string) => (name === 'my_legal_acceptances' ? mine('2026-10-01', cur.terms) : mine(cur.privacy, cur.terms)))
+    rpc.mockImplementation(async (name: string) =>
+      name === 'my_legal_acceptances' ? mine('2026-10-01', cur.terms) : mine(cur.privacy, cur.terms),
+    )
     await show('/t/torneo')
     expect(screen.getByRole('dialog', { name: t.legal.update.title(true, false) })).toBeTruthy()
-    expect(screen.getByRole('link', { name: new RegExp(t.legal.privacy.title) }).getAttribute('href')).toBe('/privacidad?desde=formulario')
+    expect(screen.getByRole('link', { name: new RegExp(t.legal.privacy.title) }).getAttribute('href')).toBe(
+      '/privacidad?desde=formulario',
+    )
     expect(screen.queryByRole('link', { name: new RegExp(t.legal.terms.title) })).toBeNull()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: t.legal.update.ok }))
     })
-    expect(rpc).toHaveBeenCalledWith('accept_legal', { p_privacy: cur.privacy, p_terms: cur.terms, p_context: 'update', p_age_seconds: expect.any(Number), p_user: 'u1' })
+    expect(rpc).toHaveBeenCalledWith('accept_legal', {
+      p_privacy: cur.privacy,
+      p_terms: cur.terms,
+      p_context: 'update',
+      p_age_seconds: expect.any(Number),
+      p_user: 'u1',
+    })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -88,7 +108,9 @@ describe('LegalUpdate', () => {
   it('an account with no record yet is shown both documents, once «Entendido» records them', async () => {
     useAuth.setState({ user: { id: 'acc', is_anonymous: false } as User, isAnonymous: false })
     getSession.mockResolvedValue({ data: { session: { user: { id: 'acc', is_anonymous: false } } } })
-    rpc.mockImplementation(async (name: string) => (name === 'my_legal_acceptances' ? mine(null, null) : mine(cur.privacy, cur.terms)))
+    rpc.mockImplementation(async (name: string) =>
+      name === 'my_legal_acceptances' ? mine(null, null) : mine(cur.privacy, cur.terms),
+    )
     await show('/')
     expect(screen.getByRole('dialog', { name: t.legal.update.firstTitle })).toBeTruthy()
     expect(screen.getByRole('link', { name: new RegExp(t.legal.privacy.title) })).toBeTruthy()
@@ -108,11 +130,30 @@ describe('LegalUpdate', () => {
   })
 
   it('never over the Tarjeta, the auction console, a room screen, the documents or the fixtures', async () => {
-    for (const p of ['/t/torneo/admin/calcutta', '/t/torneo/admin/parejas', '/organizer/reset', '/t/torneo/tarjeta', '/t/torneo/tv', '/t/torneo/ceremonia', '/t/torneo/imprimir', '/privacidad', '/terminos', '/t/_/full12-live', '/admin/_/salud'])
+    for (const p of [
+      '/t/torneo/admin/calcutta',
+      '/t/torneo/admin/parejas',
+      '/organizer/reset',
+      '/t/torneo/tarjeta',
+      '/t/torneo/tv',
+      '/t/torneo/ceremonia',
+      '/t/torneo/imprimir',
+      '/privacidad',
+      '/terminos',
+      '/t/_/full12-live',
+      '/admin/_/salud',
+    ])
       expect(QUIET_ROUTE.test(p), p).toBe(true)
     // A link to watch (STRAT-05): often a TV or a shared screen, never the place for someone's own account.
-    for (const p of ['/v/sSjvTXmU1SDUNaaBFsFGLc7N', '/v/sSjvTXmU1SDUNaaBFsFGLc7N/juegos', '/v/sSjvTXmU1SDUNaaBFsFGLc7N/tv', '/v/_/full12-live']) expect(QUIET_ROUTE.test(p), p).toBe(true)
-    for (const p of ['/', '/t/torneo', '/t/torneo/dinero', '/organizer', '/admin']) expect(QUIET_ROUTE.test(p), p).toBe(false)
+    for (const p of [
+      '/v/sSjvTXmU1SDUNaaBFsFGLc7N',
+      '/v/sSjvTXmU1SDUNaaBFsFGLc7N/juegos',
+      '/v/sSjvTXmU1SDUNaaBFsFGLc7N/tv',
+      '/v/_/full12-live',
+    ])
+      expect(QUIET_ROUTE.test(p), p).toBe(true)
+    for (const p of ['/', '/t/torneo', '/t/torneo/dinero', '/organizer', '/admin'])
+      expect(QUIET_ROUTE.test(p), p).toBe(false)
     rpc.mockResolvedValue(mine('2026-10-01', cur.terms))
     await show('/t/torneo/tarjeta')
     expect(screen.queryByRole('dialog')).toBeNull()

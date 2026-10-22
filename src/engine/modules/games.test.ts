@@ -84,8 +84,14 @@ describe('Los Matrimonios', () => {
         snap.scores.push(score(rid, pid, h, holes[h - 1]!.par + sr + 2 - ptsPerHole))
       }
     }
-    enter('r1', 'p1', 2); enter('r2', 'p1', 2); enter('r1', 'p10', 2); enter('r2', 'p10', 1) // 36+36+36+18 = 126
-    enter('r1', 'p2', 2); enter('r2', 'p2', 2); enter('r1', 'p11', 1); enter('r2', 'p11', 2) // 36+36+18+36 = 126
+    enter('r1', 'p1', 2)
+    enter('r2', 'p1', 2)
+    enter('r1', 'p10', 2)
+    enter('r2', 'p10', 1) // 36+36+36+18 = 126
+    enter('r1', 'p2', 2)
+    enter('r2', 'p2', 2)
+    enter('r1', 'p11', 1)
+    enter('r2', 'p11', 2) // 36+36+18+36 = 126
     const rows = computeTournament(snap, S).modules.pairs!.rows
     expect(rows[0]!.pairId).toBe('pair2')
     expect(rows[0]!.label).toBe('1')
@@ -131,7 +137,8 @@ describe('Menos putts', () => {
 
   it('tie splits the prize', () => {
     const snap = makeSnapshot({ players: 3, rounds: 1, settings: S })
-    for (const pid of ['p1', 'p2', 'p3']) for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', pid, h, 4, pid === 'p3' ? 2 : 1))
+    for (const pid of ['p1', 'p2', 'p3'])
+      for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', pid, h, 4, pid === 'p3' ? 2 : 1))
     const fp = computeTournament(snap, S).modules.fewestPutts!
     expect(fp.rows.map((r) => r.label)).toEqual(['T1', 'T1', '3'])
     expect(fp.prizes.p1!.amount).toBe(500)
@@ -144,7 +151,17 @@ describe('module switches (§0.5)', () => {
   it.each(ids)('disabling %s removes its state and its money', (id) => {
     const snap = fullFirstTournament()
     if (id === 'auction') {
-      snap.players.forEach((p, i) => snap.calcuttaLots.push({ id: `l${i}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: 500, ownerId: p.id, soldAt: '' }))
+      snap.players.forEach((p, i) =>
+        snap.calcuttaLots.push({
+          id: `l${i}`,
+          playerId: p.id,
+          lotNumber: i + 1,
+          status: 'sold',
+          price: 500,
+          ownerId: p.id,
+          soldAt: '',
+        }),
+      )
     }
     const on = computeTournament(snap, S)
     expect(on.modules[id]).toBeDefined()

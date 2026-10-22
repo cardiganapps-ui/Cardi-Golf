@@ -8,8 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { forgetSeen, lastSeen, markSeen, readBoard, type SeenBoard } from './boardSeen'
 import { clearAllCached, clearCached } from './snapshotCache'
 
-const BOARD: SeenBoard = { round: 'r2', rows: { p1: { place: 1, figure: '61', today: '25' }, p2: { place: 3, figure: '55', today: '' } } }
-const keys = () => Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!).filter((k) => k.startsWith('cardi-golf:board-seen:'))
+const BOARD: SeenBoard = {
+  round: 'r2',
+  rows: { p1: { place: 1, figure: '61', today: '25' }, p2: { place: 3, figure: '55', today: '' } },
+}
+const keys = () =>
+  Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!).filter((k) =>
+    k.startsWith('cardi-golf:board-seen:'),
+  )
 
 afterEach(() => {
   localStorage.clear()
@@ -33,7 +39,15 @@ describe('the last look (MOT-06)', () => {
 
   it('a stored look that no longer reads as one is no look', () => {
     expect(readBoard(BOARD)).toEqual(BOARD)
-    for (const bad of [null, 'x', { rows: {} }, { round: 3, rows: {} }, { round: null, rows: [] }, { round: null, rows: { p1: { place: 0, figure: '1', today: '' } } }, { round: null, rows: { p1: { place: 2, figure: 1, today: '' } } }])
+    for (const bad of [
+      null,
+      'x',
+      { rows: {} },
+      { round: 3, rows: {} },
+      { round: null, rows: [] },
+      { round: null, rows: { p1: { place: 0, figure: '1', today: '' } } },
+      { round: null, rows: { p1: { place: 2, figure: 1, today: '' } } },
+    ])
       expect(readBoard(bad)).toBeNull()
     localStorage.setItem('cardi-golf:board-seen:t1', '{not json')
     expect(lastSeen('t1', true)).toBeNull()

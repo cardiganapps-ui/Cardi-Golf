@@ -17,9 +17,14 @@ const { RouteError } = await import('./RouteError')
 
 /** A screen whose chunk the server no longer has. */
 function Gone(): never {
-  throw new TypeError('Failed to fetch dynamically imported module: https://golf.cardigan.mx/assets/StatsScreen-DKzuE5NK.js')
+  throw new TypeError(
+    'Failed to fetch dynamically imported module: https://golf.cardigan.mx/assets/StatsScreen-DKzuE5NK.js',
+  )
 }
-const show = () => render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <Gone />, errorElement: <RouteError /> }])} />)
+const show = () =>
+  render(
+    <RouterProvider router={createMemoryRouter([{ path: '/', element: <Gone />, errorElement: <RouteError /> }])} />,
+  )
 
 afterEach(() => {
   cleanup()

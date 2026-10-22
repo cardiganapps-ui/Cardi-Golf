@@ -7,7 +7,17 @@
  */
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CONTRAST_KEY, THEME_COLOR, THEME_KEY, applyAppearance, contrastChoice, resolvedTheme, setContrastChoice, setThemeChoice, themeChoice } from './theme'
+import {
+  CONTRAST_KEY,
+  THEME_COLOR,
+  THEME_KEY,
+  applyAppearance,
+  contrastChoice,
+  resolvedTheme,
+  setContrastChoice,
+  setThemeChoice,
+  themeChoice,
+} from './theme'
 
 const html = readFileSync('index.html', 'utf8')
 const head = html.slice(0, html.indexOf('</head>'))
@@ -22,7 +32,11 @@ function reset() {
 }
 function snapshot() {
   const root = document.documentElement
-  return { theme: root.getAttribute('data-theme'), contrast: root.getAttribute('data-contrast'), bar: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute('content')) }
+  return {
+    theme: root.getAttribute('data-theme'),
+    contrast: root.getAttribute('data-contrast'),
+    bar: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute('content')),
+  }
 }
 
 beforeEach(() => {
@@ -45,7 +59,9 @@ describe('appearance (VIS-11, A11Y-19)', () => {
     // The dark one is the dark sheet itself (tokens.css --bg), so the bar and the page meet.
     expect(tokens).toMatch(new RegExp(`:root\\[data-theme='dark'\\] \\{[^}]*--bg: ${THEME_COLOR.dark.toLowerCase()};`))
     // The light one is the platform's fairway, as the manifest's (appManifest.test.ts).
-    expect(tokens).toMatch(new RegExp(`\\[data-theme='light'\\]\\) \\{[^}]*--accent: ${THEME_COLOR.light.toLowerCase()};`))
+    expect(tokens).toMatch(
+      new RegExp(`\\[data-theme='light'\\]\\) \\{[^}]*--accent: ${THEME_COLOR.light.toLowerCase()};`),
+    )
     expect(head).toContain('<meta name="color-scheme" content="light dark" />')
   })
 
@@ -86,7 +102,15 @@ describe('appearance (VIS-11, A11Y-19)', () => {
   })
 
   it('«Sistema» follows the phone', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: q.includes('dark'), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList)
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (q: string) =>
+        ({
+          matches: q.includes('dark'),
+          media: q,
+          addEventListener() {},
+          removeEventListener() {},
+        }) as unknown as MediaQueryList,
+    )
     expect(themeChoice()).toBe('system')
     expect(resolvedTheme()).toBe('dark')
     expect(resolvedTheme('light')).toBe('light')

@@ -28,7 +28,12 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className={styles.board}>
-      <p className="help">{(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(settings.modules.snake.puttsThreshold, settings.modules.snake.label)}</p>
+      <p className="help">
+        {(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(
+          settings.modules.snake.puttsThreshold,
+          settings.modules.snake.label,
+        )}
+      </p>
       {[...byRound.entries()].map(([rid, groups]) => (
         <section key={rid} className={styles.day}>
           <h2 className="h3">{t.round.day(groups[0]!.roundNumber)}</h2>
@@ -55,17 +60,31 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                   const holder = g.holderId === pid
                   const payout = g.payouts[pid]
                   return (
-                    <button key={pid} type="button" className={`${styles.player} ${holder ? styles.holder : ''}`} onClick={() => onOpen(pid)}>
+                    <button
+                      key={pid}
+                      type="button"
+                      className={`${styles.player} ${holder ? styles.holder : ''}`}
+                      onClick={() => onOpen(pid)}
+                    >
                       <span className={styles.avatarWrap}>
                         <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} />
                         {holder && (
-                          <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder(settings.modules.snake.label)} transition={easeSlow}>
+                          <motion.span
+                            layoutId={`snake-${g.groupId}`}
+                            className={styles.snake}
+                            aria-label={t.games.holder(settings.modules.snake.label)}
+                            transition={easeSlow}
+                          >
                             <IconSnake size={16} />
                           </motion.span>
                         )}
                       </span>
                       <span className={styles.playerName}>{name(pid)}</span>
-                      {payout && showMoney && <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>{formatMoney(payout.amount, cur)}</span>}
+                      {payout && showMoney && (
+                        <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>
+                          {formatMoney(payout.amount, cur)}
+                        </span>
+                      )}
                     </button>
                   )
                 })}
@@ -74,7 +93,10 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                 <ol className={styles.history}>
                   {g.passes.map((p) => (
                     <li key={p.hole} className={p.pending ? styles.pending : ''}>
-                      {t.round.hole(p.hole)}: {p.pending ? t.games.snakeWho(t.common.orList(p.candidates.map(name))) : t.games.snakeTo(name(p.holderId!))}
+                      {t.round.hole(p.hole)}:{' '}
+                      {p.pending
+                        ? t.games.snakeWho(t.common.orList(p.candidates.map(name)))
+                        : t.games.snakeTo(name(p.holderId!))}
                     </li>
                   ))}
                 </ol>

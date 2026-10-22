@@ -139,7 +139,10 @@ export function bracketState(ctx: FormatContext): BracketState {
     // count on the board, not here, and the bracket says so instead of a column of «—» (STRAT-03).
     if (roundId) {
       const listed = new Set(pairings.flatMap(([a, b]) => (b ? [`${a.id}|${b.id}`, `${b.id}|${a.id}`] : [])))
-      const off = Math.ceil(results.filter((r) => r.roundId === roundId && r.played > 0 && !listed.has(`${r.sideId}|${r.opponentId}`)).length / 2)
+      const off = Math.ceil(
+        results.filter((r) => r.roundId === roundId && r.played > 0 && !listed.has(`${r.sideId}|${r.opponentId}`))
+          .length / 2,
+      )
       if (off > 0) warnings.push(msg('bracket.offBracket', { day: i + 1, off, round: roundName(matches.length) }))
     }
 
@@ -150,7 +153,8 @@ export function bracketState(ctx: FormatContext): BracketState {
     if (matches.some((m) => !m.winner)) {
       // The round is not finished, so who plays next is not known yet. The
       // bracket stops here rather than inventing pairings.
-      if (matches.some((m) => !m.pending && !m.winner)) warnings.push(msg('bracket.tied', { round: roundName(matches.length) }))
+      if (matches.some((m) => !m.pending && !m.winner))
+        warnings.push(msg('bracket.tied', { round: roundName(matches.length) }))
       break
     }
     pairings = advance(matches.map((m) => m.winner))
@@ -171,6 +175,8 @@ export function nextRoundGroups(state: BracketState): { round: BracketRound; gro
   if (!round) return null
   return {
     round,
-    groups: round.matches.filter((m) => m.sides[1]).map((m) => [...m.sides[0].playerIds, ...(m.sides[1]?.playerIds ?? [])]),
+    groups: round.matches
+      .filter((m) => m.sides[1])
+      .map((m) => [...m.sides[0].playerIds, ...(m.sides[1]?.playerIds ?? [])]),
   }
 }

@@ -69,10 +69,12 @@ const ACCOUNT_FILL = {
   updated_at: 'coalesce(created_at, now())',
 }
 /** The same fill, as the check reads it over the backup's row `p`. */
-const overRow = (fill) => Object.fromEntries(Object.entries(fill).map(([c, v]) => [c, v.replace(/\bcreated_at\b/g, 'p.created_at')]))
+const overRow = (fill) =>
+  Object.fromEntries(Object.entries(fill).map(([c, v]) => [c, v.replace(/\bcreated_at\b/g, 'p.created_at')]))
 const IDENTITY_FILL = { updated_at: 'coalesce(created_at, now())' }
 /** The fills for the columns the target has (an older GoTrue may lack one). */
-const has = (cols, fill) => Object.fromEntries(Object.entries(fill).filter(([c]) => cols.some((x) => x.name === c && !x.generated)))
+const has = (cols, fill) =>
+  Object.fromEntries(Object.entries(fill).filter(([c]) => cols.some((x) => x.name === c && !x.generated)))
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 // .env.local fills what the environment doesn't (R2's keys), as scripts/db.mjs does.
@@ -91,7 +93,9 @@ const flag = (name) => args.includes(name)
 const from = opt('--from')
 const db = opt('--db')
 if (!from) {
-  console.error('usage: node scripts/restore-r2.mjs --from r2:latest | r2:YYYY-MM-DD | <file.json.gz> [--db <url>] [--save <file>] [--download-only | --verify-only]')
+  console.error(
+    'usage: node scripts/restore-r2.mjs --from r2:latest | r2:YYYY-MM-DD | <file.json.gz> [--db <url>] [--save <file>] [--download-only | --verify-only]',
+  )
   process.exit(2)
 }
 
@@ -105,10 +109,17 @@ function fail(msg) {
 // The backup
 // ---------------------------------------------------------------------------
 async function r2() {
-  const need = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BACKUP_BUCKET'].filter((k) => !process.env[k])
+  const need = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BACKUP_BUCKET'].filter(
+    (k) => !process.env[k],
+  )
   if (need.length) fail(`R2 needs ${need.join(', ')}`)
   const { AwsClient } = await import('aws4fetch')
-  const client = new AwsClient({ accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY, service: 's3', region: 'auto' })
+  const client = new AwsClient({
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    service: 's3',
+    region: 'auto',
+  })
   const base = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BACKUP_BUCKET}`
   return { client, base }
 }
@@ -117,7 +128,9 @@ async function latestKey({ client, base }) {
   const keys = []
   let token = ''
   for (;;) {
-    const r = await client.fetch(`${base}?list-type=2&prefix=backups/${token ? `&continuation-token=${encodeURIComponent(token)}` : ''}`)
+    const r = await client.fetch(
+      `${base}?list-type=2&prefix=backups/${token ? `&continuation-token=${encodeURIComponent(token)}` : ''}`,
+    )
     if (!r.ok) fail(`R2 list: HTTP ${r.status}`)
     const xml = await r.text()
     for (const m of xml.matchAll(/<Key>([^<]+)<\/Key>/g)) keys.push(m[1])
@@ -154,7 +167,9 @@ async function loadDump() {
   }
   const oldLinks = text.split(`https://${PRODUCTION_REF}.supabase.co/storage/v1/`).length - 1
   if (oldLinks && !to)
-    console.log(`  ! ${oldLinks} link(s) to the old project's Storage (photos, logos): --storage-to https://<new ref>.supabase.co points them at the new one (RUNBOOK.md §8b)`)
+    console.log(
+      `  ! ${oldLinks} link(s) to the old project's Storage (photos, logos): --storage-to https://<new ref>.supabase.co points them at the new one (RUNBOOK.md §8b)`,
+    )
   const dump = JSON.parse(text)
   if (![1, 2].includes(dump.version) || typeof dump.tables !== 'object') fail(`${source}: not a Polo backup`)
   return { dump, source, bytes: raw.length }
@@ -163,7 +178,9 @@ async function loadDump() {
 // ---------------------------------------------------------------------------
 // The target
 // ---------------------------------------------------------------------------
-const target = db ?? `${process.env.PGHOST ?? 'localhost'}:${process.env.PGPORT ?? '5432'}/${process.env.PGDATABASE ?? process.env.PGUSER ?? ''}`
+const target =
+  db ??
+  `${process.env.PGHOST ?? 'localhost'}:${process.env.PGPORT ?? '5432'}/${process.env.PGDATABASE ?? process.env.PGUSER ?? ''}`
 function psql(sqlOrFile, { file = false } = {}) {
   const base = ['-X', '-q', '-v', 'ON_ERROR_STOP=1', '-At']
   const r = spawnSync('psql', [...(db ? ['-d', db] : []), ...base, ...(file ? ['-f', sqlOrFile] : ['-c', sqlOrFile])], {
@@ -186,23 +203,36 @@ const lit = (s) => `'${String(s).replace(/'/g, "''")}'`
 const ident = (s) => `"${String(s).replace(/"/g, '""')}"`
 
 function refuseProduction() {
-  const named = [target, process.env.PGHOST, process.env.PGHOSTADDR, process.env.PGUSER, process.env.PGSERVICE].filter(Boolean).join(' ')
-  if (named.includes(PRODUCTION_REF)) fail('this is production: a restore never writes over it (CLAUDE.md §0.1). Restore into a new project or a local Postgres.')
+  const named = [target, process.env.PGHOST, process.env.PGHOSTADDR, process.env.PGUSER, process.env.PGSERVICE]
+    .filter(Boolean)
+    .join(' ')
+  if (named.includes(PRODUCTION_REF))
+    fail(
+      'this is production: a restore never writes over it (CLAUDE.md §0.1). Restore into a new project or a local Postgres.',
+    )
 }
 
 function guardTarget(dump) {
   refuseProduction()
-  if (psql("select to_regclass('public.tournaments') is null") === 't') fail('the target has no Polo schema: apply the migrations first (node scripts/db.mjs migrate)')
+  if (psql("select to_regclass('public.tournaments') is null") === 't')
+    fail('the target has no Polo schema: apply the migrations first (node scripts/db.mjs migrate)')
   // Production, or any database people already use, has accounts: whatever its name, a restore never mixes into it.
-  const [users, profiles, tournaments] = psql("select (select count(*) from auth.users) || '|' || (select count(*) from public.profiles) || '|' || (select count(*) from public.tournaments)")
+  const [users, profiles, tournaments] = psql(
+    "select (select count(*) from auth.users) || '|' || (select count(*) from public.profiles) || '|' || (select count(*) from public.tournaments)",
+  )
     .split('|')
     .map(Number)
   if (users + profiles + tournaments > 0)
-    fail(`the target already holds ${users} account(s), ${profiles} profile(s) and ${tournaments} tournament(s): restore only into an empty database`)
+    fail(
+      `the target already holds ${users} account(s), ${profiles} profile(s) and ${tournaments} tournament(s): restore only into an empty database`,
+    )
   const have = new Set(psql('select name from public._migrations').split('\n').filter(Boolean))
   const want = (dump.tables._migrations ?? []).map((m) => m.name)
   const missing = want.filter((m) => !have.has(m))
-  if (missing.length) fail(`the target lacks ${missing.length} migration(s) the backup has (${missing.slice(0, 3).join(', ')}…): apply them first`)
+  if (missing.length)
+    fail(
+      `the target lacks ${missing.length} migration(s) the backup has (${missing.slice(0, 3).join(', ')}…): apply them first`,
+    )
 }
 
 /** Every column of `schema.table` as the target has it, and which are generated. */
@@ -265,7 +295,10 @@ function check(schema, table, rows, all, fill = {}) {
   const keys = new Set(rows.flatMap((r) => Object.keys(r)))
   const names = new Set(all.map((c) => c.name))
   const unknown = [...keys].filter((k) => !names.has(k))
-  if (unknown.length) fail(`${schema}.${table}: the target has no column ${unknown.slice(0, 3).join(', ')}: apply the migrations the backup was taken with`)
+  if (unknown.length)
+    fail(
+      `${schema}.${table}: the target has no column ${unknown.slice(0, 3).join(', ')}: apply the migrations the backup was taken with`,
+    )
   const filled = Object.entries(fill).filter(([c]) => names.has(c))
   const out = all.filter((c) => !keys.has(c.name) && !(c.name in fill)).map((c) => lit(c.name))
   const drop = (e) => (out.length ? `${e} - array[${out.join(', ')}]::text[]` : e)
@@ -351,7 +384,13 @@ async function main() {
       const users = dedupe(dump.auth.users, ['id'])
       load('auth', 'users', users)
       const fill = has(all, overRow(ACCOUNT_FILL))
-      sql += insert('auth', 'users', all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name), ' on conflict (id) do nothing', fill)
+      sql += insert(
+        'auth',
+        'users',
+        all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name),
+        ' on conflict (id) do nothing',
+        fill,
+      )
       checks += check('auth', 'users', users, all, fill)
       accounts = users.length
     }
@@ -360,7 +399,13 @@ async function main() {
       const ids = dedupe(dump.auth.identities, ['id'])
       load('auth', 'identities', ids)
       const fill = has(all, overRow(IDENTITY_FILL))
-      sql += insert('auth', 'identities', all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name), ' on conflict do nothing', fill)
+      sql += insert(
+        'auth',
+        'identities',
+        all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name),
+        ' on conflict do nothing',
+        fill,
+      )
       checks += check('auth', 'identities', ids, all, fill)
     }
     if (!dump.auth) {
@@ -379,12 +424,15 @@ async function main() {
         load('auth', 'users', stubs)
         sql += insert('auth', 'users', ['id', 'is_anonymous'], ' on conflict (id) do nothing')
       }
-      console.log(`  ! format 1: ${stubs.length} bare accounts (no email): their profiles, friends and crews stay on those ids, and nobody can sign in to them (RUNBOOK.md §8b)`)
+      console.log(
+        `  ! format 1: ${stubs.length} bare accounts (no email): their profiles, friends and crews stay on those ids, and nobody can sign in to them (RUNBOOK.md §8b)`,
+      )
     }
     // Each account as GoTrue reads it: the columns its own migrations leave without a default.
     const userCols = new Set((columns('auth', 'users') ?? []).map((c) => c.name))
     const fill = Object.entries(ACCOUNT_FILL).filter(([c]) => userCols.has(c))
-    if (fill.length) sql += `update auth.users set ${fill.map(([c, v]) => `${ident(c)} = coalesce(${ident(c)}, ${v})`).join(', ')};\n`
+    if (fill.length)
+      sql += `update auth.users set ${fill.map(([c, v]) => `${ident(c)} = coalesce(${ident(c)}, ${v})`).join(', ')};\n`
 
     for (const t of tables) {
       const all = columns('public', t)
@@ -394,7 +442,12 @@ async function main() {
       const rows = dedupe(dump.tables[t], pk)
       restored += rows.length
       load('public', t, rows)
-      if (rows.length) sql += insert('public', t, all.filter((c) => !c.generated && rows.some((r) => c.name in r)).map((c) => c.name))
+      if (rows.length)
+        sql += insert(
+          'public',
+          t,
+          all.filter((c) => !c.generated && rows.some((r) => c.name in r)).map((c) => c.name),
+        )
       checks += check('public', t, rows, all)
     }
     // Each identity or serial column past the rows it holds now.
@@ -419,21 +472,34 @@ analyze pg_temp.want;
 `
     // The check, inside the same transaction: any mismatch rolls everything back.
     const file = join(work, 'restore.sql')
-    writeFileSync(file, verifyOnly ? `${head}${checks}${ORPHANS}rollback;\n` : `${head}${sql}${checks}${ORPHANS}commit;\n`, { mode: 0o600 })
+    writeFileSync(
+      file,
+      verifyOnly ? `${head}${checks}${ORPHANS}rollback;\n` : `${head}${sql}${checks}${ORPHANS}commit;\n`,
+      { mode: 0o600 },
+    )
     psql(file, { file: true })
 
     const dt = `${((Date.now() - t0) / 1000).toFixed(1)} s`
-    if (verifyOnly) console.log(`✓ the target matches the backup: ${restored} rows in ${tables.length} tables and ${accounts} accounts, row for row and key by key, ${dt}`)
+    if (verifyOnly)
+      console.log(
+        `✓ the target matches the backup: ${restored} rows in ${tables.length} tables and ${accounts} accounts, row for row and key by key, ${dt}`,
+      )
     else
       console.log(
         `✓ restored ${restored} rows in ${tables.length} tables and ${accounts} accounts into ${db ? 'the --db target' : target}, checked row for row and key by key before it was committed, ${dt} in all`,
       )
-    if (dump.storage?.objects?.length) console.log(`  · ${dump.storage.objects.length} file(s) listed in Storage: in R2 under files/ (RUNBOOK.md §8b)`)
+    if (dump.storage?.objects?.length)
+      console.log(`  · ${dump.storage.objects.length} file(s) listed in Storage: in R2 under files/ (RUNBOOK.md §8b)`)
     // A night carries no secret (TRUST-10): no PIN hash and no push address. Said, so nobody is surprised at the gate.
     const noPin = (dump.tables.players?.length ?? 0) - (dump.tables.player_pins?.length ?? 0)
-    if (!verifyOnly && noPin > 0) console.log(`  ! ${noPin} player(s) have no PIN: backups never carry one. The Comité sets each in Comité › Jugadores, «PIN» (RUNBOOK.md §8b)`)
+    if (!verifyOnly && noPin > 0)
+      console.log(
+        `  ! ${noPin} player(s) have no PIN: backups never carry one. The Comité sets each in Comité › Jugadores, «PIN» (RUNBOOK.md §8b)`,
+      )
     if (!verifyOnly && !dump.tables.push_subscriptions && !dump.tables.pin_push_subscriptions)
-      console.log('  ! no phone gets notices until it turns them on again (Editar perfil or Más › Avisos del torneo): backups never carry a push address')
+      console.log(
+        '  ! no phone gets notices until it turns them on again (Editar perfil or Más › Avisos del torneo): backups never carry a push address',
+      )
   } finally {
     // The work folder holds every row and every email: never left behind, the run failed or not.
     rmSync(work, { recursive: true, force: true })
@@ -441,6 +507,6 @@ analyze pg_temp.want;
 }
 
 main().catch((e) => {
-  console.error(`✗ ${e instanceof Stop ? e.message : e?.message ?? e}`)
+  console.error(`✗ ${e instanceof Stop ? e.message : (e?.message ?? e)}`)
   process.exit(1)
 })

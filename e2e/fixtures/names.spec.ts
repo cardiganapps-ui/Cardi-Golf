@@ -32,20 +32,30 @@ async function switches(page: Page) {
             .map((id) => document.getElementById(id)?.textContent ?? '')
             .join(' ')
         : (el.getAttribute('aria-label') ?? '')
-      return { name: name.trim(), options: Array.from(el.querySelectorAll('[role="radio"], [role="tab"]'), (o) => o.textContent?.trim()).join('/') }
+      return {
+        name: name.trim(),
+        options: Array.from(el.querySelectorAll('[role="radio"], [role="tab"]'), (o) => o.textContent?.trim()).join(
+          '/',
+        ),
+      }
     }),
   )
 }
 
 /** Every «¿Cómo se calculó?» on screen, with its name. */
 async function triggers(page: Page) {
-  return page.locator('button[aria-haspopup="dialog"][class*="_trigger_"]').evaluateAll((els) => els.map((el) => (el.getAttribute('aria-label') ?? el.textContent ?? '').trim()))
+  return page
+    .locator('button[aria-haspopup="dialog"][class*="_trigger_"]')
+    .evaluateAll((els) => els.map((el) => (el.getAttribute('aria-label') ?? el.textContent ?? '').trim()))
 }
 
 const HOW = t.money.howCalculated
 
 for (const path of SCREENS) {
-  test(`${path}: every switch has a name, every «¿Cómo se calculó?» says what it explains (A11Y-22, A11Y-25)`, async ({ page, pageErrors }) => {
+  test(`${path}: every switch has a name, every «¿Cómo se calculó?» says what it explains (A11Y-22, A11Y-25)`, async ({
+    page,
+    pageErrors,
+  }) => {
     await open(page, path)
     const seen = await switches(page)
     expect(
@@ -84,7 +94,9 @@ test('Juegos: on every game the triggers say what they explain (A11Y-25)', async
   expect(checked).toBeGreaterThan(3)
 })
 
-test('«SI» is said as «índice de golpe» on the Tarjeta, the player sheet and the printed card (A11Y-22)', async ({ page }) => {
+test('«SI» is said as «índice de golpe» on the Tarjeta, the player sheet and the printed card (A11Y-22)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live/tarjeta?vista=tarjeta')
   const spoken = async () => page.locator('main').ariaSnapshot()
   expect(await spoken()).not.toMatch(/\bSI\b/)
@@ -93,7 +105,9 @@ test('«SI» is said as «índice de golpe» on the Tarjeta, the player sheet an
   await open(page, '/t/_/full12-live/imprimir')
   expect(await spoken()).not.toMatch(/\bSI\b/)
   // Each row of the card's head says what it is, and no header is left empty (axe's empty-table-header).
-  const axe = await new AxeBuilder({ page }).withRules(['empty-table-header', 'td-headers-attr', 'th-has-data-cells']).analyze()
+  const axe = await new AxeBuilder({ page })
+    .withRules(['empty-table-header', 'td-headers-attr', 'th-has-data-cells'])
+    .analyze()
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([])
   // The stroke dots are said as strokes, not «viñeta».
   const dots = page.locator('td [role="img"]').first()

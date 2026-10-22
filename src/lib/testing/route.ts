@@ -28,9 +28,17 @@ export interface RouteAnswer {
 type Handler = (req: never, res: never) => unknown
 
 export async function callRoute(handler: Handler, init: RouteRequest = {}): Promise<RouteAnswer> {
-  const headers: Record<string, string> = Object.fromEntries(Object.entries(init.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
+  const headers: Record<string, string> = Object.fromEntries(
+    Object.entries(init.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+  )
   if (init.ip) headers['x-forwarded-for'] = init.ip
-  const req = { method: init.method ?? 'GET', headers, query: init.query ?? {}, body: init.body, socket: { remoteAddress: '10.0.0.1' } }
+  const req = {
+    method: init.method ?? 'GET',
+    headers,
+    query: init.query ?? {},
+    body: init.body,
+    socket: { remoteAddress: '10.0.0.1' },
+  }
   const out: RouteAnswer = { status: 0, headers: {}, body: undefined, text: '', logs: [] }
   const res = {
     setHeader(k: string, v: string) {
@@ -56,7 +64,9 @@ export async function callRoute(handler: Handler, init: RouteRequest = {}): Prom
     },
   }
   const levels = ['log', 'info', 'warn', 'error', 'debug'] as const
-  const spies = levels.map((level) => vi.spyOn(console, level).mockImplementation((...args: unknown[]) => void out.logs.push(args.map(String).join(' '))))
+  const spies = levels.map((level) =>
+    vi.spyOn(console, level).mockImplementation((...args: unknown[]) => void out.logs.push(args.map(String).join(' '))),
+  )
   try {
     await handler(req as never, res as never)
   } finally {

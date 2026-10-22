@@ -11,7 +11,18 @@
  */
 import { t } from '../../src/i18n/es-MX'
 import { SLUGS, type HoleEntry } from './field'
-import { boardAfter, boardRows, expect, expectLive, openCard, saveHole, serverScores, tab, test, typeHole } from './phone'
+import {
+  boardAfter,
+  boardRows,
+  expect,
+  expectLive,
+  openCard,
+  saveHole,
+  serverScores,
+  tab,
+  test,
+  typeHole,
+} from './phone'
 
 test('each phone keeping the other pair: both land, and nobody is asked', async ({ join }) => {
   test.setTimeout(180_000)
@@ -31,7 +42,9 @@ test('each phone keeping the other pair: both land, and nobody is asked', async 
   const betos: HoleEntry = { Ana: { strokes: 3, putts: 1 }, Beto: { strokes: 5, putts: 2 } }
   await typeHole(beto.page, 1, betos)
   await saveHole(beto.page, 1)
-  await expect.poll(() => serverScores(SLUGS.sameCard).map((s) => `${s.name} ${s.strokes}/${s.putts} ${s.by}`)).toEqual(['Ana 3/1 Beto', 'Beto 5/2 Beto', 'Caro 4/2 Beto', 'Dani 4/2 Beto'])
+  await expect
+    .poll(() => serverScores(SLUGS.sameCard).map((s) => `${s.name} ${s.strokes}/${s.putts} ${s.by}`))
+    .toEqual(['Ana 3/1 Beto', 'Beto 5/2 Beto', 'Caro 4/2 Beto', 'Dani 4/2 Beto'])
 
   await ana.context.setOffline(false)
   // Each phone's typed values stand; Beto's untouched par for Caro and Dani is kept as the discrepancy's old value.
@@ -62,7 +75,9 @@ test('each phone keeping the other pair: both land, and nobody is asked', async 
     .toEqual([])
 })
 
-test('both typing the same player: the first value stays, the second phone is asked, and «Guardar el mío» puts it over', async ({ join }) => {
+test('both typing the same player: the first value stays, the second phone is asked, and «Guardar el mío» puts it over', async ({
+  join,
+}) => {
   test.setTimeout(180_000)
   const ana = await join(SLUGS.conflict, 'Ana')
   const beto = await join(SLUGS.conflict, 'Beto')
@@ -76,13 +91,27 @@ test('both typing the same player: the first value stays, the second phone is as
 
   await typeHole(beto.page, 1, { Caro: { strokes: 5, putts: 1 } })
   await saveHole(beto.page, 1)
-  await expect.poll(() => serverScores(SLUGS.conflict).find((s) => s.name === 'Caro')).toMatchObject({ strokes: 5, putts: 1, by: 'Beto' })
+  await expect
+    .poll(() => serverScores(SLUGS.conflict).find((s) => s.name === 'Caro'))
+    .toMatchObject({ strokes: 5, putts: 1, by: 'Beto' })
 
   await ana.context.setOffline(false)
-  const line = t.card.conflictLine(1, 'Beto', 'Caro', t.card.conflictValue(5, 1, false, true, false), t.card.conflictValue(6, 2, false, true, false), false)
+  const line = t.card.conflictLine(
+    1,
+    'Beto',
+    'Caro',
+    t.card.conflictValue(5, 1, false, true, false),
+    t.card.conflictValue(6, 2, false, true, false),
+    false,
+  )
   await expect(ana.page.getByText(line, { exact: true })).toBeVisible({ timeout: 20_000 })
   // Beto's 5 stands on the server, and on Ana's phone.
-  expect(serverScores(SLUGS.conflict).find((s) => s.name === 'Caro')).toMatchObject({ strokes: 5, putts: 1, by: 'Beto', disputed: false })
+  expect(serverScores(SLUGS.conflict).find((s) => s.name === 'Caro')).toMatchObject({
+    strokes: 5,
+    putts: 1,
+    by: 'Beto',
+    disputed: false,
+  })
 
   await ana.page.getByRole('button', { name: t.card.conflictAction(t.card.keepMine, 1, 'Caro'), exact: true }).click()
   await expect

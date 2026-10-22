@@ -14,7 +14,18 @@
  */
 import 'fake-indexeddb/auto'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { enterAs, gate, holeScore, installFakePhone, isWrite, OUTBOX_CHANNEL, settle, snakeAnswer, until, type Outcome } from './testing/fakePhone'
+import {
+  enterAs,
+  gate,
+  holeScore,
+  installFakePhone,
+  isWrite,
+  OUTBOX_CHANNEL,
+  settle,
+  snakeAnswer,
+  until,
+  type Outcome,
+} from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, enqueueTiebreak, queuedFor, startOutbox, useOutbox } = await import('./outbox')
@@ -171,7 +182,11 @@ describe('the pending count', () => {
     server.decide = (req) => {
       if (isWrite(req) || isWrite(req, 'snake_tiebreaks')) {
         const body = req.body as { player_id?: string; hole: number }
-        seen.push([`${body.player_id ?? 'answer'}:${body.hole}`, useOutbox.getState().pending, useOutbox.getState().pendingHoles])
+        seen.push([
+          `${body.player_id ?? 'answer'}:${body.hole}`,
+          useOutbox.getState().pending,
+          useOutbox.getState().pendingHoles,
+        ])
       }
       return 'answer'
     }

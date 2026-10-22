@@ -35,7 +35,10 @@ test.beforeAll(async () => {
     const path = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname)
     let file = join(dir, path)
     if (!file.startsWith(dir) || !existsSync(file) || statSync(file).isDirectory()) file = join(dir, 'index.html')
-    res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' })
+    res.writeHead(200, {
+      'content-type': TYPES[extname(file)] ?? 'application/octet-stream',
+      'cache-control': 'no-cache',
+    })
     res.end(readFileSync(file))
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -50,19 +53,26 @@ test.afterAll(async () => {
 type Marked = Window & { stayed?: boolean }
 const page_ = (path = '/t/_/full12-live/tarjeta') => `${origin}${path}`
 /** This build's worker serves the page. */
-const served = (page: Page) => page.evaluate(async () => !!(await navigator.serviceWorker.ready).active && !!navigator.serviceWorker.controller)
+const served = (page: Page) =>
+  page.evaluate(async () => !!(await navigator.serviceWorker.ready).active && !!navigator.serviceWorker.controller)
 /** A deploy: a new worker on the server, found by the next check (the app makes one on resume and every 30 minutes). */
 async function deploy(page: Page) {
   writeFileSync(join(dir, 'sw.js'), `${readFileSync(join(dir, 'sw.js'), 'utf8')}\n// the next deploy\n`)
   await page.evaluate(async () => void (await (await navigator.serviceWorker.getRegistration())?.update()))
-  await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), { timeout: 30_000 }).toBe(true)
+  await expect
+    .poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), {
+      timeout: 30_000,
+    })
+    .toBe(true)
 }
 /** «Actualizar» on the bar: the page loads again, and the new worker serves it, none left waiting. */
 async function update(page: Page) {
   const bar = page.getByRole('status').filter({ hasText: t.sync.newVersion })
   await expect(bar).toBeVisible()
   await bar.getByRole('button', { name: t.sync.update }).click()
-  await expect.poll(() => page.evaluate(() => (window as Marked).stayed ?? false).catch(() => true), { timeout: 30_000 }).toBe(false)
+  await expect
+    .poll(() => page.evaluate(() => (window as Marked).stayed ?? false).catch(() => true), { timeout: 30_000 })
+    .toBe(false)
   await expect
     .poll(
       () =>
@@ -75,7 +85,10 @@ async function update(page: Page) {
     .toBe(true)
 }
 
-test('a deploy found mid-hole waits for the hole, and «Actualizar» loads it, on the phone’s first visit too (QA-16, PWA-03)', async ({ page, pageErrors }) => {
+test('a deploy found mid-hole waits for the hole, and «Actualizar» loads it, on the phone’s first visit too (QA-16, PWA-03)', async ({
+  page,
+  pageErrors,
+}) => {
   test.setTimeout(90_000)
   // A first visit: no worker when the page opened, then this build's took it (clientsClaim). vite-plugin-pwa
   // reloads only a page that had a worker when it opened, so this is the case the app reloads by itself.

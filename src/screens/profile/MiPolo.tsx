@@ -4,7 +4,7 @@
  * what needs you now: in play, coming up, played. The join code and the
  * organizer's way in stay at the bottom.
  */
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type SubmitEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -36,10 +36,20 @@ function feedLine(f: FeedItem): { text: string; to: string } {
   switch (f.kind) {
     case 'finish': {
       const finish = t.profile.finish(f.data.rankLabel, f.data.field)
-      return { text: S.feedFinish(name, finish.charAt(0).toLowerCase() + finish.slice(1), f.data.tournament), to: `/t/${f.data.slug}` }
+      return {
+        text: S.feedFinish(name, finish.charAt(0).toLowerCase() + finish.slice(1), f.data.tournament),
+        to: `/t/${f.data.slug}`,
+      }
     }
     case 'round':
-      return { text: S.feedRound(name, S.feedWhat(f.data.birdies, f.data.eagles, f.data.best, f.data.gross), f.data.course ?? f.data.tournament), to: `/p/${f.who.handle}` }
+      return {
+        text: S.feedRound(
+          name,
+          S.feedWhat(f.data.birdies, f.data.eagles, f.data.best, f.data.gross),
+          f.data.course ?? f.data.tournament,
+        ),
+        to: `/p/${f.who.handle}`,
+      }
     case 'rivalry':
       return { text: S.feedRivalry(name, f.data.result), to: `/p/${f.who.handle}/vs` }
   }
@@ -97,12 +107,29 @@ function rowsOf(links: MyLink[], organizing: MyTournament[]): Row[] {
   const byId = new Map<string, Row>()
   for (const l of links) {
     if (l.linkStatus !== 'confirmed') continue
-    byId.set(l.tournamentId, { key: l.tournamentId, slug: l.slug, name: l.name, logoUrl: l.logoUrl, status: l.tournamentStatus, player: l.displayName, organizer: false })
+    byId.set(l.tournamentId, {
+      key: l.tournamentId,
+      slug: l.slug,
+      name: l.name,
+      logoUrl: l.logoUrl,
+      status: l.tournamentStatus,
+      player: l.displayName,
+      organizer: false,
+    })
   }
   for (const o of organizing) {
     const had = byId.get(o.id)
     if (had) had.organizer = true
-    else byId.set(o.id, { key: o.id, slug: o.slug, name: o.name, logoUrl: o.logoUrl, status: o.status as Row['status'], player: null, organizer: true })
+    else
+      byId.set(o.id, {
+        key: o.id,
+        slug: o.slug,
+        name: o.name,
+        logoUrl: o.logoUrl,
+        status: o.status as Row['status'],
+        player: null,
+        organizer: true,
+      })
   }
   return [...byId.values()]
 }
@@ -166,7 +193,7 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
     setBusy(null)
   }
 
-  function onJoin(e: FormEvent) {
+  function onJoin(e: SubmitEvent) {
     e.preventDefault()
     const clean = code.trim().toUpperCase()
     if (clean.length === 6) navigate(`/t/${clean}`)
@@ -199,7 +226,9 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
               <EventMark name={r.name} logoUrl={r.logoUrl} />
               <span className={styles.rowText}>
                 <span className={styles.rowTitle}>{r.name}</span>
-                <span className={styles.rowSub}>{[r.player, r.organizer ? M.organizer : null].filter(Boolean).join(', ')}</span>
+                <span className={styles.rowSub}>
+                  {[r.player, r.organizer ? M.organizer : null].filter(Boolean).join(', ')}
+                </span>
               </span>
               <span className={styles.rowEnd}>
                 <IconChevronRight size={20} />
@@ -220,7 +249,11 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
               <IconShield />
             </Link>
           )}
-          <Link to="/avisos" className={styles.iconBtn} aria-label={unread > 0 ? `${S.inbox}: ${S.unread(unread)}` : S.inbox}>
+          <Link
+            to="/avisos"
+            className={styles.iconBtn}
+            aria-label={unread > 0 ? `${S.inbox}: ${S.unread(unread)}` : S.inbox}
+          >
             <IconBell />
             {unread > 0 && (
               <span className={styles.badge} aria-hidden="true">
@@ -273,10 +306,20 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
               <div key={l.playerId} className={styles.ask}>
                 <span>{M.pendingLine(l.displayName, l.name)}</span>
                 <div className={styles.askActions}>
-                  <button className="btn btn--primary btn--sm" type="button" disabled={busy === l.playerId} onClick={() => void answer(l, true)}>
+                  <button
+                    className="btn btn--primary btn--sm"
+                    type="button"
+                    disabled={busy === l.playerId}
+                    onClick={() => void answer(l, true)}
+                  >
                     {M.yes}
                   </button>
-                  <button className="btn btn--ghost btn--sm" type="button" disabled={busy === l.playerId} onClick={() => void answer(l, false)}>
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    type="button"
+                    disabled={busy === l.playerId}
+                    onClick={() => void answer(l, false)}
+                  >
                     {M.no}
                   </button>
                 </div>
@@ -311,7 +354,9 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
             <Link to="/crews" className={styles.row}>
               <span className={styles.rowText}>
                 <span className={styles.rowTitle}>{crews.length ? t.crews.title : t.crews.create}</span>
-                <span className={styles.rowSub}>{crews.length ? `${t.crews.create}, ${t.crews.join.toLowerCase()}` : t.crews.lede}</span>
+                <span className={styles.rowSub}>
+                  {crews.length ? `${t.crews.create}, ${t.crews.join.toLowerCase()}` : t.crews.lede}
+                </span>
               </span>
               <span className={styles.rowEnd}>
                 <IconChevronRight size={20} />
@@ -337,7 +382,14 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
             className={`input ${styles.codeInput}`}
             placeholder={t.home.joinPlaceholder}
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+            onChange={(e) =>
+              setCode(
+                e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, '')
+                  .slice(0, 6),
+              )
+            }
             autoCapitalize="characters"
             autoComplete="off"
             maxLength={6}

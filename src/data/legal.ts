@@ -135,7 +135,13 @@ async function accept(context: LegalContext): Promise<boolean> {
   if (!me) return false
   const stored = read()
   const adult = !me.anonymous && !!stored.adult && Date.now() - stored.adult.at < ADULT_MS
-  const pending = { uid: me.uid, context, versions: currentVersions(), at: Date.now(), ...(adult ? { adult: true } : {}) }
+  const pending = {
+    uid: me.uid,
+    context,
+    versions: currentVersions(),
+    at: Date.now(),
+    ...(adult ? { adult: true } : {}),
+  }
   // Said once, for this sign-in: the next one asks again.
   if (stored.adult) write({ ...stored, adult: undefined })
   // A browser that keeps nothing: send it now, once, rather than lose it.
@@ -161,7 +167,12 @@ async function call(p: NonNullable<Stored['pending']>): Promise<{ mine: MyAccept
     // The age, as a record of its own. A server without 0070 has nowhere to keep it: the acceptance still stands.
     if (p.adult) {
       try {
-        await supabase().rpc('confirm_adult', { p_terms: p.versions.terms, p_context: p.context, p_age_seconds: Math.max(0, Math.round((Date.now() - p.at) / 1000)), p_user: p.uid })
+        await supabase().rpc('confirm_adult', {
+          p_terms: p.versions.terms,
+          p_context: p.context,
+          p_age_seconds: Math.max(0, Math.round((Date.now() - p.at) / 1000)),
+          p_user: p.uid,
+        })
       } catch {
         // No signal now: the acceptance went, and the age was said on the phone; the record waits for none.
       }
@@ -205,7 +216,8 @@ async function sendPending(): Promise<boolean> {
   const p = read().pending
   if (!p) return true
   // Too old to send, or not something this app wrote.
-  if (!Number.isFinite(p.at) || typeof p.uid !== 'string' || !p.versions || Date.now() - p.at > PENDING_MS) return dropPending(p)
+  if (!Number.isFinite(p.at) || typeof p.uid !== 'string' || !p.versions || Date.now() - p.at > PENDING_MS)
+    return dropPending(p)
   const me = await signedIn()
   if (!me) return false
   if (me.uid !== p.uid) return dropPending(p)
@@ -246,25 +258,39 @@ export async function legalUpdate(): Promise<LegalChange | null> {
   const stored = read()
   const none = { privacy: false, terms: false }
   const judge = (seen: { privacy: string | null; terms: string | null; claimed?: boolean }): LegalChange => {
-    if (seen.privacy == null && seen.terms == null) return me.anonymous && !seen.claimed ? none : { privacy: true, terms: true, first: true }
+    if (seen.privacy == null && seen.terms == null)
+      return me.anonymous && !seen.claimed ? none : { privacy: true, terms: true, first: true }
     return {
       privacy: seen.privacy == null || compareVersions(seen.privacy, cur.privacy) < 0,
       terms: seen.terms == null || compareVersions(seen.terms, cur.terms) < 0,
     }
   }
   // What waits to be sent for this user already says yes to what is on screen.
-  if (stored.pending?.uid === me.uid && stored.pending.versions.privacy === cur.privacy && stored.pending.versions.terms === cur.terms) return none
+  if (
+    stored.pending?.uid === me.uid &&
+    stored.pending.versions.privacy === cur.privacy &&
+    stored.pending.versions.terms === cur.terms
+  )
+    return none
   // What the server said last time, when it can't have changed: up to date, or an anonymous phone that never accepted.
   if (stored.seen?.uid === me.uid) {
     const up = stored.seen.privacy === cur.privacy && stored.seen.terms === cur.terms
-    if (up || (me.anonymous && stored.seen.privacy == null && stored.seen.terms == null && stored.seen.claimed === false)) return judge(stored.seen)
+    if (
+      up ||
+      (me.anonymous && stored.seen.privacy == null && stored.seen.terms == null && stored.seen.claimed === false)
+    )
+      return judge(stored.seen)
   }
   try {
     const res = await supabase().rpc('my_legal_acceptances')
     if (res.error) return null
     const mine = res.data as MyAcceptances | null
     if (!mine || typeof mine !== 'object') return null
-    const seen: NonNullable<Stored['seen']> = { uid: me.uid, privacy: mine.privacy?.version ?? null, terms: mine.terms?.version ?? null }
+    const seen: NonNullable<Stored['seen']> = {
+      uid: me.uid,
+      privacy: mine.privacy?.version ?? null,
+      terms: mine.terms?.version ?? null,
+    }
     if (me.anonymous && seen.privacy == null && seen.terms == null) {
       const claimed = await holdsClaim()
       if (claimed == null) return null

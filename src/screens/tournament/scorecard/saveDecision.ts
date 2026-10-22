@@ -14,7 +14,10 @@ import { DOUBLE_SAVE_MS, SETTLE_MS } from './timing'
 const S = t.card
 
 /** Strokes of 10 or more and putts of 5 or more are asked about before the save (§9.3), one line each. A pick-up has nothing to ask. */
-export function unusualValues(players: ReadonlyArray<{ id: string; name: string }>, drafts: Record<string, Draft>): string[] {
+export function unusualValues(
+  players: ReadonlyArray<{ id: string; name: string }>,
+  drafts: Record<string, Draft>,
+): string[] {
   const weird: string[] = []
   for (const p of players) {
     const d = drafts[p.id]
@@ -26,7 +29,8 @@ export function unusualValues(players: ReadonlyArray<{ id: string; name: string 
 }
 
 /** The players at the snake's threshold on this hole: two or more ask «¿Quién embocó al último?». */
-export const snakeCandidates = (playerIds: readonly string[], drafts: Record<string, Draft>, threshold: number) => playerIds.filter((id) => (drafts[id]?.putts ?? -Infinity) >= threshold)
+export const snakeCandidates = (playerIds: readonly string[], drafts: Record<string, Draft>, threshold: number) =>
+  playerIds.filter((id) => (drafts[id]?.putts ?? -Infinity) >= threshold)
 
 export interface SaveCheck {
   /** Past the questions about the values: the tap is the answer to «¿Seguro?» or «Sí, todos par». */
@@ -85,7 +89,12 @@ export function decideSave(c: SaveCheck): SaveStep {
  * Who a save writes: the players touched here, and the ones the server has nothing for yet (that is how an
  * all-par hole stays one tap). A player the other phone already saved is left alone (REL-05).
  */
-export function pickWrites(playerIds: readonly string[], drafts: Record<string, Draft>, touched: ReadonlySet<string>, played: (pid: string) => boolean): Record<string, Draft> {
+export function pickWrites(
+  playerIds: readonly string[],
+  drafts: Record<string, Draft>,
+  touched: ReadonlySet<string>,
+  played: (pid: string) => boolean,
+): Record<string, Draft> {
   const writes: Record<string, Draft> = {}
   for (const id of playerIds) {
     const d = drafts[id]
@@ -100,11 +109,24 @@ export function pickWrites(playerIds: readonly string[], drafts: Record<string, 
  * to the hole after this one (UX-19). A new hole goes on to the next one (null after the last: the grid).
  * `target` is the index in the play order to move to.
  */
-export function afterSave(o: { order: readonly number[]; savedHole: number; playerIds: readonly string[]; played: (pid: string, hole: number) => boolean }) {
+export function afterSave(o: {
+  order: readonly number[]
+  savedHole: number
+  playerIds: readonly string[]
+  played: (pid: string, hole: number) => boolean
+}) {
   const correcting = o.playerIds.every((id) => o.played(id, o.savedHole))
-  const backTo = correcting ? (o.order.find((h) => h !== o.savedHole && o.playerIds.some((id) => !o.played(id, h))) ?? null) : null
+  const backTo = correcting
+    ? (o.order.find((h) => h !== o.savedHole && o.playerIds.some((id) => !o.played(id, h))) ?? null)
+    : null
   const idx = o.order.indexOf(o.savedHole)
-  const target = correcting ? (backTo == null ? null : o.order.indexOf(backTo)) : idx < o.order.length - 1 ? idx + 1 : null
+  const target = correcting
+    ? backTo == null
+      ? null
+      : o.order.indexOf(backTo)
+    : idx < o.order.length - 1
+      ? idx + 1
+      : null
   return { correcting, backTo, target }
 }
 
@@ -112,13 +134,23 @@ export function afterSave(o: { order: readonly number[]; savedHole: number; play
  * What an undo puts back, taken before the save: each written player's saved values (or the draft itself for a
  * hole that was new) and whether he had any. `celebrate`: this phone's own player made a net birdie or better.
  */
-export function undoSnapshot(o: { writes: Record<string, Draft>; holeOf: (pid: string) => HoleResult | undefined; fallbackPar: number; myPlayerId: string | null }) {
+export function undoSnapshot(o: {
+  writes: Record<string, Draft>
+  holeOf: (pid: string) => HoleResult | undefined
+  fallbackPar: number
+  myPlayerId: string | null
+}) {
   const before: Record<string, Draft> = {}
   const wasPlayed: Record<string, boolean> = {}
   let celebrate = false
   for (const [id, d] of Object.entries(o.writes)) {
     const h = o.holeOf(id)
-    const pts = stablefordPoints(h?.par ?? o.fallbackPar, h?.strokesReceived ?? 0, d.pickedUp ? null : d.strokes, d.pickedUp)
+    const pts = stablefordPoints(
+      h?.par ?? o.fallbackPar,
+      h?.strokesReceived ?? 0,
+      d.pickedUp ? null : d.strokes,
+      d.pickedUp,
+    )
     if (!d.pickedUp && pts >= 3 && id === o.myPlayerId) celebrate = true
     wasPlayed[id] = !!h?.played
     before[id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
@@ -127,10 +159,14 @@ export function undoSnapshot(o: { writes: Record<string, Draft>; holeOf: (pid: s
 }
 
 /** A real undo only when every player written already had values: they are written back. Else the card offers «Corregir». */
-export const canUndo = (written: readonly string[], wasPlayed: Record<string, boolean>) => written.length > 0 && written.every((id) => wasPlayed[id])
+export const canUndo = (written: readonly string[], wasPlayed: Record<string, boolean>) =>
+  written.length > 0 && written.every((id) => wasPlayed[id])
 
 /** The fields a save sets for one player: only those that differ from the row the phone saw (REL-05). */
-export function entryFields(row: { strokes: number | null; putts: number | null; picked_up: boolean }, base: HoleFields): HoleFields {
+export function entryFields(
+  row: { strokes: number | null; putts: number | null; picked_up: boolean },
+  base: HoleFields,
+): HoleFields {
   const was = baseRow(base)
   const fields: HoleFields = {}
   if (row.strokes !== was.strokes) fields.strokes = row.strokes

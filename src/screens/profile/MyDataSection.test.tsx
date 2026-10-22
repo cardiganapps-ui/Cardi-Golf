@@ -11,8 +11,16 @@ import { t } from '../../i18n/es-MX'
 
 const api = vi.hoisted(() => ({
   downloadMyData: vi.fn(async () => undefined),
-  myDeletePreview: vi.fn(async () => ({ orphaned: [{ id: 't1', name: 'Copa del Jueves' }], anonymizedPlayers: 2, anonymizedIn: ['Ensayo', 'Copa del Jueves'], crewsHanded: ['Los jueves'], crewsDeleted: [] })),
-  deleteMyAccount: vi.fn(async (_email: string): Promise<{ done: true } | { done: false; reason: string }> => ({ done: true })),
+  myDeletePreview: vi.fn(async () => ({
+    orphaned: [{ id: 't1', name: 'Copa del Jueves' }],
+    anonymizedPlayers: 2,
+    anonymizedIn: ['Ensayo', 'Copa del Jueves'],
+    crewsHanded: ['Los jueves'],
+    crewsDeleted: [],
+  })),
+  deleteMyAccount: vi.fn(async (_email: string): Promise<{ done: true } | { done: false; reason: string }> => ({
+    done: true,
+  })),
 }))
 vi.mock('../../data/myData', () => api)
 const { MyDataSection } = await import('./MyDataSection')

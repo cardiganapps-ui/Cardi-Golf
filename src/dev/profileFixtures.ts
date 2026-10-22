@@ -20,7 +20,12 @@ const base: ProfileCard = {
   memberSince: '2026-09-01T12:00:00Z',
 }
 
-const tournament = (name: string, slug: string, status: ProfileTournament['status'], extra: Partial<ProfileTournament> = {}): ProfileTournament => ({
+const tournament = (
+  name: string,
+  slug: string,
+  status: ProfileTournament['status'],
+  extra: Partial<ProfileTournament> = {},
+): ProfileTournament => ({
   tournamentId: `t-${slug}`,
   slug,
   name,
@@ -88,19 +93,58 @@ function round(i: number, diff: number | null, extra: Partial<RoundResult> = {})
 }
 
 const money: MoneyLine[] = [
-  { tournamentId: 't-primavera', slug: 'primavera', name: 'Invitacional de Primavera', net: 1500, currency: 'MXN', publishedAt: '2026-06-01T00:00:00Z', practice: false },
-  { tournamentId: 't-otono', slug: 'otono', name: 'Copa de Otoño', net: -2500, currency: 'MXN', publishedAt: '2026-03-01T00:00:00Z', practice: false },
-  { tournamentId: 't-sabados', slug: 'sabados', name: 'Sábados en Chapultepec', net: 700, currency: 'MXN', publishedAt: '2026-09-20T00:00:00Z', practice: false },
+  {
+    tournamentId: 't-primavera',
+    slug: 'primavera',
+    name: 'Invitacional de Primavera',
+    net: 1500,
+    currency: 'MXN',
+    publishedAt: '2026-06-01T00:00:00Z',
+    practice: false,
+  },
+  {
+    tournamentId: 't-otono',
+    slug: 'otono',
+    name: 'Copa de Otoño',
+    net: -2500,
+    currency: 'MXN',
+    publishedAt: '2026-03-01T00:00:00Z',
+    practice: false,
+  },
+  {
+    tournamentId: 't-sabados',
+    slug: 'sabados',
+    name: 'Sábados en Chapultepec',
+    net: 700,
+    currency: 'MXN',
+    publishedAt: '2026-09-20T00:00:00Z',
+    practice: false,
+  },
 ]
 
-export const PROFILE_FIXTURES: Record<string, { card: ProfileCard; tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }> = {
+export const PROFILE_FIXTURES: Record<
+  string,
+  { card: ProfileCard; tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }
+> = {
   /** My profile after a season: index, strip, finishes, history (one practice round, one incomplete), money. */
   yo: {
     card: base,
     tournaments: [
       tournament('Sábados en Chapultepec', 'sabados', 'live'),
-      tournament('Invitacional de Primavera', 'primavera', 'finished', { rank: 1, rankLabel: '1', field: 12, points: 76, awards: ['prize:Individual, 1.er lugar'] }),
-      tournament('Copa de Otoño', 'otono', 'finished', { rank: 3, rankLabel: 'T3', field: 16, points: 71, awards: ['award:mostBirdies'] }),
+      tournament('Invitacional de Primavera', 'primavera', 'finished', {
+        rank: 1,
+        rankLabel: '1',
+        field: 12,
+        points: 76,
+        awards: ['prize:Individual, 1.er lugar'],
+      }),
+      tournament('Copa de Otoño', 'otono', 'finished', {
+        rank: 3,
+        rankLabel: 'T3',
+        field: 16,
+        points: 71,
+        awards: ['award:mostBirdies'],
+      }),
       tournament('Ensayo', 'ensayo', 'finished', { practice: true }),
     ],
     rounds: [
@@ -113,19 +157,56 @@ export const PROFILE_FIXTURES: Record<string, { card: ProfileCard; tournaments?:
   },
   /** Just created: no index yet, no bio, no tournaments, no rounds. */
   nuevo: {
-    card: { ...base, handle: 'tomas.rivera', displayName: 'Tomás Rivera', homeClub: null, city: null, index: null, indexRounds: 0, bio: null, fullName: null },
+    card: {
+      ...base,
+      handle: 'tomas.rivera',
+      displayName: 'Tomás Rivera',
+      homeClub: null,
+      city: null,
+      index: null,
+      indexRounds: 0,
+      bio: null,
+      fullName: null,
+    },
     tournaments: [],
     rounds: [],
     money: [],
   },
   /** Someone else, seen by a stranger with an account: the card only. */
   extrano: {
-    card: { ...base, handle: 'julian.tg', displayName: 'Julián Treviño Garza de la Fuente', isMe: false, related: false, bio: null, fullName: null, index: 8.1, indexRounds: 20 },
+    card: {
+      ...base,
+      handle: 'julian.tg',
+      displayName: 'Julián Treviño Garza de la Fuente',
+      isMe: false,
+      related: false,
+      bio: null,
+      fullName: null,
+      index: 8.1,
+      indexRounds: 20,
+    },
   },
   /** A plus handicap declared by hand, seen by a tournament mate. */
   manual: {
-    card: { ...base, handle: 'pablo.ibarra', displayName: 'Pablo Ibarra', isMe: false, related: true, index: -1.2, indexSource: 'manual', bio: 'Scratch en los buenos días.' },
-    tournaments: [tournament('Copa de Otoño', 'otono', 'finished', { rank: 1, rankLabel: '1', field: 16, points: 82, displayName: 'Pablo' })],
+    card: {
+      ...base,
+      handle: 'pablo.ibarra',
+      displayName: 'Pablo Ibarra',
+      isMe: false,
+      related: true,
+      index: -1.2,
+      indexSource: 'manual',
+      bio: 'Scratch en los buenos días.',
+    },
+    tournaments: [
+      tournament('Copa de Otoño', 'otono', 'finished', {
+        rank: 1,
+        rankLabel: '1',
+        field: 16,
+        points: 82,
+        displayName: 'Pablo',
+      }),
+    ],
     rounds: [round(0, -0.8, { gross: 71, ags: 71 }), round(1, 1.4, { gross: 74, ags: 74 })],
   },
 }

@@ -27,7 +27,14 @@
  * There is no QueryClientProvider: every hook here passes `queryClient`
  * itself, so a screen needs nothing around it (the design fixtures, tests).
  */
-import { QueryClient, keepPreviousData, partialMatchKey, useInfiniteQuery, useQuery, type QueryKey } from '@tanstack/react-query'
+import {
+  QueryClient,
+  keepPreviousData,
+  partialMatchKey,
+  useInfiniteQuery,
+  useQuery,
+  type QueryKey,
+} from '@tanstack/react-query'
 import { REQUEST_TIMEOUT_MS } from '../lib/fetchWithTimeout'
 import { TimeoutError } from '../lib/timeout'
 import { isTransient } from '../lib/humanError'
@@ -49,14 +56,22 @@ export const QUERY_RETRIES = 2
  * dropped. A request that takes the signal stops; one that doesn't still
  * ends at the client's deadline, but nobody waits for it.
  */
-export function withDeadline<T>(job: (signal: AbortSignal) => Promise<T>, outer: AbortSignal | undefined, ms: number, label: string): Promise<T> {
+export function withDeadline<T>(
+  job: (signal: AbortSignal) => Promise<T>,
+  outer: AbortSignal | undefined,
+  ms: number,
+  label: string,
+): Promise<T> {
   const ctrl = new AbortController()
   const onAbort = () => ctrl.abort(outer?.reason)
   if (outer?.aborted) ctrl.abort(outer.reason)
   else outer?.addEventListener('abort', onAbort, { once: true })
   const timer = setTimeout(() => ctrl.abort(new TimeoutError(label, ms)), ms)
   return new Promise<T>((resolve, reject) => {
-    if (ctrl.signal.aborted) return reject(ctrl.signal.reason)
+    if (ctrl.signal.aborted) {
+      reject(ctrl.signal.reason)
+      return
+    }
     ctrl.signal.addEventListener('abort', () => reject(ctrl.signal.reason), { once: true })
     job(ctrl.signal).then(resolve, reject)
   }).finally(() => {
@@ -91,7 +106,7 @@ function accountKey(uid: string | null, key: ServerKey): QueryKey {
 /** Every query under any of `keys`, whichever account it was read for, is read again (an inactive one when next shown). */
 export function invalidate(keys: readonly ServerKey[]): Promise<void> {
   if (!keys.length) return Promise.resolve()
-  return queryClient.invalidateQueries({ predicate: (q) => keys.some((k) => partialMatchKey(q.queryKey.slice(1), k as QueryKey)) })
+  return queryClient.invalidateQueries({ predicate: (q) => keys.some((k) => partialMatchKey(q.queryKey.slice(1), k)) })
 }
 
 registerServerCache({ clear: () => queryClient.clear(), invalidate })
@@ -108,10 +123,14 @@ export interface ServerQueryOptions {
 }
 
 /** What a screen reads from the server outside a tournament. `fn` gets the signal to pass on when it can. */
-export function useServerQuery<T>(key: ServerKey, fn: (signal: AbortSignal) => Promise<T>, opts: ServerQueryOptions = {}) {
+export function useServerQuery<T>(
+  key: ServerKey,
+  fn: (signal: AbortSignal) => Promise<T>,
+  opts: ServerQueryOptions = {},
+) {
   const uid = useAuth((s) => s.user?.id ?? null)
   const ms = opts.timeoutMs ?? QUERY_TIMEOUT_MS
-  const label = String(key[0] ?? 'consulta')
+  const label = typeof key[0] === 'string' ? key[0] : 'consulta'
   return useQuery<T>(
     {
       queryKey: accountKey(uid, key),
@@ -125,9 +144,13 @@ export function useServerQuery<T>(key: ServerKey, fn: (signal: AbortSignal) => P
 }
 
 /** A list read a page at a time (the panel's searches): `fetch(offset)` answers its rows and the total. */
-export function useServerPages<T>(key: ServerKey, fetch: (offset: number, signal: AbortSignal) => Promise<{ total: number; rows: T[] }>, opts: { enabled?: boolean } = {}) {
+export function useServerPages<T>(
+  key: ServerKey,
+  fetch: (offset: number, signal: AbortSignal) => Promise<{ total: number; rows: T[] }>,
+  opts: { enabled?: boolean } = {},
+) {
   const uid = useAuth((s) => s.user?.id ?? null)
-  const label = String(key[0] ?? 'consulta')
+  const label = typeof key[0] === 'string' ? key[0] : 'consulta'
   const q = useInfiniteQuery(
     {
       queryKey: accountKey(uid, key),

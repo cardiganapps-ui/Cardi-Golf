@@ -153,17 +153,63 @@ export function makeSnapshot(opts: TournamentOpts = {}): Snapshot {
 export function makeFirstTournament(): Snapshot {
   const tiers = ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C', 'D', 'D', 'D']
   const hcps = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 33]
-  const players = tiers.map((tier, i) =>
-    makePlayer(i + 1, { tier, baseHcp: hcps[i]!, isHonoree: i === 3 }),
-  )
+  const players = tiers.map((tier, i) => makePlayer(i + 1, { tier, baseHcp: hcps[i]!, isHonoree: i === 3 }))
   const snap = makeSnapshot({ players, rounds: 2, settings: FIRST_TOURNAMENT_SETTINGS })
   snap.pairs = [
-    { id: 'pair1', name: 'Los Uno', player1Id: 'p1', player2Id: 'p10', kind: 'AD', pickedByHonoree: false, drawnAt: null },
-    { id: 'pair2', name: 'Los Dos', player1Id: 'p2', player2Id: 'p11', kind: 'AD', pickedByHonoree: false, drawnAt: null },
-    { id: 'pair3', name: 'Los Tres', player1Id: 'p3', player2Id: 'p12', kind: 'AD', pickedByHonoree: false, drawnAt: null },
-    { id: 'pair4', name: 'Los Cuatro', player1Id: 'p4', player2Id: 'p7', kind: 'BC', pickedByHonoree: true, drawnAt: null },
-    { id: 'pair5', name: 'Los Cinco', player1Id: 'p5', player2Id: 'p8', kind: 'BC', pickedByHonoree: false, drawnAt: null },
-    { id: 'pair6', name: 'Los Seis', player1Id: 'p6', player2Id: 'p9', kind: 'BC', pickedByHonoree: false, drawnAt: null },
+    {
+      id: 'pair1',
+      name: 'Los Uno',
+      player1Id: 'p1',
+      player2Id: 'p10',
+      kind: 'AD',
+      pickedByHonoree: false,
+      drawnAt: null,
+    },
+    {
+      id: 'pair2',
+      name: 'Los Dos',
+      player1Id: 'p2',
+      player2Id: 'p11',
+      kind: 'AD',
+      pickedByHonoree: false,
+      drawnAt: null,
+    },
+    {
+      id: 'pair3',
+      name: 'Los Tres',
+      player1Id: 'p3',
+      player2Id: 'p12',
+      kind: 'AD',
+      pickedByHonoree: false,
+      drawnAt: null,
+    },
+    {
+      id: 'pair4',
+      name: 'Los Cuatro',
+      player1Id: 'p4',
+      player2Id: 'p7',
+      kind: 'BC',
+      pickedByHonoree: true,
+      drawnAt: null,
+    },
+    {
+      id: 'pair5',
+      name: 'Los Cinco',
+      player1Id: 'p5',
+      player2Id: 'p8',
+      kind: 'BC',
+      pickedByHonoree: false,
+      drawnAt: null,
+    },
+    {
+      id: 'pair6',
+      name: 'Los Seis',
+      player1Id: 'p6',
+      player2Id: 'p9',
+      kind: 'BC',
+      pickedByHonoree: false,
+      drawnAt: null,
+    },
   ]
   for (const r of ['r1', 'r2']) {
     snap.groups.push(

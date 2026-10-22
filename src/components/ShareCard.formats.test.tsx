@@ -29,10 +29,25 @@ function shareCard(fixture: string, what: ShareKind, edit?: (s: Snapshot) => voi
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ShareCardButton what={what} />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -44,7 +59,17 @@ function shareCard(fixture: string, what: ShareKind, edit?: (s: Snapshot) => voi
 const settingsOf = (s: Snapshot) => s.tournament.settings as TournamentSettings
 function playAs(s: Snapshot, format: Individual['format'], options: Partial<Individual['formatOptions']> = {}) {
   const st = settingsOf(s)
-  s.tournament.settings = { ...st, modules: { ...st.modules, individual: { ...st.modules.individual, format, formatOptions: { ...st.modules.individual.formatOptions, ...options } } } }
+  s.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      individual: {
+        ...st.modules.individual,
+        format,
+        formatOptions: { ...st.modules.individual.formatOptions, ...options },
+      },
+    },
+  }
 }
 /** A second day on the 8-player format fixtures, same groups; `players` have scores (all of them unless said). */
 function secondDay(s: Snapshot, status: Round['status'], players?: string[]) {
@@ -55,7 +80,8 @@ function secondDay(s: Snapshot, status: Round['status'], players?: string[]) {
   s.tournament.settings = { ...settingsOf(s), rounds: 2 }
 }
 /** A leaderboard card's row by its name: position, name, days, figure (no money since PWA-06: that is the settlement card's). */
-const row = (card: ReturnType<typeof shareCard>, name: string) => Array.from(card.getByText(name).parentElement!.children).map((c) => c.textContent)
+const row = (card: ReturnType<typeof shareCard>, name: string) =>
+  Array.from(card.getByText(name).parentElement!.children).map((c) => c.textContent)
 const dayLine = (card: ReturnType<typeof shareCard>) => card.getByText(/^Día 1, /).textContent
 
 afterEach(() => cleanup())
@@ -99,15 +125,21 @@ describe("a player's round card (STRAT-03)", () => {
   })
 
   it('a match day says whose it was', () => {
-    expect(dayLine(shareCard('match8', { kind: 'player', playerId: 'p2' }))).toBe('Día 1, hándicap de juego 9, ganó 4&3, 29 putts')
+    expect(dayLine(shareCard('match8', { kind: 'player', playerId: 'p2' }))).toBe(
+      'Día 1, hándicap de juego 9, ganó 4&3, 29 putts',
+    )
     cleanup()
-    expect(dayLine(shareCard('match8', { kind: 'player', playerId: 'p1' }))).toBe('Día 1, hándicap de juego 4, perdió 4&3, 33 putts')
+    expect(dayLine(shareCard('match8', { kind: 'player', playerId: 'p1' }))).toBe(
+      'Día 1, hándicap de juego 4, perdió 4&3, 33 putts',
+    )
   })
 
   it("under fourball the day is his side's match, not his own strokes", () => {
     // Los Compadres (Elías, Fabián) beat Las Palmas 4&3; Elías's own card was +3 net. Tres Marías won 2&1 off the
     // 10th, so Los Compadres are 1st alone.
-    const card = shareCard('team8', { kind: 'player', playerId: 'p1' }, (s) => playAs(s, 'matchPlay', { matchMode: 'fourball', scoring: 'net' }))
+    const card = shareCard('team8', { kind: 'player', playerId: 'p1' }, (s) =>
+      playAs(s, 'matchPlay', { matchMode: 'fourball', scoring: 'net' }),
+    )
     expect(card.getByText(/^Elías Fuentes, /).textContent).toBe('Elías Fuentes, 1.º con Los Compadres, 1 punto')
     expect(dayLine(card)).toBe('Día 1, hándicap de juego 4, ganó 4&3, 33 putts')
   })

@@ -30,9 +30,14 @@ function heard(frame: string): Heard | null {
   } catch {
     return null
   }
-  const [event, payload] = Array.isArray(msg) ? [msg[3], msg[4]] : [(msg as { event?: unknown }).event, (msg as { payload?: unknown }).payload]
+  const [event, payload] = Array.isArray(msg)
+    ? [msg[3], msg[4]]
+    : [(msg as { event?: unknown }).event, (msg as { payload?: unknown }).payload]
   if (event !== 'postgres_changes') return null
-  const data = (payload as { data?: { table?: string; type?: string; record?: { id?: string }; old_record?: { id?: string } } } | undefined)?.data
+  const data = (
+    payload as
+      { data?: { table?: string; type?: string; record?: { id?: string }; old_record?: { id?: string } } } | undefined
+  )?.data
   if (!data?.table || !data.type) return null
   return { table: data.table, type: data.type, id: data.record?.id ?? data.old_record?.id ?? null }
 }
@@ -53,10 +58,16 @@ function write(slug: string): string {
     )
     select json_build_object('id', id) from ins`).id
 }
-const change = (id: string) => sql(`with u as (update public.scores set strokes = 6 where id = ${lit(id)} returning 1) select to_json(count(*)) from u`)
-const remove = (id: string) => sql(`with d as (delete from public.scores where id = ${lit(id)} returning 1) select to_json(count(*)) from d`)
+const change = (id: string) =>
+  sql(
+    `with u as (update public.scores set strokes = 6 where id = ${lit(id)} returning 1) select to_json(count(*)) from u`,
+  )
+const remove = (id: string) =>
+  sql(`with d as (delete from public.scores where id = ${lit(id)} returning 1) select to_json(count(*)) from d`)
 
-test('a phone hears its own tournament’s changes, a delete included, and nothing of another’s (DB-05)', async ({ join }) => {
+test('a phone hears its own tournament’s changes, a delete included, and nothing of another’s (DB-05)', async ({
+  join,
+}) => {
   const ana = await join(SLUGS.own, 'Ana')
   // The app again, its socket watched from the start: the PIN's session stays on the phone.
   await ana.page.close()
@@ -77,7 +88,8 @@ test('a phone hears its own tournament’s changes, a delete included, and nothi
   // phone's own. And each waits for the phone's own change: Realtime checks an insert or an update against the
   // row as it stands, so a row deleted before it got there is not sent.
   const of = (id: string) => frames.filter((h) => h.table === 'scores' && h.id === id).map((h) => h.type)
-  const heardOwn = (types: string[], what: string) => expect.poll(() => of(mine), { message: `the phone’s own tournament: ${what}`, timeout: 15_000 }).toEqual(types)
+  const heardOwn = (types: string[], what: string) =>
+    expect.poll(() => of(mine), { message: `the phone’s own tournament: ${what}`, timeout: 15_000 }).toEqual(types)
   const theirs = write(SLUGS.other)
   const mine = write(SLUGS.own)
   await heardOwn(['INSERT'], 'written')

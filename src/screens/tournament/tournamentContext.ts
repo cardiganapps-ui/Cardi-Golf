@@ -15,13 +15,13 @@ export interface TournamentCtx {
   lookup: LookupResult
   me: Me
   /** Ask the server again who this device is here, and load the tournament: a new ask (after a link changed, say). */
-  refresh(): Promise<void>
+  refresh: () => Promise<void>
   /**
    * «Actualizar» before the live tournament is on screen (PWA-15): the ask already under way, or a new one
    * now. Without it (the design fixtures), `refresh`.
    */
-  retry?(): Promise<void>
-  leave(): Promise<void>
+  retry?: () => Promise<void>
+  leave: () => Promise<void>
   /** Where this tournament's screens live, when not `/t/<slug>`: a link to watch's `/v/<token>`. */
   base?: string
   /**

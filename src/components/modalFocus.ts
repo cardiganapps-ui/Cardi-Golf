@@ -73,7 +73,7 @@ const TABBABLE = [
 
 function shown(el: HTMLElement): boolean {
   // `checkVisibility` knows closed <details>, display: none and visibility: hidden; where it is missing, trust the DOM.
-  return typeof el.checkVisibility === 'function' ? el.checkVisibility({ visibilityProperty: true } as CheckVisibilityOptions) : true
+  return typeof el.checkVisibility === 'function' ? el.checkVisibility({ visibilityProperty: true }) : true
 }
 
 /** What Tab stops on inside `root`, in order: one radio per group (the checked one), nothing inert, hidden or disabled. */
@@ -113,7 +113,7 @@ export function wrapTab(frame: HTMLElement, e: KeyboardEvent): boolean {
   }
   const first = stops[0]!
   const last = stops[stops.length - 1]!
-  const at = inside ? stops.indexOf(active!) : -1
+  const at = inside ? stops.indexOf(active) : -1
   let to: HTMLElement | null = null
   if (!inside) to = e.shiftKey ? last : first
   else if (e.shiftKey && (active === frame || at === 0)) to = last

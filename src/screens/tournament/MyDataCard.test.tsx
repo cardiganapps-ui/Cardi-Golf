@@ -23,12 +23,25 @@ const me = fx.snapshot.players.find((p) => p.id === fx.me.playerId)!
 beforeEach(() => {
   localStorage.clear()
   api.requestCorrection.mockClear()
-  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null })
+  useTournament.setState({
+    tournamentId: fx.snapshot.tournament.id,
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    error: null,
+  })
 })
 afterEach(cleanup)
 
 function mount(over: Partial<TournamentCtx> = {}) {
-  const ctx: TournamentCtx = { tournamentId: fx.snapshot.tournament.id, slug: 'x', lookup: fx.lookup, me: { ...fx.me, via: 'device' }, refresh: async () => undefined, leave: async () => undefined, ...over }
+  const ctx: TournamentCtx = {
+    tournamentId: fx.snapshot.tournament.id,
+    slug: 'x',
+    lookup: fx.lookup,
+    me: { ...fx.me, via: 'device' },
+    refresh: async () => undefined,
+    leave: async () => undefined,
+    ...over,
+  }
   return render(
     <MemoryRouter>
       <TournamentContext.Provider value={ctx}>

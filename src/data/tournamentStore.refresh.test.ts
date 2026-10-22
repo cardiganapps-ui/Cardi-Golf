@@ -28,7 +28,16 @@ async function ready() {
 afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 describe('«Actualizar» asks the store for the boards now (PWA-15)', () => {

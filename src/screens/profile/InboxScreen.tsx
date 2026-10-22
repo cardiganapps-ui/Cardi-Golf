@@ -63,7 +63,11 @@ export function InboxScreen({ fixture }: { fixture?: Notice[] }) {
             const { text, to } = noticeLine(n)
             return (
               <Link key={n.id} to={to} className={`${styles.row} ${n.read ? '' : styles.rowUsed}`}>
-                {n.actor ? <Avatar name={n.actor.displayName} url={n.actor.avatarUrl} /> : <span className={styles.mono}>{(n.data.tournament ?? 'P').charAt(0).toUpperCase()}</span>}
+                {n.actor ? (
+                  <Avatar name={n.actor.displayName} url={n.actor.avatarUrl} />
+                ) : (
+                  <span className={styles.mono}>{(n.data.tournament ?? 'P').charAt(0).toUpperCase()}</span>
+                )}
                 <span className={styles.rowText}>
                   {/* Both states are the same row; only the weight differs. It
                       used to be `n.read ? '' : rowTitle`, so a read notice had

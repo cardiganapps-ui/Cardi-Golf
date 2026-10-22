@@ -30,8 +30,14 @@ async function icon(file, size, { rounded = true, scale = 1 } = {}) {
   )
   const inner = Math.round(size * scale)
   const off = Math.round((size - inner) / 2)
-  const pencil = await sharp('design/brand/layer-icon.png').resize(inner, inner, { kernel: 'lanczos3' }).png().toBuffer()
-  await sharp(paper).composite([{ input: pencil, left: off, top: off }]).png().toFile(file)
+  const pencil = await sharp('design/brand/layer-icon.png')
+    .resize(inner, inner, { kernel: 'lanczos3' })
+    .png()
+    .toBuffer()
+  await sharp(paper)
+    .composite([{ input: pencil, left: off, top: off }])
+    .png()
+    .toFile(file)
   console.log('wrote', file)
 }
 
@@ -135,5 +141,8 @@ console.log('wrote public/favicon.svg')
 for (const screen of LAUNCH_SCREENS) await launchImage(screen)
 await bootMark('public/brand/boot-mark.png')
 // IconPencil and IconFlag (src/components/icons.tsx): the Tarjeta's tab and En vivo's.
-await shortcutIcon('public/icons/shortcut-tarjeta.png', ['M4 20l4-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5 16l-1 4z', 'M13.5 7.5l3 3'])
+await shortcutIcon('public/icons/shortcut-tarjeta.png', [
+  'M4 20l4-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5 16l-1 4z',
+  'M13.5 7.5l3 3',
+])
 await shortcutIcon('public/icons/shortcut-envivo.png', ['M6 21V4', 'M6 4h10l-2.5 3.5L16 11H6'])

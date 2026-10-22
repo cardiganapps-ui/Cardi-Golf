@@ -15,11 +15,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
-  return { ...real, enqueueSignature: vi.fn(async () => undefined), enqueueHole: vi.fn(async () => undefined), enqueueScore: vi.fn(async () => undefined) }
+  return {
+    ...real,
+    enqueueSignature: vi.fn(async () => undefined),
+    enqueueHole: vi.fn(async () => undefined),
+    enqueueScore: vi.fn(async () => undefined),
+  }
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { enqueueSignature, useOutbox } from '../../data/outbox'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -44,14 +52,31 @@ function mount(edit: (s: Snapshot) => void, opts: { isComite?: boolean } = {}) {
   const round = snap.rounds.find((r) => r.status === 'live')!
   // Every hole of the day for the four.
   for (const pid of ['p1', 'p2', 'p3', 'p4'])
-    for (let h = 1; h <= round.holes; h++) if (!snap.scores.some((s) => s.roundId === round.id && s.playerId === pid && s.hole === h)) snap.scores.push(score(round.id, pid, h, 4, 2))
+    for (let h = 1; h <= round.holes; h++)
+      if (!snap.scores.some((s) => s.roundId === round.id && s.playerId === pid && s.hole === h))
+        snap.scores.push(score(round.id, pid, h, 4, 2))
   edit(snap)
   useOutbox.setState({ queueRead: true })
-  useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: snap.tournament.id,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   const me = { ...fx.me, isComite: opts.isComite ?? false }
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: fx.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -62,7 +87,6 @@ function mount(edit: (s: Snapshot) => void, opts: { isComite?: boolean } = {}) {
 }
 const rule = (cardSigning?: TournamentSettings['cardSigning']) => (s: Snapshot) => {
   const { cardSigning: _drop, ...rest } = s.tournament.settings as TournamentSettings
-  void _drop
   s.tournament.settings = cardSigning ? { ...rest, cardSigning } : rest
 }
 const nameOf = (s: Snapshot, id: string) => s.players.find((p) => p.id === id)!.displayName
@@ -71,7 +95,9 @@ describe('Tarjeta: a marker signs each player’s card (UX-23)', () => {
   it('offers «Firmar la tarjeta de …» for each other player of the group, never his own', () => {
     const { snap } = mount(rule('marker'))
     const buttons = screen.getAllByRole('button', { name: /^Firmar la tarjeta de / })
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['p2', 'p3', 'p4'].map((id) => S.signPlayer(nameOf(snap, id))))
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(
+      ['p2', 'p3', 'p4'].map((id) => S.signPlayer(nameOf(snap, id))),
+    )
     expect(screen.queryByRole('button', { name: S.signPlayer(nameOf(snap, 'p1')) })).toBeNull()
     // No pair's card to sign: the pairs' panel is not there.
     expect(screen.queryByRole('button', { name: S.sign })).toBeNull()
@@ -85,13 +111,23 @@ describe('Tarjeta: a marker signs each player’s card (UX-23)', () => {
     await act(async () => {
       fireEvent.click(within(dialog).getByRole('button', { name: S.sign }))
     })
-    expect(enqueueSignature).toHaveBeenCalledWith(snap.tournament.id, { round_id: round.id, player_id: 'p3', signed_by: 'p1' })
+    expect(enqueueSignature).toHaveBeenCalledWith(snap.tournament.id, {
+      round_id: round.id,
+      player_id: 'p3',
+      signed_by: 'p1',
+    })
   })
 
   it('a signed card says so with its stamp and offers nothing; the rest of the group still signs', () => {
     const { snap } = mount((s) => {
       rule('marker')(s)
-      s.cardSignatures.push({ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p3', signedAt: '2027-05-15T20:00:00Z' })
+      s.cardSignatures.push({
+        roundId: 'r1',
+        pairId: null,
+        playerId: 'p2',
+        signedBy: 'p3',
+        signedAt: '2027-05-15T20:00:00Z',
+      })
     })
     expect(screen.queryByRole('button', { name: S.signPlayer(nameOf(snap, 'p2')) })).toBeNull()
     expect(screen.getByText(S.stamp)).toBeTruthy()
@@ -101,19 +137,32 @@ describe('Tarjeta: a marker signs each player’s card (UX-23)', () => {
   it('a signed card locks that player’s row only: the others still take a hole', () => {
     const { snap } = mount((s) => {
       rule('marker')(s)
-      s.cardSignatures.push({ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p3', signedAt: '2027-05-15T20:00:00Z' })
+      s.cardSignatures.push({
+        roundId: 'r1',
+        pairId: null,
+        playerId: 'p2',
+        signedBy: 'p3',
+        signedAt: '2027-05-15T20:00:00Z',
+      })
     })
     fireEvent.click(screen.getByRole('button', { name: S.holeView }))
-    const pickup = (id: string) => screen.getByRole('button', { name: S.pickedUpOf(nameOf(snap, id)) }) as HTMLButtonElement
+    const pickup = (id: string) =>
+      screen.getByRole('button', { name: S.pickedUpOf(nameOf(snap, id)) }) as HTMLButtonElement
     expect(pickup('p2').disabled).toBe(true)
     expect(pickup('p3').disabled).toBe(false)
-    expect(within(screen.getAllByRole('group').find((g) => g.textContent?.includes(nameOf(snap, 'p2')))!).getByLabelText(S.cardSigned)).toBeTruthy()
+    expect(
+      within(screen.getAllByRole('group').find((g) => g.textContent?.includes(nameOf(snap, 'p2')))!).getByLabelText(
+        S.cardSigned,
+      ),
+    ).toBeTruthy()
     expect((screen.getByRole('button', { name: /^Guardar/ }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('the Comité signs any card, his own player’s too', () => {
     const { snap } = mount(rule('marker'), { isComite: true })
-    expect(screen.getAllByRole('button', { name: /^Firmar la tarjeta de / }).map((b) => b.getAttribute('aria-label'))).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => S.signPlayer(nameOf(snap, id))))
+    expect(
+      screen.getAllByRole('button', { name: /^Firmar la tarjeta de / }).map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => S.signPlayer(nameOf(snap, id))))
   })
 })
 
@@ -135,19 +184,54 @@ describe('MarkerSigningPanel on its own', () => {
     { id: 'b', name: 'Beto' },
   ]
   it('a phone outside the group sees each card’s state and signs none', () => {
-    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[]} pairs={[]} myPlayerId="z" inGroup={false} isComite={false} onSign={() => undefined} />)
+    render(
+      <MarkerSigningPanel
+        roundId="r1"
+        players={players}
+        signatures={[]}
+        pairs={[]}
+        myPlayerId="z"
+        inGroup={false}
+        isComite={false}
+        onSign={() => undefined}
+      />,
+    )
     expect(screen.getAllByText(S.cardUnsigned)).toHaveLength(2)
     expect(screen.queryByRole('button')).toBeNull()
   })
   it('a card its pair signed before (another rule) reads as signed', () => {
-    const pairs = [{ id: 'pa', name: null, player1Id: 'a', player2Id: 'x', kind: null, pickedByHonoree: false, drawnAt: null }]
-    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[{ roundId: 'r1', pairId: 'pa', signedBy: 'b', signedAt: '' }]} pairs={pairs} myPlayerId="b" inGroup isComite={false} onSign={() => undefined} />)
+    const pairs = [
+      { id: 'pa', name: null, player1Id: 'a', player2Id: 'x', kind: null, pickedByHonoree: false, drawnAt: null },
+    ]
+    render(
+      <MarkerSigningPanel
+        roundId="r1"
+        players={players}
+        signatures={[{ roundId: 'r1', pairId: 'pa', signedBy: 'b', signedAt: '' }]}
+        pairs={pairs}
+        myPlayerId="b"
+        inGroup
+        isComite={false}
+        onSign={() => undefined}
+      />,
+    )
     expect(screen.getByText(S.cardSigned)).toBeTruthy()
     expect(screen.queryByRole('button', { name: S.signPlayer('Ana') })).toBeNull()
     expect(screen.queryByRole('button', { name: S.signPlayer('Beto') })).toBeNull()
   })
   it('no complete card yet: nothing at all', () => {
-    const { container } = render(<MarkerSigningPanel roundId="r1" players={[]} signatures={[]} pairs={[]} myPlayerId="b" inGroup isComite={false} onSign={() => undefined} />)
+    const { container } = render(
+      <MarkerSigningPanel
+        roundId="r1"
+        players={[]}
+        signatures={[]}
+        pairs={[]}
+        myPlayerId="b"
+        inGroup
+        isComite={false}
+        onSign={() => undefined}
+      />,
+    )
     expect(container.textContent).toBe('')
   })
 })

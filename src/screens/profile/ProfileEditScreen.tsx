@@ -12,7 +12,16 @@ import { Avatar, Field, Segmented, Spinner, Toggle } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { useAuth } from '../../data/auth'
 import { safeNext, signOutSafely } from '../../data/account'
-import { HandleTakenError, handleOk, parseIndex, updateMyProfile, uploadMyAvatar, useMyProfile, type MyProfile, type ProfilePatch } from '../../data/profiles'
+import {
+  HandleTakenError,
+  handleOk,
+  parseIndex,
+  updateMyProfile,
+  uploadMyAvatar,
+  useMyProfile,
+  type MyProfile,
+  type ProfilePatch,
+} from '../../data/profiles'
 import { PushToggle } from './PushToggle'
 import { AdminAccesses } from './AdminAccesses'
 import { MyDataSection } from './MyDataSection'
@@ -151,16 +160,38 @@ export function ProfileEditScreen() {
       >
         <div className={styles.photoRow}>
           <Avatar name={f.displayName || profile.displayName} url={profile.avatarUrl} size="lg" />
-          <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>
+          <button
+            className="btn btn--secondary btn--sm"
+            type="button"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+          >
             {P.photo}
           </button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])}
+          />
         </div>
 
         <Field label={P.displayName} hint={P.displayNameHint}>
-          <input className="input" value={f.displayName} maxLength={40} autoComplete="nickname" onChange={(e) => set({ displayName: e.target.value })} required />
+          <input
+            className="input"
+            value={f.displayName}
+            maxLength={40}
+            autoComplete="nickname"
+            onChange={(e) => set({ displayName: e.target.value })}
+            required
+          />
         </Field>
-        <Field label={P.handle} hint={P.handleHint} error={handleError ?? (f.handle && !handleOk(handle) ? P.handleHint : null)}>
+        <Field
+          label={P.handle}
+          hint={P.handleHint}
+          error={handleError ?? (f.handle && !handleOk(handle) ? P.handleHint : null)}
+        >
           <span className={styles.prefixed}>
             <span className={styles.prefix} aria-hidden="true">
               @
@@ -181,16 +212,39 @@ export function ProfileEditScreen() {
           </span>
         </Field>
         <Field label={P.fullName}>
-          <input className="input" value={f.fullName} maxLength={80} autoComplete="name" onChange={(e) => set({ fullName: e.target.value })} />
+          <input
+            className="input"
+            value={f.fullName}
+            maxLength={80}
+            autoComplete="name"
+            onChange={(e) => set({ fullName: e.target.value })}
+          />
         </Field>
         <Field label={P.homeClub}>
-          <input className="input" value={f.homeClub} maxLength={80} onChange={(e) => set({ homeClub: e.target.value })} />
+          <input
+            className="input"
+            value={f.homeClub}
+            maxLength={80}
+            onChange={(e) => set({ homeClub: e.target.value })}
+          />
         </Field>
         <Field label={P.city}>
-          <input className="input" value={f.city} maxLength={80} autoComplete="address-level2" onChange={(e) => set({ city: e.target.value })} />
+          <input
+            className="input"
+            value={f.city}
+            maxLength={80}
+            autoComplete="address-level2"
+            onChange={(e) => set({ city: e.target.value })}
+          />
         </Field>
         <Field label={P.bio} hint={P.bioCount(f.bio.length)}>
-          <textarea className="textarea" value={f.bio} maxLength={280} rows={3} onChange={(e) => set({ bio: e.target.value })} />
+          <textarea
+            className="textarea"
+            value={f.bio}
+            maxLength={280}
+            rows={3}
+            onChange={(e) => set({ bio: e.target.value })}
+          />
         </Field>
 
         <div className={styles.section}>
@@ -207,13 +261,27 @@ export function ProfileEditScreen() {
           {f.indexSource === 'polo' ? (
             <span className={styles.help}>{P.indexPoloHint}</span>
           ) : (
-            <Field label={P.manualIndex} hint={P.manualIndexHint} error={f.manualIndex && manual == null ? P.manualIndexHint : null}>
-              <input className="input" value={f.manualIndex} inputMode="decimal" onChange={(e) => set({ manualIndex: e.target.value })} />
+            <Field
+              label={P.manualIndex}
+              hint={P.manualIndexHint}
+              error={f.manualIndex && manual == null ? P.manualIndexHint : null}
+            >
+              <input
+                className="input"
+                value={f.manualIndex}
+                inputMode="decimal"
+                onChange={(e) => set({ manualIndex: e.target.value })}
+              />
             </Field>
           )}
         </div>
 
-        <Toggle label={P.discoverable} hint={P.discoverableHint} checked={f.discoverable} onChange={(v) => set({ discoverable: v })} />
+        <Toggle
+          label={P.discoverable}
+          hint={P.discoverableHint}
+          checked={f.discoverable}
+          onChange={(v) => set({ discoverable: v })}
+        />
 
         <button className="btn btn--primary btn--block" type="submit" disabled={busy || !valid}>
           {busy ? t.common.saving : t.common.save}

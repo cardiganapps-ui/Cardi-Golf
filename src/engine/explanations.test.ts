@@ -28,7 +28,14 @@ const pesos = (amount: number) => words(msg('amount', { amount }))
 describe('the engine’s explanations (MONEY-15)', () => {
   // The engine formats no money (ARCH-05): an amount is a figure, and the one renderer writes it.
   it('writes money one way: «$10,000», «−$1,200», whole', () => {
-    expect([10000, 1234567, 0, -1200, 999.6, -0.4].map(pesos)).toEqual(['$10,000', '$1,234,567', '$0', '−$1,200', '$1,000', '$0'])
+    expect([10000, 1234567, 0, -1200, 999.6, -0.4].map(pesos)).toEqual([
+      '$10,000',
+      '$1,234,567',
+      '$0',
+      '−$1,200',
+      '$1,000',
+      '$0',
+    ])
   })
 
   describe.each(FIXTURE_NAMES)('%s', (name) => {
@@ -41,7 +48,9 @@ describe('the engine’s explanations (MONEY-15)', () => {
 
     it('titles every prize with what it pays', () => {
       // «$1,000 cada uno», «Camilo paga $300»: the title's figure is the prize's.
-      const wrong = state.prizes.filter((p) => figure(words(p.why).title) !== pesos(p.amount)).map((p) => `${words(p.label)} (${p.playerId}): paid ${pesos(p.amount)}, titled «${words(p.why).title}»`)
+      const wrong = state.prizes
+        .filter((p) => figure(words(p.why).title) !== pesos(p.amount))
+        .map((p) => `${words(p.label)} (${p.playerId}): paid ${pesos(p.amount)}, titled «${words(p.why).title}»`)
       expect(wrong).toEqual([])
     })
   })

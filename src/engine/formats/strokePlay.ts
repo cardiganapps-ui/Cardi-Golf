@@ -33,7 +33,11 @@ export function strokesWhy(h: HoleResult, net: boolean): Explanation {
   const toPar = counted - h.par
   const { par, strokesReceived: received, strokeIndex: si } = h
   // COPY-19: the hole in words first, then the arithmetic.
-  const steps: Msg[] = [h.pickedUp ? msg('strokes.pickedUp', { par, net, received, si, counted, toPar }) : msg('strokes.played', { gross: h.gross!, par, net, received, si, counted, toPar })]
+  const steps: Msg[] = [
+    h.pickedUp
+      ? msg('strokes.pickedUp', { par, net, received, si, counted, toPar })
+      : msg('strokes.played', { gross: h.gross!, par, net, received, si, counted, toPar }),
+  ]
   if (h.pickedUp) {
     steps.push(msg('strokes.pickupRule', { par, received }))
     if (net) steps.push(msg('strokes.pickupNet', { par, received, counted }))
@@ -61,13 +65,20 @@ export const strokePlayFormat: MainFormat = {
   defaultLabel: 'Stroke play',
   // Fewest strokes wins, so the ranking runs the other way from Stableford.
   higherIsBetter: () => false,
-  figureLabel: (s) => msg('figure.label', { unit: s.modules.individual.formatOptions.scoring === 'gross' ? 'gross' : 'net' }),
+  figureLabel: (s) =>
+    msg('figure.label', { unit: s.modules.individual.formatOptions.scoring === 'gross' ? 'gross' : 'net' }),
 
   describe(settings: TournamentSettings): Explanation {
     const net = settings.modules.individual.formatOptions.scoring !== 'gross'
     return {
       title: msg('format.strokePlay', { net }),
-      steps: [say('format.strokeCount'), msg('format.strokeNet', { net, pct: Math.round(settings.handicap.allowance * 100) }), say('format.strokePickUp'), say('format.strokeBoard'), say('format.strokeIncomplete')],
+      steps: [
+        say('format.strokeCount'),
+        msg('format.strokeNet', { net, pct: Math.round(settings.handicap.allowance * 100) }),
+        say('format.strokePickUp'),
+        say('format.strokeBoard'),
+        say('format.strokeIncomplete'),
+      ],
     }
   },
 

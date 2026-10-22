@@ -14,7 +14,17 @@ import type { Row } from './mappers'
 import { enterAs, gate, holeAward, holeScore, installFakePhone, settle, until, type Outcome } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueAward, enqueueHole, flush, retryRejected, setOutboxBlocked, startOutbox, useOutbox } = await import('./outbox')
+const {
+  _outboxTest,
+  adoptQueuedWrites,
+  enqueueAward,
+  enqueueHole,
+  flush,
+  retryRejected,
+  setOutboxBlocked,
+  startOutbox,
+  useOutbox,
+} = await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 type HoleItem = Extract<import('./outbox').OutboxItem, { kind: 'hole' }>
 const { useTournament } = await import('./tournamentStore')
@@ -42,14 +52,22 @@ afterEach(() => {
 
 /** This phone's save_hole calls. */
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
-const saveHole = (hole: number, entries: HoleEntry[]) => enqueueHole('t1', { round_id: 'r1', hole, entered_by: 'p1', entries })
+const saveHole = (hole: number, entries: HoleEntry[]) =>
+  enqueueHole('t1', { round_id: 'r1', hole, entered_by: 'p1', entries })
 const played = (strokes: number, putts = 2): HoleEntry['fields'] => ({ strokes, putts })
-const holesQueued = () => _outboxTest.queue().map((x) => (x as HoleItem).payload.hole).sort((a, b) => a - b)
+const holesQueued = () =>
+  _outboxTest
+    .queue()
+    .map((x) => (x as HoleItem).payload.hole)
+    .sort((a, b) => a - b)
 
 /** The other phone of the group (p3's), saving through the same door with its own session. */
 async function otherPhoneSaves(hole: number, entries: Array<{ player_id: string; fields: Row; base: Row }>) {
   if (!(server.tables.device_sessions ?? []).some((d) => d.auth_user_id === 'phone-b')) {
-    server.tables.device_sessions = [...(server.tables.device_sessions ?? []), { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' }]
+    server.tables.device_sessions = [
+      ...(server.tables.device_sessions ?? []),
+      { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' },
+    ]
   }
   const token = server.auth.sessionFor('phone-b')
   const reachable = server.reachable
@@ -138,12 +156,21 @@ describe('storage read and written by more than this tab', () => {
       ...structuredClone(mine!),
       key: 'hole:r1:7:other-tab',
       seq: mine!.seq + 1,
-      payload: { ...structuredClone(mine!.payload), mutation_id: 'other-tab', entries: [{ player_id: 'p3', fields: played(4), base: {} }] },
+      payload: {
+        ...structuredClone(mine!.payload),
+        mutation_id: 'other-tab',
+        entries: [{ player_id: 'p3', fields: played(4), base: {} }],
+      },
     }
     await d.items.put(theirs)
     await saveHole(7, [{ player_id: 'p4', fields: played(6, 1), base: {} }])
     const stored = (await d.items.toArray()) as HoleItem[]
-    expect(stored.find((x) => x.key === theirs.key)!.payload.entries.map((e) => e.player_id).sort()).toEqual(['p3', 'p4'])
+    expect(
+      stored
+        .find((x) => x.key === theirs.key)!
+        .payload.entries.map((e) => e.player_id)
+        .sort(),
+    ).toEqual(['p3', 'p4'])
     // This tab's first capture is as it was: a merge goes into the newest one only.
     expect(stored.find((x) => x.key === mine!.key)!.payload.entries.map((e) => e.player_id)).toEqual(['p2'])
   })
@@ -151,7 +178,18 @@ describe('storage read and written by more than this tab', () => {
   it('a conflict the phone can no longer clear from storage still lets the hole be saved again', async () => {
     phone.goOffline()
     const d = _outboxTest.db()!
-    await d.conflicts.put({ key: 'conflict:r1:p2:4', tournamentId: 't1', round_id: 'r1', hole: 4, player_id: 'p2', fields: played(5), base: {}, clash: ['strokes'], server: null, at: Date.now() })
+    await d.conflicts.put({
+      key: 'conflict:r1:p2:4',
+      tournamentId: 't1',
+      round_id: 'r1',
+      hole: 4,
+      player_id: 'p2',
+      fields: played(5),
+      base: {},
+      clash: ['strokes'],
+      server: null,
+      at: Date.now(),
+    })
     await _outboxTest.load()
     expect(useOutbox.getState().conflicts).toHaveLength(1)
     vi.spyOn(d.conflicts, 'bulkDelete').mockRejectedValueOnce(new Error('QuotaExceededError'))
@@ -186,7 +224,15 @@ describe('storage read and written by more than this tab', () => {
     phone.goOffline()
     const d = _outboxTest.db()!
     const createdAt = Date.now() - 60_000
-    await d.items.put({ key: 'score:r1:p2:9', kind: 'score', tournamentId: 't1', payload: holeScore('p2', 9, 5), attempts: 0, createdAt, actingUid: me } as never)
+    await d.items.put({
+      key: 'score:r1:p2:9',
+      kind: 'score',
+      tournamentId: 't1',
+      payload: holeScore('p2', 9, 5),
+      attempts: 0,
+      createdAt,
+      actingUid: me,
+    } as never)
     await _outboxTest.load()
     expect(_outboxTest.queue()).toMatchObject([{ key: 'score:r1:p2:9', seq: createdAt * 1000 }])
     phone.goOnline()

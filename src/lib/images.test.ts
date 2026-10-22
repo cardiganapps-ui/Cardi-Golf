@@ -15,8 +15,14 @@ function canvas(can: string[], otherwise: 'png' | 'null' | 'jpeg'): Encodable & 
     asked,
     toBlob(cb, type = 'image/png') {
       asked.push(type)
-      if (can.includes(type)) return cb(new Blob(['x'], { type }))
-      if (otherwise === 'null') return cb(null)
+      if (can.includes(type)) {
+        cb(new Blob(['x'], { type }))
+        return
+      }
+      if (otherwise === 'null') {
+        cb(null)
+        return
+      }
       cb(new Blob(['x'], { type: otherwise === 'png' ? 'image/png' : 'image/jpeg' }))
     },
   }

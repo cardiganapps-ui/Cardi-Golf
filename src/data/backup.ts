@@ -21,8 +21,26 @@ export interface Backup {
 }
 
 /** Tables keyed by how they hang off the tournament. */
-const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'teams', 'calcutta_lots', 'payments', 'money_adjustments', 'game_entries', 'game_results'] as const
-const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'hole_awards'] as const
+const BY_TOURNAMENT = [
+  'players',
+  'rounds',
+  'pairs',
+  'teams',
+  'calcutta_lots',
+  'payments',
+  'money_adjustments',
+  'game_entries',
+  'game_results',
+] as const
+const BY_ROUND = [
+  'groups',
+  'round_tees',
+  'scores',
+  'snake_tiebreaks',
+  'card_signatures',
+  'handicap_overrides',
+  'hole_awards',
+] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
 /**
  * Every table a backup carries back through `restore_tournament`. Courses,
@@ -30,7 +48,14 @@ const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
  * `backup.restore.test.ts` fails when the function's latest definition misses
  * one of these (DB-02: 0020 rebuilt it without the side-game tables).
  */
-export const RESTORED_TABLES: readonly string[] = ['tournaments', ...BY_TOURNAMENT, ...BY_ROUND, 'group_members', 'team_members', ...BY_LOT]
+export const RESTORED_TABLES: readonly string[] = [
+  'tournaments',
+  ...BY_TOURNAMENT,
+  ...BY_ROUND,
+  'group_members',
+  'team_members',
+  ...BY_LOT,
+]
 
 /**
  * Paged by the boards' own keys (`SNAPSHOT_KEYS`, held to the migrations): the export kept a second list of
@@ -50,21 +75,35 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
   const sb = supabase()
   const { data: tournament, error } = await sb.from('tournaments').select('*').eq('id', tournamentId).single()
   if (error) throw error
-  const tables: Record<string, Row[]> = { tournaments: [tournament as Row] }
+  const tables: Record<string, Row[]> = { tournaments: [tournament] }
   for (const t of BY_TOURNAMENT) tables[t] = await rows(t, 'tournament_id', [tournamentId])
   const roundIds = tables.rounds!.map((r) => r.id as string)
   for (const t of BY_ROUND) tables[t] = await rows(t, 'round_id', roundIds)
   const groupIds = tables.groups!.map((g) => g.id as string)
   tables.group_members = await rows('group_members', 'group_id', groupIds)
-  tables.team_members = await rows('team_members', 'team_id', tables.teams!.map((x) => x.id as string))
+  tables.team_members = await rows(
+    'team_members',
+    'team_id',
+    tables.teams!.map((x) => x.id as string),
+  )
   const lotIds = tables.calcutta_lots!.map((l) => l.id as string)
   for (const t of BY_LOT) tables[t] = await rows(t, 'lot_id', lotIds)
   // Courses used (read-only reference, so a restore elsewhere can rebuild them by hand).
   const courseIds = [...new Set(tables.rounds!.map((r) => r.course_id).filter(Boolean))] as string[]
   tables.courses = await rows('courses', 'id', courseIds)
   tables.tees = await rows('tees', 'course_id', courseIds)
-  tables.holes = await rows('holes', 'tee_id', tables.tees.map((t) => t.id as string))
-  return { version: 1, exportedAt: new Date().toISOString(), tournamentId, slug: (tournament as Row).slug as string, tables }
+  tables.holes = await rows(
+    'holes',
+    'tee_id',
+    tables.tees.map((t) => t.id as string),
+  )
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tournamentId,
+    slug: (tournament as Row).slug as string,
+    tables,
+  }
 }
 
 /**
@@ -72,13 +111,16 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
  * validated whole before anything is deleted, players and rounds keep their
  * ids (PINs and device links survive), courses are left alone.
  */
-export async function restoreBackup(tournamentId: string, backup: Backup): Promise<{ players: number; rounds: number; scores: number }> {
+export async function restoreBackup(
+  tournamentId: string,
+  backup: Backup,
+): Promise<{ players: number; rounds: number; scores: number }> {
   if (backup.version !== 1 || backup.tournamentId !== tournamentId) throw new Error('wrong-tournament')
   const { courses: _c, tees: _t, holes: _h, ...tables } = backup.tables
-  void _c
-  void _t
-  void _h
-  const res = await supabase().rpc('restore_tournament', { p_tournament_id: tournamentId, p_backup: { ...backup, tables } })
+  const res = await supabase().rpc('restore_tournament', {
+    p_tournament_id: tournamentId,
+    p_backup: { ...backup, tables },
+  })
   if (res.error) throw ApiError.from(res.error)
   // A player missing from the backup goes, and his PIN and link with him.
   entryChanged()

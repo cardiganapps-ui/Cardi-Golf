@@ -48,16 +48,24 @@ describe('the toasts (A11Y-14)', () => {
     const undo = vi.fn()
     act(() => toast('Hoyo 7 guardado', { label: t.common.undo, onClick: undo }))
     const action = screen.getByRole('button', { name: t.common.undo })
-    act(() => vi.advanceTimersByTime(5000))
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
     fireEvent.focus(action)
     // Long past its 6 s: still there while it is being read.
-    act(() => vi.advanceTimersByTime(20_000))
+    act(() => {
+      vi.advanceTimersByTime(20_000)
+    })
     expect(screen.queryByRole('button', { name: t.common.undo })).toBeTruthy()
     fireEvent.blur(action, { relatedTarget: screen.getByRole('button', { name: 'fuera' }) })
     // The second it had left.
-    act(() => vi.advanceTimersByTime(900))
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
     expect(screen.queryByRole('button', { name: t.common.undo })).toBeTruthy()
-    act(() => vi.advanceTimersByTime(200))
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
     expect(screen.queryByRole('button', { name: t.common.undo })).toBeNull()
   })
 })
@@ -77,7 +85,8 @@ describe('the offline line (A11Y-14)', () => {
 
 describe('the Tarjeta’s sync line (A11Y-14)', () => {
   const region = () => document.querySelector('[role="status"]')!
-  const refused = (n: number) => Array.from({ length: n }, (_, i) => ({ key: `k${i}`, tournamentId: 't', at: i }) as unknown as RejectedItem)
+  const refused = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ key: `k${i}`, tournamentId: 't', at: i }) as unknown as RejectedItem)
 
   it('says a write the server refused, as it happens, and not the holes on their way after every save', () => {
     render(<SaveStatus savedNote={null} onUndo={() => undefined} />)

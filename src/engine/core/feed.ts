@@ -106,7 +106,7 @@ const inOrder = (a: Placed, b: Placed) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 
 /** The hole a score is on, in its player's round: the holes are numbered from 1 in order, so it is at its number's place. */
 function holeOf(holes: HoleResult[] | undefined, hole: number): HoleResult | undefined {
   const h = holes?.[hole - 1]
-  return h && h.hole === hole ? h : holes?.find((x) => x.hole === hole)
+  return h?.hole === hole ? h : holes?.find((x) => x.hole === hole)
 }
 
 /**
@@ -116,7 +116,13 @@ function holeOf(holes: HoleResult[] | undefined, hole: number): HoleResult | und
  * one form once and compared with `<`, holes are read at their place, and a
  * pass finds its save in an index.
  */
-export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeState | undefined, opts: FeedOptions = POINTS, limit = 40): FeedEvent[] {
+export function computeFeed(
+  snapshot: Snapshot,
+  core: CoreState,
+  snake: SnakeState | undefined,
+  opts: FeedOptions = POINTS,
+  limit = 40,
+): FeedEvent[] {
   const roundNumber = new Map(snapshot.rounds.map((r) => [r.id, r.number]))
   const honoree = snapshot.players.find((p) => p.isHonoree)?.id ?? null
   const events: Array<{ e: FeedEvent } & Placed> = []
@@ -126,7 +132,9 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
 
   const active = new Set(core.roundIds)
   const scores: Array<{ s: Score } & Placed> = []
-  for (const s of snapshot.scores) if (active.has(s.roundId)) scores.push({ s, at: timeKey(s.updatedAt), rn: roundNumber.get(s.roundId) ?? 0, hole: s.hole })
+  for (const s of snapshot.scores)
+    if (active.has(s.roundId))
+      scores.push({ s, at: timeKey(s.updatedAt), rn: roundNumber.get(s.roundId) ?? 0, hole: s.hole })
   scores.sort(inOrder)
 
   // Running totals: Stableford points (more is better), or strokes against
@@ -142,7 +150,7 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
   const birdieDays = new Set<Id>()
   for (const { s, rn, at } of scores) {
     const h = holeOf(core.rounds[s.roundId]?.[s.playerId]?.holes, s.hole)
-    if (!h || !h.played) continue
+    if (!h?.played) continue
     const toPar = holeToPar(h, scoring)
     const isBirdie = points ? h.points >= 3 : toPar != null && toPar <= -1
     if (isBirdie) {
@@ -152,11 +160,41 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
       while (birdieHoles.get(`${s.roundId}:${s.playerId}:${s.hole - streak}`)) streak++
       const firstOfDay = !birdieDays.has(s.roundId)
       birdieDays.add(s.roundId)
-      push({ kind: 'birdie', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, grossUnder, under, scoring, ...(firstOfDay ? { firstOfDay: true as const } : {}), ...(streak > 1 ? { streak } : {}) }, at)
+      push(
+        {
+          kind: 'birdie',
+          at: s.updatedAt,
+          roundNumber: rn,
+          hole: s.hole,
+          playerId: s.playerId,
+          points: h.points,
+          grossUnder,
+          under,
+          scoring,
+          ...(firstOfDay ? { firstOfDay: true as const } : {}),
+          ...(streak > 1 ? { streak } : {}),
+        },
+        at,
+      )
     } else if (honoree && s.playerId === honoree) {
-      push({ kind: 'honoreeHole', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, toPar, scoring }, at)
+      push(
+        {
+          kind: 'honoreeHole',
+          at: s.updatedAt,
+          roundNumber: rn,
+          hole: s.hole,
+          playerId: s.playerId,
+          points: h.points,
+          toPar,
+          scoring,
+        },
+        at,
+      )
     } else if (!snake && !h.pickedUp && h.putts != null && h.putts >= 3) {
-      push({ kind: 'threePutt', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, putts: h.putts }, at)
+      push(
+        { kind: 'threePutt', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, putts: h.putts },
+        at,
+      )
     }
     birdieHoles.set(`${s.roundId}:${s.playerId}:${s.hole}`, isBirdie)
     if (!opts.leaders) continue
@@ -188,7 +226,20 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     if (best && !tie && real && best !== leader) {
       const previous = leader
       leader = best
-      push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, by: s.playerId, figure: points ? String(bestValue) : toParText(bestValue), scoring, ...(previous ? { previous } : {}) }, at)
+      push(
+        {
+          kind: 'leadChange',
+          at: s.updatedAt,
+          roundNumber: rn,
+          hole: s.hole,
+          playerId: best,
+          by: s.playerId,
+          figure: points ? String(bestValue) : toParText(bestValue),
+          scoring,
+          ...(previous ? { previous } : {}),
+        },
+        at,
+      )
     }
   }
 
@@ -200,7 +251,7 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
       for (const pass of g.passes) {
         if (!pass.holderId) continue
         let byPlayer = cards.get(g.roundId)
-        if (!byPlayer) cards.set(g.roundId, (byPlayer = new Map()))
+        if (!byPlayer) cards.set(g.roundId, (byPlayer = new Map<Id, Map<number, Score>>()))
         if (!byPlayer.has(pass.holderId)) byPlayer.set(pass.holderId, new Map())
       }
     }
@@ -212,7 +263,17 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
       for (const pass of g.passes) {
         if (!pass.holderId) continue
         const sc = cards.get(g.roundId)?.get(pass.holderId)?.get(pass.hole)
-        push({ kind: 'snakePass', at: sc?.updatedAt ?? null, roundNumber: g.roundNumber, hole: pass.hole, playerId: pass.holderId, groupNumber: g.groupNumber }, timeKey(sc?.updatedAt))
+        push(
+          {
+            kind: 'snakePass',
+            at: sc?.updatedAt ?? null,
+            roundNumber: g.roundNumber,
+            hole: pass.hole,
+            playerId: pass.holderId,
+            groupNumber: g.groupNumber,
+          },
+          timeKey(sc?.updatedAt),
+        )
       }
     }
   }
@@ -223,4 +284,3 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     .reverse()
     .map((x) => x.e)
 }
-

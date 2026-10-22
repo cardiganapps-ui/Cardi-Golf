@@ -31,7 +31,12 @@ describe('the heartbeat reads the outbox', () => {
     expect(deviceSnapshot()).toMatchObject({ pending: 0, oldestPendingAt: null })
     phone.online = false
     const before = Date.now()
-    await enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p1', fields: { strokes: 5, putts: 2 }, base: {} }] })
+    await enqueueHole('t1', {
+      round_id: 'r1',
+      hole: 4,
+      entered_by: 'p1',
+      entries: [{ player_id: 'p1', fields: { strokes: 5, putts: 2 }, base: {} }],
+    })
     const waiting = deviceSnapshot()
     expect(waiting.pending).toBe(1)
     expect(Date.parse(waiting.oldestPendingAt!)).toBeGreaterThanOrEqual(before - 1)

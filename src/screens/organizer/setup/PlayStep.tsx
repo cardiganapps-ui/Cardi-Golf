@@ -36,19 +36,55 @@ const SPLITS: Record<string, number[]> = { classic: [50, 30, 20], wta: [100], to
 const QUICK: Array<{ id: string; build: () => GameConfig }> = [
   {
     id: 'skins',
-    build: () => ({ id: 'skins', type: 'skins', label: 'Skins', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', carryOver: true }, money: { source: 'side', buyIn: 200, amount: 0, stake: 0, split: [100] } }),
+    build: () => ({
+      id: 'skins',
+      type: 'skins',
+      label: 'Skins',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { basis: 'net', carryOver: true },
+      money: { source: 'side', buyIn: 200, amount: 0, stake: 0, split: [100] },
+    }),
   },
   {
     id: 'birdies',
-    build: () => ({ id: 'birdies', type: 'eventPot', label: 'Premio por birdie', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } }),
+    build: () => ({
+      id: 'birdies',
+      type: 'eventPot',
+      label: 'Premio por birdie',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { event: 'birdie', basis: 'gross' },
+      money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] },
+    }),
   },
   {
     id: 'cerca',
-    build: () => ({ id: 'cerca', type: 'contest', label: 'Más cerca del hoyo', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'closest', holes: 'par3' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } }),
+    build: () => ({
+      id: 'cerca',
+      type: 'contest',
+      label: 'Más cerca del hoyo',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { kind: 'closest', holes: 'par3' },
+      money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] },
+    }),
   },
   {
     id: 'tres-putts',
-    build: () => ({ id: 'tres-putts', type: 'eventPot', label: 'Multa por tres putts', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'threePutt', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 20, split: [100] } }),
+    build: () => ({
+      id: 'tres-putts',
+      type: 'eventPot',
+      label: 'Multa por tres putts',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { event: 'threePutt', basis: 'gross' },
+      money: { source: 'direct', buyIn: 0, amount: 0, stake: 20, split: [100] },
+    }),
   },
 ]
 
@@ -92,7 +128,11 @@ export function PlayStep({
         </Field>
       </div>
       <Group label={W.rounds}>
-        <Segmented value={String(value.rounds)} options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))} onChange={(v) => set((d) => (d.rounds = Number(v)))} />
+        <Segmented
+          value={String(value.rounds)}
+          options={['1', '2', '3', '4'].map((n) => ({ value: n, label: n }))}
+          onChange={(v) => set((d) => (d.rounds = Number(v)))}
+        />
       </Group>
 
       <Toggle
@@ -118,7 +158,12 @@ export function PlayStep({
       {hasMoney && (
         <>
           <Field label={U.entryFee}>
-            <NumberField label={U.entryFee} prefix="$" value={value.entryFee} onChange={(v) => set((d) => (d.entryFee = v))} />
+            <NumberField
+              label={U.entryFee}
+              prefix="$"
+              value={value.entryFee}
+              onChange={(v) => set((d) => (d.entryFee = v))}
+            />
           </Field>
           <Group label={U.split} hint={U.splitHint}>
             <Segmented
@@ -142,11 +187,21 @@ export function PlayStep({
             const config = value.games.find((g) => g.id === q.id) ?? q.build()
             return (
               <span key={q.id} className={`${styles.chip} ${on ? styles.chipOn : ''}`}>
-                <button type="button" role="switch" aria-checked={on} className={styles.chipMain} onClick={() => toggleGame(q)}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  className={styles.chipMain}
+                  onClick={() => toggleGame(q)}
+                >
                   {on ? <IconCheck size={16} /> : <IconPlus size={16} />}
                   {config.label}
                 </button>
-                <InfoButton why={{ title: label(config.label), steps: describeGame(config) }} label={W.formatInfo(config.label)} title={W.formatInfoTitle} />
+                <InfoButton
+                  why={{ title: label(config.label), steps: describeGame(config) }}
+                  label={W.formatInfo(config.label)}
+                  title={W.formatInfoTitle}
+                />
               </span>
             )
           })}

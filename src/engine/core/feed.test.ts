@@ -17,10 +17,11 @@ function run(name: string, edit?: (s: TournamentSettings, snap: Snapshot) => voi
   edit?.(settings, snap)
   return { snap, settings, state: computeTournament(snap, settings) }
 }
-const leads = (feed: FeedEvent[]) => feed.filter((e): e is Extract<FeedEvent, { kind: 'leadChange' }> => e.kind === 'leadChange')
+const leads = (feed: FeedEvent[]) =>
+  feed.filter((e): e is Extract<FeedEvent, { kind: 'leadChange' }> => e.kind === 'leadChange')
 
-describe('feed: the leader is the board\'s leader', () => {
-  it('match play and team play announce no leader: one player\'s running total leads nothing there', () => {
+describe("feed: the leader is the board's leader", () => {
+  it("match play and team play announce no leader: one player's running total leads nothing there", () => {
     for (const name of ['match8', 'bracket8', 'team8', 'scramble8']) {
       const { state } = run(name)
       expect(state.feed.length, name).toBeGreaterThan(0)
@@ -28,7 +29,7 @@ describe('feed: the leader is the board\'s leader', () => {
     }
   })
 
-  it('stroke play: the latest leader is the board\'s leader, with the board\'s figure against par', () => {
+  it("stroke play: the latest leader is the board's leader, with the board's figure against par", () => {
     const { state } = run('stroke8')
     const latest = leads(state.feed)[0]!
     const top = state.modules.individual!.rows[0]!
@@ -38,7 +39,7 @@ describe('feed: the leader is the board\'s leader', () => {
     expect(latest.figure).toMatch(/^(E|\+\d+|−\d+)$/)
   })
 
-  it('Stableford keeps its points: the figure is the leader\'s points total', () => {
+  it("Stableford keeps its points: the figure is the leader's points total", () => {
     const { state } = run('full12-live')
     const latest = leads(state.feed)[0]!
     expect(latest.scoring).toBe('points')
@@ -52,7 +53,9 @@ describe('feed: a birdie is a birdie on the score the event counts', () => {
     const birdies = state.feed.filter((e): e is Extract<FeedEvent, { kind: 'birdie' }> => e.kind === 'birdie')
     expect(birdies.length).toBeGreaterThan(0)
     for (const e of birdies) {
-      const h = Object.values(state.core.rounds).flatMap((r) => r[e.playerId]?.holes ?? []).find((x) => x.hole === e.hole)!
+      const h = Object.values(state.core.rounds)
+        .flatMap((r) => r[e.playerId]?.holes ?? [])
+        .find((x) => x.hole === e.hole)!
       expect(e.scoring).toBe('net')
       expect(h.gross! - h.strokesReceived - h.par).toBe(-e.under)
     }
@@ -64,12 +67,14 @@ describe('feed: a birdie is a birdie on the score the event counts', () => {
     const grossBirdies = gross.state.feed.filter((e) => e.kind === 'birdie')
     expect(grossBirdies.length).toBeLessThan(net.state.feed.filter((e) => e.kind === 'birdie').length)
     for (const e of grossBirdies) {
-      const h = Object.values(gross.state.core.rounds).flatMap((r) => r[e.playerId]?.holes ?? []).find((x) => x.hole === e.hole)!
+      const h = Object.values(gross.state.core.rounds)
+        .flatMap((r) => r[e.playerId]?.holes ?? [])
+        .find((x) => x.hole === e.hole)!
       expect(h.gross! - h.par).toBeLessThanOrEqual(-1)
     }
   })
 
-  it('the honoree\'s holes under strokes carry the hole against par, and a pick-up carries none', () => {
+  it("the honoree's holes under strokes carry the hole against par, and a pick-up carries none", () => {
     const { state } = run('stroke8', (_s, snap) => {
       snap.players[0]!.isHonoree = true
       // The feed keeps the latest 40 events: pick up on the honoree's last hole, so it is among them.

@@ -79,17 +79,25 @@ export class SettingsOutdated extends UserError {
  * while the row holds one this build doesn't know, which `games` written back
  * would drop.
  */
-export function settingsWrite(raw: unknown, before: TournamentSettings, after: TournamentSettings, opts: { readAll: boolean }): SettingsWrite {
+export function settingsWrite(
+  raw: unknown,
+  before: TournamentSettings,
+  after: TournamentSettings,
+  opts: { readAll: boolean },
+): SettingsWrite {
   const stored = readSettings(raw)
   if (!stored.ok) throw new SettingsOutdated(t.outdated.save)
   const row = isObject(raw) ? raw : {}
   const a = after as unknown as JsonObject
   const b = before as unknown as JsonObject
   const written = changedKeys(b, a)
-  if (written.includes('games') && stored.unknownGames.length) throw new SettingsOutdated(t.outdated.games(stored.unknownGames.map((g) => g.label)))
+  if (written.includes('games') && stored.unknownGames.length)
+    throw new SettingsOutdated(t.outdated.games(stored.unknownGames.map((g) => g.label)))
   const set: JsonObject = {}
   for (const k of written) set[k] = a[k] === undefined ? null : a[k]
-  const read = opts.readAll ? [...new Set([...Object.keys(row), ...Object.keys(b), ...Object.keys(a), ...written])] : written
+  const read = opts.readAll
+    ? [...new Set([...Object.keys(row), ...Object.keys(b), ...Object.keys(a), ...written])]
+    : written
   const seen: JsonObject = {}
   for (const k of read) seen[k] = row[k] === undefined ? null : row[k]
   return { seen, set }

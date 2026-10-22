@@ -11,9 +11,11 @@ const sql = readdirSync(dir)
   .join('\n')
 /** Table name → the text of its `create table` block (columns and constraints). */
 const blocks = new Map<string, string>()
-for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi)) blocks.set(m[1]!, m[2]!)
+for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi))
+  blocks.set(m[1]!, m[2]!)
 // Columns added later with `alter table … add column`.
-for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)\s+add column (?:if not exists )?([a-z_]+)/gi)) blocks.set(m[1]!, `${blocks.get(m[1]!) ?? ''}\n${m[2]!} `)
+for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)\s+add column (?:if not exists )?([a-z_]+)/gi))
+  blocks.set(m[1]!, `${blocks.get(m[1]!) ?? ''}\n${m[2]!} `)
 // Created by scripts/db.mjs, not by a migration.
 blocks.set('_migrations', 'name text primary key, applied_at timestamptz ')
 const created = new Set(blocks.keys())
@@ -37,13 +39,20 @@ describe('nightly backup', () => {
     const bad: string[] = []
     for (const [table, order] of Object.entries(BACKUP_TABLES)) {
       const block = blocks.get(table) ?? ''
-      for (const col of order.split(',')) if (!new RegExp(`(^|\\s|,|\\()${col}\\s`, 'm').test(block)) bad.push(`${table}.${col}`)
+      for (const col of order.split(','))
+        if (!new RegExp(`(^|\\s|,|\\()${col}\\s`, 'm').test(block)) bad.push(`${table}.${col}`)
     }
     expect(bad).toEqual([])
   })
 
   it('copies no table with a secret in it: a PIN hash, a link token, a push address or its keys (TRUST-10)', () => {
-    for (const t of ['player_pins', 'profile_link_tokens', 'push_subscriptions', 'pin_push_subscriptions', 'spectator_links']) {
+    for (const t of [
+      'player_pins',
+      'profile_link_tokens',
+      'push_subscriptions',
+      'pin_push_subscriptions',
+      'spectator_links',
+    ]) {
       expect(BACKUP_TABLES, t).not.toHaveProperty(t)
       expect(NOT_BACKED_UP, t).toHaveProperty(t)
     }
@@ -58,7 +67,9 @@ describe('nightly backup', () => {
   })
 
   it('takes every secret-shaped key out, at any depth, and leaves the rest as it was', () => {
-    expect(withoutSecrets([{ id: 1, pin_hash: 'x', before: { auth: 'k', a: [{ endpoint: 'e', b: 2 }] }, n: null }])).toEqual([{ id: 1, before: { a: [{ b: 2 }] }, n: null }])
+    expect(
+      withoutSecrets([{ id: 1, pin_hash: 'x', before: { auth: 'k', a: [{ endpoint: 'e', b: 2 }] }, n: null }]),
+    ).toEqual([{ id: 1, before: { a: [{ b: 2 }] }, n: null }])
     expect(withoutSecrets('texto')).toBe('texto')
   })
 

@@ -126,7 +126,11 @@ export function AdminTeams() {
                   <span className={a.rowTitle}>{team.name ?? E.unnamed(team.number)}</span>
                   <span className={a.rowSub}>{t.common.andList(team.playerIds.map(name))}</span>
                 </span>
-                <span className="small">{E.hcpTotal(Math.round(team.playerIds.reduce((s, id) => s + (byId.get(id)?.baseHcp ?? 0), 0) * 10) / 10)}</span>
+                <span className="small">
+                  {E.hcpTotal(
+                    Math.round(team.playerIds.reduce((s, id) => s + (byId.get(id)?.baseHcp ?? 0), 0) * 10) / 10,
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -137,11 +141,23 @@ export function AdminTeams() {
         <div className={a.sectionTitle}>
           <strong>{E.size}</strong>
         </div>
-        <Segmented value={size} options={sizes.map((n) => ({ value: n, label: E.sizeOption(Number(n)) }))} onChange={setSize} label={E.size} />
-        <p className={a.help}>{E.sizeHint(snapshot.players.length, Math.ceil(snapshot.players.length / Number(size)))}</p>
+        <Segmented
+          value={size}
+          options={sizes.map((n) => ({ value: n, label: E.sizeOption(Number(n)) }))}
+          onChange={setSize}
+          label={E.size}
+        />
+        <p className={a.help}>
+          {E.sizeHint(snapshot.players.length, Math.ceil(snapshot.players.length / Number(size)))}
+        </p>
       </section>
 
-      <button className="btn btn--primary" type="button" disabled={snapshot.players.length < Number(size)} onClick={draw}>
+      <button
+        className="btn btn--primary"
+        type="button"
+        disabled={snapshot.players.length < Number(size)}
+        onClick={draw}
+      >
         {drawn ? E.redraw : E.draw}
       </button>
 
@@ -158,7 +174,13 @@ export function AdminTeams() {
           {revealed >= drawn.length && spread != null && <p className={a.help}>{E.spread(spread)}</p>}
           <AnimatePresence>
             {drawn.slice(0, revealed).map((team, i) => (
-              <motion.div key={team.playerIds.join('-')} className={styles.pairCard} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={easeSlow}>
+              <motion.div
+                key={team.playerIds.join('-')}
+                className={styles.pairCard}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={easeSlow}
+              >
                 <span className={styles.rings} aria-hidden="true">
                   <IconRings />
                 </span>
@@ -185,7 +207,12 @@ export function AdminTeams() {
           {revealed >= drawn.length && (
             <>
               <p className={a.help}>{E.groupsPreview(preview.length, times[0] ?? '09:00')}</p>
-              <button className="btn btn--primary btn--block" type="button" disabled={busy} onClick={() => setAskSave(true)}>
+              <button
+                className="btn btn--primary btn--block"
+                type="button"
+                disabled={busy}
+                onClick={() => setAskSave(true)}
+              >
                 {E.save}
               </button>
             </>
@@ -193,7 +220,15 @@ export function AdminTeams() {
         </section>
       )}
 
-      <ConfirmSheet open={askSave} title={E.save} body={E.saveConfirm} busy={busy} confirmLabel={E.save} onConfirm={() => void save()} onClose={() => setAskSave(false)} />
+      <ConfirmSheet
+        open={askSave}
+        title={E.save}
+        body={E.saveConfirm}
+        busy={busy}
+        confirmLabel={E.save}
+        onConfirm={() => void save()}
+        onClose={() => setAskSave(false)}
+      />
     </div>
   )
 }

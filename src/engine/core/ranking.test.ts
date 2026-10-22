@@ -17,14 +17,23 @@ describe('countback', () => {
     const b = { pointsByHole: pts(bArr), holes: 18 }
     const r = countback(a, b)
     expect(r.result).toBeLessThan(0)
-    expect(r.steps.map(({ from, to, total }) => ({ from, to, total }))).toEqual([{ from: 1, to: 18, total: true }, { from: 10, to: 18, total: false }])
+    expect(r.steps.map(({ from, to, total }) => ({ from, to, total }))).toEqual([
+      { from: 1, to: 18, total: true },
+      { from: 10, to: 18, total: false },
+    ])
   })
   it('equal all the way through hole 18 → tied', () => {
     const a = { pointsByHole: pts(Array(18).fill(2)), holes: 18 }
     const b = { pointsByHole: pts(Array(18).fill(2)), holes: 18 }
     const r = countback(a, b)
     expect(r.result).toBe(0)
-    expect(r.steps.map(({ from, to, total }) => (total ? 'total' : `${from}–${to}`))).toEqual(['total', '10–18', '13–18', '16–18', '18–18'])
+    expect(r.steps.map(({ from, to, total }) => (total ? 'total' : `${from}–${to}`))).toEqual([
+      'total',
+      '10–18',
+      '13–18',
+      '16–18',
+      '18–18',
+    ])
   })
 })
 
@@ -36,7 +45,11 @@ describe('rankBy + splitPrizes', () => {
     { id: 'd', v: 60 },
     { id: 'e', v: 60 },
   ]
-  const groups = rankBy(items, (x, y) => y.v - x.v, (x, y) => x.id.localeCompare(y.id))
+  const groups = rankBy(
+    items,
+    (x, y) => y.v - x.v,
+    (x, y) => x.id.localeCompare(y.id),
+  )
 
   it('labels ties with T', () => {
     expect(flattenRanks(groups).map((r) => `${r.item.id}:${r.label}`)).toEqual(['a:T1', 'b:T1', 'c:3', 'd:T4', 'e:T4'])

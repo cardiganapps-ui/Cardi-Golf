@@ -9,7 +9,12 @@ import { setLastTournament } from '../data/session'
 import { continueTarget, launchPath, launchTarget } from './launch'
 
 function standalone(on: boolean) {
-  window.matchMedia = ((q: string) => ({ matches: on && q === '(display-mode: standalone)', media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: on && q === '(display-mode: standalone)',
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+  })) as unknown as typeof window.matchMedia
 }
 const here = (path = '/t/otro') => {
   const url = new URL(path, window.location.origin)
@@ -83,7 +88,9 @@ describe('a launch into the open app goes where it says (PWA-14)', () => {
     const { listenForLaunches } = await import('./launch')
     window.history.replaceState(null, '', '/t/nachos-bachelor')
     const consumers: Array<(p: { targetURL?: string }) => void> = []
-    ;(globalThis as { launchQueue?: unknown }).launchQueue = { setConsumer: (c: (p: { targetURL?: string }) => void) => consumers.push(c) }
+    ;(globalThis as { launchQueue?: unknown }).launchQueue = {
+      setConsumer: (c: (p: { targetURL?: string }) => void) => consumers.push(c),
+    }
     const go = vi.fn()
     listenForLaunches(go)
     consumers[0]!({ targetURL: at('/?t=nachos-bachelor') })

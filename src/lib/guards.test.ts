@@ -24,7 +24,10 @@ const marker = join(tmp, 'preflight-ran-in')
 const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')))
 
 function git(dir: string, ...args: string[]) {
-  const r = spawnSync('git', ['-C', dir, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { encoding: 'utf8', env })
+  const r = spawnSync('git', ['-C', dir, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+    encoding: 'utf8',
+    env,
+  })
   if (r.status !== 0) throw new Error(r.stderr)
 }
 beforeAll(() => {
@@ -43,7 +46,13 @@ function pushGuard(command: string, preflight = `pwd > ${marker}`, extra: Record
   const r = spawnSync('bash', [join(ROOT, 'scripts/prepush-guard.sh')], {
     input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
     encoding: 'utf8',
-    env: { ...env, CLAUDE_PROJECT_DIR: onBranch, PREPUSH_PREFLIGHT: preflight, PREPUSH_LOG: join(tmp, 'log'), ...extra },
+    env: {
+      ...env,
+      CLAUDE_PROJECT_DIR: onBranch,
+      PREPUSH_PREFLIGHT: preflight,
+      PREPUSH_LOG: join(tmp, 'log'),
+      ...extra,
+    },
   })
   let ranIn: string | null = null
   try {
@@ -59,15 +68,19 @@ describe('the push guard', () => {
     expect(pushGuard('git status && npm test')).toEqual({ code: 0, stderr: '', ranIn: null })
   })
 
-  it.each(['git push origin main', 'git push -u origin HEAD:main', 'git push origin +refs/heads/main', 'git push --all', `cd ${onMain} && git push`, `git -C ${onMain} push origin HEAD`])(
-    'refuses %s',
-    (command) => {
-      const r = pushGuard(command)
-      expect(r.code).toBe(2)
-      expect(r.stderr).toMatch(/main|--all/)
-      expect(r.ranIn).toBeNull()
-    },
-  )
+  it.each([
+    'git push origin main',
+    'git push -u origin HEAD:main',
+    'git push origin +refs/heads/main',
+    'git push --all',
+    `cd ${onMain} && git push`,
+    `git -C ${onMain} push origin HEAD`,
+  ])('refuses %s', (command) => {
+    const r = pushGuard(command)
+    expect(r.code).toBe(2)
+    expect(r.stderr).toMatch(/main|--all/)
+    expect(r.ranIn).toBeNull()
+  })
 
   it('reads the branch of the tree being pushed, whatever GIT_DIR it inherits', () => {
     const r = pushGuard(`cd ${onMain} && git push`, undefined, { GIT_DIR: join(onBranch, '.git') })
@@ -78,7 +91,10 @@ describe('the push guard', () => {
   it('runs the preflight in the tree being pushed', () => {
     expect(pushGuard(`cd ${onBranch} && git push -u origin claude/topic`)).toMatchObject({ code: 0, ranIn: onBranch })
     expect(pushGuard(`git -C ${onBranch} push -u origin claude/topic`)).toMatchObject({ code: 0, ranIn: onBranch })
-    expect(pushGuard(`cd ${onMain} && cd ${onBranch} && git push origin claude/topic`)).toMatchObject({ code: 0, ranIn: onBranch })
+    expect(pushGuard(`cd ${onMain} && cd ${onBranch} && git push origin claude/topic`)).toMatchObject({
+      code: 0,
+      ranIn: onBranch,
+    })
   })
 
   it('blocks the push when that preflight fails', () => {
@@ -91,7 +107,11 @@ describe('the push guard', () => {
 
 describe('the GitHub MCP write guard', () => {
   const run = (tool_input: Record<string, unknown>) =>
-    spawnSync('python3', [join(ROOT, 'scripts/mcp-main-guard.py')], { input: JSON.stringify({ tool_name: 'mcp__github__push_files', tool_input }), encoding: 'utf8', env }).status
+    spawnSync('python3', [join(ROOT, 'scripts/mcp-main-guard.py')], {
+      input: JSON.stringify({ tool_name: 'mcp__github__push_files', tool_input }),
+      encoding: 'utf8',
+      env,
+    }).status
 
   it('refuses main and the default branch', () => {
     expect(run({ branch: 'main', files: [] })).toBe(2)
@@ -104,7 +124,12 @@ describe('the GitHub MCP write guard', () => {
 
 describe('the git pre-push hook', () => {
   it('refuses a push whose remote ref is main, before any preflight', () => {
-    const r = spawnSync('bash', [join(ROOT, '.githooks/pre-push')], { cwd: onBranch, input: 'refs/heads/claude/topic abc refs/heads/main def\n', encoding: 'utf8', env })
+    const r = spawnSync('bash', [join(ROOT, '.githooks/pre-push')], {
+      cwd: onBranch,
+      input: 'refs/heads/claude/topic abc refs/heads/main def\n',
+      encoding: 'utf8',
+      env,
+    })
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('never push to main')
   })
@@ -134,7 +159,8 @@ describe('the session wires every guard', () => {
     const pre = settings.hooks.PreToolUse!
     expect(pre.find((h) => h.matcher === 'Bash')!.hooks[0]!.command).toContain('prepush-guard.sh')
     const mcp = pre.find((h) => h.matcher?.includes('mcp__github__push_files'))!
-    for (const tool of ['push_files', 'create_or_update_file', 'delete_file']) expect(mcp.matcher).toContain(`mcp__github__${tool}`)
+    for (const tool of ['push_files', 'create_or_update_file', 'delete_file'])
+      expect(mcp.matcher).toContain(`mcp__github__${tool}`)
     expect(mcp.hooks[0]!.command).toContain('mcp-main-guard.py')
   })
   it('wires the git hooks at session start, and force-push stays denied', () => {

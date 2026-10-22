@@ -22,14 +22,29 @@ function walk(dir: string, out: string[] = []): string[] {
 
 /** The names a file declares as exports, at its top level. */
 function exportsOf(file: string, text: string): string[] {
-  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+  const sf = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  )
   const names: string[] = []
   sf.forEachChild((n) => {
     const mods = ts.canHaveModifiers(n) ? ts.getModifiers(n) : undefined
     if (!mods?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) return
     if (mods.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)) return
-    if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name)) names.push(d.name.text)
-    if ((ts.isFunctionDeclaration(n) || ts.isClassDeclaration(n) || ts.isInterfaceDeclaration(n) || ts.isTypeAliasDeclaration(n) || ts.isEnumDeclaration(n)) && n.name) names.push(n.name.text)
+    if (ts.isVariableStatement(n))
+      for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name)) names.push(d.name.text)
+    if (
+      (ts.isFunctionDeclaration(n) ||
+        ts.isClassDeclaration(n) ||
+        ts.isInterfaceDeclaration(n) ||
+        ts.isTypeAliasDeclaration(n) ||
+        ts.isEnumDeclaration(n)) &&
+      n.name
+    )
+      names.push(n.name.text)
   })
   return names
 }

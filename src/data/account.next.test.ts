@@ -11,7 +11,17 @@ describe('safeNext', () => {
     expect(safeNext('/ronda?crew=abc')).toBe('/ronda?crew=abc')
   })
   it('refuses another site, however it is written', () => {
-    for (const raw of ['https://evil.example', '//evil.example', '/\\evil.example', '/\\/evil.example', 'javascript:alert(1)', 'ronda', '', null]) expect(safeNext(raw), String(raw)).toBe('/')
+    for (const raw of [
+      'https://evil.example',
+      '//evil.example',
+      '/\\evil.example',
+      '/\\/evil.example',
+      'javascript:alert(1)',
+      'ronda',
+      '',
+      null,
+    ])
+      expect(safeNext(raw), String(raw)).toBe('/')
   })
   it('refuses a control character, which a browser drops before it reads the path', () => {
     expect(safeNext('/\t/evil.example')).toBe('/')

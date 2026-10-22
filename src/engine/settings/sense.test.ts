@@ -23,8 +23,10 @@ const first = (edit: (s: TournamentSettings) => void = () => undefined): Tournam
   return s
 }
 /** What each issue says, in words (ARCH-05). */
-const said = (s: TournamentSettings, field: { players: number } | null) => settingsSense(s, field).map((x) => ({ key: x.key, text: words(x.says) }))
-const keys = (s: TournamentSettings, field: { players: number } | null = FIELD) => settingsSense(s, field).map((x) => x.key)
+const said = (s: TournamentSettings, field: { players: number } | null) =>
+  settingsSense(s, field).map((x) => ({ key: x.key, text: words(x.says) }))
+const keys = (s: TournamentSettings, field: { players: number } | null = FIELD) =>
+  settingsSense(s, field).map((x) => x.key)
 
 describe('settingsSense (MONEY-13)', () => {
   it('the first tournament and the platform default make sense', () => {
@@ -33,17 +35,30 @@ describe('settingsSense (MONEY-13)', () => {
   })
 
   it('a cap of 0 is refused: the way to play scratch is 0 %, said where it is typed', () => {
-    expect(said(first((s) => (s.handicap.cap = 0)), FIELD)).toEqual([{ key: 'cap', text: S.cap }])
+    expect(
+      said(
+        first((s) => (s.handicap.cap = 0)),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'cap', text: S.cap }])
     expect(keys(first((s) => (s.handicap.cap = 0.5)))).toEqual(['cap'])
     // 0 % is a scratch event on purpose, not a mistake: nothing refuses it.
     expect(keys(first((s) => (s.handicap.allowance = 0)))).toEqual([])
   })
 
   it('the Calcutta pays each place once, and only places someone can take', () => {
-    const twoFirsts = first((s) => (s.auction.payout = [{ slot: 'place', place: 1, share: 0.5 }, { slot: 'place', place: 1, share: 0.5 }]))
+    const twoFirsts = first(
+      (s) =>
+        (s.auction.payout = [
+          { slot: 'place', place: 1, share: 0.5 },
+          { slot: 'place', place: 1, share: 0.5 },
+        ]),
+    )
     expect(said(twoFirsts, FIELD)).toEqual([{ key: 'placeTwice', text: S.placeTwice('Campeón') }])
     const fortieth = first((s) => (s.auction.payout = [{ slot: 'place', place: 40, share: 1 }]))
-    expect(said(fortieth, FIELD)).toEqual([{ key: 'placeUnreachable', text: S.placeUnreachable('40.º', '12 jugadores') }])
+    expect(said(fortieth, FIELD)).toEqual([
+      { key: 'placeUnreachable', text: S.placeUnreachable('40.º', '12 jugadores') },
+    ])
     // With no field yet there is nobody to count: only the field-free checks run.
     expect(keys(fortieth, null)).toEqual([])
     const tierTwice = first((s) => s.auction.payout.push({ slot: 'bestOfTier', tier: 'C', share: 0 }))
@@ -55,31 +70,59 @@ describe('settingsSense (MONEY-13)', () => {
   it('under a team format the Calcutta’s places are the teams’', () => {
     const teams = first((s) => {
       s.modules.individual.format = 'team'
-      s.auction.payout = [{ slot: 'place', place: 1, share: 0.7 }, { slot: 'place', place: 7, share: 0.3 }]
+      s.auction.payout = [
+        { slot: 'place', place: 1, share: 0.7 },
+        { slot: 'place', place: 7, share: 0.3 },
+      ]
     })
     // Twelve players are six teams at most before the draw, so a 7th place is nobody's.
     expect(said(teams, FIELD)).toEqual([{ key: 'placeUnreachable', text: S.placeUnreachable('7.º', '6 equipos') }])
   })
 
   it('a buyback past half is refused; the Calcutta’s rules are checked only while it is on', () => {
-    expect(said(first((s) => (s.auction.buybackMaxPct = 100)), FIELD)).toEqual([{ key: 'buyback', text: S.buyback(BUYBACK_MAX_PCT) }])
+    expect(
+      said(
+        first((s) => (s.auction.buybackMaxPct = 100)),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'buyback', text: S.buyback(BUYBACK_MAX_PCT) }])
     expect(keys(first((s) => (s.auction.buybackMaxPct = BUYBACK_MAX_PCT)))).toEqual([])
     expect(keys(first((s) => ((s.modules.auction.enabled = false), (s.auction.buybackMaxPct = 100))))).toEqual([])
   })
 
   it('a house cut bigger than the entries is named', () => {
-    expect(said(first((s) => (s.houseCut = 100000)), FIELD)).toEqual([{ key: 'houseCut', text: S.houseCut('$100,000', '$30,000') }])
+    expect(
+      said(
+        first((s) => (s.houseCut = 100000)),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'houseCut', text: S.houseCut('$100,000', '$30,000') }])
     expect(keys(first((s) => (s.houseCut = 30000)))).toEqual([])
   })
 
   it('a day’s cut past 18 strokes is refused, only when there is a next day', () => {
-    expect(said(first((s) => (s.day2Cut.maxStrokes = 54)), FIELD)).toEqual([{ key: 'cutMax', text: S.cutMax(CUT_MAX_STROKES) }])
+    expect(
+      said(
+        first((s) => (s.day2Cut.maxStrokes = 54)),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'cutMax', text: S.cutMax(CUT_MAX_STROKES) }])
     expect(keys(first((s) => ((s.rounds = 1), (s.day2Cut.maxStrokes = 54))))).toEqual([])
   })
 
   it('a currency no screen shows, and a time zone that does not exist', () => {
-    expect(said(first((s) => (s.currency = 'XYZ')), FIELD)).toEqual([{ key: 'currency', text: S.currency('XYZ') }])
-    expect(said(first((s) => (s.timezone = 'Mars/Olympus')), FIELD)).toEqual([{ key: 'timezone', text: S.timezone('Mars/Olympus') }])
+    expect(
+      said(
+        first((s) => (s.currency = 'XYZ')),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'currency', text: S.currency('XYZ') }])
+    expect(
+      said(
+        first((s) => (s.timezone = 'Mars/Olympus')),
+        FIELD,
+      ),
+    ).toEqual([{ key: 'timezone', text: S.timezone('Mars/Olympus') }])
     expect(validTimeZone('America/Mazatlan')).toBe(true)
     expect(validTimeZone('America/Mexico_City')).toBe(true)
   })
@@ -87,7 +130,10 @@ describe('settingsSense (MONEY-13)', () => {
   it('none of them stops a stored tournament from loading: the schema still parses each', () => {
     const odd = first((s) => {
       s.handicap.cap = 0
-      s.auction.payout = [{ slot: 'place', place: 1, share: 0.5 }, { slot: 'place', place: 40, share: 0.5 }]
+      s.auction.payout = [
+        { slot: 'place', place: 1, share: 0.5 },
+        { slot: 'place', place: 40, share: 0.5 },
+      ]
       s.auction.buybackMaxPct = 100
       s.houseCut = 100000
       s.day2Cut.maxStrokes = 54

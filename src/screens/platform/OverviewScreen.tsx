@@ -10,7 +10,15 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { Segmented } from '../../components/primitives'
 import { IconFlag, IconPerson, IconShield } from '../../components/icons'
-import { usePlatformApi, type CourseArrival, type FunnelCourses, type PlatformDay, type PlatformEvent, type PlatformFunnel, type PlatformOverview } from '../../data/platform'
+import {
+  usePlatformApi,
+  type CourseArrival,
+  type FunnelCourses,
+  type PlatformDay,
+  type PlatformEvent,
+  type PlatformFunnel,
+  type PlatformOverview,
+} from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
 import { useServerQuery } from '../../data/query'
@@ -25,10 +33,17 @@ const FUNNEL_DAYS = 90
 export function OverviewScreen() {
   const api = usePlatformApi()
   const [series, setSeries] = useState<Series>('scores')
-  const q = useServerQuery(usePlatformKey('overview'), async (): Promise<{ overview: PlatformOverview; daily: PlatformDay[]; funnel: PlatformFunnel | null }> => {
-    const [overview, daily, funnel] = await Promise.all([api.overview(), api.daily(30), api.funnel(FUNNEL_DAYS).catch(() => null)])
-    return { overview, daily, funnel }
-  })
+  const q = useServerQuery(
+    usePlatformKey('overview'),
+    async (): Promise<{ overview: PlatformOverview; daily: PlatformDay[]; funnel: PlatformFunnel | null }> => {
+      const [overview, daily, funnel] = await Promise.all([
+        api.overview(),
+        api.daily(30),
+        api.funnel(FUNNEL_DAYS).catch(() => null),
+      ])
+      return { overview, daily, funnel }
+    },
+  )
   const data = q.data
 
   if (q.error && !data) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
@@ -65,7 +80,10 @@ export function OverviewScreen() {
         />
         <Bars
           label={P.series[series]}
-          days={data.daily.map((d) => ({ day: d.day, value: series === 'tournaments' ? d.tournaments + d.quickRounds : d[series] }))}
+          days={data.daily.map((d) => ({
+            day: d.day,
+            value: series === 'tournaments' ? d.tournaments + d.quickRounds : d[series],
+          }))}
         />
       </section>
 
@@ -173,7 +191,8 @@ function Kpi({ label, value, sub }: { label: string; value: number; sub: string 
   )
 }
 
-const dayLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+const dayLabel = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 
 /**
  * One series of daily bars. No axis scale to read: the readout above says
@@ -237,7 +256,12 @@ function RecentRow({ e }: { e: PlatformEvent }) {
     )
   }
   const tournamentId = e.kind === 'tournament' ? e.id : e.tournamentId
-  const title = e.kind === 'tournament' ? (e.quick ? P.event.quick(e.label) : P.event.tournament(e.label)) : P.event.platform(P.actions[e.label] ?? e.label)
+  const title =
+    e.kind === 'tournament'
+      ? e.quick
+        ? P.event.quick(e.label)
+        : P.event.tournament(e.label)
+      : P.event.platform(P.actions[e.label] ?? e.label)
   const body = (
     <>
       <span className={s.rowIcon}>{e.kind === 'platform' ? <IconShield size={20} /> : <IconFlag size={20} />}</span>

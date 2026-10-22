@@ -99,12 +99,21 @@ export function AdminLayout() {
   }
   const flags = data?.state.flags
   const settings = data?.settings
-  const hot = (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0) + (flags?.missingPutts.length ?? 0)
+  const hot =
+    (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0) + (flags?.missingPutts.length ?? 0)
   const scoresBadge = hot + (flags?.unsignedCards.length ?? 0)
   const roundsBadge = flags?.incompleteRounds.length ?? 0
   const tournamentBadge =
     setup && data
-      ? setupBadge(readiness(data.snapshot, data.settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: data.state.bracket }), flags?.warnings ?? [], flags?.missingModules.length ?? 0)
+      ? setupBadge(
+          readiness(data.snapshot, data.settings, {
+            pins: entry?.pins ?? null,
+            linked: entry?.linked,
+            bracket: data.state.bracket,
+          }),
+          flags?.warnings ?? [],
+          flags?.missingModules.length ?? 0,
+        )
       : (flags?.warnings.length ?? 0) + (flags?.missingModules.length ?? 0)
   const S = t.admin.sections
   const sections: Array<{ to: string; label: string; badge?: number; hot?: boolean; show?: boolean }> = [
@@ -139,7 +148,12 @@ export function AdminLayout() {
           {sections
             .filter((s) => s.show !== false)
             .map((s) => (
-              <NavLink key={s.to} to={`/t/${slug}/admin/${s.to}`} {...preloadOnIntent(SECTION_SCREENS[s.to])} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}>
+              <NavLink
+                key={s.to}
+                to={`/t/${slug}/admin/${s.to}`}
+                {...preloadOnIntent(SECTION_SCREENS[s.to])}
+                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}
+              >
                 {s.label}
                 {s.badge ? (
                   // A11Y-22: the count said with its words, inside the link's name; a label on a bare span is dropped.
@@ -152,7 +166,13 @@ export function AdminLayout() {
             ))}
         </nav>
         <div className={styles.content}>
-          {READS_NO_SETTINGS.test(pathname) ? <Outlet /> : <SettingsGuard><Outlet /></SettingsGuard>}
+          {READS_NO_SETTINGS.test(pathname) ? (
+            <Outlet />
+          ) : (
+            <SettingsGuard>
+              <Outlet />
+            </SettingsGuard>
+          )}
         </div>
       </div>
     </div>

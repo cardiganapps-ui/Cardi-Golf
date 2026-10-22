@@ -34,17 +34,52 @@ const { MoreScreen } = await import('./MoreScreen')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
-type Facts = { online: boolean; source: 'cache' | 'server'; realtime: 'off' | 'connecting' | 'live' | 'error'; error?: string }
+interface Facts {
+  online: boolean
+  source: 'cache' | 'server'
+  realtime: 'off' | 'connecting' | 'live' | 'error'
+  error?: string
+}
 const STATES: Array<{ name: string; facts: Facts; says: string; old: boolean }> = [
-  { name: 'no signal, the phone’s copy', facts: { online: false, source: 'cache', realtime: 'off' }, says: t.sync.offlineShort, old: true },
-  { name: 'no signal, the server’s boards', facts: { online: false, source: 'server', realtime: 'error' }, says: t.sync.offlineShort, old: true },
-  { name: 'the phone’s copy, the live tournament on its way', facts: { online: true, source: 'cache', realtime: 'off' }, says: t.sync.connecting, old: true },
-  { name: 'a fetch that failed', facts: { online: true, source: 'server', realtime: 'live', error: t.errors.network }, says: t.sync.connecting, old: true },
-  { name: 'the channel joining', facts: { online: true, source: 'server', realtime: 'connecting' }, says: t.sync.connecting, old: false },
-  { name: 'the channel down, the boards polled', facts: { online: true, source: 'server', realtime: 'error' }, says: t.sync.connecting, old: false },
+  {
+    name: 'no signal, the phone’s copy',
+    facts: { online: false, source: 'cache', realtime: 'off' },
+    says: t.sync.offlineShort,
+    old: true,
+  },
+  {
+    name: 'no signal, the server’s boards',
+    facts: { online: false, source: 'server', realtime: 'error' },
+    says: t.sync.offlineShort,
+    old: true,
+  },
+  {
+    name: 'the phone’s copy, the live tournament on its way',
+    facts: { online: true, source: 'cache', realtime: 'off' },
+    says: t.sync.connecting,
+    old: true,
+  },
+  {
+    name: 'a fetch that failed',
+    facts: { online: true, source: 'server', realtime: 'live', error: t.errors.network },
+    says: t.sync.connecting,
+    old: true,
+  },
+  {
+    name: 'the channel joining',
+    facts: { online: true, source: 'server', realtime: 'connecting' },
+    says: t.sync.connecting,
+    old: false,
+  },
+  {
+    name: 'the channel down, the boards polled',
+    facts: { online: true, source: 'server', realtime: 'error' },
+    says: t.sync.connecting,
+    old: false,
+  },
   { name: 'live', facts: { online: true, source: 'server', realtime: 'live' }, says: t.sync.live, old: false },
 ]
 const SCREENS: Array<[string, React.ReactNode]> = [
@@ -54,11 +89,25 @@ const SCREENS: Array<[string, React.ReactNode]> = [
   ['Dinero', <MoneyScreen key="money" />],
   ['Más', <MoreScreen key="more" />],
 ]
-const PATH: Record<string, string> = { 'En vivo': '', Tarjeta: '/tarjeta', Juegos: '/juegos', Dinero: '/dinero', Más: '/mas' }
+const PATH: Record<string, string> = {
+  'En vivo': '',
+  Tarjeta: '/tarjeta',
+  Juegos: '/juegos',
+  Dinero: '/dinero',
+  Más: '/mas',
+}
 
 async function show(facts: Facts, name: string, screen: React.ReactNode) {
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(facts.online)
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, source: facts.source, realtime: facts.realtime, error: facts.error ?? null, updatedAt: Date.now() - 5 * 60_000 })
+  useTournament.setState({
+    tournamentId: 't-real',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    source: facts.source,
+    realtime: facts.realtime,
+    error: facts.error ?? null,
+    updatedAt: Date.now() - 5 * 60_000,
+  })
   render(
     // The app's frame: its banner over every screen, as AppShell renders it.
     <MemoryRouter initialEntries={[`/t/nacho${PATH[name]}`]}>
@@ -67,7 +116,16 @@ async function show(facts: Facts, name: string, screen: React.ReactNode) {
         <Route
           path="/t/:slug"
           element={
-            <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+            <TournamentContext.Provider
+              value={{
+                tournamentId: 't-real',
+                slug: 'nacho',
+                lookup: fx.lookup,
+                me: fx.me,
+                refresh: async () => undefined,
+                leave: async () => undefined,
+              }}
+            >
               <TournamentShell />
             </TournamentContext.Provider>
           }
@@ -105,7 +163,10 @@ describe('every tournament screen says the connection once, in the header (REL-2
         expect(header.textContent).toContain(state.says)
         // Once on the page, and none of the other states' words anywhere.
         expect(times(state.says)).toBe(1)
-        for (const other of [t.sync.offlineShort, t.sync.connecting, t.sync.live, t.sync.refreshing].filter((w) => w !== state.says)) expect(times(other)).toBe(0)
+        for (const other of [t.sync.offlineShort, t.sync.connecting, t.sync.live, t.sync.refreshing].filter(
+          (w) => w !== state.says,
+        ))
+          expect(times(other)).toBe(0)
         // The app's banner stays away from a tournament screen (MOT-17).
         expect(times(t.sync.offline)).toBe(0)
         // The age: the header's line when the boards may be old; else only En vivo's own line gives it.

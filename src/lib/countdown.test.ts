@@ -12,12 +12,18 @@ describe('zonedInstant', () => {
   })
   it('lands right across a change of clocks', () => {
     // Mexico City kept no DST in 2027; New York moves on 14 March 2027.
-    expect(new Date(zonedInstant('2027-03-14', '09:00', 'America/New_York')!).toISOString()).toBe('2027-03-14T13:00:00.000Z')
-    expect(new Date(zonedInstant('2027-03-13', '09:00', 'America/New_York')!).toISOString()).toBe('2027-03-13T14:00:00.000Z')
+    expect(new Date(zonedInstant('2027-03-14', '09:00', 'America/New_York')!).toISOString()).toBe(
+      '2027-03-14T13:00:00.000Z',
+    )
+    expect(new Date(zonedInstant('2027-03-13', '09:00', 'America/New_York')!).toISOString()).toBe(
+      '2027-03-13T14:00:00.000Z',
+    )
   })
   it('refuses a date it can’t read, and an unknown zone reads as UTC', () => {
     expect(zonedInstant('9 de abril', '09:00', MAZ)).toBeNull()
-    expect(new Date(zonedInstant('2027-04-09', '09:00', 'Nowhere/Never')!).toISOString()).toBe('2027-04-09T09:00:00.000Z')
+    expect(new Date(zonedInstant('2027-04-09', '09:00', 'Nowhere/Never')!).toISOString()).toBe(
+      '2027-04-09T09:00:00.000Z',
+    )
   })
 })
 
@@ -30,9 +36,17 @@ describe('untilDay', () => {
     expect(zonedDate(at('2027-04-09T06:00:00Z'), MAZ)).toBe('2027-04-08')
   })
   it('on the day: hours and minutes to the tee time, then started', () => {
-    expect(untilDay('2027-04-09', '09:00', MAZ, at('2027-04-09T13:25:00Z'))).toEqual({ unit: 'today', hours: 2, minutes: 35 })
+    expect(untilDay('2027-04-09', '09:00', MAZ, at('2027-04-09T13:25:00Z'))).toEqual({
+      unit: 'today',
+      hours: 2,
+      minutes: 35,
+    })
     expect(untilDay('2027-04-09', '09:00', MAZ, at('2027-04-09T16:00:00Z'))).toEqual({ unit: 'started' })
-    expect(untilDay('2027-04-09', null, MAZ, at('2027-04-09T13:25:00Z'))).toEqual({ unit: 'today', hours: null, minutes: null })
+    expect(untilDay('2027-04-09', null, MAZ, at('2027-04-09T13:25:00Z'))).toEqual({
+      unit: 'today',
+      hours: null,
+      minutes: null,
+    })
   })
   it('a day gone by has started', () => {
     expect(untilDay('2027-04-09', '09:00', MAZ, at('2027-04-11T13:25:00Z'))).toEqual({ unit: 'started' })

@@ -74,7 +74,11 @@ function ask(tournamentId: string, key: string) {
  * is `fixture:<name>`, as the shell reads it) has no server: its players
  * count as able to get in.
  */
-export function useEntryInfo(tournamentId: string, data: TournamentData | null | undefined, { enabled = true }: { enabled?: boolean } = {}): EntryInfo | null {
+export function useEntryInfo(
+  tournamentId: string,
+  data: TournamentData | null | undefined,
+  { enabled = true }: { enabled?: boolean } = {},
+): EntryInfo | null {
   const { answers, stamp } = useSyncExternalStore(subscribe, read)
   const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const playersKey = data?.playersKey

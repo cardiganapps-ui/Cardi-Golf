@@ -19,7 +19,10 @@ import { TournamentContext } from './tournamentContext'
 import { countdownText, preRoundInfo } from './preRoundInfo'
 import { words } from '../../engine/testing/words'
 
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 const { LiveScreen } = await import('./LiveScreen')
 
 const P = t.live.pre
@@ -32,7 +35,17 @@ function open(fixture: string, edit: (s: Snapshot) => void = () => undefined, ct
   useTournament.setState({ tournamentId: `fixture:${fixture}`, data, loading: false, error: null, realtime: 'off' })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined, ...ctx }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+          ...ctx,
+        }}
+      >
         <LiveScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -63,7 +76,10 @@ describe('En vivo before the first hole (STRAT-10)', () => {
     expect(r.getByText(`viernes, 9 de abril, ${snap.courses[0]!.name}`)).toBeTruthy()
     // p9 plays in group 3, at 09:20: 31 days from 9 March in Mazatlán's calendar.
     expect(r.getByText(P.days(31))).toBeTruthy()
-    const mates = snap.groups.find((g) => g.roundId === 'r1' && g.playerIds.includes('p9'))!.playerIds.filter((id) => id !== 'p9').map((id) => snap.players.find((p) => p.id === id)!.displayName)
+    const mates = snap.groups
+      .find((g) => g.roundId === 'r1' && g.playerIds.includes('p9'))!
+      .playerIds.filter((id) => id !== 'p9')
+      .map((id) => snap.players.find((p) => p.id === id)!.displayName)
     expect(r.getByText(P.groupLine(3, '09:20', 1))).toBeTruthy()
     expect(r.getByText(P.groupWith(mates))).toBeTruthy()
     expect(r.getByText(data.state.core.rounds.r1!.p9!.tee!.name)).toBeTruthy()
@@ -73,7 +89,11 @@ describe('En vivo before the first hole (STRAT-10)', () => {
   it('the handicap opens how it was calculated: from his base to the day', async () => {
     const { data } = open('auction12')
     const pr = data.state.core.rounds.r1!.p9!
-    await act(async () => fireEvent.click(within(block()!).getByRole('button', { name: t.money.howCalculatedOf(`${P.hcp}, ${pr.playingHcp}`) })))
+    await act(async () =>
+      fireEvent.click(
+        within(block()!).getByRole('button', { name: t.money.howCalculatedOf(`${P.hcp}, ${pr.playingHcp}`) }),
+      ),
+    )
     const sheet = screen.getByRole('dialog')
     expect(within(sheet).getByText(words(pr.playingHcpWhy).title)).toBeTruthy()
   })
@@ -85,7 +105,15 @@ describe('En vivo before the first hole (STRAT-10)', () => {
 
   it('nothing owed once paid; no money line in a tournament without money', () => {
     open('minimal4-setup', (s) => {
-      s.payments.push({ id: 'pay1', fromPlayerId: 'p1', toPlayerId: null, amount: 500, kind: 'entry', paid: true, note: null })
+      s.payments.push({
+        id: 'pay1',
+        fromPlayerId: 'p1',
+        toPlayerId: null,
+        amount: 500,
+        kind: 'entry',
+        paid: true,
+        note: null,
+      })
     })
     expect(within(block()!).getByText(P.paid)).toBeTruthy()
     cleanup()
@@ -103,7 +131,10 @@ describe('En vivo before the first hole (STRAT-10)', () => {
     })
     expect(within(block()!).getByText(P.noGroup)).toBeTruthy()
     cleanup()
-    open('calcutta12', () => undefined, { me: { playerId: null, isOrganizer: false, isComite: false, via: null }, spectator: { money: false, url: 'https://polo.example/v/x' } })
+    open('calcutta12', () => undefined, {
+      me: { playerId: null, isOrganizer: false, isComite: false, via: null },
+      spectator: { money: false, url: 'https://polo.example/v/x' },
+    })
     const r = within(block()!)
     expect(r.queryByText(P.group)).toBeNull()
     expect(r.queryByText(P.hcp)).toBeNull()
@@ -112,7 +143,16 @@ describe('En vivo before the first hole (STRAT-10)', () => {
 
   it('goes once a hole is saved, and never shows on a tournament under way', () => {
     open('auction12', (s) => {
-      s.scores.push({ roundId: 'r1', playerId: 'p1', hole: 1, strokes: 4, putts: 2, pickedUp: false, enteredBy: 'p1', updatedAt: null })
+      s.scores.push({
+        roundId: 'r1',
+        playerId: 'p1',
+        hole: 1,
+        strokes: 4,
+        putts: 2,
+        pickedUp: false,
+        enteredBy: 'p1',
+        updatedAt: null,
+      })
     })
     expect(block()).toBeNull()
     cleanup()

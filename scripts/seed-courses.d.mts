@@ -33,9 +33,16 @@ export declare function findInCatalog<C extends CatalogCourse>(
   catalog: C[] | null,
   q: { name: string; place?: string | null; source?: string | null; ext?: string | null },
 ): C | null
-export declare function completeTees(tees: ProviderTee[]): { complete: ProviderTee[]; dropped: Array<{ tee: string; why: string }> }
+export declare function completeTees(tees: ProviderTee[]): {
+  complete: ProviderTee[]
+  dropped: Array<{ tee: string; why: string }>
+}
 export declare function candidates(entry: ListedCourse, hits: ProviderSearchHit[]): ProviderSearchHit[]
-export declare function importPayload(c: ProviderCourse, tees: ProviderTee[], entry: ListedCourse): Record<string, unknown>
+export declare function importPayload(
+  c: ProviderCourse,
+  tees: ProviderTee[],
+  entry: ListedCourse,
+): Record<string, unknown>
 export declare function seed(o: {
   list: ListedCourse[]
   fetch: typeof globalThis.fetch

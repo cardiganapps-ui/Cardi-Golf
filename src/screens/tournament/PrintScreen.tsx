@@ -64,7 +64,14 @@ export function PrintScreen() {
             label={P.whatToPrint}
           />
         )}
-        {!sheet && rounds.length > 1 && <Segmented value={current?.id ?? ''} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />}
+        {!sheet && rounds.length > 1 && (
+          <Segmented
+            value={current?.id ?? ''}
+            options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))}
+            onChange={setRoundId}
+            label={t.common.whichDay}
+          />
+        )}
         <Button variant="primary" size="sm" onClick={() => window.print()}>
           <IconPrint /> {P.print}
         </Button>
@@ -76,19 +83,26 @@ export function PrintScreen() {
         current &&
         groups.map((g) => {
           const order = playOrder(g.startHole, current.holes)
-          const members = g.playerIds.map((pid) => ({ p: byId.get(pid)!, pr: state.core.rounds[current.id]?.[pid] })).filter((m) => m.p)
+          const members = g.playerIds
+            .map((pid) => ({ p: byId.get(pid)!, pr: state.core.rounds[current.id]?.[pid] }))
+            .filter((m) => m.p)
           const ref = members[0]?.pr
           const parOf = (h: number) => ref?.holes.find((x) => x.hole === h)?.par
           const cols = printColumns(order)
           return (
             <section key={g.id} className={styles.card}>
               <header className={styles.head}>
-                {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
+                {snapshot.tournament.logoUrl && (
+                  <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />
+                )}
                 <div className="grow">
                   <h1 className={styles.title}>{snapshot.tournament.name}</h1>
                   <div className={styles.sub}>
                     {t.round.day(current.number)}
-                    {current.date ? `, ${new Date(`${current.date}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}, {t.card.group} {g.number}
+                    {current.date
+                      ? `, ${new Date(`${current.date}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}`
+                      : ''}
+                    , {t.card.group} {g.number}
                     {g.teeTime ? `, ${g.teeTime.slice(0, 5)}` : ''}, {P.startHole(g.startHole)}
                   </div>
                 </div>
@@ -133,15 +147,20 @@ export function PrintScreen() {
                 </thead>
                 <tbody>
                   {members.map(({ p, pr }) => (
-                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr ? handicapText(pr.playingHcp) : '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} cols={cols.map((c) => (c.hole ? (pr?.holes.find((x) => x.hole === c.hole)?.strokesReceived ?? 0) : null))} />
+                    <PlayerRows
+                      key={p.id}
+                      name={p.displayName}
+                      sub={`${t.live.playingHcp} ${pr ? handicapText(pr.playingHcp) : '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`}
+                      cols={cols.map((c) =>
+                        c.hole ? (pr?.holes.find((x) => x.hole === c.hole)?.strokesReceived ?? 0) : null,
+                      )}
+                    />
                   ))}
                 </tbody>
               </table>
               <footer className={styles.foot}>
                 <span>{P.legend}</span>
-                <span>
-                  {P.sign}: ______________________ / ______________________
-                </span>
+                <span>{P.sign}: ______________________ / ______________________</span>
               </footer>
             </section>
           )
@@ -163,9 +182,17 @@ function AuctionSheet({ data }: { data: TournamentData }) {
   const rows = lots.length
     ? lots.map((l) => {
         const sold = l.status === 'sold'
-        return { key: l.id, lot: String(l.lotNumber), player: byId.get(l.playerId), buyer: sold && l.ownerId ? (byId.get(l.ownerId)?.displayName ?? '') : '', price: sold && l.price != null ? formatMoney(l.price, cur) : '' }
+        return {
+          key: l.id,
+          lot: String(l.lotNumber),
+          player: byId.get(l.playerId),
+          buyer: sold && l.ownerId ? (byId.get(l.ownerId)?.displayName ?? '') : '',
+          price: sold && l.price != null ? formatMoney(l.price, cur) : '',
+        }
       })
-    : [...snapshot.players].sort((x, y) => x.sortOrder - y.sortOrder).map((p) => ({ key: p.id, lot: '', player: p, buyer: '', price: '' }))
+    : [...snapshot.players]
+        .sort((x, y) => x.sortOrder - y.sortOrder)
+        .map((p) => ({ key: p.id, lot: '', player: p, buyer: '', price: '' }))
   return (
     <section className={styles.card}>
       <header className={styles.head}>
@@ -175,7 +202,15 @@ function AuctionSheet({ data }: { data: TournamentData }) {
           <div className={styles.sub}>{P.auctionSheet}</div>
         </div>
       </header>
-      <p className={styles.sub}>{P.auctionRules(formatMoney(a.openingBid, cur), formatMoney(a.increment, cur), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct)}</p>
+      <p className={styles.sub}>
+        {P.auctionRules(
+          formatMoney(a.openingBid, cur),
+          formatMoney(a.increment, cur),
+          a.maxPlayersPerOwner,
+          a.selfOwnedCountsTowardMax,
+          a.buybackMaxPct,
+        )}
+      </p>
       <table className={`${styles.table} ${styles.sheet}`}>
         <thead>
           <tr>

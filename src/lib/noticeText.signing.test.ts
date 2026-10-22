@@ -10,7 +10,9 @@ const at = { tournament: 'Sábado con firma', slug: 'sabado' }
 
 describe('a card to sign, by the tournament’s rule', () => {
   it('a marker’s: a teammate’s cards, the same page and title', () => {
-    expect(noticeLine({ kind: 'card_to_sign', data: { ...at, round: 1, group: 2, marker: true }, actor: null })).toEqual({
+    expect(
+      noticeLine({ kind: 'card_to_sign', data: { ...at, round: 1, group: 2, marker: true }, actor: null }),
+    ).toEqual({
       text: 'Firma la tarjeta del día 1 en Sábado con firma',
       to: '/t/sabado/tarjeta?vista=tarjeta',
       title: 'Sábado con firma',
@@ -18,6 +20,8 @@ describe('a card to sign, by the tournament’s rule', () => {
     })
   })
   it('without the flag, the other pair’s, as before', () => {
-    expect(noticeLine({ kind: 'card_to_sign', data: { ...at, round: 1, group: 2 }, actor: null }).body).toBe('Tu grupo terminó el día 1: firma la tarjeta de la otra pareja.')
+    expect(noticeLine({ kind: 'card_to_sign', data: { ...at, round: 1, group: 2 }, actor: null }).body).toBe(
+      'Tu grupo terminó el día 1: firma la tarjeta de la otra pareja.',
+    )
   })
 })

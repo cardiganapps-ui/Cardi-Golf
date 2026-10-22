@@ -21,5 +21,8 @@ export function pushEndpointOk(endpoint: unknown): boolean {
   }
   if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return false
   const host = url.hostname.toLowerCase()
-  return (PUSH_HOSTS as readonly string[]).includes(host) || PUSH_HOST_SUFFIXES.some((s) => host.endsWith(s) && host.length > s.length)
+  return (
+    (PUSH_HOSTS as readonly string[]).includes(host) ||
+    PUSH_HOST_SUFFIXES.some((s) => host.endsWith(s) && host.length > s.length)
+  )
 }

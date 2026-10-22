@@ -28,14 +28,25 @@ export interface DrawnPair {
  * kept and their players removed from the hat. Players in tiers not covered
  * by any rule are paired among themselves as a fallback (kind "?").
  */
-export function drawPairs(players: Player[], pairing: Array<[string, string]>, fixed: DrawnPair[] = [], rng: Rng = Math.random): DrawnPair[] {
+export function drawPairs(
+  players: Player[],
+  pairing: Array<[string, string]>,
+  fixed: DrawnPair[] = [],
+  rng: Rng = Math.random,
+): DrawnPair[] {
   const taken = new Set(fixed.flatMap((p) => [p.player1Id, p.player2Id]))
   const pool = players.filter((p) => !taken.has(p.id))
   const out: DrawnPair[] = [...fixed]
   const used = new Set<string>()
   for (const [a, b] of pairing) {
-    const as = shuffle(pool.filter((p) => p.tier === a), rng)
-    const bs = shuffle(pool.filter((p) => p.tier === b), rng)
+    const as = shuffle(
+      pool.filter((p) => p.tier === a),
+      rng,
+    )
+    const bs = shuffle(
+      pool.filter((p) => p.tier === b),
+      rng,
+    )
     const n = Math.min(as.length, bs.length)
     for (let i = 0; i < n; i++) {
       out.push({ player1Id: as[i]!.id, player2Id: bs[i]!.id, kind: `${a}${b}`, pickedByHonoree: false })
@@ -43,7 +54,10 @@ export function drawPairs(players: Player[], pairing: Array<[string, string]>, f
       used.add(bs[i]!.id)
     }
   }
-  const rest = shuffle(pool.filter((p) => !used.has(p.id)), rng)
+  const rest = shuffle(
+    pool.filter((p) => !used.has(p.id)),
+    rng,
+  )
   for (let i = 0; i + 1 < rest.length; i += 2) {
     out.push({ player1Id: rest[i]!.id, player2Id: rest[i + 1]!.id, kind: '?', pickedByHonoree: false })
   }
@@ -56,7 +70,10 @@ export function drawPairs(players: Player[], pairing: Array<[string, string]>, f
  * order (A with D, then B with C), then any left over; within a kind by id,
  * which the server made at random.
  */
-export function drawOrder<P extends Pick<Pair, 'id' | 'kind' | 'pickedByHonoree'>>(pairs: P[], pairing: Array<[string, string]>): P[] {
+export function drawOrder<P extends Pick<Pair, 'id' | 'kind' | 'pickedByHonoree'>>(
+  pairs: P[],
+  pairing: Array<[string, string]>,
+): P[] {
   const rank = (p: P) => {
     if (p.pickedByHonoree) return -1
     const i = pairing.findIndex(([a, b]) => p.kind === `${a}${b}`)

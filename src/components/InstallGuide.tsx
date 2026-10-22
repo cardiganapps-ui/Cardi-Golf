@@ -13,7 +13,15 @@
 import { useContext, useState } from 'react'
 import { t } from '../i18n/es-MX'
 import { useOutbox } from '../data/outbox'
-import { devicePlatform, installNow, isStandalone, markInstalled, saidInstalled, useInstallOffer, type DevicePlatform } from '../lib/install'
+import {
+  devicePlatform,
+  installNow,
+  isStandalone,
+  markInstalled,
+  saidInstalled,
+  useInstallOffer,
+  type DevicePlatform,
+} from '../lib/install'
 import { onLinkPage } from '../lib/linkPage'
 import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { IconHome, IconShare } from './icons'

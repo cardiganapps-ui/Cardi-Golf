@@ -20,7 +20,9 @@ export class RequestTimeoutError extends Error {
 }
 
 export function timeoutFor(url: string, method: string): number {
-  return /\/storage\/v1\/object\//.test(url) && method !== 'GET' && method !== 'HEAD' ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+  return /\/storage\/v1\/object\//.test(url) && method !== 'GET' && method !== 'HEAD'
+    ? UPLOAD_TIMEOUT_MS
+    : REQUEST_TIMEOUT_MS
 }
 
 /** The order of the requests' outcomes, and the latest answered and the latest lost. */

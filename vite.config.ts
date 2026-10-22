@@ -19,7 +19,10 @@ function gitSha(): string {
   const fromVercel = process.env.VERCEL_GIT_COMMIT_SHA
   if (fromVercel) return fromVercel.slice(0, 7)
   try {
-    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
   } catch {
     return 'local'
   }
@@ -45,9 +48,13 @@ const versionedIcon = <T extends { src: string }>(icon: T) => ({ ...icon, src: v
  * something the policy refuses fails CI instead of production.
  */
 function siteHeaders(): Record<string, string> {
-  const config = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+  const config = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as {
+    headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>
+  }
   const all = config.headers.find((h) => h.source === '/(.*)')
-  return Object.fromEntries((all?.headers ?? []).filter((h) => h.key !== 'Strict-Transport-Security').map((h) => [h.key, h.value]))
+  return Object.fromEntries(
+    (all?.headers ?? []).filter((h) => h.key !== 'Strict-Transport-Security').map((h) => [h.key, h.value]),
+  )
 }
 
 // https://vite.dev/config/
@@ -77,9 +84,17 @@ export default defineConfig({
       transformIndexHtml: {
         order: 'post',
         handler: (_html, ctx) => {
-          const font = Object.keys(ctx.bundle ?? {}).find((file) => /(?:^|\/)archivo-latin-wdth-normal-[\w-]+\.woff2$/.test(file))
+          const font = Object.keys(ctx.bundle ?? {}).find((file) =>
+            /(?:^|\/)archivo-latin-wdth-normal-[\w-]+\.woff2$/.test(file),
+          )
           if (!font) throw new Error('preload-text-font: no Archivo Latin face in the build')
-          return [{ tag: 'link', attrs: { rel: 'preload', href: `/${font}`, as: 'font', type: 'font/woff2', crossorigin: '' }, injectTo: 'head' as const }]
+          return [
+            {
+              tag: 'link',
+              attrs: { rel: 'preload', href: `/${font}`, as: 'font', type: 'font/woff2', crossorigin: '' },
+              injectTo: 'head' as const,
+            },
+          ]
         },
       },
     },
@@ -89,7 +104,11 @@ export default defineConfig({
       transformIndexHtml: () =>
         LAUNCH_SCREENS.map((screen) => ({
           tag: 'link',
-          attrs: { rel: 'apple-touch-startup-image', media: launchImageMedia(screen), href: versioned(launchImagePath(screen)) },
+          attrs: {
+            rel: 'apple-touch-startup-image',
+            media: launchImageMedia(screen),
+            href: versioned(launchImagePath(screen)),
+          },
           injectTo: 'head' as const,
         })),
     },
@@ -104,7 +123,10 @@ export default defineConfig({
         ...APP_MANIFEST,
         categories: [...APP_MANIFEST.categories],
         icons: APP_MANIFEST.icons.map(versionedIcon),
-        shortcuts: APP_MANIFEST.shortcuts.map((shortcut) => ({ ...shortcut, icons: shortcut.icons.map(versionedIcon) })),
+        shortcuts: APP_MANIFEST.shortcuts.map((shortcut) => ({
+          ...shortcut,
+          icons: shortcut.icons.map(versionedIcon),
+        })),
         screenshots: APP_MANIFEST.screenshots.map(versionedIcon),
       },
       workbox: {
@@ -151,7 +173,11 @@ export default defineConfig({
           {
             urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
             handler: 'CacheFirst',
-            options: { cacheName: 'tournament-assets', expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+            options: {
+              cacheName: 'tournament-assets',
+              expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 3600 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
         ],
       },

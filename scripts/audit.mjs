@@ -23,8 +23,17 @@ export function auditVerdict(stdout) {
   } catch {
     return { kind: 'unreachable', reason: stdout.trim().split('\n').pop() || 'npm audit printed nothing' }
   }
-  if (!report || typeof report !== 'object' || report.error || !report.vulnerabilities || typeof report.vulnerabilities !== 'object') {
-    return { kind: 'unreachable', reason: String(report?.message || report?.error?.summary || 'npm audit gave no report') }
+  if (
+    !report ||
+    typeof report !== 'object' ||
+    report.error ||
+    !report.vulnerabilities ||
+    typeof report.vulnerabilities !== 'object'
+  ) {
+    return {
+      kind: 'unreachable',
+      reason: String(report?.message || report?.error?.summary || 'npm audit gave no report'),
+    }
   }
   const findings = []
   for (const [name, v] of Object.entries(report.vulnerabilities)) {
@@ -33,7 +42,9 @@ export function auditVerdict(stdout) {
     findings.push({
       name,
       severity: v.severity,
-      advisories: via.filter((x) => x && typeof x === 'object' && FAILING.has(x.severity)).map((a) => ({ title: String(a.title ?? ''), url: String(a.url ?? '') })),
+      advisories: via
+        .filter((x) => x && typeof x === 'object' && FAILING.has(x.severity))
+        .map((a) => ({ title: String(a.title ?? ''), url: String(a.url ?? '') })),
       through: via.filter((x) => typeof x === 'string'),
     })
   }
@@ -78,5 +89,9 @@ export async function runAudit({ run, sleep, log, tries = 3, waitMs = 15_000 }) 
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const run = () => spawnSync('npm', AUDIT_ARGS, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout ?? ''
-  process.exitCode = await runAudit({ run, sleep: (ms) => new Promise((done) => setTimeout(done, ms)), log: (line) => console.log(line) })
+  process.exitCode = await runAudit({
+    run,
+    sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+    log: (line) => console.log(line),
+  })
 }

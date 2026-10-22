@@ -11,33 +11,44 @@ import { expect, open, test } from './base'
 const MM = 96 / 25.4
 const PAGE = { width: Math.round(11 * 96 - 20 * MM), height: Math.round(8.5 * 96 - 20 * MM) }
 
-test('one group to a landscape page, with Ida, Vuelta and Total, rows of 12 mm, ink on white (VIS-25)', async ({ page }) => {
+test('one group to a landscape page, with Ida, Vuelta and Total, rows of 12 mm, ink on white (VIS-25)', async ({
+  page,
+}) => {
   await page.setViewportSize(PAGE)
   await open(page, '/t/_/full12-live/imprimir')
   await page.emulateMedia({ media: 'print' })
   const cards = page.locator('section[class*="_card_"]')
   const n = await cards.count()
   expect(n, 'one card per group').toBeGreaterThanOrEqual(3)
-  const report = await cards.evaluateAll((els, mm) =>
-    els.map((el) => {
-      const r = el.getBoundingClientRect()
-      const heads = Array.from(el.querySelectorAll('thead tr:first-child th')).map((th) => th.textContent!.trim())
-      const scoreRows = Array.from(el.querySelectorAll('tr[class*="_player_"]')).map((tr) => tr.getBoundingClientRect().height / mm)
-      const names = Array.from(el.querySelectorAll('tr[class*="_player_"] td:first-child')).map((td) => {
-        const sub = td.querySelector('[class*="_playerSub_"]')!
-        const lh = parseFloat(getComputedStyle(sub).lineHeight) || parseFloat(getComputedStyle(sub).fontSize) * 1.3
-        return { subLines: Math.round(sub.getBoundingClientRect().height / lh), name: td.querySelector('strong')!.getBoundingClientRect().height }
-      })
-      const dots = Array.from(el.querySelectorAll('[class*="_dots_"]')).map((d) => parseFloat(getComputedStyle(d).fontSize))
-      const fills = Array.from(el.querySelectorAll('*'))
-        .map((x) => getComputedStyle(x).backgroundColor)
-        .filter((c) => c !== 'rgba(0, 0, 0, 0)' && c !== 'rgb(255, 255, 255)')
-      const greys = Array.from(el.querySelectorAll('td, th, span, strong'))
-        .map((x) => getComputedStyle(x).color)
-        .filter((c) => !/^rgb\(27, 33, 29\)$/.test(c))
-      return { width: r.width, height: r.height, heads, scoreRows, names, dots, fills, greys }
-    }),
-  MM)
+  const report = await cards.evaluateAll(
+    (els, mm) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect()
+        const heads = Array.from(el.querySelectorAll('thead tr:first-child th')).map((th) => th.textContent.trim())
+        const scoreRows = Array.from(el.querySelectorAll('tr[class*="_player_"]')).map(
+          (tr) => tr.getBoundingClientRect().height / mm,
+        )
+        const names = Array.from(el.querySelectorAll('tr[class*="_player_"] td:first-child')).map((td) => {
+          const sub = td.querySelector('[class*="_playerSub_"]')!
+          const lh = parseFloat(getComputedStyle(sub).lineHeight) || parseFloat(getComputedStyle(sub).fontSize) * 1.3
+          return {
+            subLines: Math.round(sub.getBoundingClientRect().height / lh),
+            name: td.querySelector('strong')!.getBoundingClientRect().height,
+          }
+        })
+        const dots = Array.from(el.querySelectorAll('[class*="_dots_"]')).map((d) =>
+          parseFloat(getComputedStyle(d).fontSize),
+        )
+        const fills = Array.from(el.querySelectorAll('*'))
+          .map((x) => getComputedStyle(x).backgroundColor)
+          .filter((c) => c !== 'rgba(0, 0, 0, 0)' && c !== 'rgb(255, 255, 255)')
+        const greys = Array.from(el.querySelectorAll('td, th, span, strong'))
+          .map((x) => getComputedStyle(x).color)
+          .filter((c) => !/^rgb\(27, 33, 29\)$/.test(c))
+        return { width: r.width, height: r.height, heads, scoreRows, names, dots, fills, greys }
+      }),
+    MM,
+  )
   for (const c of report) {
     expect(c.heads).toEqual(expect.arrayContaining(['Ida', 'Vuelta', 'Total']))
     expect(c.heads.indexOf('Ida')).toBeLessThan(c.heads.indexOf('Total'))

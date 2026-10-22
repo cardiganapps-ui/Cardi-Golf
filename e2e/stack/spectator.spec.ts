@@ -18,9 +18,13 @@ import { boardAfter, boardRows, expect, openCard, PHONE, saveHole, test, typeHol
 const POLL_MS = 20_000
 
 /** Every amount in pesos the page shows. */
-const pesos = (page: import('@playwright/test').Page) => page.evaluate(() => document.body.innerText.match(/\$\s?[\d,.]+/g) ?? [])
+const pesos = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => document.body.innerText.match(/\$\s?[\d,.]+/g) ?? [])
 
-test('a link to watch: no session, the boards «Sin dinero», a hole a phone saved at the next ask, and switched off at the next one', async ({ browser, join }) => {
+test('a link to watch: no session, the boards «Sin dinero», a hole a phone saved at the next ask, and switched off at the next one', async ({
+  browser,
+  join,
+}) => {
   test.setTimeout(180_000)
   // The Comité's link, as save_spectator_link makes it (the Comité's card and the function are tested on their own).
   const token = sql<string>(`insert into public.spectator_links (tournament_id, token, money)
@@ -50,7 +54,10 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
   viewer.on('websocket', () => sockets++)
   await viewer.goto(`/v/${token}`)
   await expect(viewer.getByText(t.spectator.note)).toBeVisible({ timeout: 30_000 })
-  await expect(viewer.getByRole('navigation', { name: t.common.sections }).getByRole('link')).toHaveText([t.nav.live, t.nav.games])
+  await expect(viewer.getByRole('navigation', { name: t.common.sections }).getByRole('link')).toHaveText([
+    t.nav.live,
+    t.nav.games,
+  ])
 
   // Ana's phone saves hole 1 for her foursome.
   const ana = await join(SLUGS.spectator, 'Ana')
@@ -58,7 +65,11 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
   await typeHole(ana.page, 1, HOLE_1)
   await saveHole(ana.page, 1)
   await expect
-    .poll(() => sql<number>(`select count(*)::int from public.scores s join public.tournaments t on t.id = s.tournament_id where t.slug = ${lit(SLUGS.spectator)} and s.hole = 1`))
+    .poll(() =>
+      sql<number>(
+        `select count(*)::int from public.scores s join public.tournaments t on t.id = s.tournament_id where t.slug = ${lit(SLUGS.spectator)} and s.hole = 1`,
+      ),
+    )
     .toBe(4)
   const savedAt = Date.now()
 
@@ -73,14 +84,21 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
       { timeout: POLL_MS + 10_000, intervals: [500] },
     )
     .toBe(true)
-  console.log(`[e2e-stack] link to watch: hole 1 saved → shown on the link in ${Date.now() - savedAt} ms (asks every ${POLL_MS} ms)`)
+  console.log(
+    `[e2e-stack] link to watch: hole 1 saved → shown on the link in ${Date.now() - savedAt} ms (asks every ${POLL_MS} ms)`,
+  )
   expect(await pesos(viewer), 'a link «Sin dinero» shows no peso').toEqual([])
   // It keeps nothing of its own on the phone: no outbox database, no key in storage (no telemetry device id or queue).
-  const kept = await viewer.evaluate(async () => ({ databases: (await indexedDB.databases()).map((d) => d.name), keys: Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf')) }))
+  const kept = await viewer.evaluate(async () => ({
+    databases: (await indexedDB.databases()).map((d) => d.name),
+    keys: Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf')),
+  }))
   expect(kept).toEqual({ databases: [], keys: [] })
 
   // «Apagar»: the next ask (coming back to the page asks at once) says so, and the boards go.
-  const off = sql<number>(`with d as (delete from public.spectator_links where tournament_id = (select id from public.tournaments where slug = ${lit(SLUGS.spectator)}) returning 1) select count(*)::int from d`)
+  const off = sql<number>(
+    `with d as (delete from public.spectator_links where tournament_id = (select id from public.tournaments where slug = ${lit(SLUGS.spectator)}) returning 1) select count(*)::int from d`,
+  )
   expect(off).toBe(1)
   await viewer.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
   await expect(viewer.getByText(t.spectator.gone)).toBeVisible({ timeout: 15_000 })
@@ -90,8 +108,14 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
   expect(auth, 'requests to /auth/v1/ (a sign-in, a new anonymous user)').toBe(0)
   expect(sockets, 'live channels opened').toBe(0)
   expect(rest).toContain('rpc/spectator_board')
-  expect(bearers.every(([bearer, key]) => !!key && bearer === `Bearer ${key}`), 'every request as anon').toBe(true)
-  expect([...new Set(rest)].filter((p) => p !== 'rpc/spectator_board' && p !== 'rpc/app_flags'), 'other requests').toEqual([])
+  expect(
+    bearers.every(([bearer, key]) => !!key && bearer === `Bearer ${key}`),
+    'every request as anon',
+  ).toBe(true)
+  expect(
+    [...new Set(rest)].filter((p) => p !== 'rpc/spectator_board' && p !== 'rpc/app_flags'),
+    'other requests',
+  ).toEqual([])
   expect(errors).toEqual([])
   await context.close()
 })

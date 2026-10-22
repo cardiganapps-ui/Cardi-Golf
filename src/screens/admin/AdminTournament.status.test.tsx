@@ -10,7 +10,10 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ updateTournament: vi.fn(async () => undefined) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), updateTournament: api.updateTournament }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  updateTournament: api.updateTournament,
+}))
 vi.mock('./entryInfo', () => ({ useEntryInfo: () => null }))
 
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -25,10 +28,26 @@ const A = t.admin.tournament
 function mount(fixture: string) {
   const fx = getFixture(fixture)!
   const snap: Snapshot = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), reload: async () => undefined, loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: snap.tournament.id,
+    data: dataFromSnapshot(snap),
+    reload: async () => undefined,
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: snap.tournament.slug,
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminTournament />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -47,7 +66,9 @@ describe('Torneo › Estado: the state is a choice that asks first (A11Y-17)', (
     await act(async () => fireEvent.click(screen.getByRole('tab', { name: A.tabs.status })))
     const group = screen.getByRole('radiogroup', { name: A.status })
     const radios = Array.from(group.querySelectorAll('[role="radio"]')) as HTMLElement[]
-    expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent)).toEqual([t.status[snap.tournament.status as keyof typeof t.status]])
+    expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent)).toEqual([
+      t.status[snap.tournament.status],
+    ])
     expect(radios.filter((r) => r.tabIndex === 0)).toHaveLength(1)
   })
 
@@ -69,7 +90,13 @@ describe('Torneo › Estado: the state is a choice that asks first (A11Y-17)', (
     await act(async () => fireEvent.click(screen.getByRole('radio', { name: t.status.setup })))
     expect(api.updateTournament).not.toHaveBeenCalled()
     const dialog = await screen.findByRole('dialog')
-    await act(async () => fireEvent.click(Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent !== t.common.cancel && b.className.includes('primary'))!))
+    await act(async () =>
+      fireEvent.click(
+        Array.from(dialog.querySelectorAll('button')).find(
+          (b) => b.textContent !== t.common.cancel && b.className.includes('primary'),
+        )!,
+      ),
+    )
     expect(api.updateTournament).toHaveBeenCalledWith(expect.any(String), { status: 'setup' })
   })
 })

@@ -17,7 +17,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import spec from '../../data/testing/cases/serverRules.json'
 
 const server = vi.hoisted(() => ({ refusal: null as Error | null, published: 0 }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), openRejectedWrites: vi.fn(async () => 0) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  openRejectedWrites: vi.fn(async () => 0),
+}))
 vi.mock('../../data/publish', () => ({
   publishFromStore: vi.fn(async () => {
     if (server.refusal) throw server.refusal
@@ -48,14 +51,24 @@ describe('the server refuses with a sentence people read (0029)', () => {
     const all = refusals.map(([, m]) => m)
     expect(all.some((m) => m.startsWith(C.serverRefusedFinish))).toBe(true)
     expect(all.some((m) => m.startsWith(C.serverRefusedPublish))).toBe(true)
-    for (const piece of [C.missingRounds([2]), C.openRounds([1]), C.rejectedWrites(1)]) expect(all.some((m) => m.includes(piece))).toBe(true)
+    for (const piece of [C.missingRounds([2]), C.openRounds([1]), C.rejectedWrites(1)])
+      expect(all.some((m) => m.includes(piece))).toBe(true)
     // Several days and several items, as the phone's sheet words them.
     expect(all.some((m) => m.includes(C.openRounds([1, 2])) && m.includes(C.missingRounds([3])))).toBe(true)
   })
 
   it.each(refusals)('%s: shown as the server says it', (_name, message) => {
     expect(humanError(new ApiError(message, '22023'))).toBe(message)
-    expect(humanError(new PostgrestError({ message, code: '22023', details: null as unknown as string, hint: null as unknown as string }))).toBe(message)
+    expect(
+      humanError(
+        new PostgrestError({
+          message,
+          code: '22023',
+          details: null as unknown as string,
+          hint: null as unknown as string,
+        }),
+      ),
+    ).toBe(message)
   })
 })
 
@@ -73,7 +86,16 @@ function mount() {
   useTournament.setState({ tournamentId: snap.tournament.id, data, loading: false, error: null, realtime: 'off' })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { ...fx.me, isOrganizer: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: snap.tournament.slug,
+          lookup: fx.lookup,
+          me: { ...fx.me, isOrganizer: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminData />
         <Toaster />
       </TournamentContext.Provider>
@@ -100,8 +122,10 @@ afterEach(() => {
 })
 
 describe('«Publicar resultados» when the server holds what the phone did not see (0029)', () => {
-  it('a day another phone reopened: the phone\'s gate lets it through, the server refuses, and the screen says what and where', async () => {
-    const message = refusals.find(([name]) => name.includes('publishing a Terminado tournament with a day reopened'))![1]
+  it("a day another phone reopened: the phone's gate lets it through, the server refuses, and the screen says what and where", async () => {
+    const message = refusals.find(([name]) =>
+      name.includes('publishing a Terminado tournament with a day reopened'),
+    )![1]
     server.refusal = new ApiError(message, '22023')
     mount()
     await publish()

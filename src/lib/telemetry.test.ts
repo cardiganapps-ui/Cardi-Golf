@@ -31,7 +31,9 @@ describe('telemetry', () => {
   })
 
   it('takes addresses, tokens and ids out of a message, and ids out of a route', () => {
-    expect(tel.scrub('falló ana@polo.test eyJa.eyJb.c d1b2c3d4-0000-4000-8000-00000000000a')).toBe('falló [correo] [token] [id]')
+    expect(tel.scrub('falló ana@polo.test eyJa.eyJb.c d1b2c3d4-0000-4000-8000-00000000000a')).toBe(
+      'falló [correo] [token] [id]',
+    )
     expect(tel.routeOf('/t/nacho-2027/tarjeta')).toBe('/t/:slug/tarjeta')
     expect(tel.routeOf('/p/diego/vs')).toBe('/p/:handle/vs')
     expect(tel.routeOf('/c/unirme/ABC123')).toBe('/c/unirme/:code')
@@ -53,7 +55,7 @@ describe('telemetry', () => {
     expect(tel.queuedEvents().filter((x) => x.kind === 'error')).toHaveLength(30)
   })
 
-  it('keeps the text of the engine\'s own errors only: any other message may carry a name', () => {
+  it("keeps the text of the engine's own errors only: any other message may carry a name", () => {
     class UserError extends Error {
       name = 'UserError'
     }
@@ -62,7 +64,12 @@ describe('telemetry', () => {
     tel.reportError('unhandledrejection', 'Mateo')
     // A JSON SyntaxError quotes its input («"Diego Ará"... is not valid JSON»).
     tel.reportError('unhandledrejection', new SyntaxError('Unexpected token D, "Diego Ará"... is not valid JSON'))
-    expect(tel.queuedEvents().map((e) => e.data?.message)).toEqual(['UserError', 'Error (42501)', 'no es un Error (string)', 'SyntaxError'])
+    expect(tel.queuedEvents().map((e) => e.data?.message)).toEqual([
+      'UserError',
+      'Error (42501)',
+      'no es un Error (string)',
+      'SyntaxError',
+    ])
   })
 
   it('counts a step once per tournament when asked', () => {
@@ -74,7 +81,12 @@ describe('telemetry', () => {
     tel.step('hole_saved')
     tel.step('hole_saved')
     const steps = tel.queuedEvents().filter((e) => e.kind === 'funnel')
-    expect(steps.map((e) => `${e.name}@${e.tournamentId}`)).toEqual(['tournament_open@t1', 'tournament_open@t2', 'hole_saved@t2', 'hole_saved@t2'])
+    expect(steps.map((e) => `${e.name}@${e.tournamentId}`)).toEqual([
+      'tournament_open@t1',
+      'tournament_open@t2',
+      'hole_saved@t2',
+      'hole_saved@t2',
+    ])
   })
 
   describe('sync times', () => {
@@ -98,7 +110,7 @@ describe('telemetry', () => {
       expect(tel.clockOffset()).toBe(1000)
     })
 
-    it('another phone\'s change: how long after the server stored it, by the server\'s clock', () => {
+    it("another phone's change: how long after the server stored it, by the server's clock", () => {
       vi.useFakeTimers()
       const server = Date.parse('2026-10-12T10:00:00.000Z')
       tel.notePushed(['r1:mine:3'])
@@ -109,7 +121,7 @@ describe('telemetry', () => {
       expect(tel.queuedEvents().at(-1)).toMatchObject({ name: 'apply_lag', value: 500, data: { corrected: true } })
     })
 
-    it('leaves out this phone\'s own echo, a stampless row, and a lag from a phone that slept', () => {
+    it("leaves out this phone's own echo, a stampless row, and a lag from a phone that slept", () => {
       vi.useFakeTimers()
       const now = Date.parse('2026-10-12T10:00:00.000Z')
       vi.setSystemTime(now)
@@ -129,7 +141,9 @@ describe('telemetry', () => {
 
   it('sends in batches of 50, and keeps what a failure did not send', async () => {
     for (let i = 0; i < 120; i++) tel.track('funnel', 'x')
-    rpc.mockResolvedValueOnce({ data: 50, error: null }).mockResolvedValueOnce({ data: null, error: { code: 'PGRST301', message: 'JWT expired' } })
+    rpc
+      .mockResolvedValueOnce({ data: 50, error: null })
+      .mockResolvedValueOnce({ data: null, error: { code: 'PGRST301', message: 'JWT expired' } })
     await tel.flush()
     expect(rpc).toHaveBeenCalledTimes(2)
     expect(rpc.mock.calls[0]![0]).toBe('log_client_events')
@@ -233,11 +247,24 @@ describe('telemetry', () => {
   })
 
   it('a heartbeat carries the build, the tournament and what the outbox holds', async () => {
-    tel.setDeviceSnapshot(() => ({ pending: 3, rejected: 1, oldestPendingAt: '2026-10-12T04:00:00.000Z', lastSyncAt: null }))
+    tel.setDeviceSnapshot(() => ({
+      pending: 3,
+      rejected: 1,
+      oldestPendingAt: '2026-10-12T04:00:00.000Z',
+      lastSyncAt: null,
+    }))
     tel.setTelemetryTournament('t9')
     await tel.heartbeat()
     const call = rpc.mock.calls.find((c) => c[0] === 'heartbeat')!
-    expect(call[1]).toMatchObject({ p: { tournamentId: 't9', pending: 3, rejected: 1, oldestPendingAt: '2026-10-12T04:00:00.000Z', deviceId: tel.getDeviceId() } })
+    expect(call[1]).toMatchObject({
+      p: {
+        tournamentId: 't9',
+        pending: 3,
+        rejected: 1,
+        oldestPendingAt: '2026-10-12T04:00:00.000Z',
+        deviceId: tel.getDeviceId(),
+      },
+    })
     expect(typeof (call[1] as { p: { build: unknown } }).p.build).toBe('number')
   })
 })

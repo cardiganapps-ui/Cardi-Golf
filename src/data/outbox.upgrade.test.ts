@@ -13,14 +13,32 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const legacy = (hole: number, createdAt: number) => ({
   key: `score:r1:p1:${hole}`,
   kind: 'score',
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: 'p1', hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  payload: {
+    round_id: 'r1',
+    player_id: 'p1',
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'x',
+  },
   attempts: 2,
   createdAt,
 })
@@ -45,7 +63,7 @@ describe('outbox upgrade from v2', () => {
     _outboxTest.setPush(async () => {
       throw new Error('TypeError: Failed to fetch')
     })
-    await _outboxTest.enqueue({ ...legacy(9, 4000), kind: 'score' as const, attempts: 0 } as Parameters<typeof _outboxTest.enqueue>[0])
+    await _outboxTest.enqueue({ ...legacy(9, 4000), kind: 'score' as const, attempts: 0 })
     expect(_outboxTest.queue().at(-1)!.key).toBe('score:r1:p1:9')
   })
 })

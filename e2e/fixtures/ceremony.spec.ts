@@ -31,7 +31,11 @@ const BOARD_ACCENT = 'rgb(242, 194, 48)'
 
 test.use({ isMobile: false, hasTouch: false, deviceScaleFactor: 1 })
 
-const px = (page: Page, selector: string) => page.locator(selector).first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+const px = (page: Page, selector: string) =>
+  page
+    .locator(selector)
+    .first()
+    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
 
 /** The views on the stage: the start, a step, the end (two while one leaves). */
@@ -97,7 +101,11 @@ async function fits(page: Page) {
       over: body.scrollHeight - body.clientHeight,
       wide: document.documentElement.scrollWidth - innerWidth,
       spill: a && r ? Math.max(0, a.top - r.top, r.bottom - a.bottom) : 0,
-      cut: box ? Array.from(box.querySelectorAll('[class*="_listRow_"]')).filter((row) => row.getBoundingClientRect().bottom > bottom + 0.5).length : 0,
+      cut: box
+        ? Array.from(box.querySelectorAll('[class*="_listRow_"]')).filter(
+            (row) => row.getBoundingClientRect().bottom > bottom + 0.5,
+          ).length
+        : 0,
       zoom: area?.style.getPropertyValue('--fit') || '1',
       broken: broken.map((n) => n.textContent),
       outside: outside.map((n) => n.textContent),
@@ -119,7 +127,10 @@ async function beat(page: Page, key: string) {
 }
 
 for (const [w, h] of ROOMS) {
-  test(`${w}×${h}: sized for the room, in the event's accent, every step fits, run from a clicker`, async ({ page, pageErrors }) => {
+  test(`${w}×${h}: sized for the room, in the event's accent, every step fits, run from a clicker`, async ({
+    page,
+    pageErrors,
+  }) => {
     test.setTimeout(120_000)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: w, height: h })
@@ -127,7 +138,10 @@ for (const [w, h] of ROOMS) {
     // The same tournament on the TV: its name and its accent.
     await page.goto(`/t/_/${FIXTURE}/tv`, { waitUntil: 'networkidle' })
     const eventName = (await page.locator('h1').first().textContent())!.trim()
-    const accent = await page.locator('[data-accent]').first().evaluate((el) => getComputedStyle(el).getPropertyValue('--accent').trim())
+    const accent = await page
+      .locator('[data-accent]')
+      .first()
+      .evaluate((el) => getComputedStyle(el).getPropertyValue('--accent').trim())
 
     await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
     expect(await px(page, 'h1')).toBeGreaterThanOrEqual(4 * vh)
@@ -160,8 +174,11 @@ for (const [w, h] of ROOMS) {
       expect(fit.zoom, `${label}: drawn smaller`).toBe('1')
       expect(now.range, `${label}: paged`).toBe('')
       expect(await px(page, 'h2'), `${label}: title`).toBeGreaterThanOrEqual(6 * vh)
-      const lines = await page.locator('[class*="_winnerLine_"]').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
-      for (const size of lines) expect(size, `${label}: a winner's name`).toBeGreaterThanOrEqual((lines.length > 1 ? 6.5 : 9.5) * vh)
+      const lines = await page
+        .locator('[class*="_winnerLine_"]')
+        .evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
+      for (const size of lines)
+        expect(size, `${label}: a winner's name`).toBeGreaterThanOrEqual((lines.length > 1 ? 6.5 : 9.5) * vh)
       if (now.title === C.steps.place(1)) {
         champion = true
         // The champion's card is the screen, not a fifth of it.
@@ -171,7 +188,9 @@ for (const [w, h] of ROOMS) {
         })
         expect(area).toBeGreaterThanOrEqual(0.3)
         // Points and prize on the leader's yellow plates.
-        const plates = await page.locator('[class*="_plate"]').evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
+        const plates = await page
+          .locator('[class*="_plate"]')
+          .evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
         expect(plates.length).toBeGreaterThanOrEqual(1)
         for (const bg of plates) expect(bg).toBe(BOARD_ACCENT)
       }
@@ -198,7 +217,10 @@ for (const [w, h] of ROOMS) {
 }
 
 for (const [w, h] of ROOMS) {
-  test(`${w}×${h}, a field of 60: every step fits, and a long list pages to the screen instead of scrolling`, async ({ page, pageErrors }) => {
+  test(`${w}×${h}, a field of 60: every step fits, and a long list pages to the screen instead of scrolling`, async ({
+    page,
+    pageErrors,
+  }) => {
     test.setTimeout(180_000)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: w, height: h })
@@ -220,7 +242,9 @@ for (const [w, h] of ROOMS) {
       // The money summary, page by page: «1–24 de 60», «25–48 de 60»… each row once, none skipped.
       const [, from, to, of] = /(\d+)–(\d+) de (\d+)/.exec(now.range) ?? []
       expect(Number(from), label).toBe(lastShown + 1)
-      expect(await page.locator('[class*="_listBox_"] [class*="_listRow_"]').count(), label).toBe(Number(to) - Number(from) + 1)
+      expect(await page.locator('[class*="_listBox_"] [class*="_listRow_"]').count(), label).toBe(
+        Number(to) - Number(from) + 1,
+      )
       lastShown = Number(to)
       field = Number(of)
       pages++
@@ -242,7 +266,9 @@ for (const [w, h] of ROOMS) {
   })
 }
 
-test('the champion is revealed in beats: the name, then the figures counting up, then the trophy (MOT-23)', async ({ page }) => {
+test('the champion is revealed in beats: the name, then the figures counting up, then the trophy (MOT-23)', async ({
+  page,
+}) => {
   test.setTimeout(120_000)
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
@@ -270,7 +296,7 @@ test('the champion is revealed in beats: the name, then the figures counting up,
     }
     return out
   })
-  const final = samples[samples.length - 1]!
+  const final = samples[samples.length - 1]
   const points = parseInt(final.figure, 10)
   expect(points).toBeGreaterThan(0)
   expect(final.name).toBe(1)
@@ -291,10 +317,18 @@ test('the champion is revealed in beats: the name, then the figures counting up,
   // Every figure ends on exactly what a screen reader says and reduced motion shows: the value itself, never a
   // rounded one (a match-play 1.5 ended on «2 puntos»).
   const figures = () =>
-    page.locator('[class*="_champion_"] [class*="_plate"]').evaluateAll((plates) =>
-      plates.map((p) => [p.querySelector('[aria-hidden="true"]')?.textContent, p.querySelector('[data-final]')?.textContent, p.querySelector('.sr-only')?.textContent]),
-    )
-  await expect.poll(async () => (await figures()).every(([shown, final, spoken]) => shown === final && final === spoken)).toBe(true)
+    page
+      .locator('[class*="_champion_"] [class*="_plate"]')
+      .evaluateAll((plates) =>
+        plates.map((p) => [
+          p.querySelector('[aria-hidden="true"]')?.textContent,
+          p.querySelector('[data-final]')?.textContent,
+          p.querySelector('.sr-only')?.textContent,
+        ]),
+      )
+  await expect
+    .poll(async () => (await figures()).every(([shown, final, spoken]) => shown === final && final === spoken))
+    .toBe(true)
   expect((await figures()).length).toBeGreaterThan(0)
 })
 
@@ -323,7 +357,9 @@ test('between steps the stage is never blank, and nothing bounces past its place
   const frames = await samples
   for (const f of frames) expect(f.shown, 'a frame with no view on the stage').toBeGreaterThanOrEqual(0.3)
   // The coming view rises to its place and stops there (the old spring overshot it by 3.6 px).
-  const ys = frames.flatMap((f) => f.titles.map((title, i) => ({ title, y: f.ys[i]! })).filter((v) => v.title && v.title !== from)).map((v) => v.y)
+  const ys = frames
+    .flatMap((f) => f.titles.map((title, i) => ({ title, y: f.ys[i] })).filter((v) => v.title && v.title !== from))
+    .map((v) => v.y)
   expect(ys.length).toBeGreaterThan(0)
   for (const y of ys) expect(y).toBeGreaterThanOrEqual(-0.5)
 })
@@ -355,7 +391,10 @@ test('the focus ring shows on the board green, and stays graphite on paper (A11Y
  */
 for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
   for (const fixture of ['friends8', 'auction12', 'bracket8']) {
-    test(`${fixture} at ${w}×${h}: ties and long names fit, and no name breaks inside a word`, async ({ page, pageErrors }) => {
+    test(`${fixture} at ${w}×${h}: ties and long names fit, and no name breaks inside a word`, async ({
+      page,
+      pageErrors,
+    }) => {
       test.setTimeout(120_000)
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.setViewportSize({ width: w, height: h })
@@ -377,7 +416,10 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
         // A short last word («Gael H.») is held to its name by a no-break space: never «Gael / H.» across two lines.
         const lines = await page.locator('[data-area] [data-name]').allTextContents()
         initials += lines.join(' ').match(/\u00A0\S{1,3}(?=$| |,)/g)?.length ?? 0
-        expect(lines.filter((l) => / \p{Lu}\.(?=$| |,)/u.test(l)), `${label}: an initial after a breaking space`).toEqual([])
+        expect(
+          lines.filter((l) => / \p{Lu}\.(?=$| |,)/u.test(l)),
+          `${label}: an initial after a breaking space`,
+        ).toEqual([])
         // Drawn smaller to fit, but still read from across the room: a name's letters at least 4 % of the screen.
         const names = await page.locator('[data-name]').evaluateAll((els) =>
           els.map((el) => {
@@ -415,7 +457,11 @@ test('reduced motion: no frame of a reveal reaches past the stage', async ({ pag
     w.__over = []
     const tick = () => {
       const body = document.querySelector('[class*="_body_"]')
-      if (body) w.__over.push({ title: document.querySelector('[class*="_step_"] h2')?.textContent ?? '', over: body.scrollHeight - body.clientHeight })
+      if (body)
+        w.__over.push({
+          title: document.querySelector('[class*="_step_"] h2')?.textContent ?? '',
+          over: body.scrollHeight - body.clientHeight,
+        })
       requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
@@ -426,10 +472,14 @@ test('reduced motion: no frame of a reveal reaches past the stage', async ({ pag
     if (now.title === C.done) break
     if (!now.waiting) revealed++
     // A few frames after each beat, so the reveal's first frames are sampled.
-    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
+    await page.evaluate(
+      () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))),
+    )
   }
   expect(revealed).toBeGreaterThan(5)
-  const frames = await page.evaluate(() => (window as unknown as { __over: Array<{ title: string; over: number }> }).__over)
+  const frames = await page.evaluate(
+    () => (window as unknown as { __over: Array<{ title: string; over: number }> }).__over,
+  )
   expect(frames.length).toBeGreaterThan(revealed)
   expect(frames.filter((f) => f.over > 1)).toEqual([])
 })
@@ -461,7 +511,7 @@ test('3840×2160: a lone winner keeps a big name, and a tie of four stays full s
           return range.getBoundingClientRect().height
         }),
       )
-      if (names.length === 1) expect(names[0]!, `${label}: a lone winner's name`).toBeGreaterThanOrEqual(5.5 * vh)
+      if (names.length === 1) expect(names[0], `${label}: a lone winner's name`).toBeGreaterThanOrEqual(5.5 * vh)
       if (names.length > 1 && names.length <= 4) {
         tie = true
         await expect(page.locator('[data-area] [data-compact]'), `${label}: a tie of ${names.length}`).toHaveCount(0)
@@ -479,8 +529,15 @@ test('3840×2160: a lone winner keeps a big name, and a tie of four stays full s
  * left it 31 px outside its card at 1024×768 (124 px at 2560×1440): every
  * winner's name is set to it here, and the step must fit again.
  */
-for (const [w, h] of [[1024, 768], [1920, 1080], [2560, 1440]] as Array<[number, number]>) {
-  test(`${w}×${h}: a one-word name wider than its card is drawn smaller, inside the card, never broken`, async ({ page, pageErrors }) => {
+for (const [w, h] of [
+  [1024, 768],
+  [1920, 1080],
+  [2560, 1440],
+] as Array<[number, number]>) {
+  test(`${w}×${h}: a one-word name wider than its card is drawn smaller, inside the card, never broken`, async ({
+    page,
+    pageErrors,
+  }) => {
     test.setTimeout(180_000)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: w, height: h })
@@ -499,7 +556,9 @@ for (const [w, h] of [[1024, 768], [1920, 1080], [2560, 1440]] as Array<[number,
       // A new size makes the screen fit the step again, to the name now in it (a step is at most 1400 px wide, so the height changes).
       await page.setViewportSize({ width: w, height: tried % 2 ? h - 50 : h })
       const label = `step «${now.title}»`
-      await expect.poll(async () => (await fits(page)).outside, { message: `${label}: a name outside its card`, timeout: 5000 }).toEqual([])
+      await expect
+        .poll(async () => (await fits(page)).outside, { message: `${label}: a name outside its card`, timeout: 5000 })
+        .toEqual([])
       const fit = await fits(page)
       expect(fit.broken, `${label}: a name broken inside a word`).toEqual([])
       expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
@@ -519,7 +578,10 @@ for (const [w, h] of [[1024, 768], [1920, 1080], [2560, 1440]] as Array<[number,
  * 9 px names.
  */
 for (const fixture of ['full12-finished', 'large60', 'auction12', 'friends8']) {
-  test(`393×852, ${fixture}: every step can be scrolled through from its title, and no tie is drawn below three quarters`, async ({ page, pageErrors }) => {
+  test(`393×852, ${fixture}: every step can be scrolled through from its title, and no tie is drawn below three quarters`, async ({
+    page,
+    pageErrors,
+  }) => {
     test.setTimeout(180_000)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 393, height: 852 })
@@ -537,8 +599,17 @@ for (const fixture of ['full12-finished', 'large60', 'auction12', 'friends8']) {
         const area = document.querySelector<HTMLElement>('[data-area]')!
         const reveal = area.querySelector<HTMLElement>('[data-reveal]')!
         const title = area.parentElement!.querySelector('h2')!.getBoundingClientRect()
-        const zooms = [area.style.getPropertyValue('--fit'), reveal.querySelector<HTMLElement>('[data-winners]')?.style.getPropertyValue('--wfit') ?? ''].filter(Boolean).map(Number)
-        return { above: area.getBoundingClientRect().top - reveal.getBoundingClientRect().top, overTitle: title.bottom - reveal.getBoundingClientRect().top, zoom: Math.min(1, ...zooms) }
+        const zooms = [
+          area.style.getPropertyValue('--fit'),
+          reveal.querySelector<HTMLElement>('[data-winners]')?.style.getPropertyValue('--wfit') ?? '',
+        ]
+          .filter(Boolean)
+          .map(Number)
+        return {
+          above: area.getBoundingClientRect().top - reveal.getBoundingClientRect().top,
+          overTitle: title.bottom - reveal.getBoundingClientRect().top,
+          zoom: Math.min(1, ...zooms),
+        }
       })
       expect(at.above, `${label}: the reveal starts above where scrolling reaches (px)`).toBeLessThanOrEqual(1)
       expect(at.overTitle, `${label}: the reveal covers its title (px)`).toBeLessThanOrEqual(1)
@@ -572,7 +643,9 @@ test('a tie set as a compact list goes back to full size once the screen has roo
   await page.setViewportSize({ width: 1024, height: 718 })
   await expect(compact).toHaveCount(1)
   // The names back as they were, and the room changes: it is fitted again, at full size (the compact list used to stay).
-  await page.locator('[data-area] [data-name]').evaluateAll((els, was) => els.forEach((el, i) => (el.firstChild!.textContent = was[i]!)), names)
+  await page
+    .locator('[data-area] [data-name]')
+    .evaluateAll((els, was) => els.forEach((el, i) => (el.firstChild!.textContent = was[i]!)), names)
   await page.setViewportSize({ width: 1024, height: 768 })
   await expect(compact).toHaveCount(0)
   expect((await fits(page)).outside).toEqual([])
@@ -614,7 +687,9 @@ test('a second press right after a reveal pages the list, never leaving the step
   }
 })
 
-test('after a mouse click on «Siguiente», Space reveals the next step instead of skipping it (UX-18)', async ({ page }) => {
+test('after a mouse click on «Siguiente», Space reveals the next step instead of skipping it (UX-18)', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
@@ -686,7 +761,9 @@ test('the auction console keeps the yellow focus ring on its board-green lot car
   const card = page.locator('[class*="_lotCard_"]').first()
   await expect(card).toBeVisible()
   // The card's ring is the board's yellow, not the paper's graphite.
-  expect(await card.evaluate((el) => getComputedStyle(el).getPropertyValue('--focus-ring').trim())).toBe(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--board-accent').trim()))
+  expect(await card.evaluate((el) => getComputedStyle(el).getPropertyValue('--focus-ring').trim())).toBe(
+    await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--board-accent').trim()),
+  )
   const control = card.locator('button, a').first()
   if (await control.count()) {
     await control.focus()

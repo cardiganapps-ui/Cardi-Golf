@@ -41,7 +41,12 @@ describe('the feed replays saves in time order, whatever form a stamp takes', ()
   })
 
   it('a stamp’s sort key is its one form, kept once worked out, and no stamp sorts first', () => {
-    for (const v of ['2027-04-09 12:00:01.5+00', '2027-04-09T12:00:01.500000+00:00', '2027-04-09T12:00:01.5Z', 'no es una hora']) {
+    for (const v of [
+      '2027-04-09 12:00:01.5+00',
+      '2027-04-09T12:00:01.500000+00:00',
+      '2027-04-09T12:00:01.5Z',
+      'no es una hora',
+    ]) {
       expect(timeKey(v)).toBe(canonicalTime(v))
       expect(timeKey(v)).toBe(timeKey(v))
     }
@@ -51,13 +56,15 @@ describe('the feed replays saves in time order, whatever form a stamp takes', ()
   })
 })
 
-const holesOf = (core: ReturnType<typeof computeCore>): HoleResult[] => core.roundIds.flatMap((rid) => Object.values(core.rounds[rid] ?? {}).flatMap((pr) => pr.holes))
+const holesOf = (core: ReturnType<typeof computeCore>): HoleResult[] =>
+  core.roundIds.flatMap((rid) => Object.values(core.rounds[rid] ?? {}).flatMap((pr) => pr.holes))
 const figure = (h: HoleResult) => [h.par, h.strokeIndex, h.strokesReceived, h.gross, h.pickedUp, h.played].join('|')
 
 describe('a hole’s explanation is built once per figure (PERF-14)', () => {
   it.each(FIXTURE_NAMES)('%s: every hole says how its points came out, from its own figures', (name) => {
     const snap = getFixture(name)!.snapshot
-    for (const h of holesOf(computeCore(snap, parseSettings(snap.tournament.settings)))) expect(h.why).toEqual(holeWhy(h))
+    for (const h of holesOf(computeCore(snap, parseSettings(snap.tournament.settings))))
+      expect(h.why).toEqual(holeWhy(h))
   })
 
   it('holes that read the same share one, frozen, so no reader can change another’s', () => {
@@ -99,9 +106,14 @@ describe('the moment of the tournament keeps its rule', () => {
     // Hole 1 is SI 7, hole 2 SI 11 (both par 4). p1 and p2 eagle hole 2; p3, who gets a stroke on hole 1,
     // makes a net eagle there: the same points, on the harder hole, so it wins.
     snap.scores.push(score('r1', 'p1', 2, 2), score('r1', 'p2', 2, 2), score('r1', 'p3', 1, 3))
-    const points = (pid: string, hole: number) => computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).core.rounds.r1![pid]!.holes[hole - 1]!.points
+    const points = (pid: string, hole: number) =>
+      computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).core.rounds.r1![pid]!.holes[hole - 1]!.points
     expect(points('p3', 1)).toBe(points('p1', 2))
-    expect(computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).stats.moment).toMatchObject({ playerId: 'p3', hole: 1, strokeIndex: 7 })
+    expect(computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).stats.moment).toMatchObject({
+      playerId: 'p3',
+      hole: 1,
+      strokeIndex: 7,
+    })
     // Same hole, same figure: the first card read keeps it.
     snap.scores.pop()
     expect(computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).stats.moment).toMatchObject({ playerId: 'p1', hole: 2 })

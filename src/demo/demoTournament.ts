@@ -14,7 +14,19 @@
 import { ACCENTS } from '../design/accents'
 import { FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
 import type { TournamentSettings } from '../engine/settings/schema'
-import type { CalcuttaBid, CalcuttaLot, Course, Group, Hole, Pair, Payment, Player, Round, Score, Snapshot } from '../engine/types'
+import type {
+  CalcuttaBid,
+  CalcuttaLot,
+  Course,
+  Group,
+  Hole,
+  Pair,
+  Payment,
+  Player,
+  Round,
+  Score,
+  Snapshot,
+} from '../engine/types'
 
 /** Its store id: the store treats `fixture:` boards as in memory (no fetch, nothing kept on the phone). */
 export const DEMO_ID = 'fixture:demo'
@@ -38,8 +50,46 @@ const HCPS = [5, 8, 11, 13, 14, 16, 18, 20, 22, 25, 28, 32]
 
 /** Two invented par-72 cards: [par, stroke index] per hole. */
 const CARDS: Array<Array<[number, number]>> = [
-  [[4, 7], [4, 11], [3, 17], [5, 3], [4, 1], [4, 13], [3, 15], [4, 9], [5, 5], [4, 8], [3, 18], [4, 2], [5, 12], [4, 4], [4, 10], [3, 16], [4, 6], [5, 14]],
-  [[5, 9], [4, 3], [4, 13], [3, 17], [4, 1], [4, 7], [3, 15], [5, 11], [4, 5], [4, 6], [4, 14], [3, 18], [5, 2], [4, 10], [4, 4], [3, 16], [4, 12], [5, 8]],
+  [
+    [4, 7],
+    [4, 11],
+    [3, 17],
+    [5, 3],
+    [4, 1],
+    [4, 13],
+    [3, 15],
+    [4, 9],
+    [5, 5],
+    [4, 8],
+    [3, 18],
+    [4, 2],
+    [5, 12],
+    [4, 4],
+    [4, 10],
+    [3, 16],
+    [4, 6],
+    [5, 14],
+  ],
+  [
+    [5, 9],
+    [4, 3],
+    [4, 13],
+    [3, 17],
+    [4, 1],
+    [4, 7],
+    [3, 15],
+    [5, 11],
+    [4, 5],
+    [4, 6],
+    [4, 14],
+    [3, 18],
+    [5, 2],
+    [4, 10],
+    [4, 4],
+    [3, 16],
+    [4, 12],
+    [5, 8],
+  ],
 ]
 
 /** The same small LCG the engine's own tests use: the same tournament every time. */
@@ -53,7 +103,21 @@ function rng(seed: number) {
 
 function course(n: number, name: string): Course {
   const holes: Hole[] = CARDS[n]!.map(([par, si], i) => ({ number: i + 1, par, strokeIndex: si, yards: null }))
-  return { id: `demo-c${n + 1}`, name, tees: [{ id: `demo-t${n + 1}`, courseId: `demo-c${n + 1}`, name: 'Azules', color: 'blue', rating: null, slope: null, holes }] }
+  return {
+    id: `demo-c${n + 1}`,
+    name,
+    tees: [
+      {
+        id: `demo-t${n + 1}`,
+        courseId: `demo-c${n + 1}`,
+        name: 'Azules',
+        color: 'blue',
+        rating: null,
+        slope: null,
+        holes,
+      },
+    ],
+  }
 }
 
 /** A day's holes for every player: near net par, a few birdies and blow-ups, at most one three-putt per group and hole. */
@@ -76,7 +140,16 @@ function playDay(snap: Snapshot, round: Round, seed: number, at: number): Score[
         let putts = roll < 0.1 && !threePutt ? 3 : roll < 0.35 ? 1 : 2
         if (putts === 3) threePutt = true
         putts = Math.min(putts, strokes - 1)
-        out.push({ roundId: round.id, playerId: pid, hole: h.number, strokes, putts, pickedUp: false, enteredBy: pid, updatedAt: new Date((stamp += 37_000)).toISOString() })
+        out.push({
+          roundId: round.id,
+          playerId: pid,
+          hole: h.number,
+          strokes,
+          putts,
+          pickedUp: false,
+          enteredBy: pid,
+          updatedAt: new Date((stamp += 37_000)).toISOString(),
+        })
       }
     }
   }
@@ -101,17 +174,35 @@ function auction(snap: Snapshot): { lots: CalcuttaLot[]; bids: CalcuttaBid[] } {
       if (!eligible.length) break
       amount += 250 * (1 + Math.floor(rnd() * 3))
       bidder = eligible[Math.floor(rnd() * eligible.length)]!
-      bids.push({ id: `demo-bid${bids.length + 1}`, lotId, bidderId: bidder, amount, createdAt: new Date(Date.UTC(2027, 2, 4, 3, i, b * 20)).toISOString() })
+      bids.push({
+        id: `demo-bid${bids.length + 1}`,
+        lotId,
+        bidderId: bidder,
+        amount,
+        createdAt: new Date(Date.UTC(2027, 2, 4, 3, i, b * 20)).toISOString(),
+      })
     }
     holdings.set(bidder, (holdings.get(bidder) ?? 0) + 1)
-    lots.push({ id: lotId, playerId: pid, lotNumber: i + 1, status: 'sold', price: amount, ownerId: bidder, soldAt: new Date(Date.UTC(2027, 2, 4, 3, i, 59)).toISOString() })
+    lots.push({
+      id: lotId,
+      playerId: pid,
+      lotNumber: i + 1,
+      status: 'sold',
+      price: amount,
+      ownerId: bidder,
+      soldAt: new Date(Date.UTC(2027, 2, 4, 3, i, 59)).toISOString(),
+    })
   })
   return { lots, bids }
 }
 
 /** The example, built fresh: a finished tournament, everything paid in but the prizes. */
 export function demoSnapshot(): Snapshot {
-  const settings: TournamentSettings = { ...FIRST_TOURNAMENT_SETTINGS, labels: { ...FIRST_TOURNAMENT_SETTINGS.labels, honoree: 'Homenajeado', trophy: 'el trofeo' }, timezone: 'America/Mexico_City' }
+  const settings: TournamentSettings = {
+    ...FIRST_TOURNAMENT_SETTINGS,
+    labels: { ...FIRST_TOURNAMENT_SETTINGS.labels, honoree: 'Homenajeado', trophy: 'el trofeo' },
+    timezone: 'America/Mexico_City',
+  }
   const players: Player[] = NAMES.map(([fullName, displayName], i) => ({
     id: `demo-p${i + 1}`,
     fullName,
@@ -138,16 +229,39 @@ export function demoSnapshot(): Snapshot {
     [5, 8, 'BC', 'Bandera Roja'],
     [6, 9, 'BC', 'Los Tres Putts'],
   ]
-  const pairs: Pair[] = pairing.map(([a, b, kind, name], i) => ({ id: `demo-pair${i + 1}`, name, player1Id: p(a), player2Id: p(b), kind, pickedByHonoree: false, drawnAt: '2027-03-04T04:00:00.000Z' }))
+  const pairs: Pair[] = pairing.map(([a, b, kind, name], i) => ({
+    id: `demo-pair${i + 1}`,
+    name,
+    player1Id: p(a),
+    player2Id: p(b),
+    kind,
+    pickedByHonoree: false,
+    drawnAt: '2027-03-04T04:00:00.000Z',
+  }))
   const rounds: Round[] = [
     { id: 'demo-r1', number: 1, date: '2027-03-05', courseId: 'demo-c1', holes: 18, status: 'finished' },
     { id: 'demo-r2', number: 2, date: '2027-03-06', courseId: 'demo-c2', holes: 18, status: 'finished' },
   ]
   const day = (rid: string, sets: number[][]): Group[] =>
-    sets.map((ids, i) => ({ id: `${rid}g${i + 1}`, roundId: rid, number: i + 1, teeTime: `08:${String(i * 10).padStart(2, '0')}`, startHole: 1, playerIds: ids.map(p) }))
+    sets.map((ids, i) => ({
+      id: `${rid}g${i + 1}`,
+      roundId: rid,
+      number: i + 1,
+      teeTime: `08:${String(i * 10).padStart(2, '0')}`,
+      startHole: 1,
+      playerIds: ids.map(p),
+    }))
   const groups = [
-    ...day('demo-r1', [[1, 10, 4, 7], [2, 11, 5, 8], [3, 12, 6, 9]]),
-    ...day('demo-r2', [[2, 11, 6, 9], [3, 12, 4, 7], [1, 10, 5, 8]]),
+    ...day('demo-r1', [
+      [1, 10, 4, 7],
+      [2, 11, 5, 8],
+      [3, 12, 6, 9],
+    ]),
+    ...day('demo-r2', [
+      [2, 11, 6, 9],
+      [3, 12, 4, 7],
+      [1, 10, 5, 8],
+    ]),
   ]
   const snap: Snapshot = {
     tournament: {
@@ -184,20 +298,52 @@ export function demoSnapshot(): Snapshot {
     gameResults: [],
     moneyAdjustments: [],
   }
-  snap.scores = [...playDay(snap, rounds[0]!, 11, Date.UTC(2027, 2, 5, 14, 0)), ...playDay(snap, rounds[1]!, 12, Date.UTC(2027, 2, 6, 14, 0))]
+  snap.scores = [
+    ...playDay(snap, rounds[0]!, 11, Date.UTC(2027, 2, 5, 14, 0)),
+    ...playDay(snap, rounds[1]!, 12, Date.UTC(2027, 2, 6, 14, 0)),
+  ]
   // Every card signed by the other pair of its group (the tarjeta cruzada).
-  for (const r of rounds) for (const pair of pairs) snap.cardSignatures.push({ roundId: r.id, pairId: pair.id, signedBy: pair.player1Id, signedAt: `${r.date}T20:00:00.000Z` })
+  for (const r of rounds)
+    for (const pair of pairs)
+      snap.cardSignatures.push({
+        roundId: r.id,
+        pairId: pair.id,
+        signedBy: pair.player1Id,
+        signedAt: `${r.date}T20:00:00.000Z`,
+      })
   const { lots, bids } = auction(snap)
   snap.calcuttaLots = lots
   snap.calcuttaBids = bids
   // Two players bought part of themselves back from their buyers, one of them paid already.
   const back = lots.filter((l) => l.ownerId !== l.playerId).slice(0, 2)
-  snap.calcuttaBuybacks = back.map((l, i) => ({ lotId: l.id, pct: i === 0 ? 50 : 25, amount: Math.round(((l.price ?? 0) * (i === 0 ? 50 : 25)) / 100), paid: i === 0 }))
+  snap.calcuttaBuybacks = back.map((l, i) => ({
+    lotId: l.id,
+    pct: i === 0 ? 50 : 25,
+    amount: Math.round(((l.price ?? 0) * (i === 0 ? 50 : 25)) / 100),
+    paid: i === 0,
+  }))
   // «Se paga antes de dormir»: every entry and every purchase went to the bank on Calcutta night.
-  const payments: Payment[] = players.map((pl) => ({ id: `demo-entry-${pl.id}`, fromPlayerId: pl.id, toPlayerId: null, amount: settings.entryFee, kind: 'entry', paid: true, note: null }))
+  const payments: Payment[] = players.map((pl) => ({
+    id: `demo-entry-${pl.id}`,
+    fromPlayerId: pl.id,
+    toPlayerId: null,
+    amount: settings.entryFee,
+    kind: 'entry',
+    paid: true,
+    note: null,
+  }))
   const spent = new Map<string, number>()
   for (const l of lots) spent.set(l.ownerId!, (spent.get(l.ownerId!) ?? 0) + (l.price ?? 0))
-  for (const [owner, amount] of spent) payments.push({ id: `demo-calcutta-${owner}`, fromPlayerId: owner, toPlayerId: null, amount, kind: 'calcutta', paid: true, note: null })
+  for (const [owner, amount] of spent)
+    payments.push({
+      id: `demo-calcutta-${owner}`,
+      fromPlayerId: owner,
+      toPlayerId: null,
+      amount,
+      kind: 'calcutta',
+      paid: true,
+      note: null,
+    })
   snap.payments = payments
   return snap
 }

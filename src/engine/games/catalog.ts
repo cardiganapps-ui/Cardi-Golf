@@ -29,7 +29,14 @@ export interface GameEntry {
   create: (id: string) => GameConfig
 }
 
-const m = (over: Partial<GameMoney>): GameMoney => ({ source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100], ...over })
+const m = (over: Partial<GameMoney>): GameMoney => ({
+  source: 'none',
+  buyIn: 0,
+  amount: 0,
+  stake: 0,
+  split: [100],
+  ...over,
+})
 const base = { enabled: true, rounds: 'all' as const, entrants: 'all' as const }
 
 export const MODULE_ENTRIES: ModuleEntry[] = [
@@ -47,28 +54,56 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'skins',
     type: 'skins',
     category: 'hole',
-    create: (id) => ({ ...base, id, type: 'skins', label: 'Skins', options: { basis: 'net', carryOver: true }, money: m({ source: 'side', buyIn: 200 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'skins',
+      label: 'Skins',
+      options: { basis: 'net', carryOver: true },
+      money: m({ source: 'side', buyIn: 200 }),
+    }),
   },
   {
     kind: 'game',
     key: 'birdies',
     type: 'eventPot',
     category: 'hole',
-    create: (id) => ({ ...base, id, type: 'eventPot', label: 'Birdies', options: { event: 'birdie', basis: 'gross' }, money: m({ source: 'direct', stake: 50 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'eventPot',
+      label: 'Birdies',
+      options: { event: 'birdie', basis: 'gross' },
+      money: m({ source: 'direct', stake: 50 }),
+    }),
   },
   {
     kind: 'game',
     key: 'threePutts',
     type: 'eventPot',
     category: 'hole',
-    create: (id) => ({ ...base, id, type: 'eventPot', label: 'Tres putts', options: { event: 'threePutt', basis: 'gross' }, money: m({ source: 'direct', stake: 20 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'eventPot',
+      label: 'Tres putts',
+      options: { event: 'threePutt', basis: 'gross' },
+      money: m({ source: 'direct', stake: 20 }),
+    }),
   },
   {
     kind: 'game',
     key: 'lowNet',
     type: 'lowScore',
     category: 'round',
-    create: (id) => ({ ...base, id, type: 'lowScore', label: 'Low neto', options: { basis: 'net', scope: 'perRound' }, money: m({ source: 'side', buyIn: 100, split: [100] }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'lowScore',
+      label: 'Low neto',
+      options: { basis: 'net', scope: 'perRound' },
+      money: m({ source: 'side', buyIn: 100, split: [100] }),
+    }),
   },
   {
     kind: 'game',
@@ -76,48 +111,96 @@ export const GAME_ENTRIES: GameEntry[] = [
     type: 'match',
     category: 'matches',
     later: true,
-    create: (id) => ({ ...base, id, type: 'match', label: 'Nassau', options: { format: 'nassau', basis: 'net', pairScoring: 'bestBall', pressAt: 2, maxPresses: 1, matches: [] }, money: m({ source: 'direct', stake: 100 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'match',
+      label: 'Nassau',
+      options: { format: 'nassau', basis: 'net', pairScoring: 'bestBall', pressAt: 2, maxPresses: 1, matches: [] },
+      money: m({ source: 'direct', stake: 100 }),
+    }),
   },
   {
     kind: 'game',
     key: 'closest',
     type: 'contest',
     category: 'specials',
-    create: (id) => ({ ...base, id, type: 'contest', label: 'Más cerca del hoyo', options: { kind: 'closest', holes: 'par3' }, money: m({ source: 'side', buyIn: 100 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'contest',
+      label: 'Más cerca del hoyo',
+      options: { kind: 'closest', holes: 'par3' },
+      money: m({ source: 'side', buyIn: 100 }),
+    }),
   },
   {
     kind: 'game',
     key: 'longDrive',
     type: 'contest',
     category: 'specials',
-    create: (id) => ({ ...base, id, type: 'contest', label: 'Drive más largo', options: { kind: 'longDrive', holes: [18] }, money: m({ source: 'direct', stake: 50 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'contest',
+      label: 'Drive más largo',
+      options: { kind: 'longDrive', holes: [18] },
+      money: m({ source: 'direct', stake: 50 }),
+    }),
   },
   {
     kind: 'game',
     key: 'greenies',
     type: 'contest',
     category: 'specials',
-    create: (id) => ({ ...base, id, type: 'contest', label: 'Greenies', options: { kind: 'greenie', holes: 'par3' }, money: m({ source: 'direct', stake: 20 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'contest',
+      label: 'Greenies',
+      options: { kind: 'greenie', holes: 'par3' },
+      money: m({ source: 'direct', stake: 20 }),
+    }),
   },
   {
     kind: 'game',
     key: 'custom',
     type: 'custom',
     category: 'free',
-    create: (id) => ({ ...base, id, type: 'custom', label: 'Apuesta libre', options: { description: '' }, money: m({ source: 'direct', stake: 100 }) }),
+    create: (id) => ({
+      ...base,
+      id,
+      type: 'custom',
+      label: 'Apuesta libre',
+      options: { description: '' },
+      money: m({ source: 'direct', stake: 100 }),
+    }),
   },
 ]
 
 /** Which catalog entry an instance belongs to (for grouping on screen). */
 export function entryOf(g: GameConfig): GameEntry {
-  if (g.type === 'eventPot') return GAME_ENTRIES.find((e) => e.key === (g.options.event === 'threePutt' ? 'threePutts' : 'birdies'))!
-  if (g.type === 'contest') return GAME_ENTRIES.find((e) => e.key === (g.options.kind === 'longDrive' ? 'longDrive' : g.options.kind === 'greenie' || g.options.kind === 'sandy' ? 'greenies' : 'closest'))!
+  if (g.type === 'eventPot')
+    return GAME_ENTRIES.find((e) => e.key === (g.options.event === 'threePutt' ? 'threePutts' : 'birdies'))!
+  if (g.type === 'contest')
+    return GAME_ENTRIES.find(
+      (e) =>
+        e.key ===
+        (g.options.kind === 'longDrive'
+          ? 'longDrive'
+          : g.options.kind === 'greenie' || g.options.kind === 'sandy'
+            ? 'greenies'
+            : 'closest'),
+    )!
   return GAME_ENTRIES.find((e) => e.type === g.type)!
 }
 
 /** A short unique id for a new instance ("skins", "skins-2"...). */
 export function newGameId(existing: GameConfig[], key: string): string {
-  const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)
+  const slug = key
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 24)
   const ids = new Set(existing.map((g) => g.id))
   if (!ids.has(slug)) return slug
   for (let i = 2; ; i++) if (!ids.has(`${slug}-${i}`)) return `${slug}-${i}`

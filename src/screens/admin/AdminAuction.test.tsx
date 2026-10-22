@@ -27,14 +27,20 @@ const api = vi.hoisted(() => ({
   updateTournament: vi.fn(async () => undefined),
 }))
 vi.mock('../../data/api', () => api)
-vi.mock('../tournament/tournamentContext', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
+vi.mock('../tournament/tournamentContext', () => ({
+  useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }),
+}))
 
 const { AdminAuction } = await import('./AdminAuction')
 const A = t.auction
 
 function mount() {
   const fx = getFixture('auction12')!
-  useTournament.setState({ tournamentId: 'fx-auction', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined } as never)
+  useTournament.setState({
+    tournamentId: 'fx-auction',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    reload: async () => undefined,
+  } as never)
   render(
     <MemoryRouter>
       <AdminAuction />
@@ -77,11 +83,21 @@ describe('Calcutta console at a loud dinner (UX-13)', () => {
     expect(api.sellLot).not.toHaveBeenCalled()
     const ask = screen.getByRole('dialog', { name: A.hammerTitle })
     const price = formatMoney(open.currentBid?.amount ?? 250, 'MXN')
-    expect(within(ask).getByText(leader === open.playerId ? A.hammerSelf(name(open.playerId), price) : A.hammerBody(name(open.playerId), name(leader), price))).toBeTruthy()
+    expect(
+      within(ask).getByText(
+        leader === open.playerId
+          ? A.hammerSelf(name(open.playerId), price)
+          : A.hammerBody(name(open.playerId), name(leader), price),
+      ),
+    ).toBeTruthy()
     fireEvent.click(within(ask).getByRole('button', { name: t.common.cancel }))
     expect(api.sellLot).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: A.sold }))
-    await act(async () => fireEvent.click(within(screen.getByRole('dialog', { name: A.hammerTitle })).getByRole('button', { name: A.sold })))
+    await act(async () =>
+      fireEvent.click(
+        within(screen.getByRole('dialog', { name: A.hammerTitle })).getByRole('button', { name: A.sold }),
+      ),
+    )
     expect(api.sellLot).toHaveBeenCalledWith(open.lotId, leader, open.currentBid?.amount ?? 250)
   })
 
@@ -96,7 +112,11 @@ describe('Calcutta console at a loud dinner (UX-13)', () => {
     const fx = getFixture('auction12')!
     const snap = structuredClone(fx.snapshot)
     for (const l of snap.calcuttaLots) if (l.status === 'open') l.status = 'pending'
-    useTournament.setState({ tournamentId: 'fx-auction', data: dataFromSnapshot(snap), reload: async () => undefined } as never)
+    useTournament.setState({
+      tournamentId: 'fx-auction',
+      data: dataFromSnapshot(snap),
+      reload: async () => undefined,
+    } as never)
     render(
       <MemoryRouter>
         <AdminAuction />
@@ -115,7 +135,11 @@ describe('a custom bid goes up in the increment (MONEY-19)', () => {
   /** The console with its toasts, a bidder picked who is not on top, and the bid standing on the open lot. */
   function ready() {
     const fx = getFixture('auction12')!
-    useTournament.setState({ tournamentId: 'fx-auction', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined } as never)
+    useTournament.setState({
+      tournamentId: 'fx-auction',
+      data: dataFromSnapshot(structuredClone(fx.snapshot)),
+      reload: async () => undefined,
+    } as never)
     render(
       <MemoryRouter>
         <AdminAuction />
@@ -144,7 +168,11 @@ describe('a custom bid goes up in the increment (MONEY-19)', () => {
     const { standing } = ready()
     await custom(standing + 850)
     expect(api.placeBid).not.toHaveBeenCalled()
-    expect(screen.getByText(A.offStep(formatMoney(250, 'MXN'), [formatMoney(standing + 750, 'MXN'), formatMoney(standing + 1000, 'MXN')]))).toBeTruthy()
+    expect(
+      screen.getByText(
+        A.offStep(formatMoney(250, 'MXN'), [formatMoney(standing + 750, 'MXN'), formatMoney(standing + 1000, 'MXN')]),
+      ),
+    ).toBeTruthy()
   })
 
   it('on the step, the bid goes as typed', async () => {

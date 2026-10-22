@@ -19,7 +19,12 @@
  */
 import type { Msg } from '../messages'
 import { GAME_TYPES } from './games'
-import { LEGACY_SETTINGS_ALIASES, normalizeLegacySettings, TournamentSettingsSchema, type TournamentSettings } from './schema'
+import {
+  LEGACY_SETTINGS_ALIASES,
+  normalizeLegacySettings,
+  TournamentSettingsSchema,
+  type TournamentSettings,
+} from './schema'
 import { SETTINGS_SPEC, type SettingsSpec } from './spec'
 
 export interface UnknownGame {
@@ -84,7 +89,9 @@ export function unknownSettingsKeys(raw: unknown, spec: SettingsSpec = SETTINGS_
     if (!one || one === 's' || !('o' in one)) return []
     shape = one.o
   } else shape = spec.o
-  return Object.keys(raw).flatMap((k) => (Object.hasOwn(shape, k) ? unknownSettingsKeys(raw[k], shape[k]!, at(k)) : raw[k] == null ? [] : [at(k)]))
+  return Object.keys(raw).flatMap((k) =>
+    Object.hasOwn(shape, k) ? unknownSettingsKeys(raw[k], shape[k], at(k)) : raw[k] == null ? [] : [at(k)],
+  )
 }
 
 /** A legacy key left beside its new name (`prizes.matrimonios` with `prizes.pairs`): the new one is read, the old one is no newer build's. */

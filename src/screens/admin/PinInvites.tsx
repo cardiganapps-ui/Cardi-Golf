@@ -28,18 +28,37 @@ import styles from './PinInvites.module.css'
 const N = t.admin.players.pins
 
 /** The message for one player: his invite, and his PIN when the Comité has it on screen. */
-function inviteMessage(player: Pick<Player, 'id' | 'displayName'>, tournament: string, slug: string, pin: string | null): string {
+function inviteMessage(
+  player: Pick<Player, 'id' | 'displayName'>,
+  tournament: string,
+  slug: string,
+  pin: string | null,
+): string {
   return N.invitation(player.displayName, tournament, inviteUrl(window.location.origin, slug, player.id), pin)
 }
 
 /** A player's invite, in his PIN sheet: the link to copy, and the message to send. */
-export function InviteBlock({ player, tournament, slug, pin }: { player: Player; tournament: string; slug: string; pin: string | null }) {
+export function InviteBlock({
+  player,
+  tournament,
+  slug,
+  pin,
+}: {
+  player: Player
+  tournament: string
+  slug: string
+  pin: string | null
+}) {
   return (
     <section className="stack" aria-label={N.invite}>
       <span className="label">{N.invite}</span>
       <p className={a.help}>{N.inviteHint}</p>
       <div className={a.chipRow}>
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => void shareToWhatsApp(inviteMessage(player, tournament, slug, pin))}>
+        <button
+          className="btn btn--primary btn--sm"
+          type="button"
+          onClick={() => void shareToWhatsApp(inviteMessage(player, tournament, slug, pin))}
+        >
           {N.whatsapp}
         </button>
         <CopyButton text={inviteUrl(window.location.origin, slug, player.id)} label={N.copyLink} />
@@ -49,7 +68,19 @@ export function InviteBlock({ player, tournament, slug, pin }: { player: Player;
 }
 
 /** The section above the roster: how many still need a PIN, «Generar PINs», and the list of the PINs just made. */
-export function PinTools({ players, pins, tournament, slug, onSaved }: { players: Player[]; pins: Set<string>; tournament: string; slug: string; onSaved: (ids: string[]) => void }) {
+export function PinTools({
+  players,
+  pins,
+  tournament,
+  slug,
+  onSaved,
+}: {
+  players: Player[]
+  pins: Set<string>
+  tournament: string
+  slug: string
+  onSaved: (ids: string[]) => void
+}) {
   const missing = players.filter((p) => !pins.has(p.id))
   const [ask, setAsk] = useState(false)
   const [progress, setProgress] = useState<{ done: number; of: number } | null>(null)
@@ -116,7 +147,12 @@ export function PinTools({ players, pins, tournament, slug, onSaved }: { players
                   <span className={a.rowTitle}>{player.fullName}</span>
                 </span>
                 <span className={styles.pin}>{pin}</span>
-                <button className={`btn btn--ghost btn--sm ${styles.noPrint}`} type="button" aria-label={N.whatsappTo(player.displayName)} onClick={() => void shareToWhatsApp(inviteMessage(player, tournament, slug, pin))}>
+                <button
+                  className={`btn btn--ghost btn--sm ${styles.noPrint}`}
+                  type="button"
+                  aria-label={N.whatsappTo(player.displayName)}
+                  onClick={() => void shareToWhatsApp(inviteMessage(player, tournament, slug, pin))}
+                >
                   {N.send}
                 </button>
               </div>

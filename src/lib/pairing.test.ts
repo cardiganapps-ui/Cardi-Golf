@@ -31,7 +31,8 @@ describe('pairing', () => {
     expect(pairs.filter((p) => p.kind === 'AD')).toHaveLength(3)
     expect(pairs.filter((p) => p.kind === 'BC')).toHaveLength(3)
     const tier = (id: string) => snap.players.find((p) => p.id === id)!.tier
-    for (const p of pairs) expect([tier(p.player1Id), tier(p.player2Id)].sort().join('')).toBe(p.kind === 'AD' ? 'AD' : 'BC')
+    for (const p of pairs)
+      expect([tier(p.player1Id), tier(p.player2Id)].sort().join('')).toBe(p.kind === 'AD' ? 'AD' : 'BC')
   })
 
   it('keeps the honoree pick and draws the rest', () => {
@@ -42,7 +43,7 @@ describe('pairing', () => {
     expect(new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id])).size).toBe(12)
   })
 
-  it('reveals a saved draw the same way on every screen: the honoree\'s pick, then each kind in the rule\'s order, then by id (UX-17)', () => {
+  it("reveals a saved draw the same way on every screen: the honoree's pick, then each kind in the rule's order, then by id (UX-17)", () => {
     const saved = [
       { id: 'f', kind: 'BC', pickedByHonoree: false },
       { id: 'b', kind: 'AD', pickedByHonoree: false },
@@ -126,8 +127,12 @@ describe('team draw', () => {
 
   it('is a draw, not a ranking: the same field comes out differently', () => {
     const f = field([5, 5, 5, 5, 10, 10, 10, 10])
-    const a = drawTeams(f, 2, lcg(1)).map((t) => t.playerIds.join('+')).join(' ')
-    const b = drawTeams(f, 2, lcg(99)).map((t) => t.playerIds.join('+')).join(' ')
+    const a = drawTeams(f, 2, lcg(1))
+      .map((t) => t.playerIds.join('+'))
+      .join(' ')
+    const b = drawTeams(f, 2, lcg(99))
+      .map((t) => t.playerIds.join('+'))
+      .join(' ')
     expect(a).not.toEqual(b)
     // Balanced either way: one 5 and one 10 on every team.
     for (const seed of [1, 99]) expect(drawTeams(f, 2, lcg(seed)).map((t) => t.totalHcp)).toEqual([15, 15, 15, 15])
@@ -140,10 +145,19 @@ describe('team draw', () => {
 
   it('groups keep whole teams together', () => {
     const pairs = [{ playerIds: ['a', 'b'] }, { playerIds: ['c', 'd'] }, { playerIds: ['e', 'f'] }]
-    expect(groupsFromTeams(pairs)).toEqual([['a', 'b', 'c', 'd'], ['e', 'f']])
+    expect(groupsFromTeams(pairs)).toEqual([
+      ['a', 'b', 'c', 'd'],
+      ['e', 'f'],
+    ])
     const fours = [{ playerIds: ['a', 'b', 'c', 'd'] }, { playerIds: ['e', 'f', 'g', 'h'] }]
-    expect(groupsFromTeams(fours)).toEqual([['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']])
+    expect(groupsFromTeams(fours)).toEqual([
+      ['a', 'b', 'c', 'd'],
+      ['e', 'f', 'g', 'h'],
+    ])
     // A team of three and a pair do not fit in one group of four.
-    expect(groupsFromTeams([{ playerIds: ['a', 'b', 'c'] }, { playerIds: ['d', 'e'] }])).toEqual([['a', 'b', 'c'], ['d', 'e']])
+    expect(groupsFromTeams([{ playerIds: ['a', 'b', 'c'] }, { playerIds: ['d', 'e'] }])).toEqual([
+      ['a', 'b', 'c'],
+      ['d', 'e'],
+    ])
   })
 })

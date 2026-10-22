@@ -44,7 +44,10 @@ function moduleClasses(css: string): Set<string> {
 
 /** Each CSS-module import of a source file: its local name and the module's path. */
 function moduleImports(source: string): Array<{ local: string; path: string }> {
-  return [...source.matchAll(/import\s+(\w+)\s+from\s+['"]([^'"]+\.module\.css)['"]/g)].map((m) => ({ local: m[1]!, path: m[2]! }))
+  return [...source.matchAll(/import\s+(\w+)\s+from\s+['"]([^'"]+\.module\.css)['"]/g)].map((m) => ({
+    local: m[1]!,
+    path: m[2]!,
+  }))
 }
 
 /** The literal member names read on `local`: `local.x`, `local['x-y']`, `local["x"]`. */

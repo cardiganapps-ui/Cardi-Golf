@@ -13,6 +13,8 @@ export function useStableHandlers<T extends Handlers>(fns: T): T {
   useLayoutEffect(() => {
     latest.current = fns
   })
-  const [stable] = useState(() => Object.fromEntries(Object.keys(fns).map((k) => [k, (...args: never[]) => latest.current[k]?.(...args)])) as T)
+  const [stable] = useState(
+    () => Object.fromEntries(Object.keys(fns).map((k) => [k, (...args: never[]) => latest.current[k]?.(...args)])) as T,
+  )
   return stable
 }

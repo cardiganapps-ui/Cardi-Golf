@@ -18,11 +18,14 @@ describe('the last tournament this phone opened (ARCH-03)', () => {
     setLastTournament({ slug: 'viaje', name: 'Viaje' })
     expect(getLastTournament()).toEqual({ slug: 'viaje', name: 'Viaje' })
   })
-  it.each([['not JSON', '{'], ['a word', '"viaje"'], ['no slug', JSON.stringify({ name: 'Viaje' })], ['an empty slug', JSON.stringify({ slug: '', name: 'Viaje' })], ['a time that is no time', JSON.stringify({ slug: 'viaje', name: 'Viaje', at: 'ayer' })]])(
-    '%s is none',
-    (_what, raw) => {
-      localStorage.setItem(KEY, raw)
-      expect(getLastTournament()).toBeNull()
-    },
-  )
+  it.each([
+    ['not JSON', '{'],
+    ['a word', '"viaje"'],
+    ['no slug', JSON.stringify({ name: 'Viaje' })],
+    ['an empty slug', JSON.stringify({ slug: '', name: 'Viaje' })],
+    ['a time that is no time', JSON.stringify({ slug: 'viaje', name: 'Viaje', at: 'ayer' })],
+  ])('%s is none', (_what, raw) => {
+    localStorage.setItem(KEY, raw)
+    expect(getLastTournament()).toBeNull()
+  })
 })

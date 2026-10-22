@@ -28,22 +28,38 @@ describe('one accent inside a tournament (VIS-10)', () => {
     expect(files.filter((f) => read(f).includes('--event-accent'))).toEqual([])
   })
   it('lets only tokens.css declare the accent tokens; a screen picks an accent by id, never by value', () => {
-    const declares = files.filter((f) => f !== 'styles/tokens.css' && /--accent(-soft|-wash|-ink)?\s*:|'--accent(-soft|-wash|-ink)?':/.test(read(f)))
+    const declares = files.filter(
+      (f) =>
+        f !== 'styles/tokens.css' && /--accent(-soft|-wash|-ink)?\s*:|'--accent(-soft|-wash|-ink)?':/.test(read(f)),
+    )
     expect(declares).toEqual([])
   })
   it('puts the event’s accent on the root of every tournament surface', () => {
-    for (const f of ['screens/tournament/TournamentShell.tsx', 'screens/tournament/EnterScreen.tsx', 'screens/tournament/TvScreen.tsx', 'screens/tournament/CeremonyScreen.tsx']) {
+    for (const f of [
+      'screens/tournament/TournamentShell.tsx',
+      'screens/tournament/EnterScreen.tsx',
+      'screens/tournament/TvScreen.tsx',
+      'screens/tournament/CeremonyScreen.tsx',
+    ]) {
       expect(read(f), f).toMatch(/data-accent=\{/)
     }
   })
   it('keeps the platform’s fairway out of every stylesheet but the tokens’ (the race chart’s own slot aside)', () => {
     const fairway = /--chart-1\b|--race-1\b|#1e6b3b/i
-    const using = files.filter((f) => f.endsWith('.css') && f !== 'styles/tokens.css' && f !== 'screens/tournament/race/RaceChart.module.css' && fairway.test(read(f)))
+    const using = files.filter(
+      (f) =>
+        f.endsWith('.css') &&
+        f !== 'styles/tokens.css' &&
+        f !== 'screens/tournament/race/RaceChart.module.css' &&
+        fairway.test(read(f)),
+    )
     expect(using).toEqual([])
   })
   it('scopes every curated accent in both themes', () => {
     const css = read('styles/tokens.css')
-    const ids = [...read('design/accents.ts').matchAll(/id: '([a-z]+)'/g)].map((m) => m[1]!).filter((id) => id !== 'fairway')
+    const ids = [...read('design/accents.ts').matchAll(/id: '([a-z]+)'/g)]
+      .map((m) => m[1]!)
+      .filter((id) => id !== 'fairway')
     expect(ids).toHaveLength(5)
     for (const id of ids) {
       expect(css, id).toContain(`[data-accent='${id}'] {`)

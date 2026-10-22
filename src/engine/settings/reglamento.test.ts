@@ -29,7 +29,8 @@ interface RulesSection {
   title: string
   lines: string[]
 }
-const reglamento = (snapshot: Snapshot, settings: TournamentSettings): RulesSection[] => reglamentoCodes(snapshot, settings).map((s) => ({ id: s.id, title: words(s.title), lines: words(s.lines) }))
+const reglamento = (snapshot: Snapshot, settings: TournamentSettings): RulesSection[] =>
+  reglamentoCodes(snapshot, settings).map((s) => ({ id: s.id, title: words(s.title), lines: words(s.lines) }))
 const text = (sections: RulesSection[]) => sections.flatMap((s) => s.lines).join('\n')
 const section = (sections: RulesSection[], id: string) => sections.find((s) => s.id === id)
 const glossary = (word: GlossaryWord) => words(msg('rules.glossary', { word }))
@@ -41,14 +42,28 @@ const ROUNDING = {
   ceil: 'redondeado hacia arriba (17.1 queda en 18)',
 }
 
-const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: TournamentSettings }> = FIXTURE_NAMES.map((name) => {
-  const f = getFixture(name)!
-  return { name, snapshot: f.snapshot, settings: parseSettings(f.snapshot.tournament.settings) }
-})
+const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: TournamentSettings }> = FIXTURE_NAMES.map(
+  (name) => {
+    const f = getFixture(name)!
+    return { name, snapshot: f.snapshot, settings: parseSettings(f.snapshot.tournament.settings) }
+  },
+)
 
 describe('the Reglamento follows the settings, on every fixture (COPY-11)', () => {
   it('covers the fixtures the finding names', () => {
-    for (const name of ['full12-live', 'minimal4-live', 'gloria4', 'pairs8', 'friends8', 'stroke8', 'match8', 'team8', 'firma4', 'calcutta12']) expect(FIXTURE_NAMES).toContain(name)
+    for (const name of [
+      'full12-live',
+      'minimal4-live',
+      'gloria4',
+      'pairs8',
+      'friends8',
+      'stroke8',
+      'match8',
+      'team8',
+      'firma4',
+      'calcutta12',
+    ])
+      expect(FIXTURE_NAMES).toContain(name)
   })
 
   for (const { name, snapshot, settings } of TOURNAMENTS) {
@@ -78,18 +93,22 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
       })
 
       it('speaks of a cut, of day 2 and of «los dos días» only where the settings have them', () => {
-        if (!cutApplies(settings, days)) expect(all).not.toMatch(/Recorte del día 2|Recorte de hándicap|recortado|máximo 0/)
+        if (!cutApplies(settings, days))
+          expect(all).not.toMatch(/Recorte del día 2|Recorte de hándicap|recortado|máximo 0/)
         if (days !== 2) expect(all).not.toMatch(/los dos días/)
         if (days < 2) expect(all).not.toMatch(/día 2|último día|cada día|Sin recorte/)
-        if (cutApplies(settings, days)) expect(section(doc, 'handicaps')!.lines.join(' ')).toContain(`máximo ${settings.day2Cut.maxStrokes}`)
+        if (cutApplies(settings, days))
+          expect(section(doc, 'handicaps')!.lines.join(' ')).toContain(`máximo ${settings.day2Cut.maxStrokes}`)
       })
 
       it('names tiers only when the tournament has them, and the Calcutta’s tier places from its payout', () => {
         if (!settings.tiers.length) expect(all).not.toMatch(/Categorías|categoría/)
         else expect(section(doc, 'field')!.lines.join(' ')).toContain(t.common.andList(settings.tiers))
         const tiers = settings.auction.payout.flatMap((s) => (s.slot === 'bestOfTier' ? [s.tier] : []))
-        if (m.auction.enabled && tiers.length) expect(section(doc, 'auction')!.lines.join(' ')).toContain(`categoría ${t.common.orList(tiers)}`)
-        if (m.auction.enabled && !tiers.length) expect(section(doc, 'auction')!.lines.join(' ')).not.toMatch(/categoría/)
+        if (m.auction.enabled && tiers.length)
+          expect(section(doc, 'auction')!.lines.join(' ')).toContain(`categoría ${t.common.orList(tiers)}`)
+        if (m.auction.enabled && !tiers.length)
+          expect(section(doc, 'auction')!.lines.join(' ')).not.toMatch(/categoría/)
       })
 
       it('prints the settings’ own numbers', () => {
@@ -98,7 +117,9 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
         else expect(S).not.toMatch(/inscripción de \$|paga \$/)
         const hcp = section(doc, 'handicaps')!.lines.join(' ')
         if (settings.handicap.allowance > 0) {
-          expect(hcp).toContain(`${Math.round(settings.handicap.allowance * 100)}% del hándicap base, con tope de ${settings.handicap.cap}`)
+          expect(hcp).toContain(
+            `${Math.round(settings.handicap.allowance * 100)}% del hándicap base, con tope de ${settings.handicap.cap}`,
+          )
           expect(hcp).toContain(ROUNDING[settings.handicap.rounding])
         }
         if (m.individual.enabled) {
@@ -111,26 +132,43 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
         if (m.snake.enabled) {
           const s = section(doc, 'snake')!.lines.join(' ')
           expect(s).toContain(`${m.snake.puttsThreshold} putts o más`)
-          if (settings.prizes.snakePerSurvivor > 0) expect(s).toContain(`${formatMoney(settings.prizes.snakePerSurvivor, 'MXN')} de la bolsa (${formatMoney(snakePotPerGroup(settings), 'MXN')} por grupo)`)
+          if (settings.prizes.snakePerSurvivor > 0)
+            expect(s).toContain(
+              `${formatMoney(settings.prizes.snakePerSurvivor, 'MXN')} de la bolsa (${formatMoney(snakePotPerGroup(settings), 'MXN')} por grupo)`,
+            )
           expect(s).not.toMatch(/entre los cuatro/)
         }
-        if (m.bestRound.enabled && settings.prizes.bestRoundPerDay > 0) expect(section(doc, 'bestRound')!.lines.join(' ')).toContain(formatMoney(settings.prizes.bestRoundPerDay, 'MXN'))
-        if (m.fewestPutts.enabled) expect(section(doc, 'fewestPutts')!.lines.join(' ')).toContain(`cuenta ${settings.pickupPuttsForFewestPutts} putts`)
-        if (m.pairs.enabled) for (const [a, b] of m.pairs.pairing) expect(section(doc, 'pairs')!.lines.join(' ')).toContain(`${a} con ${b}`)
+        if (m.bestRound.enabled && settings.prizes.bestRoundPerDay > 0)
+          expect(section(doc, 'bestRound')!.lines.join(' ')).toContain(
+            formatMoney(settings.prizes.bestRoundPerDay, 'MXN'),
+          )
+        if (m.fewestPutts.enabled)
+          expect(section(doc, 'fewestPutts')!.lines.join(' ')).toContain(
+            `cuenta ${settings.pickupPuttsForFewestPutts} putts`,
+          )
+        if (m.pairs.enabled)
+          for (const [a, b] of m.pairs.pairing)
+            expect(section(doc, 'pairs')!.lines.join(' ')).toContain(`${a} con ${b}`)
         if (m.auction.enabled) {
           const a = section(doc, 'auction')!.lines.join(' ')
-          expect(a).toContain(`en ${formatMoney(settings.auction.openingBid, 'MXN')} y las pujas suben de ${formatMoney(settings.auction.increment, 'MXN')}`)
+          expect(a).toContain(
+            `en ${formatMoney(settings.auction.openingBid, 'MXN')} y las pujas suben de ${formatMoney(settings.auction.increment, 'MXN')}`,
+          )
           expect(a).toContain(`Máximo ${settings.auction.maxPlayersPerOwner} jugadores por dueño`)
           if (settings.auction.buybackMaxPct > 0) expect(a).toContain(`hasta el ${settings.auction.buybackMaxPct}%`)
         }
       })
 
       it('says who signs the cards by the tournament’s rule', () => {
-        expect(section(doc, 'cards')!.lines).toEqual([words(say('rules.cardsEnter')), words(msg('rules.cards', { mode: cardSigningMode(settings) }))])
+        expect(section(doc, 'cards')!.lines).toEqual([
+          words(say('rules.cardsEnter')),
+          words(msg('rules.cards', { mode: cardSigningMode(settings) })),
+        ])
       })
 
       it('leaves out the platform’s generic last place, and says the precedence plainly (COPY-12)', () => {
-        if (settings.labels.lastPlace === DEFAULT_SETTINGS.labels.lastPlace) expect(all).not.toContain(`gana ${DEFAULT_SETTINGS.labels.lastPlace}`)
+        if (settings.labels.lastPlace === DEFAULT_SETTINGS.labels.lastPlace)
+          expect(all).not.toContain(`gana ${DEFAULT_SETTINGS.labels.lastPlace}`)
         expect(all).not.toMatch(/manda la hoja/)
         expect(section(doc, 'governance')!.lines.join(' ')).toContain('vale esta página')
       })
@@ -139,7 +177,10 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
         const said = section(doc, 'glossary')!.lines
         expect(said).toContain(glossary('par'))
         expect(said.includes(words(msg('rules.glossaryAuction', { game: m.auction.label })))).toBe(m.auction.enabled)
-        const putting = m.snake.enabled || m.fewestPutts.enabled || settings.games.some((g) => g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt')
+        const putting =
+          m.snake.enabled ||
+          m.fewestPutts.enabled ||
+          settings.games.some((g) => g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt')
         expect(said.includes(glossary('putts'))).toBe(putting)
         expect(said.includes(glossary('handicap'))).toBe(settings.handicap.allowance > 0)
       })
@@ -163,7 +204,9 @@ describe('«En corto» on the first tournament (COPY-12)', () => {
 
   it('what you pay, what the bolsa pays, the Calcutta apart, who holds the money', () => {
     expect(S[0]).toBe('Cada jugador paga $2,500 de inscripción. Con 12 jugadores, la bolsa es de $30,000.')
-    expect(S[1]).toBe('De la bolsa salen los premios: Individual ($20,000), Los Matrimonios ($3,000), Mejor ronda ($2,400), La Víbora ($3,600) y Menos putts ($1,000).')
+    expect(S[1]).toBe(
+      'De la bolsa salen los premios: Individual ($20,000), Los Matrimonios ($3,000), Mejor ronda ($2,400), La Víbora ($3,600) y Menos putts ($1,000).',
+    )
     expect(S[2]).toContain('La Calcutta va aparte de la bolsa')
     expect(S.some((l) => l.endsWith('es el banquero: junta el dinero y paga los premios.'))).toBe(true)
     expect(S.at(-1)).toBe(words(say('rules.settle')))
@@ -196,7 +239,9 @@ describe('settings no fixture has', () => {
 
   it('two days and the cut off: one sentence says so', () => {
     const { doc } = base({ rounds: 2 })
-    expect(section(doc, 'handicaps')!.lines).toContain('Sin recorte: lo que hagas un día no cambia tu hándicap del siguiente.')
+    expect(section(doc, 'handicaps')!.lines).toContain(
+      'Sin recorte: lo que hagas un día no cambia tu hándicap del siguiente.',
+    )
   })
 
   it('the rounding is the setting’s', () => {
@@ -208,7 +253,9 @@ describe('settings no fixture has', () => {
 
   it('a scratch event says so and nothing about strokes received', () => {
     const { doc } = base({ handicap: { ...DEFAULT_SETTINGS.handicap, allowance: 0 } })
-    expect(section(doc, 'handicaps')!.lines).toEqual(['Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.'])
+    expect(section(doc, 'handicaps')!.lines).toEqual([
+      'Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.',
+    ])
     expect(section(doc, 'glossary')!.lines).not.toContain(glossary('handicap'))
   })
 
@@ -220,14 +267,23 @@ describe('settings no fixture has', () => {
   })
 
   it('three days: «los 3 días», and a cut that reads day by day', () => {
-    const { doc } = base({ rounds: 3, modules: { ...DEFAULT_SETTINGS.modules, pairs: { enabled: true, label: 'Parejas', pairing: [], honoreePicks: false } }, day2Cut: { ...DEFAULT_SETTINGS.day2Cut, maxStrokes: 3 } })
+    const { doc } = base({
+      rounds: 3,
+      modules: {
+        ...DEFAULT_SETTINGS.modules,
+        pairs: { enabled: true, label: 'Parejas', pairing: [], honoreePicks: false },
+      },
+      day2Cut: { ...DEFAULT_SETTINGS.day2Cut, maxStrokes: 3 },
+    })
     expect(section(doc, 'pairs')!.lines.join(' ')).toContain('juegan juntas los 3 días')
     expect(section(doc, 'pairs')!.lines[0]).toBe('Parejas fijas, sorteadas por el Comité.')
     expect(section(doc, 'handicaps')!.lines.join(' ')).toContain('al día siguiente se te recorta')
   })
 
   it('a snake for no money says so, under its own name (STRAT-11)', () => {
-    const { doc } = base({ modules: { ...DEFAULT_SETTINGS.modules, snake: { enabled: true, label: 'El Tres Putts', puttsThreshold: 3 } } })
+    const { doc } = base({
+      modules: { ...DEFAULT_SETTINGS.modules, snake: { enabled: true, label: 'El Tres Putts', puttsThreshold: 3 } },
+    })
     const s = section(doc, 'snake')!
     expect(s.title).toBe('El Tres Putts')
     expect(s.lines.join(' ')).toContain('el Tres Putts pasa a quien hace 3 putts')
@@ -237,6 +293,8 @@ describe('settings no fixture has', () => {
 
   it('the house cut is said apart from the prizes', () => {
     const { doc } = base({ entryFee: 500, houseCut: 400, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [3600] } })
-    expect(section(doc, 'summary')!.lines).toContain('$400 de la bolsa no son premio: se apartan para los gastos del torneo.')
+    expect(section(doc, 'summary')!.lines).toContain(
+      '$400 de la bolsa no son premio: se apartan para los gastos del torneo.',
+    )
   })
 })

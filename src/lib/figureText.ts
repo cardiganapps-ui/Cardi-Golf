@@ -63,7 +63,10 @@ const PLATFORM_WORDS: FeedWords = { snake: DEFAULT_SETTINGS.modules.snake.label,
 /** The feed's words from a tournament's settings. */
 export function feedWords(settings: TournamentSettings): FeedWords {
   const honoree = settings.labels.honoree.trim()
-  return { snake: settings.modules.snake.label, honoree: honoree && honoree !== DEFAULT_SETTINGS.labels.honoree ? honoree : null }
+  return {
+    snake: settings.modules.snake.label,
+    honoree: honoree && honoree !== DEFAULT_SETTINGS.labels.honoree ? honoree : null,
+  }
 }
 
 /**
@@ -77,7 +80,8 @@ function feedChoices(e: FeedEvent, nameOf: (id: string) => string, words: FeedWo
       const ctx = { first: !!e.firstOfDay, streak: e.streak }
       const set = `birdie:${e.scoring}:${e.streak && e.streak > 1 ? 'streak' : e.firstOfDay ? 'first' : e.under >= 2 ? 'eagle' : 'birdie'}`
       // Points only where the event counts them.
-      if (e.scoring !== 'points') return { set, lines: t.feed.underPar(name, e.hole, e.under, e.scoring === 'net', ctx) }
+      if (e.scoring !== 'points')
+        return { set, lines: t.feed.underPar(name, e.hole, e.under, e.scoring === 'net', ctx) }
       return { set, lines: t.feed.underParPoints(name, e.hole, e.points, e.grossUnder >= e.under, ctx) }
     }
     case 'leadChange':
@@ -87,7 +91,10 @@ function feedChoices(e: FeedEvent, nameOf: (id: string) => string, words: FeedWo
     case 'honoreeHole':
       return {
         set: `honoree:${e.scoring}:${e.points === 0 ? 0 : 1}`,
-        lines: e.scoring === 'points' ? t.feed.honoreeHole(name, e.hole, e.points, words.honoree) : t.feed.honoreeToPar(name, e.hole, e.toPar, e.scoring === 'net', words.honoree),
+        lines:
+          e.scoring === 'points'
+            ? t.feed.honoreeHole(name, e.hole, e.points, words.honoree)
+            : t.feed.honoreeToPar(name, e.hole, e.toPar, e.scoring === 'net', words.honoree),
       }
     case 'threePutt':
       return { set: 'threePutt', lines: t.feed.threePutt(name, e.hole, e.putts) }
@@ -95,7 +102,12 @@ function feedChoices(e: FeedEvent, nameOf: (id: string) => string, words: FeedWo
 }
 
 /** A feed event as a line of the ticker, in the figure the event counts (STRAT-03); `variant` picks among its lines. */
-export function feedText(e: FeedEvent, nameOf: (id: string) => string, words: FeedWords = PLATFORM_WORDS, variant = 0): string {
+export function feedText(
+  e: FeedEvent,
+  nameOf: (id: string) => string,
+  words: FeedWords = PLATFORM_WORDS,
+  variant = 0,
+): string {
   const { lines } = feedChoices(e, nameOf, words)
   return lines[variant % lines.length]!
 }
@@ -113,18 +125,27 @@ function hash(s: string): number {
  * or a new event above it never rewrites a line already on screen. Read from the oldest up, a line that would repeat
  * the one before it, from the same set, takes the next one instead.
  */
-export function feedLines(feed: readonly FeedEvent[], nameOf: (id: string) => string, words: FeedWords = PLATFORM_WORDS): string[] {
+export function feedLines(
+  feed: readonly FeedEvent[],
+  nameOf: (id: string) => string,
+  words: FeedWords = PLATFORM_WORDS,
+): string[] {
   return feedPicks(feed, nameOf, words).map((p) => p.line)
 }
 
 /** Each event's line with the set it comes from and which of the set it is: what `feedLines` shows, for the tests too. */
-export function feedPicks(feed: readonly FeedEvent[], nameOf: (id: string) => string, words: FeedWords = PLATFORM_WORDS): Array<{ set: string; pick: number; line: string }> {
+export function feedPicks(
+  feed: readonly FeedEvent[],
+  nameOf: (id: string) => string,
+  words: FeedWords = PLATFORM_WORDS,
+): Array<{ set: string; pick: number; line: string }> {
   const out = new Array<{ set: string; pick: number; line: string }>(feed.length)
   let prev: { set: string; pick: number } | null = null
   for (let i = feed.length - 1; i >= 0; i--) {
     const e = feed[i]!
     const { set, lines } = feedChoices(e, nameOf, words)
     let pick = hash(feedKey(e)) % lines.length
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- through `?.` TypeScript reads `prev` as only its first value (null) in this loop
     if (prev && prev.set === set && prev.pick === pick && lines.length > 1) pick = (pick + 1) % lines.length
     out[i] = { set, pick, line: lines[pick]! }
     prev = { set, pick }

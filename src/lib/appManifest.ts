@@ -29,14 +29,36 @@ export const APP_MANIFEST = {
   // A long press on the icon (Android): the last tournament this phone opened, on its card or its En vivo
   // (`/continuar`, src/screens/ContinueScreen.tsx); with none, Home.
   shortcuts: [
-    { name: t.app.shortcuts.card, short_name: t.app.shortcuts.cardShort, url: '/continuar/tarjeta', icons: [{ src: '/icons/shortcut-tarjeta.png', sizes: '192x192', type: 'image/png' }] },
-    { name: t.app.shortcuts.live, short_name: t.app.shortcuts.live, url: '/continuar', icons: [{ src: '/icons/shortcut-envivo.png', sizes: '192x192', type: 'image/png' }] },
+    {
+      name: t.app.shortcuts.card,
+      short_name: t.app.shortcuts.cardShort,
+      url: '/continuar/tarjeta',
+      icons: [{ src: '/icons/shortcut-tarjeta.png', sizes: '192x192', type: 'image/png' }],
+    },
+    {
+      name: t.app.shortcuts.live,
+      short_name: t.app.shortcuts.live,
+      url: '/continuar',
+      icons: [{ src: '/icons/shortcut-envivo.png', sizes: '192x192', type: 'image/png' }],
+    },
   ],
   // Chrome's install sheet on Android shows these, and a bare «¿Instalar?» without them: two real screens at a
   // phone's size, from the fixture build, of a tournament whose people are made up (scripts/make-screenshots.mjs).
   screenshots: [
-    { src: '/screenshots/envivo.webp', sizes: '786x1704', type: 'image/webp', form_factor: 'narrow', label: t.app.screenshots.live },
-    { src: '/screenshots/tarjeta.webp', sizes: '786x1704', type: 'image/webp', form_factor: 'narrow', label: t.app.screenshots.card },
+    {
+      src: '/screenshots/envivo.webp',
+      sizes: '786x1704',
+      type: 'image/webp',
+      form_factor: 'narrow',
+      label: t.app.screenshots.live,
+    },
+    {
+      src: '/screenshots/tarjeta.webp',
+      sizes: '786x1704',
+      type: 'image/webp',
+      form_factor: 'narrow',
+      label: t.app.screenshots.card,
+    },
   ],
   icons: [
     { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

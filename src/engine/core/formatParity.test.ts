@@ -21,7 +21,9 @@ function run(name: string, edit?: (s: TournamentSettings, snap: Snapshot) => voi
   return { snap, settings, state: computeTournament(snap, settings) }
 }
 const holesOf = (state: ReturnType<typeof computeTournament>) =>
-  Object.values(state.core.rounds).flatMap((r) => Object.values(r).flatMap((pr) => pr.holes.filter((h) => h.played).map((h) => ({ pr, h }))))
+  Object.values(state.core.rounds).flatMap((r) =>
+    Object.values(r).flatMap((pr) => pr.holes.filter((h) => h.played).map((h) => ({ pr, h }))),
+  )
 
 describe('stats under strokes: fewer is better, everywhere', () => {
   const { state } = run('stroke8')
@@ -33,7 +35,7 @@ describe('stats under strokes: fewer is better, everywhere', () => {
     expect(best).toBeLessThan(0)
   })
 
-  it('each player\'s best hole is no worse than his worst', () => {
+  it("each player's best hole is no worse than his worst", () => {
     for (const s of Object.values(state.stats.players)) {
       if (!s.bestHole || !s.worstHole) continue
       expect(s.bestHole.value).toBeLessThanOrEqual(s.worstHole.value)
@@ -46,10 +48,12 @@ describe('stats under strokes: fewer is better, everywhere', () => {
       expect(r.hardest!.avg).toBe(Math.max(...avgs))
       expect(r.easiest!.avg).toBe(Math.min(...avgs))
     }
-    expect(state.stats.cursedHole!.avg).toBe(Math.max(...state.stats.rounds.flatMap((r) => r.holes.filter((h) => h.played >= 2).map((h) => h.avg))))
+    expect(state.stats.cursedHole!.avg).toBe(
+      Math.max(...state.stats.rounds.flatMap((r) => r.holes.filter((h) => h.played >= 2).map((h) => h.avg))),
+    )
   })
 
-  it('the race ends on each player\'s board figure against par', () => {
+  it("the race ends on each player's board figure against par", () => {
     for (const row of state.modules.individual!.rows) {
       expect(state.stats.players[row.playerId]!.race.at(-1)).toBe(row.figure.rank)
     }
@@ -72,7 +76,7 @@ describe('El Resucitado needs both days played whole', () => {
 })
 
 describe('the pairs race counts points whatever the main event plays', () => {
-  it('each player\'s points race ends on his Stableford points', () => {
+  it("each player's points race ends on his Stableford points", () => {
     const { state } = run('stroke8')
     for (const [pid, s] of Object.entries(state.stats.players)) {
       expect(s.pointsRace.at(-1) ?? 0).toBe(state.core.totals[pid]!.points)
@@ -89,7 +93,7 @@ describe('feed under strokes', () => {
     expect(state.feed.filter((e) => e.kind === 'leadChange')).toEqual([])
   })
 
-  it('gross stroke play: the latest leader is the gross board\'s leader, not the net one', () => {
+  it("gross stroke play: the latest leader is the gross board's leader, not the net one", () => {
     // p6 gets every stroke there is: he leads on net, and not on gross.
     const edit = (scoring: 'net' | 'gross') => (s: TournamentSettings, snap: Snapshot) => {
       s.modules.individual.formatOptions.scoring = scoring
@@ -102,7 +106,7 @@ describe('feed under strokes', () => {
     expect(state.feed.find((e) => e.kind === 'leadChange')!.playerId).toBe(grossLeader)
   })
 
-  it('the close names the board\'s champion when the replay never did (an incomplete card drops)', () => {
+  it("the close names the board's champion when the replay never did (an incomplete card drops)", () => {
     const { state } = run('stroke8', (_s, snap) => {
       // The leader misses his last hole, and the tournament closes.
       const top = 'p2'
@@ -116,18 +120,41 @@ describe('feed under strokes', () => {
 })
 
 describe('a hole explained in strokes', () => {
-  const h = (over: Partial<HoleResult>): HoleResult =>
-    ({ hole: 3, par: 4, strokeIndex: 5, yards: null, strokesReceived: 1, gross: 5, net: 4, points: 2, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: { code: 'label', params: { text: '' } }, steps: [] }, ...over }) as HoleResult
+  const h = (over: Partial<HoleResult>): HoleResult => ({
+    hole: 3,
+    par: 4,
+    strokeIndex: 5,
+    yards: null,
+    strokesReceived: 1,
+    gross: 5,
+    net: 4,
+    points: 2,
+    putts: 2,
+    pickedUp: false,
+    played: true,
+    disputed: false,
+    why: { title: { code: 'label', params: { text: '' } }, steps: [] },
+    ...over,
+  })
 
   it('net: the strokes received off the gross, and the result against par', () => {
-    expect(words(strokesWhy(h({}), true)).steps).toEqual(['5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): 4 netos, par', '5 − 1 = 4 neto'])
+    expect(words(strokesWhy(h({}), true)).steps).toEqual([
+      '5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): 4 netos, par',
+      '5 − 1 = 4 neto',
+    ])
     expect(words(strokesWhy(h({}), false)).steps).toEqual(['5 golpes en un par 4: 1 sobre par'])
   })
 
   it('a pick-up counts as net double bogey, and says what each number is', () => {
     const why = words(strokesWhy(h({ pickedUp: true, gross: null }), true))
-    expect(why.steps).toEqual(['Levantó en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): cuenta 6 golpes netos, 2 sobre par', 'Un hoyo levantado cuenta como doble bogey neto: par 4 + 1 golpe de ventaja + 2 = 7', '7 − 1 = 6 neto'])
-    expect(words(strokesWhy(h({ pickedUp: true, gross: null }), false)).steps[0]).toBe('Levantó en un par 4: cuenta 7 golpes, 3 sobre par')
+    expect(why.steps).toEqual([
+      'Levantó en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): cuenta 6 golpes netos, 2 sobre par',
+      'Un hoyo levantado cuenta como doble bogey neto: par 4 + 1 golpe de ventaja + 2 = 7',
+      '7 − 1 = 6 neto',
+    ])
+    expect(words(strokesWhy(h({ pickedUp: true, gross: null }), false)).steps[0]).toBe(
+      'Levantó en un par 4: cuenta 7 golpes, 3 sobre par',
+    )
   })
 })
 

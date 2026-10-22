@@ -16,7 +16,9 @@ const S = t.card
 
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 /** Every animation that ends (a sheet sliding up, the stamp) has ended: axe reads text caught mid-fade as low contrast. */
 async function settled(page: Page) {
@@ -32,7 +34,10 @@ async function settled(page: Page) {
 async function expectSound(page: Page, pageErrors: string[]) {
   await settled(page)
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   expect(await seriousViolations(page)).toEqual([])
 }
 const signButtons = (page: Page) => page.getByRole('button', { name: /^Firmar la tarjeta de / })

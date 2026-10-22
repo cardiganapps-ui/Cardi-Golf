@@ -319,7 +319,6 @@ export interface Snapshot {
   moneyAdjustments?: MoneyAdjustment[]
 }
 
-
 export interface Explained<T> {
   value: T
   why: Explanation

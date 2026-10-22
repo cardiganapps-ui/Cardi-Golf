@@ -14,7 +14,14 @@ import { listCourses, loadCourseDraft } from '../../data/api'
 import { formatIndex, parseIndex, useMyProfile } from '../../data/profiles'
 import { myFriends, type FriendCard } from '../../data/social'
 import { createQuickRound, type QuickPlayer, type QuickRoundInput } from '../../data/quick'
-import { QUICK_GAMES, quickSettings, quickSplit, quickStakes, quickUpfront, type QuickGame } from '../../engine/games/quick'
+import {
+  QUICK_GAMES,
+  quickSettings,
+  quickSplit,
+  quickStakes,
+  quickUpfront,
+  type QuickGame,
+} from '../../engine/games/quick'
 import { formatMoney, PLATFORM_CURRENCY } from '../../lib/money'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
@@ -65,7 +72,15 @@ const showIndex = (v: number | null) => (v == null ? '' : formatIndex(v))
 // A Ronda rápida plays the platform's settings (quick.ts), so its currency.
 const cur = PLATFORM_CURRENCY
 
-export function QuickRoundView({ me, friends, courses, loadTees, crews = [], initialCrewId = null, onStart }: QuickRoundData) {
+export function QuickRoundView({
+  me,
+  friends,
+  courses,
+  loadTees,
+  crews = [],
+  initialCrewId = null,
+  onStart,
+}: QuickRoundData) {
   const [date, setDate] = useState(today())
   const [courseId, setCourseId] = useState(courses[0]?.id ?? '')
   const [tees, setTees] = useState<QuickTee[] | null>(null)
@@ -110,7 +125,10 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
   const potLine = useMemo(() => {
     if (!money || feeNum <= 0) return null
     const split = quickSplit(count)
-    return Q.potLine(formatMoney(feeNum * count, cur), split.length === 1 ? null : split.map((x) => `${x}%`).join(' / '))
+    return Q.potLine(
+      formatMoney(feeNum * count, cur),
+      split.length === 1 ? null : split.map((x) => `${x}%`).join(' / '),
+    )
   }, [money, feeNum, count])
   /** COPY-21: with money, each game's stake and what everyone puts in before the first hole. */
   const stakeLines = useMemo(() => {
@@ -123,7 +141,14 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
           : Q.stakeBirdies(formatMoney(x.perEvent ?? 0, cur)),
     )
   }, [money, games, count])
-  const upfrontLine = money && (feeNum > 0 || stakeLines.length > 0) ? Q.upfront(count, formatMoney(quickUpfront(feeNum, games), cur), quickStakes(games).some((x) => x.perEvent != null)) : null
+  const upfrontLine =
+    money && (feeNum > 0 || stakeLines.length > 0)
+      ? Q.upfront(
+          count,
+          formatMoney(quickUpfront(feeNum, games), cur),
+          quickStakes(games).some((x) => x.perEvent != null),
+        )
+      : null
 
   function toggleFriend(f: FriendCard) {
     setPicked((cur) => {
@@ -167,7 +192,14 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
   }
 
   const indexInput = (value: string, onChange: (v: string) => void, label: string) => (
-    <input className={`input ${styles.indexInput}`} inputMode="decimal" placeholder={Q.index} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} />
+    <input
+      className={`input ${styles.indexInput}`}
+      inputMode="decimal"
+      placeholder={Q.index}
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
   )
 
   return (
@@ -203,7 +235,9 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
                 <select className="input" value={teeId} onChange={(e) => setTeeId(e.target.value)}>
                   {tees.map((x) => (
                     <option key={x.id} value={x.id}>
-                      {[x.name, x.rating != null && x.slope != null ? `${x.rating} / ${x.slope}` : null].filter(Boolean).join(', ')}
+                      {[x.name, x.rating != null && x.slope != null ? `${x.rating} / ${x.slope}` : null]
+                        .filter(Boolean)
+                        .join(', ')}
                     </option>
                   ))}
                 </select>
@@ -241,8 +275,17 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
                 <span className={styles.rowTitle}>{g.name}</span>
                 <span className={styles.rowSub}>{Q.guest}</span>
               </span>
-              {indexInput(g.index, (v) => setGuests((all) => all.map((x) => (x.key === g.key ? { ...x, index: v } : x))), Q.indexLabel(g.name))}
-              <button type="button" className={styles.iconBtn} aria-label={Q.remove(g.name)} onClick={() => setGuests((all) => all.filter((x) => x.key !== g.key))}>
+              {indexInput(
+                g.index,
+                (v) => setGuests((all) => all.map((x) => (x.key === g.key ? { ...x, index: v } : x))),
+                Q.indexLabel(g.name),
+              )}
+              <button
+                type="button"
+                className={styles.iconBtn}
+                aria-label={Q.remove(g.name)}
+                onClick={() => setGuests((all) => all.filter((x) => x.key !== g.key))}
+              >
                 <IconClose size={20} />
               </button>
             </div>
@@ -268,7 +311,12 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
                         <span className={styles.rowSub}>@{f.handle}</span>
                       </span>
                     </label>
-                    {on && indexInput(picked.get(f.handle) ?? '', (v) => setPicked((cur) => new Map(cur).set(f.handle, v)), Q.indexLabel(f.displayName))}
+                    {on &&
+                      indexInput(
+                        picked.get(f.handle) ?? '',
+                        (v) => setPicked((cur) => new Map(cur).set(f.handle, v)),
+                        Q.indexLabel(f.displayName),
+                      )}
                   </div>
                 )
               })}
@@ -285,7 +333,13 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
             addGuest()
           }}
         >
-          <input className="input" placeholder={Q.guestName} aria-label={Q.guestName} value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+          <input
+            className="input"
+            placeholder={Q.guestName}
+            aria-label={Q.guestName}
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+          />
           <button className="btn btn--secondary" type="submit" disabled={!guestName.trim()}>
             <IconPlus size={18} /> {Q.addGuest}
           </button>
@@ -300,7 +354,13 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
           {QUICK_GAMES.map((g) => {
             const on = games.includes(g)
             return (
-              <button key={g} type="button" aria-pressed={on} className={`${styles.pick} ${on ? styles.pickOn : ''}`} onClick={() => setGames((cur) => (on ? cur.filter((x) => x !== g) : [...cur, g]))}>
+              <button
+                key={g}
+                type="button"
+                aria-pressed={on}
+                className={`${styles.pick} ${on ? styles.pickOn : ''}`}
+                onClick={() => setGames((cur) => (on ? cur.filter((x) => x !== g) : [...cur, g]))}
+              >
                 {Q.game[g]}
               </button>
             )
@@ -309,7 +369,12 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
         <Toggle label={Q.money} hint={Q.moneyHint} checked={money} onChange={setMoney} />
         {money && (
           <Field label={Q.entryFee} hint={potLine ?? undefined}>
-            <input className="input" inputMode="numeric" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^0-9]/g, ''))} />
+            <input
+              className="input"
+              inputMode="numeric"
+              value={fee}
+              onChange={(e) => setFee(e.target.value.replace(/[^0-9]/g, ''))}
+            />
           </Field>
         )}
         {stakeLines.length > 0 && (
@@ -320,7 +385,9 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
           </ul>
         )}
         {upfrontLine && <p className={styles.help}>{upfrontLine}</p>}
-        {playsMoney && <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />}
+        {playsMoney && (
+          <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />
+        )}
       </section>
 
       <section className={styles.section}>
@@ -363,9 +430,19 @@ export function QuickRoundScreen() {
   const friendsQ = useServerQuery(['friends', 'mine'], () => myFriends(), { enabled: ok })
   const coursesQ = useServerQuery(['courses', 'library'], () => listCourses(), { enabled: ok })
   const crewsQ = useServerQuery(['crews', 'mine'], () => myCrews(), { enabled: ok })
-  const friends = useMemo(() => (friendsQ.data ? friendsQ.data.friends : friendsQ.isError ? [] : null), [friendsQ.data, friendsQ.isError])
-  const courses = useMemo((): QuickCourse[] | null => (coursesQ.data ? coursesQ.data.filter((x) => x.tees > 0) : coursesQ.isError ? [] : null), [coursesQ.data, coursesQ.isError])
-  const crews = useMemo((): MyCrew[] | null => crewsQ.data ?? (crewsQ.isError ? [] : null), [crewsQ.data, crewsQ.isError])
+  const friends = useMemo(
+    () => (friendsQ.data ? friendsQ.data.friends : friendsQ.isError ? [] : null),
+    [friendsQ.data, friendsQ.isError],
+  )
+  const courses = useMemo(
+    (): QuickCourse[] | null =>
+      coursesQ.data ? coursesQ.data.filter((x) => x.tees > 0) : coursesQ.isError ? [] : null,
+    [coursesQ.data, coursesQ.isError],
+  )
+  const crews = useMemo(
+    (): MyCrew[] | null => crewsQ.data ?? (crewsQ.isError ? [] : null),
+    [crewsQ.data, crewsQ.isError],
+  )
 
   useEffect(() => {
     if (ok && !profile) void load(true)

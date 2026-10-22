@@ -14,7 +14,9 @@ const ROOT = new URL('../', import.meta.url).pathname
 const FLOOR = 16
 
 const tokens = new Map<string, number>()
-for (const m of readFileSync(join(ROOT, 'styles/tokens.css'), 'utf8').matchAll(/--(fs-[a-z0-9-]+):\s*([\d.]+)(rem|px)\s*;/g)) {
+for (const m of readFileSync(join(ROOT, 'styles/tokens.css'), 'utf8').matchAll(
+  /--(fs-[a-z0-9-]+):\s*([\d.]+)(rem|px)\s*;/g,
+)) {
   tokens.set(m[1]!, m[3] === 'rem' ? Number(m[2]) * 16 : Number(m[2]))
 }
 
@@ -84,7 +86,8 @@ describe('no control renders under 16px (iOS focus zoom)', () => {
         if (!CONTROL.test(rule.selector)) continue
         for (const d of rule.body.matchAll(/font-size:\s*([^;]+);/g)) {
           const px = smallestPx(d[1]!)
-          if (px != null && px < FLOOR) offenders.push(`${relative(ROOT, file)}: ${rule.selector} → ${d[1]!.trim()} (${px}px)`)
+          if (px != null && px < FLOOR)
+            offenders.push(`${relative(ROOT, file)}: ${rule.selector} → ${d[1]!.trim()} (${px}px)`)
         }
       }
     }

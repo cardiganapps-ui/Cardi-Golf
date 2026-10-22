@@ -24,7 +24,16 @@ function mount(name: string, edit?: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: 't-teams', data: dataFromSnapshot(snapshot) })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-teams', slug: 'viaje', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-teams',
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminTeams />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -42,7 +51,11 @@ describe('Equipos', () => {
     expect(screen.queryByText(E.notTeamFormat)).toBeNull()
     expect(screen.getByRole('button', { name: E.draw })).toBeTruthy()
     const size = screen.getByRole('radiogroup', { name: E.size })
-    expect(within(size).getAllByRole('radio').map((x) => x.textContent)).toEqual([E.sizeOption(2)])
+    expect(
+      within(size)
+        .getAllByRole('radio')
+        .map((x) => x.textContent),
+    ).toEqual([E.sizeOption(2)])
   })
 
   it('singles match play has no teams', () => {

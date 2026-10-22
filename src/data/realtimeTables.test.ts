@@ -48,7 +48,9 @@ function fullIdentityThrough(last: string): Set<string> {
     .map(text)
     .join('\n')
   const tables = new Set<string>()
-  for (const m of sql.matchAll(/alter table\s+(?:only\s+)?(?:if exists\s+)?(?:public\.)?(\w+)\s+replica identity\s+(full|default|nothing|using index)\b/gi)) {
+  for (const m of sql.matchAll(
+    /alter table\s+(?:only\s+)?(?:if exists\s+)?(?:public\.)?(\w+)\s+replica identity\s+(full|default|nothing|using index)\b/gi,
+  )) {
     if (m[2]!.toLowerCase() === 'full') tables.add(m[1]!)
     else tables.delete(m[1]!)
   }
@@ -64,21 +66,26 @@ function columnsThrough(table: string, last: string): Set<string> {
   const cols = new Set<string>()
   for (const f of files.filter((f) => prefix(f) <= last)) {
     const sql = text(f)
-    for (const m of sql.matchAll(new RegExp(`create table\\s+(?:if not exists\\s+)?(?:public\\.)?${table}\\s*\\(`, 'gi'))) {
+    for (const m of sql.matchAll(
+      new RegExp(`create table\\s+(?:if not exists\\s+)?(?:public\\.)?${table}\\s*\\(`, 'gi'),
+    )) {
       let depth = 1
-      let start = m.index! + m[0].length
+      let start = m.index + m[0].length
       for (let i = start; i < sql.length && depth > 0; i++) {
         const ch = sql[i]
         if (ch === '(') depth++
         else if (ch === ')') depth--
         if ((ch === ',' && depth === 1) || depth === 0) {
           const name = /^\s*"?(\w+)/.exec(sql.slice(start, i))?.[1]?.toLowerCase()
-          if (name && !['constraint', 'primary', 'unique', 'check', 'foreign', 'exclude', 'like'].includes(name)) cols.add(name)
+          if (name && !['constraint', 'primary', 'unique', 'check', 'foreign', 'exclude', 'like'].includes(name))
+            cols.add(name)
           start = i + 1
         }
       }
     }
-    for (const m of sql.matchAll(new RegExp(`alter table\\s+(?:only\\s+)?(?:if exists\\s+)?(?:public\\.)?${table}\\b([^;]*);`, 'gi'))) {
+    for (const m of sql.matchAll(
+      new RegExp(`alter table\\s+(?:only\\s+)?(?:if exists\\s+)?(?:public\\.)?${table}\\b([^;]*);`, 'gi'),
+    )) {
       for (const a of m[1]!.matchAll(/\badd\s+column\s+(?:if not exists\s+)?"?(\w+)/gi)) cols.add(a[1]!.toLowerCase())
       for (const d of m[1]!.matchAll(/\bdrop\s+column\s+(?:if exists\s+)?"?(\w+)/gi)) cols.delete(d[1]!.toLowerCase())
     }
@@ -108,7 +115,10 @@ describe('each binding is filtered by tournament (DB-05)', () => {
 
   it('a table filtered on anything but its primary key logs its whole old row on production: Postgres Changes reads a delete’s filter from what the delete logged, so without it the phone hears none of its deletes', () => {
     const blind = REALTIME_TABLES.filter((t) => filterColumn(t) !== 'id' && !fullIdentityThrough(ON_PRODUCTION).has(t))
-    expect(blind, `apply the migration that sets replica identity full to production, read it back, then move ON_PRODUCTION`).toEqual([])
+    expect(
+      blind,
+      `apply the migration that sets replica identity full to production, read it back, then move ON_PRODUCTION`,
+    ).toEqual([])
   })
 
   it('the guard bites: through 0048 no table logs its whole old row, through 0049 every filtered one does', () => {
@@ -118,7 +128,8 @@ describe('each binding is filtered by tournament (DB-05)', () => {
 
   it('the tournament row by its id, every other table by its tournament', () => {
     expect(liveFilter('tournaments', 't1')).toBe('id=eq.t1')
-    for (const t of REALTIME_TABLES.filter((t) => t !== 'tournaments')) expect(liveFilter(t, 't1')).toBe('tournament_id=eq.t1')
+    for (const t of REALTIME_TABLES.filter((t) => t !== 'tournaments'))
+      expect(liveFilter(t, 't1')).toBe('tournament_id=eq.t1')
   })
 })
 
@@ -135,13 +146,19 @@ describe('realtime tables', () => {
 
   it('never names a table only a migration after ON_PRODUCTION publishes: the bundle may land before it does (REL-01)', () => {
     const onlyLater = REALTIME_TABLES.filter((t) => published().has(t) && !publishedThrough(ON_PRODUCTION).has(t))
-    expect(onlyLater, `apply the migrations after ${ON_PRODUCTION} to production, check its publication, then move ON_PRODUCTION`).toEqual([])
+    expect(
+      onlyLater,
+      `apply the migrations after ${ON_PRODUCTION} to production, check its publication, then move ON_PRODUCTION`,
+    ).toEqual([])
     // Nor one a migration up to it took back out.
     expect(REALTIME_TABLES.filter((t) => !publishedThrough(ON_PRODUCTION).has(t))).toEqual([])
   })
 
   it('ON_PRODUCTION names a migration that exists, so a later one is still refused', () => {
-    expect(files.some((f) => f.startsWith(`${ON_PRODUCTION}_`)), `${ON_PRODUCTION} is not a migration`).toBe(true)
+    expect(
+      files.some((f) => f.startsWith(`${ON_PRODUCTION}_`)),
+      `${ON_PRODUCTION} is not a migration`,
+    ).toBe(true)
     expect(ON_PRODUCTION <= prefix(files.at(-1)!)).toBe(true)
   })
 
@@ -172,17 +189,28 @@ describe('realtime tables', () => {
 
   it('publishes every table the store applies by row, the ones still held off the channel included', () => {
     const pub = published()
-    expect(APPLIED_TABLES.filter((t) => !pub.has(t)), 'publish these in a migration').toEqual([])
+    expect(
+      APPLIED_TABLES.filter((t) => !pub.has(t)),
+      'publish these in a migration',
+    ).toEqual([])
   })
 
   it('listens to every table the boards and the inbox need: each one applied by row, each structural one that reloads, each inbox one, and nothing else', () => {
     // The tables whose change reloads the snapshot (their rows need joins the event does not carry).
     const structural: readonly string[] = RELOADED_TABLES
     const expected = new Set<string>([...APPLIED_TABLES, ...structural, ...INBOX_TABLES])
-    expect(expected.size, 'a table is in two of the lists').toBe(APPLIED_TABLES.length + structural.length + INBOX_TABLES.length)
+    expect(expected.size, 'a table is in two of the lists').toBe(
+      APPLIED_TABLES.length + structural.length + INBOX_TABLES.length,
+    )
     const listened = new Set<string>(REALTIME_TABLES)
-    expect([...expected].filter((t) => !listened.has(t)), 'dropped from REALTIME_TABLES: no phone hears these change').toEqual([])
-    expect([...listened].filter((t) => !expected.has(t)), 'on the channel, but neither applied, structural nor inbox').toEqual([])
+    expect(
+      [...expected].filter((t) => !listened.has(t)),
+      'dropped from REALTIME_TABLES: no phone hears these change',
+    ).toEqual([])
+    expect(
+      [...listened].filter((t) => !expected.has(t)),
+      'on the channel, but neither applied, structural nor inbox',
+    ).toEqual([])
     // Every structural table is in the snapshot, so its reload brings the change.
     for (const t of structural) expect(Object.keys(SNAPSHOT_KEYS)).toContain(t)
   })

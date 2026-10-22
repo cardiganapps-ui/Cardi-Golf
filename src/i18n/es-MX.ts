@@ -21,7 +21,14 @@ function movedWords(by: number): string {
 }
 
 /** What each pencil mark on a card says, in words. */
-const MARK_NAMES: Record<string, string> = { eagle: 'águila o mejor', birdie: 'birdie', par: 'par', bogey: 'bogey', double: 'doble bogey o peor', pickup: 'levantó' }
+const MARK_NAMES: Record<string, string> = {
+  eagle: 'águila o mejor',
+  birdie: 'birdie',
+  par: 'par',
+  bogey: 'bogey',
+  double: 'doble bogey o peor',
+  pickup: 'levantó',
+}
 
 /** How a board row is said beyond its figures (A11Y-11). */
 export interface RowSpeech {
@@ -93,7 +100,8 @@ function underParName(under: number, net: boolean): string {
 /** «par», «bogey», «doble bogey», «triple bogey», «4 sobre par», with «neto» when off handicap. */
 function overParName(d: number, net: boolean): string {
   if (d < 0) return underParName(-d, net)
-  const word = d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'doble bogey' : d === 3 ? 'triple bogey' : `${d} sobre par`
+  const word =
+    d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'doble bogey' : d === 3 ? 'triple bogey' : `${d} sobre par`
   return net ? `${word} neto` : word
 }
 
@@ -101,12 +109,37 @@ function overParName(d: number, net: boolean): string {
  * The feed's lines for a score under par (COPY-15): `what` is its name («birdie neto»), `under` how far under, `fig`
  * the points after a comma or nothing. A run of birdies, then the day's first, then an eagle get lines of their own.
  */
-function feedUnderPar(name: string, hole: number, what: string, under: number, fig: string, ctx: { first?: boolean; streak?: number }): string[] {
+function feedUnderPar(
+  name: string,
+  hole: number,
+  what: string,
+  under: number,
+  fig: string,
+  ctx: { first?: boolean; streak?: number },
+): string[] {
   const What = what.charAt(0).toUpperCase() + what.slice(1)
-  if (ctx.streak && ctx.streak > 1) return [`${name} no para: ${what} en el ${hole}, ${ctx.streak} hoyos seguidos bajo par${fig}`, `${name} va que vuela: ${what} en el ${hole}, ya van ${ctx.streak} seguidos${fig}`]
-  if (ctx.first) return [`${name} estrena el día con un ${what} en el ${hole}${fig}`, `${name} abre el día: ${what} en el ${hole}${fig}`]
-  if (under >= 2) return [`${name}: ${what} en el ${hole}${fig}`, `¡${What} de ${name} en el ${hole}!${fig ? ` ${fig.slice(2)}` : ''}`, `${name} se luce en el ${hole}: ${what}${fig}`]
-  return [`${name}: ${what} en el ${hole}${fig}`, `${What} de ${name} en el ${hole}${fig}`, `${name} la mete en el ${hole}: ${what}${fig}`, `En el ${hole}, ${what} para ${name}${fig}`]
+  if (ctx.streak && ctx.streak > 1)
+    return [
+      `${name} no para: ${what} en el ${hole}, ${ctx.streak} hoyos seguidos bajo par${fig}`,
+      `${name} va que vuela: ${what} en el ${hole}, ya van ${ctx.streak} seguidos${fig}`,
+    ]
+  if (ctx.first)
+    return [
+      `${name} estrena el día con un ${what} en el ${hole}${fig}`,
+      `${name} abre el día: ${what} en el ${hole}${fig}`,
+    ]
+  if (under >= 2)
+    return [
+      `${name}: ${what} en el ${hole}${fig}`,
+      `¡${What} de ${name} en el ${hole}!${fig ? ` ${fig.slice(2)}` : ''}`,
+      `${name} se luce en el ${hole}: ${what}${fig}`,
+    ]
+  return [
+    `${name}: ${what} en el ${hole}${fig}`,
+    `${What} de ${name} en el ${hole}${fig}`,
+    `${name} la mete en el ${hole}: ${what}${fig}`,
+    `En el ${hole}, ${what} para ${name}${fig}`,
+  ]
 }
 
 /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
@@ -150,7 +183,8 @@ type HcpSource = 'index' | 'estimate' | 'manual'
 const HCP_WORD: Record<HcpSource, string> = { index: 'índice', estimate: 'estimado', manual: 'base' }
 /** A handicap changed after they were fixed (UX-28): «de 14 a 12», «de 14.2 a 12.3 (índice)», «de 14 (base) a 12.3 (índice)». */
 export function hcpFromTo(from: { source: HcpSource; base: number }, to: { source: HcpSource; base: number }): string {
-  if (from.source === to.source) return `de ${handicapText(from.base)} a ${handicapText(to.base)}${from.source === 'manual' ? '' : ` (${HCP_WORD[from.source]})`}`
+  if (from.source === to.source)
+    return `de ${handicapText(from.base)} a ${handicapText(to.base)}${from.source === 'manual' ? '' : ` (${HCP_WORD[from.source]})`}`
   return `de ${handicapText(from.base)} (${HCP_WORD[from.source]}) a ${handicapText(to.base)} (${HCP_WORD[to.source]})`
 }
 
@@ -167,10 +201,14 @@ export interface PayWords {
  * holds it, so it is his own money going in or coming out, never a payment to himself.
  */
 function payWords(from: string | null, to: string | null, paid = false, bankerSelf = false): PayWords {
-  if (bankerSelf && to === null && from) return { who: from, verb: paid ? 'puso lo suyo en el banco' : 'pone lo suyo en el banco', whom: null }
-  if (bankerSelf && from === null && to) return { who: to, verb: paid ? 'se quedó con lo suyo del banco' : 'se queda con lo suyo del banco', whom: null }
+  if (bankerSelf && to === null && from)
+    return { who: from, verb: paid ? 'puso lo suyo en el banco' : 'pone lo suyo en el banco', whom: null }
+  if (bankerSelf && from === null && to)
+    return { who: to, verb: paid ? 'se quedó con lo suyo del banco' : 'se queda con lo suyo del banco', whom: null }
   const verb = paid ? 'le pagó' : 'le paga'
-  return to === null ? { who: from ?? 'El banco', verb: `${verb} al banco`, whom: null } : { who: from ?? 'El banco', verb: `${verb} a`, whom: to }
+  return to === null
+    ? { who: from ?? 'El banco', verb: `${verb} al banco`, whom: null }
+    : { who: from ?? 'El banco', verb: `${verb} a`, whom: to }
 }
 /** The words as one line, with the amount when there is one: «El banco le paga a Camilo: $3,300». */
 function payText(w: PayWords, amount?: string): string {
@@ -201,12 +239,12 @@ export function netScoreName(points: number): string {
  */
 export interface MsgFormat {
   /** Whole units: «$10,000», «−$1,200». */
-  money(n: number): string
+  money: (n: number) => string
   /** With centavos when there are any: «$6,462.50». */
-  moneyCents(n: number): string
+  moneyCents: (n: number) => string
   /** Signed for a part of a line: «+$2,500», «−$500», «$0». */
-  signedMoney(n: number): string
-  msg(m: Msg): string
+  signedMoney: (n: number) => string
+  msg: (m: Msg) => string
 }
 /** The engine's every code, in words (`explain`). TypeScript holds it to the contract in src/engine/messages.ts. */
 type ExplainCatalog = { [K in keyof MsgParams]: (p: MsgParams[K], f: MsgFormat) => string }
@@ -215,7 +253,11 @@ type ExplainCatalog = { [K in keyof MsgParams]: (p: MsgParams[K], f: MsgFormat) 
 const minus = (n: number) => (n < 0 ? `−${Math.abs(n)}` : String(n))
 /** A number in a handicap's arithmetic: up to 2 decimals, and a true minus (−0.8, never -0.8). */
 const num = (n: number) => {
-  const abs = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(2).replace(/\.?0+$/, '')
+  const abs = Number.isInteger(n)
+    ? String(Math.abs(n))
+    : Math.abs(n)
+        .toFixed(2)
+        .replace(/\.?0+$/, '')
   return n < 0 && abs !== '0' ? `−${abs}` : abs
 }
 /** A plus handicap's arithmetic is negative; say once how it is written. */
@@ -225,12 +267,22 @@ const golpes = (n: number) => `${n} ${n === 1 ? 'golpe' : 'golpes'}`
 /** «+2», «E», «−1»: strokes relative to par. */
 const toParText = (d: number) => (d === 0 ? 'E' : d > 0 ? `+${d}` : minus(d))
 /** A countback's holes: «Total», «Hoyo 18», «Hoyos 10–18». */
-const windowLabel = (w: { from: number; to: number; total: boolean }) => (w.total ? 'Total' : w.from === w.to ? `Hoyo ${w.to}` : `Hoyos ${w.from}–${w.to}`)
+const windowLabel = (w: { from: number; to: number; total: boolean }) =>
+  w.total ? 'Total' : w.from === w.to ? `Hoyo ${w.to}` : `Hoyos ${w.from}–${w.to}`
 /** A match's standing in holes: «2 arriba», «1 abajo», «empatado». */
 const holesUp = (n: number) => (n > 0 ? `${n} arriba` : n < 0 ? `${-n} abajo` : 'empatado')
 /** One side of a match on the last day: each on its own, since one over or not started is not the other's «empatado». */
-const matchSide = (side: MatchSide, n: number) => (side === 'notPlayed' ? 'no jugó' : side === 'notOut' ? 'no ha salido' : `${side === 'done' ? 'terminó' : 'va'} ${holesUp(n)}`)
-const UNFILLED_UNIT: Record<'player' | 'team' | 'pair', [string, string]> = { player: ['jugador', 'jugadores'], team: ['equipo', 'equipos'], pair: ['pareja', 'parejas'] }
+const matchSide = (side: MatchSide, n: number) =>
+  side === 'notPlayed'
+    ? 'no jugó'
+    : side === 'notOut'
+      ? 'no ha salido'
+      : `${side === 'done' ? 'terminó' : 'va'} ${holesUp(n)}`
+const UNFILLED_UNIT: Record<'player' | 'team' | 'pair', [string, string]> = {
+  player: ['jugador', 'jugadores'],
+  team: ['equipo', 'equipos'],
+  pair: ['pareja', 'parejas'],
+}
 const UNIT_WORDS: Record<GameUnit, [string, string]> = {
   skin: ['skin', 'skins'],
   birdie: ['birdie', 'birdies'],
@@ -314,7 +366,11 @@ export const t = {
      * «1½ puntos» (match points). Points only where the event counts them.
      */
     figure: (text: string, value: number, kind: 'points' | 'net' | 'gross' | 'match') =>
-      kind === 'points' ? ptsText(value, text) : kind === 'match' ? `${text} ${value > 0 && value <= 1 ? 'punto' : 'puntos'}` : `${text} ${kind === 'net' ? 'neto' : 'gross'}`,
+      kind === 'points'
+        ? ptsText(value, text)
+        : kind === 'match'
+          ? `${text} ${value > 0 && value <= 1 ? 'punto' : 'puntos'}`
+          : `${text} ${kind === 'net' ? 'neto' : 'gross'}`,
     /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. The only way copy joins names. */
     andList,
     /** «Camilo o Damián», «Camilo u Óscar»: who, of these. */
@@ -430,12 +486,14 @@ export const t = {
     },
     northStar: {
       title: 'Torneos cerrados al peso',
-      hint: (days: number) => `En ${days} días: terminados, con 8 o más jugadores y hoyos de 3 o más teléfonos. La métrica que manda.`,
+      hint: (days: number) =>
+        `En ${days} días: terminados, con 8 o más jugadores y hoyos de 3 o más teléfonos. La métrica que manda.`,
       finished: (n: number) => (n === 1 ? '1 terminado en total' : `${n} terminados en total`),
     },
     funnel: {
       title: (days: number) => `Organizadores, ${days} días`,
-      intro: 'Torneos de organizadores que no son el admin, sin ensayos ni rondas rápidas. Cada paso cuenta los que llegaron hasta ahí.',
+      intro:
+        'Torneos de organizadores que no son el admin, sin ensayos ni rondas rápidas. Cada paso cuenta los que llegaron hasta ahí.',
       step: {
         created: 'Creados',
         field: 'Con jugadores',
@@ -450,18 +508,22 @@ export const t = {
       /** 0075 (STRAT-14): how the courses those tournaments play arrived. */
       courses: {
         title: 'Cómo llegó cada campo',
-        intro: 'Cada campo que juegan sus días, una vez por torneo: ya estaba en Polo cuando se creó el torneo, o se agregó después.',
+        intro:
+          'Cada campo que juegan sus días, una vez por torneo: ya estaba en Polo cuando se creó el torneo, o se agregó después.',
         first: 'En su primer torneo',
         all: 'En todos',
         /** «7 de 9 ya estaban en Polo (5 de la búsqueda y 2 de una foto). 2 se agregaron (2 de una foto).» Each part names how, by its counts. */
         line: (found: number, total: number, foundHow: string[], added: number, addedHow: string[]) =>
           [
             `${found} de ${total} ya ${found === 1 ? 'estaba' : 'estaban'} en Polo${foundHow.length ? ` (${andList(foundHow)})` : ''}.`,
-            added ? `${added} ${added === 1 ? 'se agregó' : 'se agregaron'}${addedHow.length ? ` (${andList(addedHow)})` : ''}.` : null,
+            added
+              ? `${added} ${added === 1 ? 'se agregó' : 'se agregaron'}${addedHow.length ? ` (${andList(addedHow)})` : ''}.`
+              : null,
           ]
             .filter(Boolean)
             .join(' '),
-        how: (n: number, how: 'search' | 'photo' | 'manual') => `${n} ${{ search: 'de la búsqueda', photo: 'de una foto', manual: 'a mano' }[how]}`,
+        how: (n: number, how: 'search' | 'photo' | 'manual') =>
+          `${n} ${{ search: 'de la búsqueda', photo: 'de una foto', manual: 'a mano' }[how]}`,
         none: 'Ningún torneo tiene campo todavía.',
       },
     },
@@ -496,25 +558,58 @@ export const t = {
       orphan: 'Sin Comité',
     },
     kindLabel: 'Tipo',
-    status: { setup: 'En preparación', auction: 'Calcutta', live: 'En juego', finished: 'Terminado' } as Record<string, string>,
-    roundStatus: { scheduled: 'Programada', live: 'En juego', finished: 'Terminada', cancelled: 'Cancelada' } as Record<string, string>,
+    status: { setup: 'En preparación', auction: 'Calcutta', live: 'En juego', finished: 'Terminado' } as Record<
+      string,
+      string
+    >,
+    roundStatus: { scheduled: 'Programada', live: 'En juego', finished: 'Terminada', cancelled: 'Cancelada' } as Record<
+      string,
+      string
+    >,
     /** What an audit row changed, by table; unknown tables show as they are. */
     tables: {
-      scores: 'Hoyo', players: 'Jugador', rounds: 'Ronda', groups: 'Grupo', group_members: 'Grupo', pairs: 'Pareja',
-      tournaments: 'Torneo', tournament_organizers: 'Comité', payments: 'Pago', handicap_overrides: 'Hándicap',
-      round_tees: 'Tee', snake_tiebreaks: 'Víbora', card_signatures: 'Firma', calcutta_lots: 'Calcutta',
-      calcutta_bids: 'Puja', calcutta_buybacks: 'Recompra', game_entries: 'Juego', hole_awards: 'Premio de hoyo',
-      game_results: 'Resultado', courses: 'Campo', tees: 'Tee', holes: 'Hoyo del campo', pin_claims: 'Teléfono',
-      spectator_links: 'Enlace para ver', teams: 'Equipo', team_members: 'Equipo', player_pins: 'PIN', player_corrections: 'Pedido de corrección',
-      tournament_results: 'Resultados publicados', photos: 'Foto', course_documents: 'Tarjeta del campo',
-      money_adjustments: 'Dinero por asignar', rejected_writes: 'Pendiente de revisar',
+      scores: 'Hoyo',
+      players: 'Jugador',
+      rounds: 'Ronda',
+      groups: 'Grupo',
+      group_members: 'Grupo',
+      pairs: 'Pareja',
+      tournaments: 'Torneo',
+      tournament_organizers: 'Comité',
+      payments: 'Pago',
+      handicap_overrides: 'Hándicap',
+      round_tees: 'Tee',
+      snake_tiebreaks: 'Víbora',
+      card_signatures: 'Firma',
+      calcutta_lots: 'Calcutta',
+      calcutta_bids: 'Puja',
+      calcutta_buybacks: 'Recompra',
+      game_entries: 'Juego',
+      hole_awards: 'Premio de hoyo',
+      game_results: 'Resultado',
+      courses: 'Campo',
+      tees: 'Tee',
+      holes: 'Hoyo del campo',
+      pin_claims: 'Teléfono',
+      spectator_links: 'Enlace para ver',
+      teams: 'Equipo',
+      team_members: 'Equipo',
+      player_pins: 'PIN',
+      player_corrections: 'Pedido de corrección',
+      tournament_results: 'Resultados publicados',
+      photos: 'Foto',
+      course_documents: 'Tarjeta del campo',
+      money_adjustments: 'Dinero por asignar',
+      rejected_writes: 'Pendiente de revisar',
     } as Record<string, string>,
     practiceCount: (n: number) => `${n} ${n === 1 ? 'ensayo' : 'ensayos'}`,
-    count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'torneo' : 'torneos'}` : `${shown} de ${total}`),
+    count: (shown: number, total: number) =>
+      shown === total ? `${total} ${total === 1 ? 'torneo' : 'torneos'}` : `${shown} de ${total}`,
     more: 'Ver más',
     empty: 'Ningún torneo coincide.',
     chips: { protected: 'Protegido', practice: 'Ensayo', quick: 'Rápida', orphan: 'Sin Comité' },
-    rowSub: (players: number, owner: string | null) => `${players} ${players === 1 ? 'jugador' : 'jugadores'}${owner ? `, ${owner}` : ''}`,
+    rowSub: (players: number, owner: string | null) =>
+      `${players} ${players === 1 ? 'jugador' : 'jugadores'}${owner ? `, ${owner}` : ''}`,
     lastActivity: (when: string) => `Movimiento ${when}`,
     noActivity: 'Sin movimiento',
     // Detalle
@@ -530,7 +625,8 @@ export const t = {
     noRounds: 'Sin rondas.',
     /** A round with no date yet, in Admin de Polo (VIS-27: it printed a dash). */
     noDate: 'Sin fecha',
-    roundLine: (n: number, course: string | null, scores: number) => `Ronda ${n}${course ? `, ${course}` : ''}, ${scores} ${scores === 1 ? 'hoyo' : 'hoyos'}`,
+    roundLine: (n: number, course: string | null, scores: number) =>
+      `Ronda ${n}${course ? `, ${course}` : ''}, ${scores} ${scores === 1 ? 'hoyo' : 'hoyos'}`,
     counts: {
       players: 'Jugadores',
       linked: 'Con perfil',
@@ -544,12 +640,16 @@ export const t = {
     crew: (name: string) => `Crew: ${name}`,
     audit: 'Últimos cambios',
     auditEmpty: 'Sin cambios registrados.',
-    auditLine: (table: string, action: string) => `${table}, ${action === 'INSERT' ? 'alta' : action === 'UPDATE' ? 'cambio' : 'baja'}`.replace(/^./, (c) => c.toUpperCase()),
+    auditLine: (table: string, action: string) =>
+      `${table}, ${action === 'INSERT' ? 'alta' : action === 'UPDATE' ? 'cambio' : 'baja'}`.replace(/^./, (c) =>
+        c.toUpperCase(),
+      ),
     byPlatform: 'Admin de Polo',
     notFound: 'Ese torneo ya no existe.',
     // Protección
     protection: 'Protección',
-    protectedBody: 'Nadie puede borrarlo, ni su dueño. Para corregir algo como Admin de Polo tienes que desbloquearlo 30 minutos con un motivo.',
+    protectedBody:
+      'Nadie puede borrarlo, ni su dueño. Para corregir algo como Admin de Polo tienes que desbloquearlo 30 minutos con un motivo.',
     unprotectedBody: 'Protégelo cuando sea un torneo real: nadie podrá borrarlo por accidente.',
     protect: 'Proteger',
     unprotect: 'Quitar protección',
@@ -557,7 +657,8 @@ export const t = {
     unlock: 'Desbloquear 30 min',
     relock: 'Bloquear ya',
     unlockTitle: 'Desbloquear este torneo',
-    unlockBody: 'Vas a poder hacer lo mismo que su Comité durante 30 minutos. Todo queda registrado como Admin de Polo, con este motivo.',
+    unlockBody:
+      'Vas a poder hacer lo mismo que su Comité durante 30 minutos. Todo queda registrado como Admin de Polo, con este motivo.',
     reason: 'Motivo',
     reasonPlaceholder: 'Qué vas a corregir y quién lo pidió',
     unlockedUntil: (time: string) => `Desbloqueado hasta las ${time}`,
@@ -581,12 +682,14 @@ export const t = {
       search: 'Correo, usuario o nombre',
       filters: { all: 'Todos', accounts: 'Cuentas', devices: 'Teléfonos sin cuenta', blocked: 'Bloqueados' },
       filterLabel: 'Quiénes',
-      count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'persona' : 'personas'}` : `${shown} de ${total}`),
+      count: (shown: number, total: number) =>
+        shown === total ? `${total} ${total === 1 ? 'persona' : 'personas'}` : `${shown} de ${total}`,
       empty: 'Nadie coincide.',
       pickOne: 'Elige a alguien para ver su detalle.',
       back: 'Personas',
       phone: 'Teléfono sin cuenta',
-      phoneAs: (player: string, tournament: string | null) => `Entró como ${player}${tournament ? ` en ${tournament}` : ''}`,
+      phoneAs: (player: string, tournament: string | null) =>
+        `Entró como ${player}${tournament ? ` en ${tournament}` : ''}`,
       phoneUnclaimed: 'Todavía no entra como ningún jugador',
       rowSub: (who: string, n: number) => `${who}${n ? `, ${n} ${n === 1 ? 'torneo' : 'torneos'}` : ''}`,
       provider: { email: 'Correo', google: 'Google', anonymous: 'Sin cuenta' } as Record<string, string>,
@@ -610,23 +713,37 @@ export const t = {
       unlink: 'Quitar amarre',
       unlinked: 'Amarre quitado',
       social: 'Crews y amigos',
-      friends: (n: number, pending: number) => `${n} ${n === 1 ? 'amigo' : 'amigos'}${pending ? `, ${pending} por responder` : ''}`,
-      crewLine: (role: string, members: number) => `${role === 'owner' ? 'Dueño' : 'Miembro'}, ${members} ${members === 1 ? 'miembro' : 'miembros'}`,
-      push: (n: number, hosts: string) => (n ? `Avisos en ${n} ${n === 1 ? 'dispositivo' : 'dispositivos'} (${hosts})` : 'Sin avisos activados'),
+      friends: (n: number, pending: number) =>
+        `${n} ${n === 1 ? 'amigo' : 'amigos'}${pending ? `, ${pending} por responder` : ''}`,
+      crewLine: (role: string, members: number) =>
+        `${role === 'owner' ? 'Dueño' : 'Miembro'}, ${members} ${members === 1 ? 'miembro' : 'miembros'}`,
+      push: (n: number, hosts: string) =>
+        n ? `Avisos en ${n} ${n === 1 ? 'dispositivo' : 'dispositivos'} (${hosts})` : 'Sin avisos activados',
       pin: 'Bloqueos de PIN',
       noPinLocks: 'Sin bloqueos de PIN.',
-      deviceLock: (failed: number, until: string | null) => (until ? `Este teléfono está bloqueado hasta las ${until}` : `${failed} ${failed === 1 ? 'intento fallido' : 'intentos fallidos'} en este teléfono`),
-      playerLock: (name: string, tournament: string, until: string | null) => `${name} en ${tournament}${until ? `: bloqueado hasta las ${until}` : ''}`,
+      deviceLock: (failed: number, until: string | null) =>
+        until
+          ? `Este teléfono está bloqueado hasta las ${until}`
+          : `${failed} ${failed === 1 ? 'intento fallido' : 'intentos fallidos'} en este teléfono`,
+      playerLock: (name: string, tournament: string, until: string | null) =>
+        `${name} en ${tournament}${until ? `: bloqueado hasta las ${until}` : ''}`,
       clearLock: 'Quitar bloqueo',
       clearLockTitle: 'Quitar el bloqueo de PIN',
       clearLockBody: 'El PIN no cambia: solo se borran los intentos fallidos y el bloqueo.',
       activity: 'Lo que hizo el admin',
       noActivity: 'Nada todavía.',
-      actions: { block: 'Bloqueó la cuenta', unblock: 'Desbloqueó la cuenta', delete: 'Borró la cuenta', pin_unlock: 'Quitó un bloqueo de PIN', view: 'Abrió la cuenta' } as Record<string, string>,
+      actions: {
+        block: 'Bloqueó la cuenta',
+        unblock: 'Desbloqueó la cuenta',
+        delete: 'Borró la cuenta',
+        pin_unlock: 'Quitó un bloqueo de PIN',
+        view: 'Abrió la cuenta',
+      } as Record<string, string>,
       manage: 'Acciones',
       block: 'Bloquear',
       blockTitle: 'Bloquear esta cuenta',
-      blockBody: 'No podrá volver a entrar y se cierran sus sesiones. Si ya tenía la app abierta, puede seguir hasta una hora. Sus torneos y resultados no se tocan.',
+      blockBody:
+        'No podrá volver a entrar y se cierran sus sesiones. Si ya tenía la app abierta, puede seguir hasta una hora. Sus torneos y resultados no se tocan.',
       unblock: 'Desbloquear',
       unblockTitle: 'Desbloquear esta cuenta',
       unblockBody: 'Podrá volver a entrar.',
@@ -639,7 +756,8 @@ export const t = {
       deleteAnonymized: (n: number, tournaments: string) =>
         `${n === 1 ? 'Su jugador queda' : `Sus ${n} jugadores quedan`} como «Jugador borrado», sin nombre, foto ni forma, en ${tournaments}. Los hoyos, el hándicap y el dinero se quedan, para que los resultados de los demás sigan cuadrando.`,
       /** Players only proposed to the profile: the Comité's own entry, kept as it is. */
-      deletePlayers: (n: number) => `${n} ${n === 1 ? 'jugador conserva' : 'jugadores conservan'} su nombre, sus hoyos y sus resultados, sin su perfil.`,
+      deletePlayers: (n: number) =>
+        `${n} ${n === 1 ? 'jugador conserva' : 'jugadores conservan'} su nombre, sus hoyos y sus resultados, sin su perfil.`,
       deleteCrewsHanded: (names: string) => `Sus crews pasan a su miembro más antiguo: ${names}.`,
       deleteCrewsDeleted: (names: string) => `Se borran sus crews donde estaba solo: ${names}.`,
       deleteSocial: (friends: number, rivalries: number) =>
@@ -657,23 +775,53 @@ export const t = {
     // Campos
     courses: {
       search: 'Nombre o ciudad',
-      filters: { all: 'Todos', dupes: 'Duplicados', broken: 'Con errores', unused: 'Sin usar', verified: 'Verificados', unverified: 'Sin verificar', corrected: 'Corregidos' },
+      filters: {
+        all: 'Todos',
+        dupes: 'Duplicados',
+        broken: 'Con errores',
+        unused: 'Sin usar',
+        verified: 'Verificados',
+        unverified: 'Sin verificar',
+        corrected: 'Corregidos',
+      },
       filterLabel: 'Cuáles',
-      count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'campo' : 'campos'}` : `${shown} de ${total}`),
+      count: (shown: number, total: number) =>
+        shown === total ? `${total} ${total === 1 ? 'campo' : 'campos'}` : `${shown} de ${total}`,
       empty: 'Ningún campo coincide.',
       pickOne: 'Elige un campo para ver su tarjeta.',
       back: 'Campos',
       rowSub: (tees: number, rounds: number, where: string | null) =>
-        [where, `${tees} ${tees === 1 ? 'tee' : 'tees'}`, rounds ? `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}` : 'sin usar'].filter(Boolean).join(', '),
+        [
+          where,
+          `${tees} ${tees === 1 ? 'tee' : 'tees'}`,
+          rounds ? `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}` : 'sin usar',
+        ]
+          .filter(Boolean)
+          .join(', '),
       chips: { dupe: 'Duplicado', broken: 'Con errores', corrected: 'Corregido' },
-      source: { manual: 'A mano', golfcourseapi: 'Base de datos', opengolfapi: 'Base de datos', scorecard_photo: 'Foto de tarjeta' } as Record<string, string>,
+      source: {
+        manual: 'A mano',
+        golfcourseapi: 'Base de datos',
+        opengolfapi: 'Base de datos',
+        scorecard_photo: 'Foto de tarjeta',
+      } as Record<string, string>,
       created: (who: string | null, when: string) => `${who ? `Lo agregó ${who}` : 'Agregado'} ${when}`,
       tees: 'Tees',
       cardOf: (tee: string) => `Tarjeta de ${tee}`,
       holeLine: (n: number, par: number, si: number) => `Hoyo ${n}: par ${par}, índice de golpe ${si}`,
       teeLine: (par: number | null, rating: number | null, slope: number | null, inUse: number) =>
-        [par ? `Par ${par}` : null, rating != null ? `${rating} / ${slope ?? '—'}` : null, inUse ? `en uso (${inUse})` : null].filter(Boolean).join(', '),
-      problems: { holes: 'no tiene 9 ni 18 hoyos', par: 'algún par fuera de 3–6', si: 'los índices de golpe se repiten o faltan' } as Record<string, string>,
+        [
+          par ? `Par ${par}` : null,
+          rating != null ? `${rating} / ${slope ?? '—'}` : null,
+          inUse ? `en uso (${inUse})` : null,
+        ]
+          .filter(Boolean)
+          .join(', '),
+      problems: {
+        holes: 'no tiene 9 ni 18 hoyos',
+        par: 'algún par fuera de 3–6',
+        si: 'los índices de golpe se repiten o faltan',
+      } as Record<string, string>,
       noTees: 'Sin tees: nadie puede jugarlo así.',
       usedBy: 'Dónde se juega',
       notUsed: 'Nadie lo juega todavía.',
@@ -687,12 +835,14 @@ export const t = {
       mergeKeep: 'Se queda',
       mergeDrop: 'Se va',
       mergeSwap: 'Al revés',
-      mergeBody: (drop: string, keep: string) => `Las rondas, los tees de cada jugador y las fotos de «${drop}» pasan a «${keep}», y «${drop}» se borra.`,
+      mergeBody: (drop: string, keep: string) =>
+        `Las rondas, los tees de cada jugador y las fotos de «${drop}» pasan a «${keep}», y «${drop}» se borra.`,
       mergeMapTitle: 'A qué tee pasa cada uno',
       mergeUnmapped: 'Nadie lo juega: se borra',
       mergeNeedsMap: 'Alguien lo juega: elige a cuál pasa',
       mergeMismatch: 'Tarjetas distintas (par o índice de golpe); corrígela antes',
-      mergeDone: (rounds: number) => `Fusionados. ${rounds} ${rounds === 1 ? 'ronda pasó' : 'rondas pasaron'} al campo que se queda.`,
+      mergeDone: (rounds: number) =>
+        `Fusionados. ${rounds} ${rounds === 1 ? 'ronda pasó' : 'rondas pasaron'} al campo que se queda.`,
       delete: 'Borrar campo',
       deleteTitle: 'Borrar este campo',
       deleteBody: 'Nadie lo juega. Se borra con sus tees y hoyos.',
@@ -700,14 +850,20 @@ export const t = {
       deleted: 'Campo borrado',
       refresh: 'Recalcular resultados',
       refreshed: (n: number) => `Recalculé ${n} ${n === 1 ? 'ronda' : 'rondas'}.`,
-      activity: { course_merge: 'Fusionó campos', course_delete: 'Borró un campo', course_refresh: 'Recalculó resultados' } as Record<string, string>,
+      activity: {
+        course_merge: 'Fusionó campos',
+        course_delete: 'Borró un campo',
+        course_refresh: 'Recalculó resultados',
+      } as Record<string, string>,
       /** 0075 (STRAT-14): who compared the card with the printed one, and its last correction. */
       verifiedBy: (via: 'platform' | 'comite' | null | undefined, who: string | null | undefined, when: string) =>
         `Verificada ${via === 'comite' ? 'por el Comité de un torneo que la jugó' : 'por el Admin de Polo'}${who ? ` (${who})` : ''} ${when}`,
-      correctedLine: (who: string | null | undefined, when: string) => `Última corrección de la tarjeta ${when}${who ? `, de ${who}` : ''}`,
+      correctedLine: (who: string | null | undefined, when: string) =>
+        `Última corrección de la tarjeta ${when}${who ? `, de ${who}` : ''}`,
       verify: 'Marcar verificada',
       verifyTitle: 'Marcar la tarjeta verificada',
-      verifyBody: 'La comparaste con la impresa del club: el par y el índice de golpe de cada hoyo, y el rating y el slope de cada tee. Si alguien la cambia después, deja de estar verificada.',
+      verifyBody:
+        'La comparaste con la impresa del club: el par y el índice de golpe de cada hoyo, y el rating y el slope de cada tee. Si alguien la cambia después, deja de estar verificada.',
       unverify: 'Quitar la marca',
       unverifyTitle: 'Quitar la marca de verificada',
       unverifyBody: 'La tarjeta se sigue pudiendo usar; solo deja de verse verificada.',
@@ -717,12 +873,19 @@ export const t = {
     // Crews
     crews: {
       search: 'Nombre o código',
-      count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'crew' : 'crews'}` : `${shown} de ${total}`),
+      count: (shown: number, total: number) =>
+        shown === total ? `${total} ${total === 1 ? 'crew' : 'crews'}` : `${shown} de ${total}`,
       empty: 'Ningún crew coincide.',
       pickOne: 'Elige un crew para ver su detalle.',
       back: 'Crews',
       rowSub: (members: number, outings: number, owner: string | null) =>
-        [`${members} ${members === 1 ? 'miembro' : 'miembros'}`, `${outings} ${outings === 1 ? 'salida' : 'salidas'}`, owner].filter(Boolean).join(', '),
+        [
+          `${members} ${members === 1 ? 'miembro' : 'miembros'}`,
+          `${outings} ${outings === 1 ? 'salida' : 'salidas'}`,
+          owner,
+        ]
+          .filter(Boolean)
+          .join(', '),
       lastOuting: (when: string) => `Última salida ${when}`,
       noOutings: 'Sin salidas',
       members: 'Miembros',
@@ -734,14 +897,21 @@ export const t = {
       removeBodyOwner: 'Es el dueño: el crew pasa a su miembro más antiguo.',
       removeBodyLast: 'Es el último: el crew se borra.',
       removeBody: 'Deja de ver el crew y sus salidas.',
-      removed: { removed: 'Listo', handed: 'Listo. El crew pasó a su miembro más antiguo.', deleted: 'Era el último: el crew se borró.' } as Record<string, string>,
+      removed: {
+        removed: 'Listo',
+        handed: 'Listo. El crew pasó a su miembro más antiguo.',
+        deleted: 'Era el último: el crew se borró.',
+      } as Record<string, string>,
       outings: 'Salidas',
       delete: 'Borrar crew',
       deleteTitle: 'Borrar este crew',
       deleteBody: 'Sus torneos y rondas se quedan, fuera del crew. Sus miembros dejan de verlo.',
       deleteConfirm: (name: string) => `Escribe «${name}» para confirmar`,
       deleted: 'Crew borrado',
-      activity: { crew_remove_member: 'Sacó a alguien', crew_delete: 'Borró el crew', view: 'Abrió el crew' } as Record<string, string>,
+      activity: { crew_remove_member: 'Sacó a alguien', crew_delete: 'Borró el crew', view: 'Abrió el crew' } as Record<
+        string,
+        string
+      >,
       notFound: 'Ese crew ya no existe.',
     },
     // Avisos
@@ -762,8 +932,12 @@ export const t = {
       urlHint: 'Una página de Polo, como /crews o /ronda',
       urlBad: 'Tiene que ser una página de Polo, que empiece con /',
       preview: 'Así se ve',
-      audienceAll: (profiles: number, push: number) => `Llega a ${profiles} ${profiles === 1 ? 'perfil' : 'perfiles'}; ${push} ${push === 1 ? 'lo recibe' : 'lo reciben'} en el teléfono.`,
-      limit: (sent: number) => (sent >= 2 ? 'Ya mandaste los dos avisos a todos de hoy.' : `Puedes mandar ${2 - sent} ${2 - sent === 1 ? 'aviso' : 'avisos'} a todos más hoy.`),
+      audienceAll: (profiles: number, push: number) =>
+        `Llega a ${profiles} ${profiles === 1 ? 'perfil' : 'perfiles'}; ${push} ${push === 1 ? 'lo recibe' : 'lo reciben'} en el teléfono.`,
+      limit: (sent: number) =>
+        sent >= 2
+          ? 'Ya mandaste los dos avisos a todos de hoy.'
+          : `Puedes mandar ${2 - sent} ${2 - sent === 1 ? 'aviso' : 'avisos'} a todos más hoy.`,
       send: 'Mandar aviso',
       confirmAll: (n: number) => `Mandar a ${n} ${n === 1 ? 'persona' : 'personas'}`,
       confirmTitle: 'Mandar el aviso',
@@ -808,7 +982,8 @@ export const t = {
         self_export: 'Una persona descargó sus datos',
         self_delete: 'Una persona borró su cuenta',
       } as Record<string, string>,
-      comiteLine: (table: string, op: string) => `${table}, ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
+      comiteLine: (table: string, op: string) =>
+        `${table}, ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
     },
     // Salud
     health: {
@@ -817,14 +992,17 @@ export const t = {
       backupOk: (when: string) => `Último respaldo bueno ${when}`,
       backupNever: 'Todavía no hay respaldos registrados. El siguiente corre a las 2 am de Los Cabos.',
       backupFailed: (when: string, error: string) => `El último intento falló ${when}: ${error}`,
-      backupSize: (kb: number, tables: number, rows: number) => `${kb.toLocaleString('es-MX')} KB, ${tables} tablas, ${rows.toLocaleString('es-MX')} filas`,
-      backupWeek: (ok: number, failed: number) => `Esta semana: ${ok} ${ok === 1 ? 'bueno' : 'buenos'}${failed ? `, ${failed} ${failed === 1 ? 'falló' : 'fallaron'}` : ''}`,
+      backupSize: (kb: number, tables: number, rows: number) =>
+        `${kb.toLocaleString('es-MX')} KB, ${tables} tablas, ${rows.toLocaleString('es-MX')} filas`,
+      backupWeek: (ok: number, failed: number) =>
+        `Esta semana: ${ok} ${ok === 1 ? 'bueno' : 'buenos'}${failed ? `, ${failed} ${failed === 1 ? 'falló' : 'fallaron'}` : ''}`,
       backupStale: 'Más de 36 horas sin un respaldo bueno. Revisa el cron en Vercel.',
       /** The nightly deletion (0069, TRUST-18): it runs after a good backup. */
       retention: 'Borrado de cada noche',
       retentionHint: 'Después de cada respaldo bueno se borra lo que ya cumplió: nunca nada de un torneo que exista.',
       retentionNever: 'Todavía no corre: corre después del siguiente respaldo bueno.',
-      retentionLast: (when: string, ok: boolean) => (ok ? `La última noche corrió ${when}` : `La última noche falló ${when}`),
+      retentionLast: (when: string, ok: boolean) =>
+        ok ? `La última noche corrió ${when}` : `La última noche falló ${when}`,
       retentionWeek: 'Esta semana se borraron',
       retentionNone: 'Esta semana no hubo nada que borrar.',
       retentionKind: {
@@ -841,15 +1019,20 @@ export const t = {
       pushConfigured: 'Configuradas',
       pushMissing: 'Falta configurarlas en Vault (ve docs/handoff.md).',
       pushUnknown: 'No pude revisar la configuración.',
-      pushSubs: (subs: number, profiles: number) => `${subs} ${subs === 1 ? 'teléfono' : 'teléfonos'} de ${profiles} ${profiles === 1 ? 'perfil' : 'perfiles'}`,
-      pushRecent: (total: number, failed: number) => (total ? `Últimas horas: ${total} ${total === 1 ? 'envío' : 'envíos'}${failed ? `, ${failed} con error` : ', sin errores'}` : 'Sin envíos en las últimas horas'),
+      pushSubs: (subs: number, profiles: number) =>
+        `${subs} ${subs === 1 ? 'teléfono' : 'teléfonos'} de ${profiles} ${profiles === 1 ? 'perfil' : 'perfiles'}`,
+      pushRecent: (total: number, failed: number) =>
+        total
+          ? `Últimas horas: ${total} ${total === 1 ? 'envío' : 'envíos'}${failed ? `, ${failed} con error` : ', sin errores'}`
+          : 'Sin envíos en las últimas horas',
       pushRecentNote: 'Supabase solo guarda unas horas de envíos.',
       database: 'Base de datos',
       migration: (name: string, when: string) => `Última migración: ${name}, ${when}`,
       notices24h: (n: number) => `${n} ${n === 1 ? 'aviso' : 'avisos'} en 24 horas`,
       people: 'Personas',
       blocked: (n: number) => `${n} ${n === 1 ? 'cuenta bloqueada' : 'cuentas bloqueadas'}`,
-      locks: (device: number, player: number) => `${device + player} ${device + player === 1 ? 'bloqueo de PIN activo' : 'bloqueos de PIN activos'}`,
+      locks: (device: number, player: number) =>
+        `${device + player} ${device + player === 1 ? 'bloqueo de PIN activo' : 'bloqueos de PIN activos'}`,
       switches: 'Interruptores',
       switchesHint: 'Para una emergencia o un mantenimiento. Tú siempre puedes crear cuentas y torneos.',
       pauseAccounts: 'Pausar cuentas nuevas',
@@ -866,27 +1049,40 @@ export const t = {
       switchOff: (what: string) => `Apagar: ${what}`,
       // Telemetría (STRAT-02): lo que mandan los teléfonos.
       phones: 'Teléfonos, últimas 24 horas',
-      phonesHint: 'Lo que reporta cada teléfono: errores, cuánto tarda un hoyo en llegar a los demás, y lo que le falta por mandar. Nunca nombres ni montos.',
+      phonesHint:
+        'Lo que reporta cada teléfono: errores, cuánto tarda un hoyo en llegar a los demás, y lo que le falta por mandar. Nunca nombres ni montos.',
       sync: 'Hoyos en vivo',
       syncNone: 'Ningún hoyo de otro teléfono llegó en estas horas.',
       syncLag: (p50: string, p95: string) => `Llegan a los demás en ${p50} (la mitad), ${p95} (95 de cada 100)`,
       syncSlow: (n: number, total: number) => `${n} de ${total} ${total === 1 ? 'tardó' : 'tardaron'} más de 2 s`,
-      syncAck: (p50: string, p95: string) => `El servidor contesta un hoyo en ${p50} (la mitad), ${p95} (95 de cada 100)`,
+      syncAck: (p50: string, p95: string) =>
+        `El servidor contesta un hoyo en ${p50} (la mitad), ${p95} (95 de cada 100)`,
       devices: 'Teléfonos',
       devicesSeen: (n: number) => `${n} ${n === 1 ? 'teléfono activo' : 'teléfonos activos'}`,
       devicesPending: (holes: number, phones: number, when: string | null) =>
-        holes ? `${holes} ${holes === 1 ? 'hoyo' : 'hoyos'} sin mandar en ${phones} ${phones === 1 ? 'teléfono' : 'teléfonos'}${when ? `, el más viejo ${when}` : ''}` : 'Nada sin mandar',
+        holes
+          ? `${holes} ${holes === 1 ? 'hoyo' : 'hoyos'} sin mandar en ${phones} ${phones === 1 ? 'teléfono' : 'teléfonos'}${when ? `, el más viejo ${when}` : ''}`
+          : 'Nada sin mandar',
       devicesRejected: (n: number) => `${n} ${n === 1 ? 'hoyo rechazado' : 'hoyos rechazados'} en los teléfonos`,
       build: (sha: string | null, n: number) => `${sha ? `Versión ${sha}` : 'Versión sin nombre'}: ${n}`,
       vitals: 'Rapidez',
       vitalsNone: 'Sin mediciones todavía.',
-      vital: { lcp: 'Carga', inp: 'Respuesta al tocar', cls: 'Saltos de la pantalla', fcp: 'Primer dibujo', ttfb: 'Respuesta del servidor' } as Record<string, string>,
+      vital: {
+        lcp: 'Carga',
+        inp: 'Respuesta al tocar',
+        cls: 'Saltos de la pantalla',
+        fcp: 'Primer dibujo',
+        ttfb: 'Respuesta del servidor',
+      } as Record<string, string>,
       errors: 'Errores',
       errorsNone: 'Ningún error en estas horas.',
-      errorLine: (count: number, devices: number, when: string) => `${count} ${count === 1 ? 'vez' : 'veces'} en ${devices} ${devices === 1 ? 'teléfono' : 'teléfonos'}, la última ${when}`,
-      errorWhere: (route: string, line: string, sha: string | null) => [route ? `En ${route}` : '', line, sha ? `versión ${sha}` : ''].filter(Boolean).join(', '),
+      errorLine: (count: number, devices: number, when: string) =>
+        `${count} ${count === 1 ? 'vez' : 'veces'} en ${devices} ${devices === 1 ? 'teléfono' : 'teléfonos'}, la última ${when}`,
+      errorWhere: (route: string, line: string, sha: string | null) =>
+        [route ? `En ${route}` : '', line, sha ? `versión ${sha}` : ''].filter(Boolean).join(', '),
       usage: 'Uso',
-      usageLine: (count: number, people: number) => `${count.toLocaleString('es-MX')} (${people} ${people === 1 ? 'persona' : 'personas'})`,
+      usageLine: (count: number, people: number) =>
+        `${count.toLocaleString('es-MX')} (${people} ${people === 1 ? 'persona' : 'personas'})`,
       step: {
         app_open: 'Abrieron la app',
         tournament_open: 'Abrieron un torneo',
@@ -907,7 +1103,8 @@ export const t = {
     removeOrganizer: 'Quitar del Comité',
     // Banner inside a tournament
     banner: 'Admin de Polo',
-    bannerBody: 'Estás en un torneo de otro organizador. Lo que cambies queda registrado a tu nombre como Admin de Polo.',
+    bannerBody:
+      'Estás en un torneo de otro organizador. Lo que cambies queda registrado a tu nombre como Admin de Polo.',
     bannerProtected: 'Protegido: solo lectura',
     bannerUnlocked: (time: string) => `Desbloqueado hasta las ${time}`,
     bannerPanel: 'Ver en el admin',
@@ -1004,8 +1201,14 @@ export const t = {
       formatInfo: (name: string) => `Cómo se juega ${name}`,
       formatInfoTitle: 'Cómo se juega',
       formats: {
-        stableford: { name: 'Stableford', blurb: 'Puntos por hoyo: gana quien más sume. Puedes levantar sin arruinar la tarjeta.' },
-        strokePlay: { name: 'Golpes', blurb: 'Se cuentan todos los golpes: gana quien menos haga. El formato de siempre.' },
+        stableford: {
+          name: 'Stableford',
+          blurb: 'Puntos por hoyo: gana quien más sume. Puedes levantar sin arruinar la tarjeta.',
+        },
+        strokePlay: {
+          name: 'Golpes',
+          blurb: 'Se cuentan todos los golpes: gana quien menos haga. El formato de siempre.',
+        },
         matchPlay: { name: 'Match play', blurb: 'Hoyo por hoyo contra tu rival. Se gana por hoyos, no por golpes.' },
         team: { name: 'Por equipos', blurb: 'Scramble, mejor bola o shamble: el equipo juega una tarjeta.' },
       },
@@ -1015,7 +1218,8 @@ export const t = {
       matchMode: 'Tipo de partido',
       matchSingles: 'Uno contra uno',
       matchFourball: 'Fourball',
-      matchHint: 'El partido es el grupo: dos jugadores, o cuatro en dos parejas. Las parejas se arman en Equipos, en la consola del Comité.',
+      matchHint:
+        'El partido es el grupo: dos jugadores, o cuatro en dos parejas. Las parejas se arman en Equipos, en la consola del Comité.',
       teamMode: 'Cómo juega el equipo',
       teamScramble: 'Scramble',
       teamBestBall: 'Mejor bola',
@@ -1067,8 +1271,10 @@ export const t = {
       create: 'Crear torneo',
       creating: 'Creando…',
       created: 'Torneo creado',
-      shareHint: 'Compártelo cuando los jugadores ya estén dados de alta: con el código o el enlace entran a este torneo con su cara y su PIN.',
-      nextSteps: 'Ya existe. Ahora, en el Comité: los jugadores con su PIN, el campo, la fecha y los grupos. «Para empezar» te dice qué falta.',
+      shareHint:
+        'Compártelo cuando los jugadores ya estén dados de alta: con el código o el enlace entran a este torneo con su cara y su PIN.',
+      nextSteps:
+        'Ya existe. Ahora, en el Comité: los jugadores con su PIN, el campo, la fecha y los grupos. «Para empezar» te dice qué falta.',
       shareLater: 'Código para invitar',
       goAdmin: 'Ir al Comité',
       fixToCreate: 'Ajusta el dinero para crear el torneo: debe cuadrar, y cada premio debe tener quién lo gane.',
@@ -1088,30 +1294,61 @@ export const t = {
       modules: {
         individual: { blurb: 'Stableford con hándicap: la tabla principal del torneo.' },
         bestRound: { blurb: 'Un premio cada día para la mejor ronda en puntos.' },
-        pairs: { blurb: 'Parejas fijas que suman sus puntos todo el torneo.', later: 'El sorteo de parejas se hace en Comité.' },
+        pairs: {
+          blurb: 'Parejas fijas que suman sus puntos todo el torneo.',
+          later: 'El sorteo de parejas se hace en Comité.',
+        },
         snake: { blurb: 'La tiene el último que hizo tres putts en su grupo; los demás cobran.' },
         fewestPutts: { blurb: 'Premio para quien haga menos putts en todo el torneo.' },
-        auction: { blurb: 'Subasta de jugadores antes del primer día, con su propio pozo.', later: 'La subasta se corre en Comité.' },
-      } as Record<'individual' | 'bestRound' | 'pairs' | 'snake' | 'fewestPutts' | 'auction', { blurb: string; later?: string }>,
+        auction: {
+          blurb: 'Subasta de jugadores antes del primer día, con su propio pozo.',
+          later: 'La subasta se corre en Comité.',
+        },
+      } as Record<
+        'individual' | 'bestRound' | 'pairs' | 'snake' | 'fewestPutts' | 'auction',
+        { blurb: string; later?: string }
+      >,
       games: {
         skins: { title: 'Skins', blurb: 'Cada hoyo lo gana quien hace menos golpes, solo. Empate: se acumula.' },
-        birdies: { title: 'Premio por birdie', blurb: 'Cada birdie o mejor cobra. Águilas también se pueden premiar aparte.' },
-        threePutts: { title: 'Multa por tres putts', blurb: 'Cada tres putts le cuesta al que los hace: le paga a cada uno de los demás.' },
+        birdies: {
+          title: 'Premio por birdie',
+          blurb: 'Cada birdie o mejor cobra. Águilas también se pueden premiar aparte.',
+        },
+        threePutts: {
+          title: 'Multa por tres putts',
+          blurb: 'Cada tres putts le cuesta al que los hace: le paga a cada uno de los demás.',
+        },
         lowNet: { title: 'Low gross / low neto', blurb: 'La mejor tarjeta del día o del torneo, gross o neta.' },
-        nassau: { title: 'Nassau / match play', blurb: 'Uno contra uno o parejas: ida, vuelta y total, con presiones.', later: 'Los partidos se arman en Comité, Juegos.' },
+        nassau: {
+          title: 'Nassau / match play',
+          blurb: 'Uno contra uno o parejas: ida, vuelta y total, con presiones.',
+          later: 'Los partidos se arman en Comité, Juegos.',
+        },
         closest: { title: 'Más cerca del hoyo', blurb: 'En los par 3: el grupo marca quién la dejó más cerca.' },
         longDrive: { title: 'Drive más largo', blurb: 'En los hoyos que elijas (en fairway).' },
-        greenies: { title: 'Greenies y sandies', blurb: 'Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.' },
+        greenies: {
+          title: 'Greenies y sandies',
+          blurb: 'Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.',
+        },
         custom: { title: 'Apuesta libre', blurb: 'Lo que se les ocurra: el Comité marca al ganador.' },
       } as Record<string, { title: string; blurb: string; later?: string }>,
     },
     /** The templates of «Nuevo torneo», by preset id (src/engine/games/presets.ts). */
     presets: {
-      friends: { name: 'Fin de semana entre amigos', blurb: 'Dos días, bolsa 50/30/20, skins, Nassau, más cerca del hoyo y multa por tres putts.' },
-      serious: { name: 'Torneo serio', blurb: 'Stableford con premios fuertes, mejor ronda por día, low gross y menos putts.' },
+      friends: {
+        name: 'Fin de semana entre amigos',
+        blurb: 'Dos días, bolsa 50/30/20, skins, Nassau, más cerca del hoyo y multa por tres putts.',
+      },
+      serious: {
+        name: 'Torneo serio',
+        blurb: 'Stableford con premios fuertes, mejor ronda por día, low gross y menos putts.',
+      },
       fun: { name: 'Solo diversión', blurb: 'Sin dinero: puntos, skins, birdies y concursos por la pura gloria.' },
       blank: { name: 'En blanco', blurb: 'Solo el Stableford individual. Tú agregas lo demás.' },
-      calcutta: { name: 'Viaje con Calcutta', blurb: 'El formato completo: parejas, víbora, mejor ronda, putts y subasta. Categorías A a D.' },
+      calcutta: {
+        name: 'Viaje con Calcutta',
+        blurb: 'El formato completo: parejas, víbora, mejor ronda, putts y subasta. Categorías A a D.',
+      },
     } as Record<'friends' | 'serious' | 'fun' | 'blank' | 'calcutta', { name: string; blurb: string }>,
     catalogHint: 'Enciende lo que quieran jugar. Cada juego tiene sus opciones; lo demás queda en «Más opciones».',
     add: 'Agregar',
@@ -1134,7 +1371,13 @@ export const t = {
     pressAt: (n: number) => `Al ir ${n} abajo`,
     maxPresses: 'Presiones por vuelta',
     pairScoring: { bestBall: 'Mejor bola', aggregate: 'Suma de la pareja' } as Record<string, string>,
-    kind: { closest: 'Más cerca', longDrive: 'Drive largo', greenie: 'Greenie', sandy: 'Sandy', custom: 'Otro' } as Record<string, string>,
+    kind: {
+      closest: 'Más cerca',
+      longDrive: 'Drive largo',
+      greenie: 'Greenie',
+      sandy: 'Sandy',
+      custom: 'Otro',
+    } as Record<string, string>,
     holes: 'Hoyos',
     /** A11Y-22: what each switch on a game's card chooses, said by a screen reader before its options. */
     choose: {
@@ -1159,7 +1402,13 @@ export const t = {
     entryFee: 'Inscripción por jugador',
     split: 'Reparto del individual',
     splitHint: 'De lo que queda en la bolsa después de los demás premios.',
-    splits: { classic: '50/30/20', wta: 'Todo al 1.º', top2: '60/40', top4: '40/30/20/10', amounts: 'Montos fijos' } as Record<string, string>,
+    splits: {
+      classic: '50/30/20',
+      wta: 'Todo al 1.º',
+      top2: '60/40',
+      top4: '40/30/20/10',
+      amounts: 'Montos fijos',
+    } as Record<string, string>,
     place: (n: number) => ordinal(String(n)),
     addPlace: 'Agregar lugar',
     /** TRUST-12: what the group spends together, never a «house» that takes a cut. */
@@ -1169,7 +1418,10 @@ export const t = {
     perDay: 'por día',
     perSurvivor: (game: string) => `a cada quien sin ${labelInSentence(game)}`,
     sidePotsTitle: 'Juegos aparte',
-    source: { none: 'Sin dinero', side: 'Bote aparte', main: 'De la bolsa', direct: 'Directo' } as Record<string, string>,
+    source: { none: 'Sin dinero', side: 'Bote aparte', main: 'De la bolsa', direct: 'Directo' } as Record<
+      string,
+      string
+    >,
     sourceHint: {
       none: 'Por la gloria.',
       side: 'Cada quien que entra pone su parte; el bote solo paga a los que entraron.',
@@ -1179,7 +1431,14 @@ export const t = {
     buyIn: 'Cada quien pone',
     amount: 'Monto de la bolsa',
     stake: (unit: string) => `Por ${unit}`,
-    unit: { skins: 'skin', eventPot: 'cada uno', match: 'apuesta', contest: 'hoyo ganado', custom: 'perdedor', lowScore: 'lugar' } as Record<string, string>,
+    unit: {
+      skins: 'skin',
+      eventPot: 'cada uno',
+      match: 'apuesta',
+      contest: 'hoyo ganado',
+      custom: 'perdedor',
+      lowScore: 'lugar',
+    } as Record<string, string>,
     placesSplit: 'Reparto',
     bar: {
       main: 'Bolsa',
@@ -1223,7 +1482,8 @@ export const t = {
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
     /** SEC-07: signing out ends every session of the account, so a lost or lent phone is signed out from another. */
-    signOutEverywhere: 'Cierra tu sesión en todos los teléfonos y computadoras donde entraste. Si perdiste o prestaste un teléfono, ciérrala desde otro.',
+    signOutEverywhere:
+      'Cierra tu sesión en todos los teléfonos y computadoras donde entraste. Si perdiste o prestaste un teléfono, ciérrala desde otro.',
     /** The sign-out button while it waits for the server (up to 15 s on lie-fi). */
     signingOut: 'Cerrando sesión…',
     /**
@@ -1231,9 +1491,11 @@ export const t = {
      * it (no signal and an expired token, or the signal just back inside its
      * 60 s retry cooldown, when no request is even sent). Nothing was cleared.
      */
-    signOutUnconfirmed: 'No se pudo confirmar tu sesión con el servidor, así que sigue abierta y lo guardado en el teléfono sigue aquí. Intenta de nuevo en un minuto.',
+    signOutUnconfirmed:
+      'No se pudo confirmar tu sesión con el servidor, así que sigue abierta y lo guardado en el teléfono sigue aquí. Intenta de nuevo en un minuto.',
     /** The server has not answered yet (lie-fi, an expired token still refreshing): the session may still end, and then the phone says so. */
-    signOutPending: 'El servidor no ha respondido: por ahora sigues dentro. Si la sesión se cierra, se borra lo guardado en el teléfono y te avisamos.',
+    signOutPending:
+      'El servidor no ha respondido: por ahora sigues dentro. Si la sesión se cierra, se borra lo guardado en el teléfono y te avisamos.',
     /** The session ended after the phone had said it was still there: what it kept of the person is gone now too. */
     signedOutLate: 'Ya se cerró tu sesión y se borró lo guardado en el teléfono.',
     enterProfile: 'Entrar a mi perfil',
@@ -1244,20 +1506,27 @@ export const t = {
     myData: {
       title: 'Tus datos',
       download: 'Descargar mis datos',
-      downloadHint: 'Un archivo con todo lo que Polo guarda de ti: tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, y quién entró a tu cuenta.',
+      downloadHint:
+        'Un archivo con todo lo que Polo guarda de ti: tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, y quién entró a tu cuenta.',
       downloading: 'Preparando el archivo…',
       downloaded: 'Listo: el archivo está en tus descargas.',
       file: (day: string) => `polo-mis-datos-${day}.json`,
       delete: 'Borrar mi cuenta',
-      deleteHint: 'Se borran tu perfil, tus amistades, rivalidades y avisos, y sales de tus crews. Lo que jugaste se queda en sus torneos, sin tu nombre.',
+      deleteHint:
+        'Se borran tu perfil, tus amistades, rivalidades y avisos, y sales de tus crews. Lo que jugaste se queda en sus torneos, sin tu nombre.',
       deleteTitle: 'Borrar tu cuenta',
-      deleteBody: 'Es para siempre. Se borran tu cuenta, tu perfil, tus amistades, tus rivalidades, tus avisos y los teléfonos donde los activaste, y sales de tus crews. Tus golpes, tu hándicap y tu dinero se quedan en cada torneo, para que los resultados de los demás sigan cuadrando, con tu jugador como «Jugador borrado».',
-      deletePlayers: (n: number, where: string[]) => `${n === 1 ? 'Tu jugador queda' : `Tus ${n} jugadores quedan`} como «Jugador borrado» en ${andList(where)}.`,
+      deleteBody:
+        'Es para siempre. Se borran tu cuenta, tu perfil, tus amistades, tus rivalidades, tus avisos y los teléfonos donde los activaste, y sales de tus crews. Tus golpes, tu hándicap y tu dinero se quedan en cada torneo, para que los resultados de los demás sigan cuadrando, con tu jugador como «Jugador borrado».',
+      deletePlayers: (n: number, where: string[]) =>
+        `${n === 1 ? 'Tu jugador queda' : `Tus ${n} jugadores quedan`} como «Jugador borrado» en ${andList(where)}.`,
       deleteOrphaned: (names: string[]) =>
         `Eres todo el Comité de ${andList(names)}: ${names.length === 1 ? 'se queda' : 'se quedan'} sin Comité. Si quieres, antes agrega a alguien a su Comité.`,
-      deleteCrewsHanded: (names: string[]) => `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} ${names.length === 1 ? 'pasa' : 'pasan'} a quien lleva más tiempo en ${names.length === 1 ? 'él' : 'cada uno'}.`,
-      deleteCrewsGone: (names: string[]) => `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} se ${names.length === 1 ? 'borra' : 'borran'}: no ${names.length === 1 ? 'tiene' : 'tienen'} a nadie más.`,
-      deleteKept: 'Las copias de cada noche de antes del borrado lo siguen guardando, como dice el Aviso de privacidad.',
+      deleteCrewsHanded: (names: string[]) =>
+        `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} ${names.length === 1 ? 'pasa' : 'pasan'} a quien lleva más tiempo en ${names.length === 1 ? 'él' : 'cada uno'}.`,
+      deleteCrewsGone: (names: string[]) =>
+        `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} se ${names.length === 1 ? 'borra' : 'borran'}: no ${names.length === 1 ? 'tiene' : 'tienen'} a nadie más.`,
+      deleteKept:
+        'Las copias de cada noche de antes del borrado lo siguen guardando, como dice el Aviso de privacidad.',
       confirmEmail: (email: string) => `Escribe tu correo (${email}) para confirmar`,
       deleteConfirm: 'Borrar para siempre',
       deleted: 'Tu cuenta se borró.',
@@ -1287,7 +1556,8 @@ export const t = {
     indexManual: 'Índice',
     manualNote: 'Declarado por el jugador',
     noIndex: 'Sin índice todavía',
-    noIndexHint: 'Se calcula con tus rondas completas en Polo, como el índice oficial: las 8 mejores de las últimas 20.',
+    noIndexHint:
+      'Se calcula con tus rondas completas en Polo, como el índice oficial: las 8 mejores de las últimas 20.',
     rounds: (n: number) => (n === 1 ? '1 ronda' : `${n} rondas`),
     memberSince: (d: string) => `En Polo desde ${d}`,
     edit: 'Editar perfil',
@@ -1304,21 +1574,31 @@ export const t = {
     myProfile: 'Mi perfil',
     // Results (0015)
     indexTitle: (v: string) => `Índice Polo ${v}`,
-    indexRule: (n: number, k: number) => `De tus últimas ${n} rondas que cuentan, ${k === 1 ? 'se toma la mejor' : `se promedian las ${k} mejores`}.`,
+    indexRule: (n: number, k: number) =>
+      `De tus últimas ${n} rondas que cuentan, ${k === 1 ? 'se toma la mejor' : `se promedian las ${k} mejores`}.`,
     indexAdjust: (v: string) => `Con pocas rondas se ajusta: ${v}.`,
     indexNeeds: 'Hacen falta 3 rondas completas de 18 hoyos, en un campo con rating y slope, en torneos que cuentan.',
-    indexHow: 'Cada ronda da un diferencial: (gross ajustado − rating) × 113 ÷ slope. El gross ajustado topa cada hoyo en doble bogey neto y un hoyo levantado cuenta así.',
+    indexHow:
+      'Cada ronda da un diferencial: (gross ajustado − rating) × 113 ÷ slope. El gross ajustado topa cada hoyo en doble bogey neto y un hoyo levantado cuenta así.',
     counts: 'Cuenta',
     stats: { rounds: 'Rondas', bestGross: 'Mejor gross', birdies: 'Birdies' },
     history: 'Historial',
     noHistory: 'Las rondas aparecen aquí cuando el Comité las marca como terminadas.',
     practice: 'Práctica',
     incomplete: 'Incompleta',
-    roundLine: (gross: number | null, ags: number | null) => (gross != null ? `Gross ${gross}${ags != null && ags !== gross ? `, ajustado ${ags}` : ''}` : ags != null ? `Ajustado ${ags}` : 'Sin gross'),
+    roundLine: (gross: number | null, ags: number | null) =>
+      gross != null
+        ? `Gross ${gross}${ags != null && ags !== gross ? `, ajustado ${ags}` : ''}`
+        : ags != null
+          ? `Ajustado ${ags}`
+          : 'Sin gross',
     differential: 'Diferencial',
     seeAll: (n: number) => `Ver las ${n}`,
     roundTitle: (tournament: string, day: number) => `${tournament}, día ${day}`,
-    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${handicapText(ch)}` : null].filter(Boolean).join(', '),
+    roundFacts: (tee: string | null, ch: number | null) =>
+      [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${handicapText(ch)}` : null]
+        .filter(Boolean)
+        .join(', '),
     finish: (label: string, field: number | null) => {
       const n = label.replace(/^T/, '')
       const place = label.startsWith('T') ? `Empatado en ${n}.º` : `${n}.º`
@@ -1350,7 +1630,8 @@ export const t = {
     manualIndex: 'Índice',
     manualIndexHint: 'Si eres plus, escríbelo con signo: +1.2.',
     discoverable: 'Aparecer en búsquedas',
-    discoverableHint: 'Viene apagado: así solo te encuentran tus amigos, tus crews y quienes juegan un torneo contigo. Si lo prendes, cualquiera con cuenta te encuentra con tres letras de tu nombre o tu usuario.',
+    discoverableHint:
+      'Viene apagado: así solo te encuentran tus amigos, tus crews y quienes juegan un torneo contigo. Si lo prendes, cualquiera con cuenta te encuentra con tres letras de tu nombre o tu usuario.',
     saved: 'Perfil guardado',
   },
   mipolo: {
@@ -1382,7 +1663,8 @@ export const t = {
     when: 'Fecha',
     course: 'Campo',
     coursePick: 'Elige el campo',
-    noCourses: 'Todavía no hay campos. Agrega el tuyo: se busca en la base de campos o se lee de una foto de la tarjeta.',
+    noCourses:
+      'Todavía no hay campos. Agrega el tuyo: se busca en la base de campos o se lee de una foto de la tarjeta.',
     addCourse: '¿No está tu campo? Agrégalo',
     tee: 'Tee',
     teeHint: 'Todos salen del mismo tee; se cambia por jugador en Comité.',
@@ -1402,17 +1684,26 @@ export const t = {
     remove: (name: string) => `Quitar a ${name}`,
     games: 'A qué juegan',
     gamesHint: 'Siempre hay Stableford individual con hándicap completo. Suma lo que quieras:',
-    game: { skins: 'Skins', closest: 'Más cerca del hoyo', birdies: 'Birdies', threePutts: 'Tres putts', lowNet: 'Low neto' } as Record<string, string>,
+    game: {
+      skins: 'Skins',
+      closest: 'Más cerca del hoyo',
+      birdies: 'Birdies',
+      threePutts: 'Tres putts',
+      lowNet: 'Low neto',
+    } as Record<string, string>,
     money: 'Con dinero',
-    moneyHint: 'Sin dinero todo es por la gloria. Con dinero, cada uno paga la inscripción y la bolsa se reparte por lugares; los juegos llevan su apuesta y se ajustan en Comité.',
+    moneyHint:
+      'Sin dinero todo es por la gloria. Con dinero, cada uno paga la inscripción y la bolsa se reparte por lugares; los juegos llevan su apuesta y se ajustan en Comité.',
     entryFee: 'Inscripción por jugador',
     /** `split` null: one place takes it all. */
     /** The inscriptions are the bolsa, here as in a tournament; a «bote» is only what a game's entrants put in (COPY-14). */
-    potLine: (pot: string, split: string | null) => (split ? `Bolsa de ${pot}, se reparte ${split}.` : `Bolsa de ${pot}, todo para el primero.`),
+    potLine: (pot: string, split: string | null) =>
+      split ? `Bolsa de ${pot}, se reparte ${split}.` : `Bolsa de ${pot}, todo para el primero.`,
     /** COPY-21: each chosen game's money, said before anyone commits to it. */
     stakeBuyIn: (game: string, each: string, pot: string) => `${game}: ${each} por jugador, bote de ${pot}.`,
     stakeBirdies: (each: string) => `Birdies: cada birdie o mejor cobra ${each} de cada uno de los demás.`,
-    stakeThreePutts: (each: string) => `Tres putts: cada tres putts le cuesta ${each} a quien los hace, para cada uno de los demás.`,
+    stakeThreePutts: (each: string) =>
+      `Tres putts: cada tres putts le cuesta ${each} a quien los hace, para cada uno de los demás.`,
     upfront: (players: number, each: string, direct: boolean) =>
       `Con ${players} ${players === 1 ? 'jugador' : 'jugadores'}, cada uno pone ${each} al empezar${direct ? '; lo de jugador a jugador se paga al final' : ''}.`,
     groups: (n: number) => (n === 1 ? 'Un grupo' : `${n} grupos de hasta 4`),
@@ -1425,7 +1716,12 @@ export const t = {
     finishMissing: (n: number) => (n === 1 ? 'A 1 jugador le faltan hoyos.' : `A ${n} jugadores les faltan hoyos.`),
     finishConfirm: 'Ya no se podrá capturar. Si algo quedó mal, el Comité lo corrige y se vuelve a publicar.',
     finished: (n: number) => `Ronda publicada en ${n === 1 ? '1 perfil' : `${n} perfiles`}.`,
-    rivalryLine: (name: string, n: number) => (n === 0 ? `Rivalidad con ${name}: parejos` : n > 0 ? `Rivalidad con ${name}: recibes ${n}` : `Rivalidad con ${name}: das ${-n}`),
+    rivalryLine: (name: string, n: number) =>
+      n === 0
+        ? `Rivalidad con ${name}: parejos`
+        : n > 0
+          ? `Rivalidad con ${name}: recibes ${n}`
+          : `Rivalidad con ${name}: das ${-n}`,
   },
   legal: {
     /** Where data is collected (TRUST-05): the notice and the terms, a tap away, before anything is saved. */
@@ -1446,13 +1742,18 @@ export const t = {
      */
     update: {
       title: (privacy: boolean, terms: boolean) =>
-        privacy && terms ? 'Cambiamos el aviso y los términos' : privacy ? 'Cambiamos el aviso de privacidad' : 'Cambiamos los términos de uso',
+        privacy && terms
+          ? 'Cambiamos el aviso y los términos'
+          : privacy
+            ? 'Cambiamos el aviso de privacidad'
+            : 'Cambiamos los términos de uso',
       body: (both: boolean) =>
         both
           ? 'Cada uno dice arriba su fecha nueva. Léelos cuando quieras: al tocar «Entendido» guardamos que aceptas las versiones nuevas.'
           : 'Dice arriba su fecha nueva. Léelo cuando quieras: al tocar «Entendido» guardamos que aceptas la versión nueva.',
       firstTitle: 'El aviso y los términos de Polo',
-      firstBody: 'Todavía no tenemos guardado que los aceptaste. Léelos cuando quieras: al tocar «Entendido» lo guardamos.',
+      firstBody:
+        'Todavía no tenemos guardado que los aceptaste. Léelos cuando quieras: al tocar «Entendido» lo guardamos.',
       ok: 'Entendido',
     },
     /** Comité › Jugadores: the Comité types other people's data. */
@@ -1469,13 +1770,15 @@ export const t = {
     },
     /** The tournament's switch on a PIN phone (Más, En vivo): what turning it on stores, and until when (save_pin_push, 0052). */
     pinPushNote: {
-      start: 'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el ',
+      start:
+        'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el ',
       privacy: 'Aviso de privacidad',
       end: '.',
     },
     /** Comité › Campos and /campos: a scorecard photo goes to Anthropic to be read (api/scorecard-extract.ts). */
     scorecardNote: {
-      start: 'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el ',
+      start:
+        'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el ',
       privacy: 'Aviso de privacidad',
       end: '.',
     },
@@ -1505,23 +1808,74 @@ export const t = {
       version: '2026-10-16.2',
       updated: 'Última actualización: 16 de octubre de 2026',
       sections: [
-        ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Al crear tu cuenta guardamos también que confirmaste tener 18 años o más; de un torneo con dinero, cuándo su Comité confirmó que todos sus jugadores son mayores de edad; lo que un jugador le pide al Comité corregir de sus datos; a qué crew pediste entrar, hasta que te contestan; y cuándo descargaste tus datos o borraste tu cuenta, en los registros de quien opera Polo. Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse. Un navegador que solo abre un enlace para ver no manda ninguno.'],
-        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo, que el Comité corrigió su tarjeta (qué cambió y por qué queda en ella, a la vista de todo el torneo) y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
-        ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si prendes «Aparecer en búsquedas» en tu perfil: viene apagado. Prendido, te encuentran con tres letras de tu nombre o tu usuario, y la búsqueda muestra tu nombre, tu usuario y tu foto; tu club y tu ciudad solo están en tu tarjeta. Quien administra un crew decide si basta su código para entrar o si aprueba a cada quien, puede ponerle fin al código y puede sacar a cualquiera; quien sale o es sacado deja de ver el perfil completo de los demás, y ellos el suyo. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
-        ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no; también el historial de cada tarjeta: qué valores tuvo cada hoyo, quién los capturó y cuándo, y el motivo cuando el Comité lo corrigió. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, el tee que juega cada día, el hándicap de juego que le fije el Comité (sin su motivo) y si es el homenajeado; el campo de cada día con sus tees y sus hoyos; sus golpes, putts y resultados, los grupos, las parejas, los equipos, quién firmó cada tarjeta y cuándo, y los juegos, con quién juega cada uno y quién ganó cada concurso. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta, ni los juegos con bote aparte ni quién entró en ellos; con dinero ve también lo que cada quien paga, gana y debe, la Calcutta con sus precios y los botes aparte. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera. Si un amigo te agrega a una Ronda rápida, tu nombre (el corto, no el completo) y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú; tu foto, solo si tu perfil aparece en búsquedas. Si dices «No soy yo», tu foto se quita de ese jugador. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.'],
-        ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código; el nombre corto, la categoría, el tee, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
-        ['Si alguien te agregó a un torneo', 'Si el Comité de un torneo, o un amigo en una Ronda rápida, te agregó como jugador, no creaste ninguna cuenta: lo que guardamos de ti es lo que él escribió (la sección anterior), lo que se captura de ti en el torneo y, si entras con tu PIN, qué teléfono quedó ligado a tu jugador. Quien te agrega se compromete, en los términos, a poder compartir tu nombre, tu foto y lo demás que escriba de ti con quienes ven el torneo, y a avisarte que te agregó. La primera vez que entras con tu PIN, Polo te muestra lo que el Comité guardó de ti y te deja pedirle que lo corrija; tu pedido lo ve el Comité de ese torneo. Para que se borre, o para cualquier otra cosa, está «Cómo pedir algo sobre tus datos».'],
-        ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo; y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
-        ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews y cuántos amigos tienen; los crews, con sus miembros y sus salidas (nunca su código), para atender un reporte; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta, sacar a alguien de un crew y mandar avisos a todos o a una persona. Para abrir desde su panel un torneo en el que no está, una cuenta o un crew, escribe por qué, y queda registrado: el Comité de ese torneo lo ve en su historial de cambios, con el motivo, y tú ves en Editar perfil, en «Accesos del administrador», cuándo abrió tu cuenta o uno de tus crews, por qué y lo que hizo con ellos. Si entra a un torneo por su enlace, su Comité también lo ve en el historial, sin motivo. Lo que cambia en un torneo queda marcado como suyo. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros. Lo usa para dar soporte y corregir errores.'],
-        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido. No lleva ningún PIN, ningún enlace de un solo uso ni la dirección de avisos de ningún navegador. Nosotros no la ciframos: Cloudflare cifra lo que guarda en sus discos, pero quien tenga las llaves de ese almacenamiento puede leerla. Hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
-        ['Fuera de México', 'Los servicios que usa Polo son de empresas de Estados Unidos y guardan o procesan ahí lo que les toca: Supabase (las cuentas, la base de datos y los archivos, en Virginia), Vercel (sirve la app), Resend (los correos con código), Cloudflare (los respaldos de cada noche) y Anthropic (las fotos de tarjetas de campo). Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo. Google, si entras con Google, y el servicio de notificaciones de tu navegador (Apple, Google, Microsoft o Mozilla), si activas los avisos, no trabajan para Polo: reciben lo que tu cuenta o tu navegador ya les da, bajo sus propios avisos de privacidad. Fuera de ellos y de lo que este aviso dice que ve cada quien, no compartimos tus datos con nadie.'],
-        ['Cuánto tiempo los guardamos', 'Cada noche, después del respaldo, se borra lo que ya cumplió su plazo. Tu perfil, tus amistades y rivalidades, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Los avisos de tu bandeja se borran a los 12 meses. Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan, y su historial de cambios también; si el torneo se borra, su historial se queda con una copia de todo lo que tenía y se borra 90 días después. La respuesta que el servidor le dio a cada hoyo guardado sirve para no guardarlo dos veces, y se borra a los 90 días. Los campos cargados con sus fotos de tarjeta y los registros de quien opera Polo no tienen fecha de borrado, y tampoco lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. Un usuario anónimo, el que se crea al mandar un PIN, se borra si pasan 180 días sin usarse y no tiene nada en ningún torneo (nunca entró como un jugador ni capturó nada); si entró como un jugador, se queda mientras quede rastro de eso en el torneo. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace. Las copias de cada noche guardan lo que había esa noche, salvo los PIN, los enlaces y las direcciones de avisos, y hoy no se borran nunca.'],
-        ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
-        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, ponerlo o sacarlo de las búsquedas y apagar los avisos en cada teléfono. En Editar perfil, «Descargar mis datos» te da un archivo con todo lo que Polo guarda de ti (tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, qué aceptaste y cuándo, y los accesos del administrador), y «Borrar mi cuenta» la borra, escribiendo tu correo para confirmar; también puede borrarla quien opera Polo. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
-        ['Cómo pedir algo sobre tus datos', 'Puedes pedir saber qué datos tenemos de ti, corregirlos, que los borremos o que dejemos de usarlos para algo (tus derechos de acceso, rectificación, cancelación y oposición), y también retirar tu consentimiento o limitar su uso. Pídeselo a quien opera Polo, Diego Gaxiola, directamente o por medio del Comité de tu torneo, que se lo pasa; el correo golf@cardigan.mx todavía no recibe mensajes. Di tu nombre, el correo de tu cuenta o el torneo y el jugador, qué pides y, si es una corrección, el dato correcto. Antes de hacerlo confirmamos que eres tú: que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta; si juegas sin cuenta, con el Comité de tu torneo. Te contestamos en un máximo de 20 días hábiles y, si procede, lo hacemos en los 15 días hábiles siguientes. Si no quedas conforme, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno, la autoridad de protección de datos personales en México.'],
-        ['Menores de edad', 'Polo es para mayores de 18 años. Para crear una cuenta confirmas que los tienes, y guardamos que lo confirmaste. Un torneo que juega con dinero le pide a su Comité confirmar que todos sus jugadores son mayores de edad, y lo guarda. Si un Comité agrega como jugador a alguien menor de edad en un torneo sin dinero, necesita el permiso de su madre, su padre o su tutor, y cualquiera de ellos puede pedirnos corregir o borrar sus datos como dice la sección anterior.'],
-        ['Cambios a este aviso', 'Cuando este aviso cambie, cambian la fecha y la versión de arriba, y lo que ya guardamos no se usa para algo nuevo sin decirlo aquí antes. Si ya lo habías aceptado, al abrir Polo te lo decimos, con un enlace para leerlo, hasta que toques «Entendido» (nunca mientras capturas un hoyo, en la subasta o en las pantallas de TV).'],
+        [
+          'Quiénes somos',
+          'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.',
+        ],
+        [
+          'Qué datos guardamos',
+          'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Al crear tu cuenta guardamos también que confirmaste tener 18 años o más; de un torneo con dinero, cuándo su Comité confirmó que todos sus jugadores son mayores de edad; lo que un jugador le pide al Comité corregir de sus datos; a qué crew pediste entrar, hasta que te contestan; y cuándo descargaste tus datos o borraste tu cuenta, en los registros de quien opera Polo. Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse. Un navegador que solo abre un enlace para ver no manda ninguno.',
+        ],
+        [
+          'Para qué los usamos',
+          'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo, que el Comité corrigió su tarjeta (qué cambió y por qué queda en ella, a la vista de todo el torneo) y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.',
+        ],
+        [
+          'Quién ve tu perfil',
+          'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si prendes «Aparecer en búsquedas» en tu perfil: viene apagado. Prendido, te encuentran con tres letras de tu nombre o tu usuario, y la búsqueda muestra tu nombre, tu usuario y tu foto; tu club y tu ciudad solo están en tu tarjeta. Quien administra un crew decide si basta su código para entrar o si aprueba a cada quien, puede ponerle fin al código y puede sacar a cualquiera; quien sale o es sacado deja de ver el perfil completo de los demás, y ellos el suyo. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.',
+        ],
+        [
+          'Lo que se ve de un torneo',
+          'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no; también el historial de cada tarjeta: qué valores tuvo cada hoyo, quién los capturó y cuándo, y el motivo cuando el Comité lo corrigió. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, el tee que juega cada día, el hándicap de juego que le fije el Comité (sin su motivo) y si es el homenajeado; el campo de cada día con sus tees y sus hoyos; sus golpes, putts y resultados, los grupos, las parejas, los equipos, quién firmó cada tarjeta y cuándo, y los juegos, con quién juega cada uno y quién ganó cada concurso. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta, ni los juegos con bote aparte ni quién entró en ellos; con dinero ve también lo que cada quien paga, gana y debe, la Calcutta con sus precios y los botes aparte. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera. Si un amigo te agrega a una Ronda rápida, tu nombre (el corto, no el completo) y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú; tu foto, solo si tu perfil aparece en búsquedas. Si dices «No soy yo», tu foto se quita de ese jugador. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.',
+        ],
+        [
+          'Lo que el Comité captura de cada jugador',
+          'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código; el nombre corto, la categoría, el tee, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.',
+        ],
+        [
+          'Si alguien te agregó a un torneo',
+          'Si el Comité de un torneo, o un amigo en una Ronda rápida, te agregó como jugador, no creaste ninguna cuenta: lo que guardamos de ti es lo que él escribió (la sección anterior), lo que se captura de ti en el torneo y, si entras con tu PIN, qué teléfono quedó ligado a tu jugador. Quien te agrega se compromete, en los términos, a poder compartir tu nombre, tu foto y lo demás que escriba de ti con quienes ven el torneo, y a avisarte que te agregó. La primera vez que entras con tu PIN, Polo te muestra lo que el Comité guardó de ti y te deja pedirle que lo corrija; tu pedido lo ve el Comité de ese torneo. Para que se borre, o para cualquier otra cosa, está «Cómo pedir algo sobre tus datos».',
+        ],
+        [
+          'El dinero de un torneo',
+          'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo; y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.',
+        ],
+        [
+          'Quién opera Polo',
+          'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews y cuántos amigos tienen; los crews, con sus miembros y sus salidas (nunca su código), para atender un reporte; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta, sacar a alguien de un crew y mandar avisos a todos o a una persona. Para abrir desde su panel un torneo en el que no está, una cuenta o un crew, escribe por qué, y queda registrado: el Comité de ese torneo lo ve en su historial de cambios, con el motivo, y tú ves en Editar perfil, en «Accesos del administrador», cuándo abrió tu cuenta o uno de tus crews, por qué y lo que hizo con ellos. Si entra a un torneo por su enlace, su Comité también lo ve en el historial, sin motivo. Lo que cambia en un torneo queda marcado como suyo. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros. Lo usa para dar soporte y corregir errores.',
+        ],
+        [
+          'Dónde viven',
+          'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido. No lleva ningún PIN, ningún enlace de un solo uso ni la dirección de avisos de ningún navegador. Nosotros no la ciframos: Cloudflare cifra lo que guarda en sus discos, pero quien tenga las llaves de ese almacenamiento puede leerla. Hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).',
+        ],
+        [
+          'Fuera de México',
+          'Los servicios que usa Polo son de empresas de Estados Unidos y guardan o procesan ahí lo que les toca: Supabase (las cuentas, la base de datos y los archivos, en Virginia), Vercel (sirve la app), Resend (los correos con código), Cloudflare (los respaldos de cada noche) y Anthropic (las fotos de tarjetas de campo). Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo. Google, si entras con Google, y el servicio de notificaciones de tu navegador (Apple, Google, Microsoft o Mozilla), si activas los avisos, no trabajan para Polo: reciben lo que tu cuenta o tu navegador ya les da, bajo sus propios avisos de privacidad. Fuera de ellos y de lo que este aviso dice que ve cada quien, no compartimos tus datos con nadie.',
+        ],
+        [
+          'Cuánto tiempo los guardamos',
+          'Cada noche, después del respaldo, se borra lo que ya cumplió su plazo. Tu perfil, tus amistades y rivalidades, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Los avisos de tu bandeja se borran a los 12 meses. Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan, y su historial de cambios también; si el torneo se borra, su historial se queda con una copia de todo lo que tenía y se borra 90 días después. La respuesta que el servidor le dio a cada hoyo guardado sirve para no guardarlo dos veces, y se borra a los 90 días. Los campos cargados con sus fotos de tarjeta y los registros de quien opera Polo no tienen fecha de borrado, y tampoco lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. Un usuario anónimo, el que se crea al mandar un PIN, se borra si pasan 180 días sin usarse y no tiene nada en ningún torneo (nunca entró como un jugador ni capturó nada); si entró como un jugador, se queda mientras quede rastro de eso en el torneo. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace. Las copias de cada noche guardan lo que había esa noche, salvo los PIN, los enlaces y las direcciones de avisos, y hoy no se borran nunca.',
+        ],
+        [
+          'Google',
+          'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.',
+        ],
+        [
+          'Tus derechos',
+          'Puedes editar tu perfil cuando quieras, ponerlo o sacarlo de las búsquedas y apagar los avisos en cada teléfono. En Editar perfil, «Descargar mis datos» te da un archivo con todo lo que Polo guarda de ti (tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, qué aceptaste y cuándo, y los accesos del administrador), y «Borrar mi cuenta» la borra, escribiendo tu correo para confirmar; también puede borrarla quien opera Polo. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.',
+        ],
+        [
+          'Cómo pedir algo sobre tus datos',
+          'Puedes pedir saber qué datos tenemos de ti, corregirlos, que los borremos o que dejemos de usarlos para algo (tus derechos de acceso, rectificación, cancelación y oposición), y también retirar tu consentimiento o limitar su uso. Pídeselo a quien opera Polo, Diego Gaxiola, directamente o por medio del Comité de tu torneo, que se lo pasa; el correo golf@cardigan.mx todavía no recibe mensajes. Di tu nombre, el correo de tu cuenta o el torneo y el jugador, qué pides y, si es una corrección, el dato correcto. Antes de hacerlo confirmamos que eres tú: que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta; si juegas sin cuenta, con el Comité de tu torneo. Te contestamos en un máximo de 20 días hábiles y, si procede, lo hacemos en los 15 días hábiles siguientes. Si no quedas conforme, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno, la autoridad de protección de datos personales en México.',
+        ],
+        [
+          'Menores de edad',
+          'Polo es para mayores de 18 años. Para crear una cuenta confirmas que los tienes, y guardamos que lo confirmaste. Un torneo que juega con dinero le pide a su Comité confirmar que todos sus jugadores son mayores de edad, y lo guarda. Si un Comité agrega como jugador a alguien menor de edad en un torneo sin dinero, necesita el permiso de su madre, su padre o su tutor, y cualquiera de ellos puede pedirnos corregir o borrar sus datos como dice la sección anterior.',
+        ],
+        [
+          'Cambios a este aviso',
+          'Cuando este aviso cambie, cambian la fecha y la versión de arriba, y lo que ya guardamos no se usa para algo nuevo sin decirlo aquí antes. Si ya lo habías aceptado, al abrir Polo te lo decimos, con un enlace para leerlo, hasta que toques «Entendido» (nunca mientras capturas un hoyo, en la subasta o en las pantallas de TV).',
+        ],
       ] as Array<[string, string]>,
     },
     terms: {
@@ -1529,16 +1883,46 @@ export const t = {
       version: '2026-10-16',
       updated: 'Última actualización: 16 de octubre de 2026',
       sections: [
-        ['El servicio', 'Polo es gratis y se ofrece tal cual, para grupos de amigos. Lo opera Diego Gaxiola. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.'],
-        ['Edad', 'Para crear una cuenta en Polo necesitas tener 18 años o más, y lo confirmas al crearla. Un torneo que juega con dinero es solo para mayores de edad, y su Comité lo confirma por todos sus jugadores.'],
-        ['El dinero', 'Polo solo lleva la cuenta: no cobra, no guarda ni mueve dinero. Anota lo que los jugadores acuerdan entre ellos; cada grupo es responsable de lo que se juega, de pagarlo y de que sea legal donde juegan. El Comité de cada torneo decide sus reglas y sus resultados, y quien opera Polo también puede corregir un error en cualquier torneo.'],
-        ['Si organizas', 'Si creas un torneo o una Ronda rápida, o agregas a alguien como jugador, confirmas que puedes compartir su nombre, su foto y lo demás que escribas de él con quienes van a ver el torneo, y que le avisas que lo agregaste y dónde está el aviso de privacidad. Corriges lo que te pida corregir de sus datos. Las reglas, los premios y el dinero de tu torneo son responsabilidad de su Comité.'],
-        ['Tu cuenta', 'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Puedes borrar tu cuenta cuando quieras, en Editar perfil.'],
-        ['Si se suspende una cuenta', 'Quien opera Polo puede bloquear o borrar una cuenta que no cumpla estos términos, y siempre anota el motivo. Si crees que fue un error, díselo a Diego Gaxiola, directamente o por medio del Comité de tu torneo (el correo golf@cardigan.mx todavía no recibe mensajes), y lo revisa.'],
-        ['Tu contenido', 'Lo que subes o escribes (fotos, nombres, tarjetas) sigue siendo tuyo. Nos das permiso de guardarlo, de mostrarlo a quien dice el aviso de privacidad y, si es la foto o el PDF de la tarjeta de un campo, de mandarlo a Anthropic para leerlo.'],
-        ['Responsabilidad', 'En lo que la ley lo permita, quien opera Polo no responde por pérdidas que vengan de usar la app, de un error en un marcador o en una cuenta de dinero, o de que no esté disponible. Antes de pagar, revisen los números entre ustedes: cada uno dice «¿Cómo se calculó?».'],
-        ['Cambios', 'Si estos términos cambian, cambian su fecha y su versión de arriba, y la app te lo dice al abrirla, con un enlace para leerlos, hasta que toques «Entendido». Si no estás de acuerdo, puedes dejar de usar Polo y borrar tu cuenta.'],
-        ['Ley y tribunales', 'Estos términos se rigen por las leyes de México, y cualquier desacuerdo se resuelve ante los tribunales de México que correspondan. Los escribió quien opera Polo, sin que un abogado los haya revisado todavía.'],
+        [
+          'El servicio',
+          'Polo es gratis y se ofrece tal cual, para grupos de amigos. Lo opera Diego Gaxiola. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.',
+        ],
+        [
+          'Edad',
+          'Para crear una cuenta en Polo necesitas tener 18 años o más, y lo confirmas al crearla. Un torneo que juega con dinero es solo para mayores de edad, y su Comité lo confirma por todos sus jugadores.',
+        ],
+        [
+          'El dinero',
+          'Polo solo lleva la cuenta: no cobra, no guarda ni mueve dinero. Anota lo que los jugadores acuerdan entre ellos; cada grupo es responsable de lo que se juega, de pagarlo y de que sea legal donde juegan. El Comité de cada torneo decide sus reglas y sus resultados, y quien opera Polo también puede corregir un error en cualquier torneo.',
+        ],
+        [
+          'Si organizas',
+          'Si creas un torneo o una Ronda rápida, o agregas a alguien como jugador, confirmas que puedes compartir su nombre, su foto y lo demás que escribas de él con quienes van a ver el torneo, y que le avisas que lo agregaste y dónde está el aviso de privacidad. Corriges lo que te pida corregir de sus datos. Las reglas, los premios y el dinero de tu torneo son responsabilidad de su Comité.',
+        ],
+        [
+          'Tu cuenta',
+          'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Puedes borrar tu cuenta cuando quieras, en Editar perfil.',
+        ],
+        [
+          'Si se suspende una cuenta',
+          'Quien opera Polo puede bloquear o borrar una cuenta que no cumpla estos términos, y siempre anota el motivo. Si crees que fue un error, díselo a Diego Gaxiola, directamente o por medio del Comité de tu torneo (el correo golf@cardigan.mx todavía no recibe mensajes), y lo revisa.',
+        ],
+        [
+          'Tu contenido',
+          'Lo que subes o escribes (fotos, nombres, tarjetas) sigue siendo tuyo. Nos das permiso de guardarlo, de mostrarlo a quien dice el aviso de privacidad y, si es la foto o el PDF de la tarjeta de un campo, de mandarlo a Anthropic para leerlo.',
+        ],
+        [
+          'Responsabilidad',
+          'En lo que la ley lo permita, quien opera Polo no responde por pérdidas que vengan de usar la app, de un error en un marcador o en una cuenta de dinero, o de que no esté disponible. Antes de pagar, revisen los números entre ustedes: cada uno dice «¿Cómo se calculó?».',
+        ],
+        [
+          'Cambios',
+          'Si estos términos cambian, cambian su fecha y su versión de arriba, y la app te lo dice al abrirla, con un enlace para leerlos, hasta que toques «Entendido». Si no estás de acuerdo, puedes dejar de usar Polo y borrar tu cuenta.',
+        ],
+        [
+          'Ley y tribunales',
+          'Estos términos se rigen por las leyes de México, y cualquier desacuerdo se resuelve ante los tribunales de México que correspondan. Los escribió quien opera Polo, sin que un abogado los haya revisado todavía.',
+        ],
         ['Privacidad', 'Cómo tratamos tus datos está en el aviso de privacidad.'],
       ] as Array<[string, string]>,
     },
@@ -1553,9 +1937,12 @@ export const t = {
     /** Blocked: where this phone undoes it (PWA-12). The installed iPhone app has no browser settings: it is Ajustes. */
     denied: 'Los bloqueaste en este navegador. Para activarlos: el ícono junto a la dirección y luego Notificaciones.',
     deniedIos: 'Los bloqueaste para Polo. Para activarlos: abre Ajustes, toca Notificaciones y luego Polo.',
-    deniedAndroidApp: 'Los bloqueaste para Polo. Para activarlos: en los Ajustes del teléfono, Aplicaciones, Polo y luego Notificaciones.',
-    deniedAndroid: 'Los bloqueaste en este navegador. Para activarlos: toca el ícono junto a la dirección, luego Permisos y Notificaciones.',
-    needsInstall: 'En iPhone y iPad los avisos llegan solo a la app de la pantalla de inicio (iOS 16.4 o más nuevo): toca Compartir, «Agregar a inicio», y abre Polo desde el ícono.',
+    deniedAndroidApp:
+      'Los bloqueaste para Polo. Para activarlos: en los Ajustes del teléfono, Aplicaciones, Polo y luego Notificaciones.',
+    deniedAndroid:
+      'Los bloqueaste en este navegador. Para activarlos: toca el ícono junto a la dirección, luego Permisos y Notificaciones.',
+    needsInstall:
+      'En iPhone y iPad los avisos llegan solo a la app de la pantalla de inicio (iOS 16.4 o más nuevo): toca Compartir, «Agregar a inicio», y abre Polo desde el ícono.',
     unsupported: 'Este navegador no recibe avisos.',
     unsupportedIos: 'Este iPhone no recibe avisos: hace falta iOS 16.4 o más nuevo.',
     enabled: 'Listo: te avisamos aquí.',
@@ -1647,19 +2034,22 @@ export const t = {
     joinButton: 'Entrar',
     badCode: 'Ese código no existe. Pídele al grupo el nuevo.',
     joinTitle: (name: string) => `Te invitan a ${name}`,
-    joinLine: (n: number) => `${n === 1 ? '1 miembro' : `${n} miembros`}. Al entrar ven tu perfil completo y tú el suyo.`,
+    joinLine: (n: number) =>
+      `${n === 1 ? '1 miembro' : `${n} miembros`}. Al entrar ven tu perfil completo y tú el suyo.`,
     joinCta: 'Entrar al crew',
     already: 'Ya estás en este crew.',
     joined: (name: string) => `Ya eres de ${name}`,
     /** A crew that approves who enters (0071, TRUST-11). */
-    joinApprovalLine: (n: number) => `${n === 1 ? '1 miembro' : `${n} miembros`}. Quien lo administra aprueba a quien entra; ya adentro, ven tu perfil completo y tú el suyo.`,
+    joinApprovalLine: (n: number) =>
+      `${n === 1 ? '1 miembro' : `${n} miembros`}. Quien lo administra aprueba a quien entra; ya adentro, ven tu perfil completo y tú el suyo.`,
     joinAsk: 'Pedir entrar',
     requested: (name: string) => `Listo: quien administra ${name} ya sabe que quieres entrar.`,
     alreadyAsked: 'Ya pediste entrar: quien lo administra decide.',
     // Crew page
     season: (y: number) => `Temporada ${y}`,
     table: 'Tabla',
-    tableHow: 'Por salida: 25, 18, 15, 12, 10, 8, 6, 4, 2 y 1 punto del 1.º al 10.º, más 1 por jugar. Los empates se reparten los puntos de los lugares que ocupan. Desempata quien ganó más salidas y luego el mejor lugar.',
+    tableHow:
+      'Por salida: 25, 18, 15, 12, 10, 8, 6, 4, 2 y 1 punto del 1.º al 10.º, más 1 por jugar. Los empates se reparten los puntos de los lugares que ocupan. Desempata quien ganó más salidas y luego el mejor lugar.',
     noSeason: 'Cuando se publique la primera salida del crew, aquí sale la tabla.',
     events: (n: number) => (n === 1 ? '1 salida' : `${n} salidas`),
     wins: (n: number) => (n === 1 ? '1 victoria' : `${n} victorias`),
@@ -1691,10 +2081,12 @@ export const t = {
     declined: (name: string) => `Rechazaste a ${name}`,
     remove: 'Sacar',
     removeTitle: (name: string) => `Sacar a ${name}`,
-    removeBody: (name: string, crew: string) => `${name} deja de estar en ${crew}: ya no ve la tabla, las salidas ni el perfil completo de los demás, y no se le avisa. Puede volver a entrar si tiene el código: cámbialo, o prende «Aprobar solicitudes».`,
+    removeBody: (name: string, crew: string) =>
+      `${name} deja de estar en ${crew}: ya no ve la tabla, las salidas ni el perfil completo de los demás, y no se le avisa. Puede volver a entrar si tiene el código: cámbialo, o prende «Aprobar solicitudes».`,
     removed: (name: string) => `${name} ya no es del crew`,
     leave: 'Salir del crew',
-    leaveConfirm: (name: string) => `Dejas de ver la tabla y las salidas de ${name}. Si eres el último, el crew se borra.`,
+    leaveConfirm: (name: string) =>
+      `Dejas de ver la tabla y las salidas de ${name}. Si eres el último, el crew se borra.`,
     crewField: 'Crew',
     crewNone: 'Sin crew',
     crewHint: 'La salida cuenta para la tabla de ese crew.',
@@ -1713,7 +2105,8 @@ export const t = {
     searchPlaceholder: 'Nombre o @usuario',
     searchNone: 'Nadie con ese nombre. Si tiene el perfil oculto, pídele su enlace.',
     /** TRUST-08 (0058): two letters find only the people you know; a stranger who chose to be found needs three. */
-    searchShort: 'Con dos letras solo salen tus amigos, tus crews y quienes jugaron contigo. Escribe una más para buscar a alguien más.',
+    searchShort:
+      'Con dos letras solo salen tus amigos, tus crews y quienes jugaron contigo. Escribe una más para buscar a alguien más.',
     incoming: 'Te quieren agregar',
     outgoing: 'Esperando respuesta',
     suggestions: 'Jugaron contigo',
@@ -1728,7 +2121,8 @@ export const t = {
     acceptFriend: 'Aceptar solicitud',
     areFriends: 'Son amigos',
     removeFriend: 'Quitar de amigos',
-    removeConfirm: (name: string) => `${name} deja de ver tu perfil completo, salvo que jueguen un torneo juntos. Si tienen una rivalidad, se termina.`,
+    removeConfirm: (name: string) =>
+      `${name} deja de ver tu perfil completo, salvo que jueguen un torneo juntos. Si tienen una rivalidad, se termina.`,
     block: 'Bloquear',
     blockConfirm: (name: string) => `${name} no podrá encontrarte ni agregarte. No se le avisa.`,
     blocked: 'Bloqueado',
@@ -1743,23 +2137,39 @@ export const t = {
     gross: 'Gross',
     record: (w: number, l: number, t: number) => `${w} ganadas, ${l} perdidas${t ? `, ${t} empatadas` : ''}`,
     recordShort: { won: 'Ganadas', lost: 'Perdidas', tied: 'Empates' },
-    recordHow: 'Neto: gross ajustado menos tu hándicap de campo en el tee que jugó cada uno. Gross: solo rondas sin hoyos levantados.',
+    recordHow:
+      'Neto: gross ajustado menos tu hándicap de campo en el tee que jugó cada uno. Gross: solo rondas sin hoyos levantados.',
     sharedRounds: 'Rondas juntos',
     /** A11Y-22: the Neto/Gross switch over the shared rounds. */
     basis: 'Contar en',
-    noShared: 'Todavía no tienen rondas completas juntos. Cuando el Comité cierre una en la que jugaron los dos, sale aquí.',
+    noShared:
+      'Todavía no tienen rondas completas juntos. Cuando el Comité cierre una en la que jugaron los dos, sale aquí.',
     you: 'Tú',
     /** Between the two faces on Cara a cara. */
     versusJoin: 'contra',
-    roundVs: (basis: 'net' | 'gross', mine: number | null, theirs: number | null) => `${basis === 'net' ? 'Neto' : 'Gross'} ${mine ?? '—'} contra ${theirs ?? '—'}`,
+    roundVs: (basis: 'net' | 'gross', mine: number | null, theirs: number | null) =>
+      `${basis === 'net' ? 'Neto' : 'Gross'} ${mine ?? '—'} contra ${theirs ?? '—'}`,
     // Rivalry
     rivalry: 'Rivalidad',
-    rivalryHint: 'Juegan con golpes que se mueven: después de cada ronda que jueguen juntos, quien pierde recibe un golpe más. Cuenta el gross ajustado de cada uno con los golpes aplicados.',
+    rivalryHint:
+      'Juegan con golpes que se mueven: después de cada ronda que jueguen juntos, quien pierde recibe un golpe más. Cuenta el gross ajustado de cada uno con los golpes aplicados.',
     rivalryFriendsOnly: 'Las rivalidades son entre amigos.',
-    strokesMine: (n: number, name: string) => (n === 0 ? `Parejos con ${name}` : n > 0 ? `Recibes ${n === 1 ? '1 golpe' : `${n} golpes`} de ${name}` : `Le das ${-n === 1 ? '1 golpe' : `${-n} golpes`} a ${name}`),
+    strokesMine: (n: number, name: string) =>
+      n === 0
+        ? `Parejos con ${name}`
+        : n > 0
+          ? `Recibes ${n === 1 ? '1 golpe' : `${n} golpes`} de ${name}`
+          : `Le das ${-n === 1 ? '1 golpe' : `${-n} golpes`} a ${name}`,
     strokesFigure: (n: number) => (n === 0 ? '0' : n > 0 ? `+${n}` : `−${-n}`),
     strokesLabel: (n: number) => (n === 0 ? 'Parejos' : n > 0 ? 'Recibes' : 'Das'),
-    suggest: (n: number | null) => (n == null ? 'Sin los dos índices, empiecen parejos o acuerden los golpes.' : n === 0 ? 'Con sus índices, van parejos.' : n > 0 ? `Con sus índices, recibirías ${n}.` : `Con sus índices, darías ${-n}.`),
+    suggest: (n: number | null) =>
+      n == null
+        ? 'Sin los dos índices, empiecen parejos o acuerden los golpes.'
+        : n === 0
+          ? 'Con sus índices, van parejos.'
+          : n > 0
+            ? `Con sus índices, recibirías ${n}.`
+            : `Con sus índices, darías ${-n}.`,
     startStrokes: 'Golpes para empezar',
     receive: 'Recibo',
     give: 'Doy',
@@ -1774,7 +2184,8 @@ export const t = {
     since: (d: string) => `Desde ${d}`,
     noRivalryRounds: 'Cuenta desde hoy: la próxima ronda que jueguen juntos mueve los golpes.',
     result: { won: 'Ganaste', lost: 'Perdiste', tie: 'Empate' } as Record<'won' | 'lost' | 'tie', string>,
-    resultLine: (mine: number, theirs: number, before: number) => `${mine} contra ${theirs}, ${before === 0 ? 'parejos' : before > 0 ? `recibiendo ${before}` : `dando ${-before}`}`,
+    resultLine: (mine: number, theirs: number, before: number) =>
+      `${mine} contra ${theirs}, ${before === 0 ? 'parejos' : before > 0 ? `recibiendo ${before}` : `dando ${-before}`}`,
     // Inbox
     noNotices: 'Nada nuevo. Aquí te avisamos de amigos, rivalidades y resultados.',
     notice: {
@@ -1784,7 +2195,8 @@ export const t = {
       rivalry_accepted: (name: string) => `${name} aceptó la rivalidad`,
       rivalry_round: (name: string) => `Nueva ronda en tu rivalidad con ${name}`,
       link_pending: (player: string, tournament: string) => `El Comité de ${tournament} dice que eres ${player}`,
-      results: (tournament: string, finish: string | null) => `Resultados de ${tournament}${finish ? `: quedaste ${finish}` : ''}`,
+      results: (tournament: string, finish: string | null) =>
+        `Resultados de ${tournament}${finish ? `: quedaste ${finish}` : ''}`,
       round_invite: (name: string, tournament: string) => `${name} te agregó a su ronda: ${tournament}`,
       crew_join: (name: string, crew: string) => `${name} entró a ${crew}`,
       /** A crew that approves who enters (0071, TRUST-11): to its owner, and to whoever it let in. */
@@ -1804,22 +2216,38 @@ export const t = {
       card_to_sign: (tournament: string, round: number) => `Firma la tarjeta del día ${round} en ${tournament}`,
       cardToSignBody: (round: number) => `Tu grupo terminó el día ${round}: firma la tarjeta de la otra pareja.`,
       /** A marker's rule (UX-23): the notice names nobody (it never carries another player's name). */
-      cardToSignMarkerBody: (round: number) => `Ya hay tarjetas de tu grupo del día ${round} listas: firma las de tus compañeros.`,
-      snake_tiebreak: (tournament: string, game: string, hole: number) => `${game} en ${tournament}: falta decir quién embocó al último en el ${hole}`,
-      snakeTiebreakBody: (game: string, round: number, hole: number) => `${game}, día ${round}: falta decir quién embocó al último en el hoyo ${hole}.`,
+      cardToSignMarkerBody: (round: number) =>
+        `Ya hay tarjetas de tu grupo del día ${round} listas: firma las de tus compañeros.`,
+      snake_tiebreak: (tournament: string, game: string, hole: number) =>
+        `${game} en ${tournament}: falta decir quién embocó al último en el ${hole}`,
+      snakeTiebreakBody: (game: string, round: number, hole: number) =>
+        `${game}, día ${round}: falta decir quién embocó al último en el hoyo ${hole}.`,
       /** The snake's own name when a notice comes without it (the server always sends the tournament's). */
       snakeGame: 'La Víbora',
       /** TRUST-14 (0062): the day only, never the hole, the values or who: the card says them, with the Comité's reason. */
-      score_corrected: (tournament: string, round: number) => `El Comité corrigió tu tarjeta del día ${round} en ${tournament}`,
-      scoreCorrectedBody: (round: number) => `El Comité corrigió tu tarjeta del día ${round}. Toca para ver qué cambió y por qué.`,
+      score_corrected: (tournament: string, round: number) =>
+        `El Comité corrigió tu tarjeta del día ${round} en ${tournament}`,
+      scoreCorrectedBody: (round: number) =>
+        `El Comité corrigió tu tarjeta del día ${round}. Toca para ver qué cambió y por qué.`,
     },
     someone: 'Alguien',
     // Feed
     feedFinish: (name: string, finish: string, tournament: string) => `${name} quedó ${finish} en ${tournament}`,
     feedRound: (name: string, what: string, where: string) => `${name}: ${what} en ${where}`,
     feedWhat: (birdies: number, eagles: number, best: boolean, gross: number | null) =>
-      andList([best && gross != null ? `su mejor ronda (${gross})` : null, eagles > 0 ? (eagles === 1 ? 'un águila' : `${eagles} águilas`) : null, birdies >= 3 ? `${birdies} birdies` : null].filter((x): x is string => !!x)) || 'una gran ronda',
-    feedRivalry: (name: string, result: 'won' | 'lost' | 'tie') => (result === 'won' ? `Le ganaste la ronda a ${name}` : result === 'lost' ? `${name} te ganó la ronda` : `Empataste con ${name}`),
+      andList(
+        [
+          best && gross != null ? `su mejor ronda (${gross})` : null,
+          eagles > 0 ? (eagles === 1 ? 'un águila' : `${eagles} águilas`) : null,
+          birdies >= 3 ? `${birdies} birdies` : null,
+        ].filter((x): x is string => !!x),
+      ) || 'una gran ronda',
+    feedRivalry: (name: string, result: 'won' | 'lost' | 'tie') =>
+      result === 'won'
+        ? `Le ganaste la ronda a ${name}`
+        : result === 'lost'
+          ? `${name} te ganó la ronda`
+          : `Empataste con ${name}`,
   },
   enter: {
     title: 'Entrar',
@@ -1833,7 +2261,9 @@ export const t = {
     attemptsLeft: (n: number) => (n === 1 ? 'Te queda 1 intento.' : `Te quedan ${n} intentos.`),
     /** COPY-13: the time the lock ends, on this phone's clock; none when the server did not say. */
     lockedUntil: (time: string | null) =>
-      time ? `Demasiados intentos. Vuelve a intentar a las ${time}.` : 'Demasiados intentos. Espera unos minutos y vuelve a intentar.',
+      time
+        ? `Demasiados intentos. Vuelve a intentar a las ${time}.`
+        : 'Demasiados intentos. Espera unos minutos y vuelve a intentar.',
     /** SEC-04: too many wrong PINs for this player from phones that never held him. His own phones still get in. */
     lockedPlayer: (time: string | null) =>
       `Hubo demasiados intentos con este PIN desde teléfonos nuevos. ${time ? `Vuelve a intentar a las ${time}` : 'Espera unos minutos'} o pídele al Comité que lo desbloquee. Donde ya entraste antes, sigue funcionando.`,
@@ -1847,9 +2277,12 @@ export const t = {
     /** Under a face's name (VIS-18): its category, in words; the boxed letter read as noise. */
     faceTier: (tier: string) => `Categoría ${tier}`,
     faceSpoken: (name: string, tier: string | null, honoree: boolean, askMe: boolean) =>
-      [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : ''].filter(Boolean).join(', '),
+      [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : '']
+        .filter(Boolean)
+        .join(', '),
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
-    alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
+    alreadyLinked: (name: string) =>
+      `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
     notFound: 'Ese torneo no existe. Revisa el enlace o el código.',
     /** «no existe», when this phone still had writes of that tournament: they can never go out now. */
     goneUnsent: 'Lo que este teléfono tenía sin subir de ese torneo ya no se puede subir.',
@@ -1899,10 +2332,12 @@ export const t = {
     /** The chip as a button (PWA-15): what it says, then what a tap does («Conectando… Actualizar», not «…. »). */
     refreshLabel: (state: string) => `${state}${state.endsWith('…') ? '' : '.'} Actualizar`,
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
-    notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
+    notPersistent:
+      'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
     rejected: (n: number) => (n === 1 ? '1 rechazado' : `${n} rechazados`),
     /** The same, said to a screen reader the moment it happens on the Tarjeta (A11Y-14). */
-    rejectedSaid: (n: number) => (n === 1 ? 'El servidor rechazó 1 cambio de este teléfono.' : `El servidor rechazó ${n} cambios de este teléfono.`),
+    rejectedSaid: (n: number) =>
+      n === 1 ? 'El servidor rechazó 1 cambio de este teléfono.' : `El servidor rechazó ${n} cambios de este teléfono.`,
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
@@ -1998,7 +2433,8 @@ export const t = {
     sent: 'Listo: el Comité ya lo sabe.',
     /** Comité › Jugadores: the players' requests. */
     requests: (n: number) => (n === 1 ? '1 pedido de corrección' : `${n} pedidos de corrección`),
-    requestsHint: 'Lo que un jugador pidió corregir de sus datos, desde su teléfono. Corrígelo en su hoja y márcalo hecho.',
+    requestsHint:
+      'Lo que un jugador pidió corregir de sus datos, desde su teléfono. Corrígelo en su hoja y márcalo hecho.',
     requestLine: (player: string, when: string) => `${player}, ${when}`,
     done: 'Hecho',
     doneAt: (when: string) => `Hecho ${when}`,
@@ -2054,11 +2490,19 @@ export const t = {
     /** A11Y-22: the Puntos/Gross switch's name. */
     boardIn: 'Tablero en',
     /** The honoree's card where the event does not count points: its figure, today's, and his last hole in words. */
-    spotlightFigure: (pos: string, figure: string, today: string | null, lastHole: number | null, lastText: string | null) =>
+    spotlightFigure: (
+      pos: string,
+      figure: string,
+      today: string | null,
+      lastHole: number | null,
+      lastText: string | null,
+    ) =>
       `${ordinal(pos)} con ${figure}${today ? `, hoy ${today}` : ''}${lastHole != null && lastText ? `, hoyo ${lastHole}: ${lastText}` : ''}`,
-    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${ptsText(total)}${today != null ? `, hoy ${today}` : ''}${lastHole != null && lastPts != null ? `, hoyo ${lastHole}: ${ptsText(lastPts)}` : ''}`,
+    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) =>
+      `${ordinal(pos)} con ${ptsText(total)}${today != null ? `, hoy ${today}` : ''}${lastHole != null && lastPts != null ? `, hoyo ${lastHole}: ${ptsText(lastPts)}` : ''}`,
     /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6»; a match won on the 18th is «1 arriba» for the winner and «1 abajo» for the loser. */
-    matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text.replace(/ arriba$/, ' abajo')}` : text),
+    matchDay: (result: 'won' | 'lost' | 'halved', text: string) =>
+      result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text.replace(/ arriba$/, ' abajo')}` : text,
     // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
     /**
      * A11Y-11: what a screen reader hears for a board row, everything the row shows: «1.º, Camilo (tú), El novio,
@@ -2085,7 +2529,8 @@ export const t = {
         .filter(Boolean)
         .join(', '),
     /** `game` is the snake's own label (STRAT-11). */
-    pendingSnake: (n: number, game: string) => `${game}: ${n === 1 ? '1 desempate pendiente' : `${n} desempates pendientes`}`,
+    pendingSnake: (n: number, game: string) =>
+      `${game}: ${n === 1 ? '1 desempate pendiente' : `${n} desempates pendientes`}`,
     /** UX-28: a handicap changed after they were fixed; tapping it opens the player. */
     hcpChanged: (name: string, fromTo: string) => `El hándicap de ${name} cambió después de fijarlos: ${fromTo}`,
     /** STRAT-10: En vivo before anyone has played a hole: the next day, his group, tee and handicap, what he owes, and how long to go. */
@@ -2099,7 +2544,8 @@ export const t = {
       todayIn: (hours: number, minutes: number) =>
         `Salen en ${andList([hours > 0 ? `${hours} ${hours === 1 ? 'hora' : 'horas'}` : '', hours === 0 || minutes ? `${minutes} min` : ''].filter(Boolean))}`,
       group: 'Tu grupo',
-      groupLine: (n: number, time: string | null, hole: number) => `Grupo ${n}${time ? `, a las ${time}` : ''}, salida por el ${hole}`,
+      groupLine: (n: number, time: string | null, hole: number) =>
+        `Grupo ${n}${time ? `, a las ${time}` : ''}, salida por el ${hole}`,
       groupWith: (names: string[]) => `Con ${andList(names)}`,
       noGroup: 'El Comité todavía no arma los grupos.',
       firstTee: 'Primera salida',
@@ -2115,7 +2561,13 @@ export const t = {
   },
   card: {
     contest: {
-      question: { closest: '¿Quién la dejó más cerca?', longDrive: '¿Quién pegó el drive más largo?', greenie: '¿Quién hizo greenie?', sandy: '¿Quién hizo sandy?', custom: '¿Quién ganó?' } as Record<string, string>,
+      question: {
+        closest: '¿Quién la dejó más cerca?',
+        longDrive: '¿Quién pegó el drive más largo?',
+        greenie: '¿Quién hizo greenie?',
+        sandy: '¿Quién hizo sandy?',
+        custom: '¿Quién ganó?',
+      } as Record<string, string>,
       nobody: 'Nadie',
       many: 'Pueden ser varios',
       hint: 'Se guarda con el hoyo.',
@@ -2136,7 +2588,8 @@ export const t = {
     netGrossCaption: 'neto / golpes',
     grossCaption: 'golpes',
     signedReasonTitle: 'Corrección con tarjeta firmada',
-    signedReasonHint: 'Hay tarjetas firmadas en este grupo. La corrección del Comité necesita una razón y queda en la bitácora.',
+    signedReasonHint:
+      'Hay tarjetas firmadas en este grupo. La corrección del Comité necesita una razón y queda en la bitácora.',
     strokes: 'Golpes',
     putts: 'Putts',
     pickedUp: 'Levantó',
@@ -2159,10 +2612,24 @@ export const t = {
      * 'gone': a day the Comité deleted since, which has no number to name.
      */
     conflictTitle: 'Alguien más capturó primero',
-    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean, day: number | 'gone' | null = null) =>
+    conflictLine: (
+      hole: number,
+      who: string | null,
+      player: string,
+      theirs: string,
+      mine: string,
+      self: boolean,
+      day: number | 'gone' | null = null,
+    ) =>
       `${day === null ? `Hoyo ${hole}` : day === 'gone' ? `Hoyo ${hole} (día borrado)` : `Día ${day}, hoyo ${hole}`}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
     /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
-    conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
+    conflictValue: (
+      strokes: number | null,
+      putts: number | null,
+      pickedUp: boolean,
+      withPutts: boolean,
+      puttsOnly: boolean,
+    ) => {
       const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
       return puttsOnly ? p : `${pickedUp ? 'levantó' : `${strokes ?? '–'}`}${withPutts ? ` con ${p}` : ''}`
     },
@@ -2171,15 +2638,19 @@ export const t = {
     conflictAction: (action: string, hole: number, player: string, day: number | 'gone' | null = null) =>
       `${action}: ${day === null || day === 'gone' ? '' : `día ${day}, `}hoyo ${hole}${day === 'gone' ? ' (día borrado)' : ''}, ${player}`,
     /** Under the question on a day that is no longer live: what «Guardar el mío» does then. */
-    conflictClosedHint: 'Ese día ya no está en juego: «Guardar el mío» lo manda al Comité, que lo revisa en sus pendientes.',
-    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
+    conflictClosedHint:
+      'Ese día ya no está en juego: «Guardar el mío» lo manda al Comité, que lo revisa en sus pendientes.',
+    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) =>
+      `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
     /** A hole the whole group had played, saved again: the card goes back to where the group is (UX-19). */
-    correctedHole: (n: number, backTo: number | null) => (backTo == null ? `Hoyo ${n} corregido` : `Hoyo ${n} corregido; seguimos en el ${backTo}`),
+    correctedHole: (n: number, backTo: number | null) =>
+      backTo == null ? `Hoyo ${n} corregido` : `Hoyo ${n} corregido; seguimos en el ${backTo}`,
     /** The Comité's correction goes to the server at once (a closed day, a signed card): with no signal it is not kept (REL-22). */
-    correctionNeedsSignal: 'Sin señal: la corrección no se guardó. Guárdala otra vez cuando haya señal; lo que escribiste sigue aquí.',
+    correctionNeedsSignal:
+      'Sin señal: la corrección no se guardó. Guárdala otra vez cuando haya señal; lo que escribiste sigue aquí.',
     undoNeedsSignal: 'Sin señal: no se deshizo. Inténtalo otra vez cuando haya señal.',
     /** On the button for a moment after a save (MOT-02). */
     savedCheck: 'Guardado',
@@ -2190,7 +2661,8 @@ export const t = {
     snakeHolder: (game: string) => `Tiene ${labelInSentence(game)}`,
     restoredHole: (n: number) => `Hoyo ${n} quedó como estaba`,
     allDefaultsTitle: (n: number) => `¿Guardar el ${n} con todos en par?`,
-    allDefaultsHint: 'Acabas de guardar el hoyo anterior y aquí nadie ha cambiado nada. Si fue un doble toque, regresa.',
+    allDefaultsHint:
+      'Acabas de guardar el hoyo anterior y aquí nadie ha cambiado nada. Si fue un doble toque, regresa.',
     allDefaultsBack: 'Regresar',
     allDefaultsConfirm: 'Sí, todos par',
     front: 'Ida',
@@ -2209,13 +2681,16 @@ export const t = {
     next: 'Hoyo siguiente',
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',
     whoHoledLast: '¿Quién embocó al último?',
-    whoHoledLastHint: (threshold: number, game: string) => `Dos o más hicieron ${threshold} putts o más en este hoyo: ${labelInSentence(game)} pasa al que embocó al último.`,
+    whoHoledLastHint: (threshold: number, game: string) =>
+      `Dos o más hicieron ${threshold} putts o más en este hoyo: ${labelInSentence(game)} pasa al que embocó al último.`,
     // UX-08: the group that doesn't remember saves the hole all the same; the snake waits for the Comité (Comité › Tarjetas).
     whoHoledLastUnknown: 'No sabemos: que decida el Comité',
-    whoHoledLastUnknownHint: (game: string) => `El hoyo se guarda igual. ${game} queda pendiente hasta que el Comité diga quién fue.`,
+    whoHoledLastUnknownHint: (game: string) =>
+      `El hoyo se guarda igual. ${game} queda pendiente hasta que el Comité diga quién fue.`,
     markName: MARK_NAMES,
     /** A11Y-10: a score mark as a screen reader says it: «7, doble bogey o peor»; a pick-up is «levantó». */
-    markSpoken: (value: string | number, kind: string) => (kind === 'pickup' ? 'levantó' : `${value}, ${(MARK_NAMES[kind] ?? kind)}`),
+    markSpoken: (value: string | number, kind: string) =>
+      kind === 'pickup' ? 'levantó' : `${value}, ${MARK_NAMES[kind] ?? kind}`,
     weirdTitle: '¿Seguro?',
     weirdFix: 'Corregir',
     weirdConfirm: 'Sí, así fue',
@@ -2254,16 +2729,19 @@ export const t = {
       unavailable: 'El historial todavía no está en el servidor.',
       comite: 'el Comité',
       /** «8 abr 2027, 10:41, Ana: 5 golpes, 2 putts», then the Comité's why when there is one. */
-      step: (when: string, who: string, what: string, why: string | null) => `${when}, ${who}: ${what}${why ? `. ${why}` : ''}`,
+      step: (when: string, who: string, what: string, why: string | null) =>
+        `${when}, ${who}: ${what}${why ? `. ${why}` : ''}`,
       value: (strokes: number | null, putts: number | null) =>
         `${strokes ?? '—'} ${strokes === 1 ? 'golpe' : 'golpes'}${putts == null ? '' : `, ${putts} ${putts === 1 ? 'putt' : 'putts'}`}`,
-      pickedUp: (putts: number | null) => `levantó${putts == null ? '' : `, ${putts} ${putts === 1 ? 'putt' : 'putts'}`}`,
+      pickedUp: (putts: number | null) =>
+        `levantó${putts == null ? '' : `, ${putts} ${putts === 1 ? 'putt' : 'putts'}`}`,
       deleted: 'lo borró',
       typed: (reason: string) => `«${reason}»`,
       kept: 'Resolvió la discrepancia y dejó el valor que tenía',
       restored: 'Resolvió la discrepancia y regresó el valor anterior',
     },
-    disputedHint: 'Los hoyos marcados los capturaron dos teléfonos con valores distintos. Vale el último; la firma de la tarjeta lo confirma.',
+    disputedHint:
+      'Los hoyos marcados los capturaron dos teléfonos con valores distintos. Vale el último; la firma de la tarjeta lo confirma.',
   },
   /**
    * A tournament's settings this build can't read in full (ARCH-04): a newer build wrote them.
@@ -2281,7 +2759,8 @@ export const t = {
     money: (labels: string[]) =>
       `Esta versión de la app no conoce ${andList(labels.map((l) => `«${l}»`))}, que ${labels.length > 1 ? 'mueven' : 'mueve'} dinero, así que no muestra el dinero. Actualízala para verlo.`,
     /** A save of the games while the row holds one this build doesn't know: the save would drop it. */
-    games: (labels: string[]) => `Esta versión de la app no conoce ${andList(labels.map((l) => `«${l}»`))}: actualízala para cambiar los juegos.`,
+    games: (labels: string[]) =>
+      `Esta versión de la app no conoce ${andList(labels.map((l) => `«${l}»`))}: actualízala para cambiar los juegos.`,
     /** A Comité save over a row this build can't read. */
     save: 'Esta versión de la app no puede leer la configuración de este torneo: actualízala para cambiarla.',
   },
@@ -2313,9 +2792,11 @@ export const t = {
     invested: 'invirtió',
     unassigned: 'Sin asignar',
     noAuctionYet: 'La subasta todavía no empieza.',
-    snakeRule: (n: number, game: string) => `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo. Al final de la ronda cobran todos menos quien se quedó con ${labelInSentence(game)}.`,
+    snakeRule: (n: number, game: string) =>
+      `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo. Al final de la ronda cobran todos menos quien se quedó con ${labelInSentence(game)}.`,
     /** The same, on a link to watch «Sin dinero» (STRAT-05): who holds it, never who cashes. */
-    snakeRuleNoMoney: (n: number, game: string) => `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo, y se queda con él hasta que otro hace ${n} putts o se acaba la ronda.`,
+    snakeRuleNoMoney: (n: number, game: string) =>
+      `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo, y se queda con él hasta que otro hace ${n} putts o se acaba la ronda.`,
     snakePending: (hole: number) => `Pendiente en el hoyo ${hole}`,
     snakeSettled: 'Repartida',
     snakeDone: 'Terminada',
@@ -2336,7 +2817,7 @@ export const t = {
   player: {
     /** A11Y-10: a hole of the player's card, said whole: «Hoyo 5: 7 golpes, doble bogey o peor, 1 pt»; «Hoyo 5: levantó». */
     holeSpoken: (n: number, gross: number | null, kind: string, pts: number | null) =>
-      `Hoyo ${n}: ${gross == null ? 'levantó' : `${gross} ${gross === 1 ? 'golpe' : 'golpes'}, ${(MARK_NAMES[kind] ?? kind)}`}${pts == null ? '' : `, ${pts} ${pts === 1 ? 'punto' : 'puntos'}`}`,
+      `Hoyo ${n}: ${gross == null ? 'levantó' : `${gross} ${gross === 1 ? 'golpe' : 'golpes'}, ${MARK_NAMES[kind] ?? kind}`}${pts == null ? '' : `, ${pts} ${pts === 1 ? 'punto' : 'puntos'}`}`,
     gross: 'Gross',
     putts: 'Putts',
     strokesShort: 'Ventaja',
@@ -2367,15 +2848,23 @@ export const t = {
     snakeHoles: (game: string) => `Hoyos con ${labelInSentence(game)}`,
     /** `figure` already carries its unit (`common.figure`). */
     /** `where` is `where()`'s: how far into which day (COPY-26), or null before the first hole. */
-    position: (label: string, figure: string, where: string | null) => `${ordinal(label)}, ${figure}${where ? `, ${where}` : ''}`,
+    position: (label: string, figure: string, where: string | null) =>
+      `${ordinal(label)}, ${figure}${where ? `, ${where}` : ''}`,
     /** A team format: where his team stands, and its figure. */
-    positionTeam: (label: string, team: string, figure: string, where: string | null) => `${ordinal(label)} con ${team}, ${figure}${where ? `, ${where}` : ''}`,
+    positionTeam: (label: string, team: string, figure: string, where: string | null) =>
+      `${ordinal(label)} con ${team}, ${figure}${where ? `, ${where}` : ''}`,
     /**
      * COPY-26: how far he is, on the day he is playing. A count across days read as a hole («por el 26» of 36):
      * «por el 8 del día 2», «terminó el día 1», «terminó»; one day says no day.
      */
     where: (thru: number, holes: number, day: number, days: number, last: boolean) =>
-      thru >= holes ? (days > 1 && !last ? `terminó el día ${day}` : 'terminó') : days > 1 ? `por el ${thru} del día ${day}` : `por el ${thru}`,
+      thru >= holes
+        ? days > 1 && !last
+          ? `terminó el día ${day}`
+          : 'terminó'
+        : days > 1
+          ? `por el ${thru} del día ${day}`
+          : `por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${handicapText(ph)}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, figure: string) => `Día ${day}: ${figure}`,
@@ -2390,7 +2879,8 @@ export const t = {
     /** MOT-10: the Tarjeta's vibration, on this phone only. */
     haptics: 'Vibrar al capturar',
     /** `game`: the snake's label when the tournament plays it (STRAT-11). */
-    hapticsHint: (game: string | null) => `Un toque corto en cada número y al guardar un hoyo, más largo en un birdie${game ? ` o si pasa ${labelInSentence(game)}` : ''}. Solo en este teléfono.`,
+    hapticsHint: (game: string | null) =>
+      `Un toque corto en cada número y al guardar un hoyo, más largo en un birdie${game ? ` o si pasa ${labelInSentence(game)}` : ''}. Solo en este teléfono.`,
     /** VIS-11, A11Y-19: light, dark or the phone's setting, and more contrast; on this phone only. */
     appearance: {
       title: 'Apariencia',
@@ -2429,13 +2919,15 @@ export const t = {
       cutMax: (max: number) => `El recorte de hándicap llega hasta ${max} golpes por día.`,
       houseCut: (cut: string, pot: string) => `Los gastos del grupo se llevan ${cut} y las inscripciones suman ${pot}.`,
       placeTwice: (place: string) => `Dos casillas de la Calcutta pagan lo mismo: ${place}.`,
-      placeUnreachable: (place: string, field: string) => `La Calcutta paga el ${place} lugar y hay ${field}: nadie lo puede ganar.`,
+      placeUnreachable: (place: string, field: string) =>
+        `La Calcutta paga el ${place} lugar y hay ${field}: nadie lo puede ganar.`,
       tierTwice: (tier: string) => `Dos casillas de la Calcutta pagan al mejor de la categoría ${tier}.`,
       lastTwice: (label: string) => `Dos casillas de la Calcutta pagan a ${label}.`,
       buyback: (max: number) => `La recompra llega hasta la mitad: ${max} %.`,
       currency: (c: string) => `Polo cuenta en pesos mexicanos (MXN), no en ${c}.`,
       timezone: (zone: string) => `La zona horaria «${zone}» no existe.`,
-      signingPairs: (game: string) => `Las tarjetas las firman las parejas, pero ${game} está apagado: en Reglas, elige quién firma.`,
+      signingPairs: (game: string) =>
+        `Las tarjetas las firman las parejas, pero ${game} está apagado: en Reglas, elige quién firma.`,
       /** Not an error: said beside the allowance, so a scratch event is never one by accident. */
       scratch: 'Con 0 % nadie recibe golpes: se juega scratch.',
       /** Near Guardar and Crear. */
@@ -2450,7 +2942,20 @@ export const t = {
       todoLabel: 'Pendiente',
       /** `what`: the lines it checked, from `checked` (andList). */
       allSet: (what: string) => `Listo para jugar: ${what}.`,
-      checked: { players: 'jugadores', pins: 'PIN', handicaps: 'hándicaps', rounds: 'rondas', roundSetup: 'rondas', card: 'campo', foreignTees: 'tees', teams: 'equipos', pairs: 'parejas', bracket: 'cuadro', tees: 'tees', groups: 'grupos' },
+      checked: {
+        players: 'jugadores',
+        pins: 'PIN',
+        handicaps: 'hándicaps',
+        rounds: 'rondas',
+        roundSetup: 'rondas',
+        card: 'campo',
+        foreignTees: 'tees',
+        teams: 'equipos',
+        pairs: 'parejas',
+        bracket: 'cuadro',
+        tees: 'tees',
+        groups: 'grupos',
+      },
       day: (n: number) => `día ${n}`,
       players: (n: number) => `${n} jugadores dados de alta`,
       playersMissing: 'Da de alta a los jugadores (al menos 2)',
@@ -2460,8 +2965,12 @@ export const t = {
       handicapsMissing: 'Revisa los hándicaps y fíjalos (abrir la subasta o empezar a jugar los fija solo)',
       rounds: (n: number) => (n === 1 ? '1 ronda creada' : `${n} rondas creadas`),
       roundsMissing: (n: number) => (n === 1 ? 'Falta crear 1 ronda' : `Faltan ${n} rondas por crear`),
-      roundsCancelled: (n: number) => (n === 1 ? 'La ronda está cancelada: vuelve a programarla' : 'Todas las rondas están canceladas: vuelve a programar una'),
-      roundsExtra: (n: number, days: number, extra: number) => `${n} rondas para un torneo de ${days} ${days === 1 ? 'día' : 'días'}: sube los días en Reglas o borra ${extra === 1 ? 'la que sobra' : `las ${extra} que sobran`}`,
+      roundsCancelled: (n: number) =>
+        n === 1
+          ? 'La ronda está cancelada: vuelve a programarla'
+          : 'Todas las rondas están canceladas: vuelve a programar una',
+      roundsExtra: (n: number, days: number, extra: number) =>
+        `${n} rondas para un torneo de ${days} ${days === 1 ? 'día' : 'días'}: sube los días en Reglas o borra ${extra === 1 ? 'la que sobra' : `las ${extra} que sobran`}`,
       roundSetup: 'Cada ronda tiene campo y fecha',
       roundSetupMissing: (days: string) => `Falta campo o fecha: ${days}`,
       card: 'El campo de cada ronda tiene su tarjeta',
@@ -2477,15 +2986,25 @@ export const t = {
       pairsMissing: 'Arma las parejas del fourball',
       pairsLoose: (n: number) => (n === 1 ? '1 jugador sin pareja' : `${n} jugadores sin pareja`),
       /** Under fourball a team that isn't two players (teams of 4 from a team format, the odd one of a draw). */
-      pairsNotTwo: (n: number) => (n === 1 ? '1 equipo no es pareja: el fourball se juega en parejas de 2' : `${n} equipos no son parejas: el fourball se juega en parejas de 2`),
-      bracketDays: (needed: number, days: number) => `El cuadro necesita ${needed} rondas y el torneo es de ${days} ${days === 1 ? 'día' : 'días'}: sube los días a ${needed} en Reglas`,
-      bracketUndecided: (round: string, n: number, day: number) => `${round}: ${n === 1 ? 'un partido quedó' : `${n} partidos quedaron`} sin ganador. Decide quién pasa y arma los grupos del día ${day}`,
+      pairsNotTwo: (n: number) =>
+        n === 1
+          ? '1 equipo no es pareja: el fourball se juega en parejas de 2'
+          : `${n} equipos no son parejas: el fourball se juega en parejas de 2`,
+      bracketDays: (needed: number, days: number) =>
+        `El cuadro necesita ${needed} rondas y el torneo es de ${days} ${days === 1 ? 'día' : 'días'}: sube los días a ${needed} en Reglas`,
+      bracketUndecided: (round: string, n: number, day: number) =>
+        `${round}: ${n === 1 ? 'un partido quedó' : `${n} partidos quedaron`} sin ganador. Decide quién pasa y arma los grupos del día ${day}`,
       tees: (day: number) => `Todos tienen tee para el día ${day}`,
-      teesMissing: (n: number, day: number, tee: string) => (n === 1 ? `1 jugador sin tee para el día ${day}: saldría desde ${tee}` : `${n} jugadores sin tee para el día ${day}: saldrían desde ${tee}`),
+      teesMissing: (n: number, day: number, tee: string) =>
+        n === 1
+          ? `1 jugador sin tee para el día ${day}: saldría desde ${tee}`
+          : `${n} jugadores sin tee para el día ${day}: saldrían desde ${tee}`,
       groups: (day: number) => `Grupos del día ${day} listos`,
       groupsMissing: (day: number) => `Arma los grupos del día ${day}`,
-      groupsPartial: (n: number, day: number) => (n === 1 ? `1 jugador sin grupo el día ${day}` : `${n} jugadores sin grupo el día ${day}`),
-      groupsMatches: (n: number, day: number) => (n === 1 ? `Arma el grupo de 1 partido del día ${day}` : `Arma los grupos de ${n} partidos del día ${day}`),
+      groupsPartial: (n: number, day: number) =>
+        n === 1 ? `1 jugador sin grupo el día ${day}` : `${n} jugadores sin grupo el día ${day}`,
+      groupsMatches: (n: number, day: number) =>
+        n === 1 ? `Arma el grupo de 1 partido del día ${day}` : `Arma los grupos de ${n} partidos del día ${day}`,
     },
     sections: {
       tournament: 'Torneo',
@@ -2679,7 +3198,12 @@ export const t = {
       /** A PIN claim's line (pin_claims): a phone took the player, let go of him, or the Comité took it off. */
       claim: {
         took: (player: string, from: string) => `${player} entró con su PIN ${from}`,
-        from: { ios: 'desde un iPhone', android: 'desde un Android', desktop: 'desde una computadora', other: 'desde un teléfono' } as Record<string, string>,
+        from: {
+          ios: 'desde un iPhone',
+          android: 'desde un Android',
+          desktop: 'desde una computadora',
+          other: 'desde un teléfono',
+        } as Record<string, string>,
         left: (player: string) => `Un teléfono dejó de entrar como ${player}`,
         removed: (player: string) => `El Comité sacó del torneo un teléfono que entraba como ${player}`,
         /** SEC-04 (0056): the Comité opened a locked PIN to new phones again, the PIN unchanged. */
@@ -2743,38 +3267,54 @@ export const t = {
       tiebreak: (group: number, hole: number, game: string) => `${game}, grupo ${group}, hoyo ${hole}`,
       // UX-22: an answer given by the wrong thumb can be changed; the change stays in Historial.
       answeredTitle: (game: string) => `Desempates de ${labelInSentence(game)}`,
-      answeredHint: 'Quién embocó al último en cada empate de 3 putts. Si alguien contestó mal, cámbialo aquí; el cambio queda en el historial.',
-      answeredSub: (day: string, who: string, by: string | null) => `${day}. Embocó al último: ${who}. Lo dijo ${by ?? 'el Comité'}.`,
+      answeredHint:
+        'Quién embocó al último en cada empate de 3 putts. Si alguien contestó mal, cámbialo aquí; el cambio queda en el historial.',
+      answeredSub: (day: string, who: string, by: string | null) =>
+        `${day}. Embocó al último: ${who}. Lo dijo ${by ?? 'el Comité'}.`,
       change: 'Cambiar',
       changeTitle: (group: number, hole: number) => `Grupo ${group}, hoyo ${hole}: ¿quién embocó al último?`,
-      changeHint: (game: string) => `Toca a quien de verdad embocó al último. ${game} y su dinero se recalculan desde ese hoyo.`,
+      changeHint: (game: string) =>
+        `Toca a quien de verdad embocó al último. ${game} y su dinero se recalculan desde ese hoyo.`,
       dispute: (name: string, hole: number) => `Discrepancia, ${name}, hoyo ${hole}`,
       unsigned: (pair: string) => `Tarjeta sin firmar, ${pair}`,
       incomplete: (n: number) => `${n} tarjeta${n === 1 ? '' : 's'} sin terminar`,
       // MONEY-18: holes saved with strokes and no putts; the games that pay on putts wait for them.
-      missingPutts: (name: string, holes: number[]) => `Faltan los putts de ${name}: ${holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(holes.map(String))}`,
-      missingPuttsWhy: (games: string[]) => `${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'} hasta que se capturen.`,
+      missingPutts: (name: string, holes: number[]) =>
+        `Faltan los putts de ${name}: ${holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(holes.map(String))}`,
+      missingPuttsWhy: (games: string[]) =>
+        `${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'} hasta que se capturen.`,
       warning: 'Aviso',
       view: 'Ver',
       rejectedTitle: 'Capturas rechazadas por el servidor',
       /** On a Comité device, which can send them again. */
-      rejectedHint: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
+      rejectedHint:
+        'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
       /** On a player's phone: the list lives only there, so the Comité learns of it from the player. */
-      rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
+      rejectedHintPlayer:
+        'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
       /** Every line can go again now (the day live, the card unsigned, this phone's player in that group): checked against what the card holds now. */
-      rejectedHintResend: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Ahora sí se puede volver a mandar: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
+      rejectedHintResend:
+        'Este teléfono intentó guardar esto y el servidor no lo aceptó. Ahora sí se puede volver a mandar: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
       /** Some lines can go again and some can't: both instructions. */
-      rejectedHintMixed: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Lo que tiene «Volver a mandar» ya se puede mandar otra vez: compáralo con lo que ya tiene la tarjeta. Lo demás solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
+      rejectedHintMixed:
+        'Este teléfono intentó guardar esto y el servidor no lo aceptó. Lo que tiene «Volver a mandar» ya se puede mandar otra vez: compáralo con lo que ya tiene la tarjeta. Lo demás solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
       /** «día 2, hoyo 11»; a day deleted since says so. */
-      dayHole: (day: number | null, hole: number) => (day === null ? `hoyo ${hole} de un día que ya no existe` : `día ${day}, hoyo ${hole}`),
+      dayHole: (day: number | null, hole: number) =>
+        day === null ? `hoyo ${hole} de un día que ya no existe` : `día ${day}, hoyo ${hole}`,
       rejectedScore: (name: string, where: string, value: string) => `${name}, ${where}: ${value}`,
       /** What a refused hole held: «5 golpes, 2 putts», «levantó, 1 putt». */
       scoreValue: (strokes: number | null, putts: number | null, pickedUp: boolean) => {
-        const shots = pickedUp ? 'levantó' : strokes === null ? 'sin golpes' : `${strokes} golpe${strokes === 1 ? '' : 's'}`
+        const shots = pickedUp
+          ? 'levantó'
+          : strokes === null
+            ? 'sin golpes'
+            : `${strokes} golpe${strokes === 1 ? '' : 's'}`
         return putts === null ? shots : `${shots}, ${putts} putt${putts === 1 ? '' : 's'}`
       },
-      rejectedTiebreak: (group: number, where: string, name: string, game: string) => `${game}, grupo ${group}, ${where}: ${name}`,
-      rejectedSignature: (pair: string, day: number | null) => (day === null ? `Firma de ${pair}, de un día que ya no existe` : `Firma de ${pair}, día ${day}`),
+      rejectedTiebreak: (group: number, where: string, name: string, game: string) =>
+        `${game}, grupo ${group}, ${where}: ${name}`,
+      rejectedSignature: (pair: string, day: number | null) =>
+        day === null ? `Firma de ${pair}, de un día que ya no existe` : `Firma de ${pair}, día ${day}`,
       rejectedAward: (game: string, where: string, names: string) => `${game}, ${where}: ${names}`,
       /** The state of the tournament now (what was true when the server refused it isn't known here). */
       reasonClosed: (day: number) => `El día ${day} está cerrado.`,
@@ -2792,24 +3332,31 @@ export const t = {
       sendToComite: 'Mandar al Comité',
       sendCopied: 'Copiado: pégalo en el chat del Comité.',
       /** The first line of what «Mandar al Comité» sends; one line per capture follows. */
-      sendHeader: (tournament: string, who: string | null) => (who ? `${tournament}: esto no se subió desde el teléfono de ${who}.` : `${tournament}: esto no se subió desde este teléfono.`),
+      sendHeader: (tournament: string, who: string | null) =>
+        who
+          ? `${tournament}: esto no se subió desde el teléfono de ${who}.`
+          : `${tournament}: esto no se subió desde este teléfono.`,
       /**
        * A hole save_hole refused and kept for the Comité (0026, 0028): the Comité sees it in «Pendientes de revisar».
        * `who` null: the phone's own player's.
        */
       leftForComite: (hole: number, who: string | null) =>
-        who ? `El hoyo ${hole} de ${who} quedó para el Comité: ya lo ve en su lista de pendientes.` : `Tu hoyo ${hole} quedó para el Comité: ya lo ve en su lista de pendientes.`,
+        who
+          ? `El hoyo ${hole} de ${who} quedó para el Comité: ya lo ve en su lista de pendientes.`
+          : `Tu hoyo ${hole} quedó para el Comité: ya lo ve en su lista de pendientes.`,
     },
     /** «Pendientes de revisar»: holes the server kept for the Comité (REL-08, 0028). */
     serverInbox: {
       title: 'Pendientes de revisar',
       hint: 'Hoyos que el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o con valores imposibles; también el par que la Tarjeta pone sola, cuando es lo único que llegó para un hoyo vacío. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial. Cuando dos teléfonos guardan el mismo hoyo, el que llegó después pregunta en su Tarjeta «Guardar el mío» o «Dejar el suyo», aunque el día ya esté cerrado, hasta que alguien conteste en ese teléfono; si guarda el suyo con el día cerrado, llega aquí.',
       none: 'Nada por revisar: el servidor tomó todo lo que mandaron los teléfonos.',
-      unavailable: 'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo; no detiene el cierre del torneo.',
+      unavailable:
+        'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo; no detiene el cierre del torneo.',
       retry: 'Volver a cargar',
       /** «Beto, día 1, hoyo 14». */
       where: (name: string, where: string) => `${name}, ${where}`,
-      sent: (value: string, who: string | null) => (who ? `Mandó ${value}, desde el teléfono de ${who}.` : `Mandó ${value}.`),
+      sent: (value: string, who: string | null) =>
+        who ? `Mandó ${value}, desde el teléfono de ${who}.` : `Mandó ${value}.`,
       sentUnreadable: 'Lo que mandó no se entiende.',
       /** An untouched default (`auto`), listed because nothing else was sent for that empty hole. */
       untouched: 'Era el par que la Tarjeta pone sola, sin que nadie lo cambiara; es lo único que llegó para ese hoyo.',
@@ -2832,7 +3379,8 @@ export const t = {
       dismissBody: (where: string) => `${where}: la tarjeta no cambia. El motivo queda en el Historial.`,
       dismissMatching: (n: number) => `Descartar los que ya coinciden (${n})`,
       dismissMatchingTitle: 'Descartar los que ya coinciden',
-      dismissMatchingBody: (n: number) => `${n === 1 ? 'Un hoyo ya tiene' : `${n} hoyos ya tienen`} en la tarjeta lo que mandó el teléfono. Se descartan con el mismo motivo; la tarjeta no cambia.`,
+      dismissMatchingBody: (n: number) =>
+        `${n === 1 ? 'Un hoyo ya tiene' : `${n} hoyos ya tienen`} en la tarjeta lo que mandó el teléfono. Se descartan con el mismo motivo; la tarjeta no cambia.`,
       matchingReason: 'La tarjeta ya tiene ese valor',
       applied: 'Aplicado.',
       dismissed: 'Descartado.',
@@ -2849,7 +3397,8 @@ export const t = {
       startHole: 'Hoyo de salida',
       startAt: (n: number) => `Salida por el ${n}`,
       warnIncomplete: 'Este grupo no está formado por parejas completas.',
-      warnKinds: (kinds: string) => `Este grupo no es una pareja ${kinds}. Se respeta el orden de la tabla, pero revísalo.`,
+      warnKinds: (kinds: string) =>
+        `Este grupo no es una pareja ${kinds}. Se respeta el orden de la tabla, pero revísalo.`,
       unassigned: (names: string) => `Sin grupo: ${names}`,
       /**
        * COPY-25: from the groups «Generar por tabla de parejas» makes, by places in the pair standings, in tee order
@@ -2858,7 +3407,8 @@ export const t = {
        */
       standingsHint: (groups: number[][]) => {
         const places = (g: number[]) => andList(g.map((n) => `${n}.ª`))
-        if (groups.length < 2) return `Por la tabla de parejas: ${groups.length ? `${groups[0]!.length === 1 ? 'la pareja' : 'las parejas'} ${places(groups[0]!)} salen juntas` : 'todavía no hay parejas'}.`
+        if (groups.length < 2)
+          return `Por la tabla de parejas: ${groups.length ? `${groups[0]!.length === 1 ? 'la pareja' : 'las parejas'} ${places(groups[0]!)} salen juntas` : 'todavía no hay parejas'}.`
         const middle = groups.slice(1, -1).map((g) => `luego ${places(g)}`)
         const last = groups.at(-1)!
         return `Por la tabla de parejas: salen primero ${groups[0]!.length === 1 ? 'la pareja' : 'las parejas'} ${places(groups[0]!)}, ${[...middle, `y ${last.length === 1 ? 'cierra la' : 'cierran'} ${places(last)}`].join(', ')}.`
@@ -2890,7 +3440,8 @@ export const t = {
       /** A hole tile saved with strokes and no putts (MONEY-18): what to fill. */
       noPutts: 'sin putts',
       disputesTitle: 'Discrepancias',
-      disputesHint: 'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
+      disputesHint:
+        'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
       /** COPY-20: a discrepancy in words, each value with who captured it (nobody named: the Comité's own write). */
       disputeNow: (value: string, who: string | null) => `Ahora: ${value} (capturó ${who ?? 'el Comité'}).`,
       disputeBefore: (value: string, who: string | null) => `Antes: ${value} (capturó ${who ?? 'el Comité'}).`,
@@ -2911,26 +3462,34 @@ export const t = {
     },
     data: {
       publish: 'Resultados en los perfiles',
-      publishHint: 'Se publican solos al marcar el torneo como Terminado. Si corriges algo después, publícalos otra vez.',
-      publishWaiting: 'Las rondas terminadas ya cuentan para el índice de cada jugador. Lugar, puntos y dinero se publican cuando el torneo está Terminado.',
+      publishHint:
+        'Se publican solos al marcar el torneo como Terminado. Si corriges algo después, publícalos otra vez.',
+      publishWaiting:
+        'Las rondas terminadas ya cuentan para el índice de cada jugador. Lugar, puntos y dinero se publican cuando el torneo está Terminado.',
       publishButton: 'Publicar resultados',
       export: 'Respaldo',
-      exportHint: 'Descarga todo el torneo (jugadores, rondas, grupos, tarjetas, Calcutta, pagos) como JSON, y las tarjetas y resultados como CSV. Hazlo cada noche del torneo.',
+      exportHint:
+        'Descarga todo el torneo (jugadores, rondas, grupos, tarjetas, Calcutta, pagos) como JSON, y las tarjetas y resultados como CSV. Hazlo cada noche del torneo.',
       exportJson: 'Respaldo JSON',
       exportCsv: 'Tarjetas y resultados CSV',
       restore: 'Restaurar',
-      restoreHint: 'Sube un respaldo JSON de este mismo torneo. Reemplaza todo lo que hay ahora (los campos no se tocan).',
+      restoreHint:
+        'Sube un respaldo JSON de este mismo torneo. Reemplaza todo lo que hay ahora (los campos no se tocan).',
       restoreButton: 'Restaurar desde JSON…',
-      restoreConfirm: (when: string) => `Se reemplazan todos los datos del torneo con el respaldo del ${when}. ¿Seguro?`,
+      restoreConfirm: (when: string) =>
+        `Se reemplazan todos los datos del torneo con el respaldo del ${when}. ¿Seguro?`,
       restored: 'Respaldo restaurado.',
-      restoredCount: (players: number, rounds: number, scores: number) => `Respaldo restaurado: ${players} jugadores, ${rounds} rondas, ${scores} hoyos.`,
+      restoredCount: (players: number, rounds: number, scores: number) =>
+        `Respaldo restaurado: ${players} jugadores, ${rounds} rondas, ${scores} hoyos.`,
       wrongTournament: 'Ese respaldo es de otro torneo. Solo se puede restaurar un respaldo de este mismo torneo.',
       badFile: 'Ese archivo no es un respaldo válido.',
       print: 'Tarjetas de papel',
-      printHint: 'Por si la app se cae: una tarjeta por grupo con los golpes de ventaja de cada jugador. Imprímelas la noche anterior.',
+      printHint:
+        'Por si la app se cae: una tarjeta por grupo con los golpes de ventaja de cada jugador. Imprímelas la noche anterior.',
       printButton: 'Ver tarjetas',
       duplicate: 'Duplicar torneo',
-      duplicateHint: 'Copia la configuración, el campo y los jugadores (sin tarjetas ni Calcutta) a un torneo nuevo, por ejemplo para un ensayo.',
+      duplicateHint:
+        'Copia la configuración, el campo y los jugadores (sin tarjetas ni Calcutta) a un torneo nuevo, por ejemplo para un ensayo.',
       duplicateName: 'Nombre del torneo nuevo',
       duplicateButton: 'Duplicar',
       duplicated: 'Torneo duplicado. Estás en el nuevo.',
@@ -2955,17 +3514,21 @@ export const t = {
       unbalancedNearSave: 'La bolsa no cuadra: ajusta los premios antes de guardar.',
       unreachableNearSave: 'Hay premios que nadie puede ganar: ajústalos antes de guardar.',
       /** update_settings refused a save (ARCH-13): what it read changed on another screen or phone, and nothing was written. */
-      settingsChanged: 'Alguien más cambió la configuración mientras tanto y tu cambio no se guardó. Ya ves cómo quedó: vuelve a hacerlo.',
+      settingsChanged:
+        'Alguien más cambió la configuración mientras tanto y tu cambio no se guardó. Ya ves cómo quedó: vuelve a hacerlo.',
       /** Torneo after that refusal: the draft kept over what the server holds now. */
-      settingsMerged: 'Mientras editabas, alguien más guardó cambios en la configuración. Ya los ves aquí junto con los tuyos: revisa y vuelve a guardar.',
-      settingsMergedLost: 'Mientras editabas, alguien más cambió lo mismo que tú y quedó lo suyo. Tus demás cambios siguen aquí: revisa y vuelve a guardar.',
+      settingsMerged:
+        'Mientras editabas, alguien más guardó cambios en la configuración. Ya los ves aquí junto con los tuyos: revisa y vuelve a guardar.',
+      settingsMergedLost:
+        'Mientras editabas, alguien más cambió lo mismo que tú y quedó lo suyo. Tus demás cambios siguen aquí: revisa y vuelve a guardar.',
       brand: 'Marca',
       name: 'Nombre',
       tagline: 'Lema',
       logo: 'Logo',
       uploadLogo: 'Subir logo',
       /** PERF-01: a logo stored whole, before renditions (or seeded straight into Storage). */
-      logoHeavy: 'Este logo está guardado completo y tarda en cargar en los teléfonos. Optimízalo: se ve igual y pesa mucho menos.',
+      logoHeavy:
+        'Este logo está guardado completo y tarda en cargar en los teléfonos. Optimízalo: se ve igual y pesa mucho menos.',
       optimizeLogo: 'Optimizar logo',
       accent: 'Color de acento',
       status: 'Estado',
@@ -2985,10 +3548,16 @@ export const t = {
       honoreePicks: (label: string) => `${label} escoge pareja`,
       /** UX-23: who signs a card after the last hole; `pairs` is offered only with the pairs game on. */
       cardSigning: 'Quién firma las tarjetas',
-      cardSigningOption: { pairs: 'Las parejas, cruzado', marker: 'Otro jugador del grupo', none: 'Nadie firma' } as Record<'pairs' | 'marker' | 'none', string>,
+      cardSigningOption: {
+        pairs: 'Las parejas, cruzado',
+        marker: 'Otro jugador del grupo',
+        none: 'Nadie firma',
+      } as Record<'pairs' | 'marker' | 'none', string>,
       cardSigningHint: {
-        pairs: 'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. La firma bloquea la tarjeta: después solo el Comité la corrige, con un motivo.',
-        marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada jugador; nadie firma la suya. La firma bloquea esa tarjeta: después solo el Comité la corrige, con un motivo.',
+        pairs:
+          'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. La firma bloquea la tarjeta: después solo el Comité la corrige, con un motivo.',
+        marker:
+          'Al terminar el día, otro jugador del grupo firma la tarjeta de cada jugador; nadie firma la suya. La firma bloquea esa tarjeta: después solo el Comité la corrige, con un motivo.',
         none: 'Nadie firma: el grupo puede corregir sus hoyos mientras el día esté en juego, y el Comité después.',
       } as Record<'pairs' | 'marker' | 'none', string>,
       perRoundSlope: 'Ajustar hándicap por slope de cada ronda',
@@ -3043,11 +3612,13 @@ export const t = {
       fieldUnknownNearSave: 'Escribe en Dinero cuántos jugadores esperas: con eso se revisa la bolsa.',
       danger: 'Zona de peligro',
       deleteTournament: 'Borrar este torneo',
-      deleteConfirm: (name: string) => `Escribe «${name}» para confirmar que quieres borrar el torneo y todos sus datos.`,
+      deleteConfirm: (name: string) =>
+        `Escribe «${name}» para confirmar que quieres borrar el torneo y todos sus datos.`,
       protectedTitle: 'Torneo protegido',
       protectedBody: 'Nadie puede borrarlo, ni tú. Quítale la protección si de verdad quieres borrarlo.',
       unprotectedTitle: 'Proteger este torneo',
-      unprotectedBody: 'Para un torneo real: nadie podrá borrarlo por accidente, y el Admin de Polo necesitará desbloquearlo con un motivo para corregir algo.',
+      unprotectedBody:
+        'Para un torneo real: nadie podrá borrarlo por accidente, y el Admin de Polo necesitará desbloquearlo con un motivo para corregir algo.',
       protect: 'Proteger',
       unprotect: 'Quitar protección',
       unprotectReason: 'Motivo para quitarla',
@@ -3063,11 +3634,13 @@ export const t = {
       searchProfiles: 'Nombre o usuario',
       withHandle: (h: string) => `Usar @${h}`,
       indexApplied: 'Índice puesto. Guarda para aplicarlo.',
-      applyIndex: (idx: string, declared: boolean) => (declared ? `Usar su índice (${idx})` : `Usar índice Polo (${idx})`),
+      applyIndex: (idx: string, declared: boolean) =>
+        declared ? `Usar su índice (${idx})` : `Usar índice Polo (${idx})`,
       proposed: 'Listo. Lo confirma desde su perfil.',
       linkedSelf: 'Amarrado a tu perfil',
       /** TRUST-08: a profile starts out of search, so a hidden one is the usual reason; the player can link it himself. */
-      noProfile: 'No encontré ese perfil. Si lo tiene oculto, que entre al torneo con su PIN y lo guarde en su perfil, o que prenda «Aparecer en búsquedas».',
+      noProfile:
+        'No encontré ese perfil. Si lo tiene oculto, que entre al torneo con su PIN y lo guarde en su perfil, o que prenda «Aparecer en búsquedas».',
       profileTaken: 'Este jugador ya tiene un perfil confirmado.',
       profileElsewhere: 'Ese perfil ya es otro jugador de este torneo.',
       linkedTo: (h: string) => `@${h}`,
@@ -3114,10 +3687,12 @@ export const t = {
         generateBody: (n: number) =>
           `${n === 1 ? 'Un PIN' : `${n} PINs`} de cuatro dígitos al azar, uno para cada jugador sin PIN. Se ven solo en la lista que sale después: al cerrarla ya no se pueden volver a ver. Si alguien olvida el suyo, cámbialo.`,
         generating: (done: number, of: number) => `Guardando ${done} de ${of}…`,
-        failed: (n: number) => (n === 1 ? 'Un PIN no se guardó: vuelve a intentarlo.' : `${n} PINs no se guardaron: vuelve a intentarlo.`),
+        failed: (n: number) =>
+          n === 1 ? 'Un PIN no se guardó: vuelve a intentarlo.' : `${n} PINs no se guardaron: vuelve a intentarlo.`,
         listOpen: (n: number) => `Lista de PINs (${n})`,
         list: 'Lista de PINs',
-        listHint: 'Léelos en voz alta o mándale a cada quien el suyo. Al cerrar esta lista ya no se pueden volver a ver.',
+        listHint:
+          'Léelos en voz alta o mándale a cada quien el suyo. Al cerrar esta lista ya no se pueden volver a ver.',
         copyList: 'Copiar la lista',
         print: 'Imprimir',
         /** One line of the list as copied: «Ana López: 4821». */
@@ -3142,7 +3717,8 @@ export const t = {
       phonesHelp:
         'Cada teléfono que entró como este jugador con su PIN. En un iPhone, Safari y la app de la pantalla de inicio cuentan como dos. Cambiar el PIN no saca a los que ya entraron: sácalos aquí.',
       /** «Teléfono 2, iPhone, desde 13 oct 2026, 10:02»: its number is the one Historial names. */
-      phoneLine: (n: number, kind: string | null, since: string) => `Teléfono ${n}${kind ? `, ${kind}` : ''}, desde ${since}`,
+      phoneLine: (n: number, kind: string | null, since: string) =>
+        `Teléfono ${n}${kind ? `, ${kind}` : ''}, desde ${since}`,
       removePhone: 'Sacar',
       /** Each «Sacar» names its phone, so a screen reader tells them apart (the visible word stays in the name). */
       removePhoneOf: (n: number) => `Sacar el teléfono ${n}`,
@@ -3177,12 +3753,21 @@ export const t = {
       courseHcp: (n: number) => `hándicap de campo ${handicapText(n)}`,
       committee: 'Comité',
       /** A plus handicap gives strokes back on a hole (MONEY-21): «Da 1 golpe». */
-      strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : n < 0 ? `Da ${-n} golpe${n === -1 ? '' : 's'}` : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
+      strokesOn: (n: number) =>
+        n === 0
+          ? 'Sin golpes de ventaja'
+          : n < 0
+            ? `Da ${-n} golpe${n === -1 ? '' : 's'}`
+            : `${n} golpe${n === 1 ? '' : 's'} de ventaja`,
       /** The holes where a plus handicap gives its strokes back: «Devuelve: 1 en SI 18». */
       givesBackLine: (ranges: string) => `Devuelve: ${ranges}`,
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
       /** Save waits for a handicap someone typed, by the method chosen (UX-16): a new player opened on 18. */
-      hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe los golpes de sus tres rondas para guardarlo.' },
+      hcpMissing: {
+        manual: 'Escribe su hándicap para guardarlo.',
+        index: 'Escribe su índice para guardarlo.',
+        estimate: 'Escribe los golpes de sus tres rondas para guardarlo.',
+      },
       reordered: 'Las rondas venían en otro orden; se acomodaron.',
       /** UX-28: the base handicaps fixed before the Calcutta (0046). */
       lock: {
@@ -3190,15 +3775,18 @@ export const t = {
         open: 'Fíjalos antes de que empiece el torneo: después, cambiar uno pide un motivo y todos lo ven en En vivo. Abrir la subasta o empezar a jugar los fija solo.',
         fix: 'Fijar hándicaps',
         fixTitle: 'Fijar los hándicaps',
-        fixBody: 'Desde ahora, cambiar el hándicap de un jugador pide un motivo, y En vivo y su ficha dicen qué cambió y por qué.',
+        fixBody:
+          'Desde ahora, cambiar el hándicap de un jugador pide un motivo, y En vivo y su ficha dicen qué cambió y por qué.',
         fixed: (when: string | null) =>
           `${when ? `Fijados el ${when}` : 'Fijados desde que empezó el torneo'}. Cambiar uno pide un motivo, y todos lo ven en En vivo.`,
         free: 'Liberar',
         freeTitle: 'Liberar los hándicaps',
-        freeBody: 'Se vuelven a cambiar sin motivo, y se borra lo que se anotó al cambiarlos. Solo se puede antes de que empiece el torneo.',
+        freeBody:
+          'Se vuelven a cambiar sin motivo, y se borra lo que se anotó al cambiarlos. Solo se puede antes de que empiece el torneo.',
         fixedHint: 'Fijado: cambiarlo pide un motivo.',
         reasonTitle: 'Cambiar un hándicap fijado',
-        reasonBody: (name: string, fromTo: string) => `El hándicap de ${name} cambia ${fromTo}. Todos lo verán en En vivo, con este motivo.`,
+        reasonBody: (name: string, fromTo: string) =>
+          `El hándicap de ${name} cambia ${fromTo}. Todos lo verán en En vivo, con este motivo.`,
         reasonConfirm: 'Guardar con motivo',
         changed: 'cambió después de fijarlos',
         history: 'Cambios después de fijarlos',
@@ -3224,7 +3812,8 @@ export const t = {
       inPolo: 'Ya en Polo',
       inPoloHint: 'Ya los cargó alguien: no hace falta importarlos otra vez.',
       providers: 'En las bases de campos',
-      verifiedHint: 'Alguien la comparó con la tarjeta impresa del club. Si cambias un hoyo o un tee, deja de estar verificada.',
+      verifiedHint:
+        'Alguien la comparó con la tarjeta impresa del club. Si cambias un hoyo o un tee, deja de estar verificada.',
       verify: 'Verificar tarjeta',
       verifyTitle: 'Verificar la tarjeta',
       verifyBody: (name: string) =>
@@ -3256,7 +3845,8 @@ export const t = {
       yardsOf: (n: number) => `Yardas del hoyo ${n}`,
       parTotal: 'Par total',
       paste: 'Pegar de la tarjeta',
-      pasteHint: 'Pega dos o tres líneas: pares, índices de golpe y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
+      pasteHint:
+        'Pega dos o tres líneas: pares, índices de golpe y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
       pasteApply: 'Aplicar',
       pasteError: 'No entendí. Necesito 18 números por línea.',
       issues: 'Revisar',
@@ -3264,7 +3854,9 @@ export const t = {
       parSum: (n: number) => `Los pares suman ${n}.`,
       /** A tee started from scratch: cells nobody has typed yet (UX-16). */
       holesUntyped: (holes: number[]) =>
-        holes.length > 6 ? `Falta el par o el índice de ${holes.length} hoyos.` : `Falta el par o el índice ${holes.length === 1 ? 'del hoyo' : 'de los hoyos'} ${andList(holes.map(String))}.`,
+        holes.length > 6
+          ? `Falta el par o el índice de ${holes.length} hoyos.`
+          : `Falta el par o el índice ${holes.length === 1 ? 'del hoyo' : 'de los hoyos'} ${andList(holes.map(String))}.`,
       confidence: { high: 'Lectura confiable', medium: 'Revisar con cuidado', low: 'Lectura dudosa' },
       source: { manual: 'A mano', golfcourseapi: 'Importado', opengolfapi: 'Importado', scorecard_photo: 'De foto' },
     },
@@ -3277,10 +3869,12 @@ export const t = {
       unavailable: 'La lista de teléfonos todavía no está disponible.',
       failed: 'No se pudo leer la lista de teléfonos. Intenta de nuevo con señal.',
       noPlayer: 'Sin jugador (no ha entrado con su PIN)',
-      pending: (n: number, when: string | null) => `${n === 1 ? 'Un hoyo sin mandar' : `${n} hoyos sin mandar`}${when ? `, el primero ${when}` : ''}`,
+      pending: (n: number, when: string | null) =>
+        `${n === 1 ? 'Un hoyo sin mandar' : `${n} hoyos sin mandar`}${when ? `, el primero ${when}` : ''}`,
       clear: 'Todo mandado',
       rejected: (n: number) => (n === 1 ? 'Un hoyo que el servidor no tomó' : `${n} hoyos que el servidor no tomó`),
-      seen: (when: string, sha: string | null, other: boolean) => `Visto ${when}${sha ? `, versión ${sha}${other ? ', otra que la tuya' : ''}` : ''}`,
+      seen: (when: string, sha: string | null, other: boolean) =>
+        `Visto ${when}${sha ? `, versión ${sha}${other ? ', otra que la tuya' : ''}` : ''}`,
     },
     rounds: {
       add: 'Agregar ronda',
@@ -3303,20 +3897,24 @@ export const t = {
       finishConfirm: (n: number) => `¿Terminar el día ${n}? Se cierran las tarjetas y se calculan los premios del día.`,
       cancelConfirm: (n: number) => `¿Cancelar el día ${n}? Deja de contar para los premios. Se puede reabrir.`,
       deleteConfirm: (n: number) => `¿Borrar el día ${n} con todas sus tarjetas? No se puede deshacer.`,
-      pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
+      pendingBeforeFinish: (n: number) =>
+        `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
       /** Holes of this day the server did not take, still to apply or dismiss (REL-08): a warning, not a lock. */
-      inboxBeforeFinish: (n: number) => `${n === 1 ? 'Un hoyo de este día que el servidor no tomó sigue' : `${n} hoyos de este día que el servidor no tomó siguen`} en «Pendientes de revisar» (Tarjetas). Puedes terminar y resolverlos después.`,
+      inboxBeforeFinish: (n: number) =>
+        `${n === 1 ? 'Un hoyo de este día que el servidor no tomó sigue' : `${n} hoyos de este día que el servidor no tomó siguen`} en «Pendientes de revisar» (Tarjetas). Puedes terminar y resolverlos después.`,
       /** On the day's block. */
       inboxCount: (n: number) => (n === 1 ? 'Un hoyo por revisar en Tarjetas' : `${n} hoyos por revisar en Tarjetas`),
       /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
-      phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
+      phonesBeforeFinish:
+        'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
       devicesBeforeFinish: (holes: number, names: string[]) =>
         `${names.length === 1 ? 'El teléfono' : 'Los teléfonos'} de ${andList(names)} ${names.length === 1 ? 'reporta' : 'reportan'} ${holes === 1 ? 'un hoyo sin mandar' : `${holes} hoyos sin mandar`} (Teléfonos del torneo, abajo).`,
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
       duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,
       needsGroups: 'Arma los grupos antes de iniciar la ronda.',
-      startWhileLive: (n: number) => `El día ${n} sigue en juego. ¿Iniciar esta ronda de todos modos? La otra se queda en juego hasta que la termines.`,
+      startWhileLive: (n: number) =>
+        `El día ${n} sigue en juego. ¿Iniciar esta ronda de todos modos? La otra se queda en juego hasta que la termines.`,
       reschedule: 'Volver a programada',
     },
   },
@@ -3353,16 +3951,20 @@ export const t = {
     hammerBody: (player: string, buyer: string, price: string) => `${player} se vende a ${buyer} por ${price}.`,
     hammerSelf: (player: string, price: string) => `${player} se queda con él mismo por ${price}.`,
     reopenTitle: (player: string) => `¿Reabrir el lote de ${player}?`,
-    reopenBody: (price: string, buyer: string, buyback: boolean) => `Se deshace la venta de ${price} a ${buyer}${buyback ? ' y su recompra' : ''}. El lote vuelve a abrirse con sus pujas.`,
+    reopenBody: (price: string, buyer: string, buyback: boolean) =>
+      `Se deshace la venta de ${price} a ${buyer}${buyback ? ' y su recompra' : ''}. El lote vuelve a abrirse con sus pujas.`,
     reopenWhileOpen: 'Primero vende o deshaz el lote abierto.',
     limitReached: (n: number) => `Ya tiene ${n}`,
     minBid: (amount: string) => `La puja tiene que superar ${amount}.`,
     /** A custom bid off the step (MONEY-19): the valid amounts either side of it. */
-    offStep: (increment: string, options: string[]) => `Las pujas suben de ${increment} en ${increment}: ${options.length === 1 ? `la siguiente es ${options[0]}` : `${options[0]} o ${options[1]}`}.`,
-    selfAtLimit: (n: number) => `Ya tiene ${n} jugadores; no puede quedarse consigo mismo. Alguien más tiene que pujar.`,
+    offStep: (increment: string, options: string[]) =>
+      `Las pujas suben de ${increment} en ${increment}: ${options.length === 1 ? `la siguiente es ${options[0]}` : `${options[0]} o ${options[1]}`}.`,
+    selfAtLimit: (n: number) =>
+      `Ya tiene ${n} jugadores; no puede quedarse consigo mismo. Alguien más tiene que pujar.`,
     searchBidder: 'Buscar postor',
     buyback: 'Recompra',
-    buybackHint: (max: number) => `El jugador puede recomprar hasta el ${max}% de sí mismo pagándole a su dueño esa proporción del precio.`,
+    buybackHint: (max: number) =>
+      `El jugador puede recomprar hasta el ${max}% de sí mismo pagándole a su dueño esa proporción del precio.`,
     buybackPays: (name: string, amount: string, owner: string) => `${name} le paga ${amount} a ${owner}`,
     noBuyback: 'Sin recompra',
     next: 'Siguiente lote',
@@ -3399,15 +4001,19 @@ export const t = {
     existing: 'Equipos sorteados',
     size: '¿De cuántos?',
     sizeOption: (n: number) => `${n} por equipo`,
-    sizeHint: (players: number, teams: number) => `${players} jugadores en ${teams} ${teams === 1 ? 'equipo' : 'equipos'}.`,
+    sizeHint: (players: number, teams: number) =>
+      `${players} jugadores en ${teams} ${teams === 1 ? 'equipo' : 'equipos'}.`,
     draw: 'Sortear equipos',
     redraw: 'Sortear otra vez',
     names: 'Ponles nombre',
     unnamed: (n: number) => `Equipo ${n}`,
     hcpTotal: (n: number) => `hándicap ${handicapText(n)}`,
     spread: (n: number) =>
-      n === 0 ? 'Quedaron exactamente parejos: todos los equipos suman el mismo hándicap.' : `Del equipo más fuerte al más débil hay ${n} de hándicap.`,
-    groupsPreview: (n: number, first: string) => `Saldrían ${n} ${n === 1 ? 'grupo' : 'grupos'}, el primero a las ${first}.`,
+      n === 0
+        ? 'Quedaron exactamente parejos: todos los equipos suman el mismo hándicap.'
+        : `Del equipo más fuerte al más débil hay ${n} de hándicap.`,
+    groupsPreview: (n: number, first: string) =>
+      `Saldrían ${n} ${n === 1 ? 'grupo' : 'grupos'}, el primero a las ${first}.`,
     save: 'Guardar equipos',
     saveConfirm: 'Se reemplazan los equipos que hubiera. Los grupos de la ronda se ajustan en Grupos.',
     saved: 'Equipos guardados.',
@@ -3425,7 +4031,8 @@ export const t = {
     /** Each pair's name field, by who is in it: «Nombre de Camilo y Matías». */
     nameOf: (both: string) => `Nombre de ${both}`,
     /** The draw is saved as it is drawn, and the TV shows it (UX-17). */
-    saved: 'Sorteo guardado con los grupos del día 1; la tele lo va mostrando. Las horas de salida se ajustan en Grupos.',
+    saved:
+      'Sorteo guardado con los grupos del día 1; la tele lo va mostrando. Las horas de salida se ajustan en Grupos.',
     onTv: 'La tele muestra el sorteo pareja por pareja, con el enlace para ver (Torneo, pestaña Estado). En este teléfono:',
     existing: 'Ya hay parejas. Volver a sortear las reemplaza (los grupos del día 1 también).',
     redrawConfirm: 'La sala ya vio este sorteo. Volver a sortear reemplaza las parejas y los grupos del día 1.',
@@ -3436,7 +4043,8 @@ export const t = {
     namesSaved: 'Nombres guardados.',
     /** On Calcutta night the draw ends the night: «Empezar el torneo» takes the TV to the tournament's boards. */
     start: 'Empezar el torneo',
-    startHint: 'Cierra la noche de la Calcutta: la tele pasa a los tableros del torneo. Los nombres escritos se guardan antes.',
+    startHint:
+      'Cierra la noche de la Calcutta: la tele pasa a los tableros del torneo. Los nombres escritos se guardan antes.',
     started: 'El torneo empezó.',
   },
   moneyScreen: {
@@ -3460,16 +4068,19 @@ export const t = {
     sidePots: 'Botes',
     houseCut: (amount: string) => `Gastos del grupo: ${amount}`,
     viaBank: 'Vía banquero',
-    viaBankHint: (banker: string) => `Solo lo que falta por pagar: ${banker} cobra lo que se le debe y paga a cada quien. Lo ya marcado como pagado no se vuelve a pedir.`,
+    viaBankHint: (banker: string) =>
+      `Solo lo que falta por pagar: ${banker} cobra lo que se le debe y paga a cada quien. Lo ya marcado como pagado no se vuelve a pedir.`,
     p2p: 'Sin banquero',
     p2pHint: (banker: string | null) =>
       `Lista mínima de transferencias entre personas, sobre lo que falta por pagar (el que más debe le paga al que más recibe).${banker ? ` Lo que ya entró al banco lo reparte ${banker}.` : ''}`,
     settlePreview: 'Así quedaría si terminara ahora. Mientras tanto, lo que se cobra se marca en «Quién debe qué».',
     allSettled: 'Todo liquidado: nadie le debe nada a nadie.',
     /** Two parties square up; null is the bank («Iván J. queda a mano con el banco»). */
-    squared: (a: string | null, b: string | null) => (a === null || b === null ? `${a ?? b ?? ''} queda a mano con el banco` : `${andList([a, b])} quedan a mano`),
+    squared: (a: string | null, b: string | null) =>
+      a === null || b === null ? `${a ?? b ?? ''} queda a mano con el banco` : `${andList([a, b])} quedan a mano`,
     recordPaid: 'Registrar algo que ya se pagó',
-    recordPaidHint: 'Solo si alguien ya pagó y no se marcó: la liquidación de arriba ya lo cuenta como pendiente. Al marcarlo aquí, deja de pedirse.',
+    recordPaidHint:
+      'Solo si alguien ya pagó y no se marcó: la liquidación de arriba ya lo cuenta como pendiente. Al marcarlo aquí, deja de pedirse.',
     markedPaid: 'Marcado como pagado.',
     unmarkedPaid: 'Ya no cuenta como pagado.',
     refund: 'Devolución',
@@ -3484,7 +4095,8 @@ export const t = {
     bankOff: (diff: string) => `No cuadra: ${diff}`,
     byComite: 'Asignado por el Comité',
     /** A money line in words (COPY-08); null is the bank, `bankerSelf` the banker with his own bank. */
-    pays: (from: string | null, to: string | null, amount: string, bankerSelf = false) => payText(payWords(from, to, false, bankerSelf), amount),
+    pays: (from: string | null, to: string | null, amount: string, bankerSelf = false) =>
+      payText(payWords(from, to, false, bankerSelf), amount),
     payWords,
     payText,
     /** On a person's own breakdown, whom he pays: «Apuesta, le paga a Camilo». */
@@ -3493,7 +4105,8 @@ export const t = {
     /** The state, on its own toggle in «Ya pagaron»; the action is «Marcar pagado». */
     paid: 'Pagado',
     paidTitle: (n: number) => `Ya pagaron (${n})`,
-    paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
+    paidHint:
+      'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
     /** A «Deshacer» tapped after a later change to the same payment: it would bring back the older value. */
     undoStale: 'Ese pago cambió después: revísalo en «Ya pagaron».',
     share: 'Compartir liquidación',
@@ -3522,13 +4135,15 @@ export const t = {
     /** A vía-banco line whose parts cancel out. */
     nets: 'Lo que le deben y lo que debe se compensan: no cambia de manos dinero, solo se cierran las cuentas.',
     owesTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía debe ${amount} en total`,
-    getsTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía tiene que recibir ${amount} en total`,
+    getsTotal: (name: string | null, amount: string) =>
+      `${name ?? 'El banco'} todavía tiene que recibir ${amount} en total`,
     /** The bank's side, in two parts: the banker holds it, or it stands as itself. */
     bankCollects: 'Lo que el banquero todavía cobra',
     bankPays: 'Lo que el banquero todavía paga',
     ruleTitle: 'Cómo se reparte',
     rule: 'Para hacer las menos transferencias, el que más debe le paga al que más tiene que recibir, y así hasta cuadrar.',
-    share: (from: string | null, total: string, amount: string, to: string | null) => `De los ${total} que debe ${from ?? 'el banco'}, ${amount} van ${to === null ? 'al banco' : `a ${to}`}.`,
+    share: (from: string | null, total: string, amount: string, to: string | null) =>
+      `De los ${total} que debe ${from ?? 'el banco'}, ${amount} van ${to === null ? 'al banco' : `a ${to}`}.`,
     bankTitle: 'El banquero',
     bankIn: (label: string, amount: string) => `Entra, ${label}: ${amount}`,
     bankOut: (label: string, amount: string) => `Sale, ${label}: ${amount}`,
@@ -3556,20 +4171,26 @@ export const t = {
     poolSurplus: (entries: string, prizes: string) => `Las inscripciones suman ${entries} y los premios ${prizes}`,
     cancelledRound: (n: number) => `Día ${n} cancelado: su premio no se jugó`,
     unplayedRound: (n: number) => `Día ${n} no se jugó`,
-    pendingTiebreak: (day: number, group: number, hole: number) => `Día ${day}, grupo ${group}: falta decir quién embocó al último en el hoyo ${hole}`,
+    pendingTiebreak: (day: number, group: number, hole: number) =>
+      `Día ${day}, grupo ${group}: falta decir quién embocó al último en el hoyo ${hole}`,
     // Snake money an unanswered tiebreak holds: the snake pays it once answered; the Comité does not assign it.
     heldLabel: (label: string, day: number, group: number) => `${label}, día ${day}, grupo ${group}`,
     heldTitle: (amount: string) => `${amount} esperan un desempate`,
-    heldWhy: (amount: string, game: string) => `En cuanto se responda, ${labelInSentence(game)} reparte los ${amount} de ese grupo. No es dinero por asignar.`,
-    heldNote: (hole: number) => `Responde el desempate del hoyo ${hole} («¿Quién embocó al último?») en Comité, sección Tarjetas.`,
+    heldWhy: (amount: string, game: string) =>
+      `En cuanto se responda, ${labelInSentence(game)} reparte los ${amount} de ese grupo. No es dinero por asignar.`,
+    heldNote: (hole: number) =>
+      `Responde el desempate del hoyo ${hole} («¿Quién embocó al último?») en Comité, sección Tarjetas.`,
     heldApart: (amount: string) => `${amount} esperan un desempate y se reparten al responderlo`,
     heldTotal: (amount: string) => `Esperando un desempate: ${amount}`,
     heldExtra: (amount: string, game: string) => `Además, ${amount} esperan un desempate de ${labelInSentence(game)}.`,
     title: (amount: string) => `${amount} sin asignar`,
     decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.',
-    over: (label: string, assigned: string, left: string) => `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
-    orphan: (label: string, assigned: string) => `Asignación sin dinero en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
-    mismatch: (bank: string, listed: string) => `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
+    over: (label: string, assigned: string, left: string) =>
+      `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
+    orphan: (label: string, assigned: string) =>
+      `Asignación sin dinero en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
+    mismatch: (bank: string, listed: string) =>
+      `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
     // Dinero: the list everyone sees, and the Comité's actions.
     heading: 'Por asignar',
     intro: 'Dinero que el reglamento deja al Comité. Hasta que decida, se queda en el banco.',
@@ -3608,8 +4229,18 @@ export const t = {
     finalOpenVerdict: 'Falta cerrar un día',
     finalOpen: (open: number[], missing: number[]) => {
       const what: string[] = []
-      if (open.length) what.push(open.length === 1 ? `el día ${open[0]} sigue abierto` : `los días ${andList(open.map(String))} siguen abiertos`)
-      if (missing.length) what.push(missing.length === 1 ? `el día ${missing[0]} no existe` : `los días ${andList(missing.map(String))} no existen`)
+      if (open.length)
+        what.push(
+          open.length === 1
+            ? `el día ${open[0]} sigue abierto`
+            : `los días ${andList(open.map(String))} siguen abiertos`,
+        )
+      if (missing.length)
+        what.push(
+          missing.length === 1
+            ? `el día ${missing[0]} no existe`
+            : `los días ${andList(missing.map(String))} no existen`,
+        )
       const fix = missing.length
         ? 'termina o cancela cada día en Comité, sección Rondas (crea el que falte, o baja el número de rondas en Comité, sección Torneo)'
         : open.length === 1
@@ -3624,8 +4255,10 @@ export const t = {
   /** «Cerrar torneo»: what blocks Terminado and publishing (MONEY-05). */
   /** Holes saved with strokes and no putts (MONEY-18): the engine's warning. */
   missingPutts: {
-    who: (name: string, days: Array<{ day: number; holes: number[] }>) => `${name} (${days.map((d) => `día ${d.day}: ${d.holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(d.holes.map(String))}`).join('; ')})`,
-    warning: (who: string[], games: string[]) => `Faltan putts: ${andList(who)}. Hasta que el Comité los capture en Tarjetas, ${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'}.`,
+    who: (name: string, days: Array<{ day: number; holes: number[] }>) =>
+      `${name} (${days.map((d) => `día ${d.day}: ${d.holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(d.holes.map(String))}`).join('; ')})`,
+    warning: (who: string[], games: string[]) =>
+      `Faltan putts: ${andList(who)}. Hasta que el Comité los capture en Tarjetas, ${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'}.`,
   },
   closeGate: {
     title: 'Antes de cerrar el torneo',
@@ -3633,19 +4266,30 @@ export const t = {
     ok: 'Todo listo para cerrar.',
     understood: 'Entendido',
     moneyFirst: 'Terminar la ronda y decidir en Dinero',
-    moneyFirstHint: 'La ronda se cierra y en Dinero aparece lo que queda por asignar. Cuando el Comité decida, vuelve aquí para publicar.',
-    missingRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} no está creado` : `Los días ${andList(days.map(String))} no están creados`}: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.`,
-    openRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} sigue abierto` : `Los días ${andList(days.map(String))} siguen abiertos`}: termínalo o cancélalo en Comité, sección Rondas.`,
-    tiebreaks: (n: number, game: string) => `${n === 1 ? 'Un desempate' : `${n} desempates`} de ${labelInSentence(game)} sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.`,
-    unsoldLots: (names: string) => `Lotes de la Calcutta sin vender: ${names}. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.`,
+    moneyFirstHint:
+      'La ronda se cierra y en Dinero aparece lo que queda por asignar. Cuando el Comité decida, vuelve aquí para publicar.',
+    missingRounds: (days: number[]) =>
+      `${days.length === 1 ? `El día ${days[0]} no está creado` : `Los días ${andList(days.map(String))} no están creados`}: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.`,
+    openRounds: (days: number[]) =>
+      `${days.length === 1 ? `El día ${days[0]} sigue abierto` : `Los días ${andList(days.map(String))} siguen abiertos`}: termínalo o cancélalo en Comité, sección Rondas.`,
+    tiebreaks: (n: number, game: string) =>
+      `${n === 1 ? 'Un desempate' : `${n} desempates`} de ${labelInSentence(game)} sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.`,
+    unsoldLots: (names: string) =>
+      `Lotes de la Calcutta sin vender: ${names}. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.`,
     unassigned: (amount: string) => `${amount} por asignar: el Comité decide en Dinero, Liquidación.`,
-    badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
-    unsignedCards: (n: number) => `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
-    missingPutts: (n: number) => `Faltan los putts de ${n === 1 ? 'un hoyo' : `${n} hoyos`}: captúralos en Comité, sección Tarjetas.`,
-    rejectedWrites: (n: number) => `${n === 1 ? 'Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo' : `${n} hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos`} en Comité, sección Tarjetas, «Pendientes de revisar».`,
+    badAssignments: (n: number) =>
+      `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
+    unsignedCards: (n: number) =>
+      `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
+    missingPutts: (n: number) =>
+      `Faltan los putts de ${n === 1 ? 'un hoyo' : `${n} hoyos`}: captúralos en Comité, sección Tarjetas.`,
+    rejectedWrites: (n: number) =>
+      `${n === 1 ? 'Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo' : `${n} hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos`} en Comité, sección Tarjetas, «Pendientes de revisar».`,
     /** The server has no «Pendientes de revisar» yet (0028 not applied): nothing there can hold the close. */
-    rejectedUnavailable: 'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
-    owed: (people: number, amount: string) => `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
+    rejectedUnavailable:
+      'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
+    owed: (people: number, amount: string) =>
+      `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
     /**
      * The server's own refusal (0029 `close_blockers_text`): this line, then
      * one sentence per item it checks (missingRounds, openRounds,
@@ -3670,17 +4314,33 @@ export const t = {
      * `plain` when the card itself made it with no stroke received, so the name takes no «neto» (COPY-23: every
      * 4 or more read «águila neta», a gross eagle too). A run of birdies or the day's first gets its own lines.
      */
-    underParPoints: (name: string, hole: number, pts: number, plain: boolean, ctx: { first?: boolean; streak?: number } = {}) => {
+    underParPoints: (
+      name: string,
+      hole: number,
+      pts: number,
+      plain: boolean,
+      ctx: { first?: boolean; streak?: number } = {},
+    ) => {
       const what = underParName(pts - 2, !plain)
       const fig = ptsText(pts, `+${pts}`)
       return feedUnderPar(name, hole, what, pts - 2, `, ${fig}`, ctx)
     },
     /** Under strokes: «birdie neto», «águila» (gross), «albatros neto». No points: the event does not count them. */
-    underPar: (name: string, hole: number, under: number, net: boolean, ctx: { first?: boolean; streak?: number } = {}) => feedUnderPar(name, hole, underParName(under, net), under, '', ctx),
+    underPar: (
+      name: string,
+      hole: number,
+      under: number,
+      net: boolean,
+      ctx: { first?: boolean; streak?: number } = {},
+    ) => feedUnderPar(name, hole, underParName(under, net), under, '', ctx),
     /** `figure` as the board writes the total: «34» points, «−3» or «E» against par; `previous`, who led before. */
     leadChange: (name: string, figure: string, previous: string | null = null) => {
       const fig = figure === 'E' ? 'en par' : `con ${figure}`
-      return [`¡Cambio de líder! ${name} toma la punta ${fig}`, previous ? `${name} le quita la punta a ${previous}, ${fig}` : `${name} se pone adelante, ${fig}`, `Nuevo líder: ${name}, ${fig}`]
+      return [
+        `¡Cambio de líder! ${name} toma la punta ${fig}`,
+        previous ? `${name} le quita la punta a ${previous}, ${fig}` : `${name} se pone adelante, ${fig}`,
+        `Nuevo líder: ${name}, ${fig}`,
+      ]
     },
     /** `game` is the snake's own label (STRAT-11). */
     snakePass: (name: string, hole: number, game: string) => [
@@ -3691,14 +4351,26 @@ export const t = {
     /** `role`: the honoree's label when the organizer gave one («El novio»); null for the platform's own. */
     honoreeHole: (name: string, hole: number, pts: number, role: string | null = null) =>
       pts === 0
-        ? [`${name} en el ${hole}: cero puntos.`, `El ${hole} no fue para ${name}: cero puntos.`, `${name}${role ? `, ${labelInSentence(role)},` : ''} en el ${hole}: cero puntos, pero sigue sonriendo.`]
-        : [`${name} en el ${hole}: ${ptsText(pts)}`, `${name}${role ? `, ${labelInSentence(role)},` : ''} suma ${ptsText(pts)} en el ${hole}`, `Reporte de ${name} en el ${hole}: ${ptsText(pts)}`],
+        ? [
+            `${name} en el ${hole}: cero puntos.`,
+            `El ${hole} no fue para ${name}: cero puntos.`,
+            `${name}${role ? `, ${labelInSentence(role)},` : ''} en el ${hole}: cero puntos, pero sigue sonriendo.`,
+          ]
+        : [
+            `${name} en el ${hole}: ${ptsText(pts)}`,
+            `${name}${role ? `, ${labelInSentence(role)},` : ''} suma ${ptsText(pts)} en el ${hole}`,
+            `Reporte de ${name} en el ${hole}: ${ptsText(pts)}`,
+          ],
     /** A hole named on the score the event counts: «par», «bogey neto», «birdie», «levantó». */
     scoreName: (toPar: number | null, net: boolean) => (toPar == null ? 'levantó' : overParName(toPar, net)),
     /** The honoree's hole under strokes: «par», «bogey neto», «levantó». */
     honoreeToPar: (name: string, hole: number, toPar: number | null, net: boolean, role: string | null = null) => {
       const w = toPar == null ? 'levantó' : overParName(toPar, net)
-      return [`${name} en el ${hole}: ${w}.`, role ? `${name}, ${labelInSentence(role)}, en el ${hole}: ${w}.` : `Así va ${name} en el ${hole}: ${w}.`, `Reporte de ${name} en el ${hole}: ${w}.`]
+      return [
+        `${name} en el ${hole}: ${w}.`,
+        role ? `${name}, ${labelInSentence(role)}, en el ${hole}: ${w}.` : `Así va ${name} en el ${hole}: ${w}.`,
+        `Reporte de ${name} en el ${hole}: ${w}.`,
+      ]
     },
     /** Three putts or more where no snake says it: a gentle ribbing about the green, never the player. */
     threePutt: (name: string, hole: number, putts: number) => [
@@ -3729,7 +4401,9 @@ export const t = {
       scrubHint: 'Mueve la barra para leerla hoyo por hoyo.',
       /** Past six lines, a few stand out. */
       colourHint: (pairs: boolean) =>
-        pairs ? 'En color, las tres primeras, la tuya y la que elijas para comparar; en gris, las demás.' : 'En color, los tres primeros, tú y quien elijas para comparar; en gris, los demás.',
+        pairs
+          ? 'En color, las tres primeras, la tuya y la que elijas para comparar; en gris, las demás.'
+          : 'En color, los tres primeros, tú y quien elijas para comparar; en gris, los demás.',
       pause: 'Pausar',
       resume: 'Seguir',
       end: 'Ver el final',
@@ -3751,14 +4425,33 @@ export const t = {
       tableName: (title: string) => `${title}, hoyo por hoyo`,
       entrant: (pairs: boolean) => (pairs ? 'Pareja' : 'Jugador'),
       /** The figure as a voice says it: «72 puntos», «11 bajo par», «par». */
-      spoken: (v: number, strokes: boolean) => (strokes ? toParWords(v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`) : `${v} ${Math.abs(v) === 1 ? 'punto' : 'puntos'}`),
+      spoken: (v: number, strokes: boolean) =>
+        strokes
+          ? toParWords(v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`)
+          : `${v} ${Math.abs(v) === 1 ? 'punto' : 'puntos'}`,
       /**
        * What the chart says to a screen reader: «Carrera de puntos: 12 jugadores, 36 hoyos. Va al frente Diego A.
        * con 72 puntos; tomó la punta en el hoyo 5 del día 2.»
        */
-      summary: (s: { title: string; count: number; pairs: boolean; holes: number; leaders: string[]; value: string; tookLead: string | null; wireToWire: boolean }) => {
-        const who = s.leaders.length === 1 ? `Va al frente ${s.leaders[0]} con ${s.value}` : `Van al frente ${andList(s.leaders)} con ${s.value}`
-        const since = s.tookLead ? `; tomó la punta en el ${s.tookLead.charAt(0).toLowerCase()}${s.tookLead.slice(1)}` : s.wireToWire ? '; va al frente desde el primer hoyo' : ''
+      summary: (s: {
+        title: string
+        count: number
+        pairs: boolean
+        holes: number
+        leaders: string[]
+        value: string
+        tookLead: string | null
+        wireToWire: boolean
+      }) => {
+        const who =
+          s.leaders.length === 1
+            ? `Va al frente ${s.leaders[0]} con ${s.value}`
+            : `Van al frente ${andList(s.leaders)} con ${s.value}`
+        const since = s.tookLead
+          ? `; tomó la punta en el ${s.tookLead.charAt(0).toLowerCase()}${s.tookLead.slice(1)}`
+          : s.wireToWire
+            ? '; va al frente desde el primer hoyo'
+            : ''
         const noun = s.pairs ? (s.count === 1 ? 'pareja' : 'parejas') : s.count === 1 ? 'jugador' : 'jugadores'
         return `${s.title}: ${s.count} ${noun}, ${s.holes} ${s.holes === 1 ? 'hoyo' : 'hoyos'}. ${who}${since}.`
       },
@@ -3777,7 +4470,8 @@ export const t = {
     /** A total against par in a table cell: «+3», «0», «−2». */
     signed: (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0'),
     /** An average against par: «1.25 sobre par en promedio», «en par en promedio». */
-    avgToPar: (avg: number) => (avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`),
+    avgToPar: (avg: number) =>
+      avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`,
     birdiesGross: 'Birdies gross',
     birdiesNet: 'Birdies netos',
     pars: 'Pares',
@@ -3793,11 +4487,14 @@ export const t = {
     worstHole: 'Peor hoyo',
     streak: 'Racha',
     moment: 'Momento del torneo',
-    momentText: (name: string, hole: number, day: number, pts: number) => `${name}, hoyo ${hole} del día ${day}: ${pts} ${pts === 1 ? 'punto' : 'puntos'}.`,
-    momentStrokes: (name: string, hole: number, day: number, toPar: number, net: boolean) => `${name}, hoyo ${hole} del día ${day}: ${overParName(toPar, net)}.`,
+    momentText: (name: string, hole: number, day: number, pts: number) =>
+      `${name}, hoyo ${hole} del día ${day}: ${pts} ${pts === 1 ? 'punto' : 'puntos'}.`,
+    momentStrokes: (name: string, hole: number, day: number, toPar: number, net: boolean) =>
+      `${name}, hoyo ${hole} del día ${day}: ${overParName(toPar, net)}.`,
     cursed: 'Hoyo Maldito',
     cursedText: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${ptsText(avg)} promedio.`,
-    cursedStrokes: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`}.`,
+    cursedStrokes: (hole: number, day: number, avg: number) =>
+      `Hoyo ${hole} del día ${day}: ${avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`}.`,
     noData: 'Cuando haya tarjetas capturadas, aquí salen las estadísticas.',
     award: {
       mostBirdies: { name: 'Rey del Birdie', desc: 'Más birdies gross' },
@@ -3811,20 +4508,26 @@ export const t = {
       worstRoi: { name: 'El Filántropo', desc: 'Peor retorno en la Calcutta' },
     },
     /** Under strokes the awards that read the hole figure say so. */
-    awardStrokes: { mostConsistent: 'Menor varianza de golpes por hoyo', biggestGain: 'Más golpes menos del día 1 al día 2' } as Partial<Record<string, string>>,
+    awardStrokes: {
+      mostConsistent: 'Menor varianza de golpes por hoyo',
+      biggestGain: 'Más golpes menos del día 1 al día 2',
+    } as Partial<Record<string, string>>,
     /** The snake's award, named for the tournament's own snake: «La Víbora» gives «Víbora de Oro» (STRAT-11). */
-    snakeAward: (game: string) => ({ name: `${labelBare(game)} de Oro`, desc: `Más hoyos cargando ${labelInSentence(game)}` }),
+    snakeAward: (game: string) => ({
+      name: `${labelBare(game)} de Oro`,
+      desc: `Más hoyos cargando ${labelInSentence(game)}`,
+    }),
     // Signed figures (a return on the Calcutta, a gain from day 1 to day 2) take a true minus, never a hyphen.
     unit: (unit: 'count' | 'points' | 'strokes' | 'pct' | 'variance', v: number) =>
       unit === 'strokes'
         ? `${v} ${v === 1 ? 'golpe' : 'golpes'} menos`
         : unit === 'pct'
-        ? `${Math.round(v * 100) < 0 ? '−' : ''}${Math.abs(Math.round(v * 100))}%`
-        : unit === 'points'
-          ? ptsText(v, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}`)
-          : unit === 'variance'
-            ? `varianza ${v.toFixed(2)}`
-            : `${v}`,
+          ? `${Math.round(v * 100) < 0 ? '−' : ''}${Math.abs(Math.round(v * 100))}%`
+          : unit === 'points'
+            ? ptsText(v, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}`)
+            : unit === 'variance'
+              ? `varianza ${v.toFixed(2)}`
+              : `${v}`,
   },
   share: {
     leaderboard: 'Compartir tabla',
@@ -3849,8 +4552,18 @@ export const t = {
     intro: (name: string) => `Las reglas de ${name}, tal como las calcula la app.`,
     // The sections and their lines are the engine's codes (src/engine/settings/reglamento.ts), in words in `explain`
     // («rules.*», ARCH-05). A Calcutta slot's name is also the Comité's and the TV's.
-    slotName: (slot: string, place: number | undefined, tier: string | undefined, lastPlace: string) => (slot === 'place' ? (place === 1 ? 'Campeón' : place === 2 ? 'Subcampeón' : ordinal(String(place))) : slot === 'bestOfTier' ? `Mejor ${tier}` : lastPlace),
-    slot: (slot: string, place: number | undefined, tier: string | undefined, share: number, lastPlace: string) => `${t.rules.slotName(slot, place, tier, lastPlace)} ${Math.round(share * 100)}%`,
+    slotName: (slot: string, place: number | undefined, tier: string | undefined, lastPlace: string) =>
+      slot === 'place'
+        ? place === 1
+          ? 'Campeón'
+          : place === 2
+            ? 'Subcampeón'
+            : ordinal(String(place))
+        : slot === 'bestOfTier'
+          ? `Mejor ${tier}`
+          : lastPlace,
+    slot: (slot: string, place: number | undefined, tier: string | undefined, share: number, lastPlace: string) =>
+      `${t.rules.slotName(slot, place, tier, lastPlace)} ${Math.round(share * 100)}%`,
   },
   ceremony: {
     title: 'Ceremonia',
@@ -3913,7 +4626,8 @@ export const t = {
     paid: 'Pagó',
     pot: 'Pozo de la Calcutta',
     /** How the night on paper reaches the app once the server is back. */
-    auctionAfter: 'Cuando vuelva la señal, en la consola, lote por lote: «Abrir lote», el comprador, «Otra» con el precio, «¡Vendido!» y la recompra.',
+    auctionAfter:
+      'Cuando vuelva la señal, en la consola, lote por lote: «Abrir lote», el comprador, «Otra» con el precio, «¡Vendido!» y la recompra.',
   },
   tv: {
     title: 'Modo TV',
@@ -3953,7 +4667,11 @@ export const t = {
   saveResults: {
     title: 'Guarda tus rondas',
     body: (name: string) => `Lo que jugaste en ${name} se queda en tu perfil, en cualquier teléfono.`,
-    gets: ['Tus tarjetas y tus resultados, torneo por torneo', 'Tu índice Polo, que se calcula con tus rondas', 'Tu lugar listo para el siguiente torneo del grupo'],
+    gets: [
+      'Tus tarjetas y tus resultados, torneo por torneo',
+      'Tu índice Polo, que se calcula con tus rondas',
+      'Tu lugar listo para el siguiente torneo del grupo',
+    ],
     action: 'Guardar mis rondas',
     actionHere: 'Guardar en mi perfil',
     hint: 'Con tu correo y un código, sin contraseña. Este teléfono no pierde nada.',
@@ -3962,8 +4680,10 @@ export const t = {
   demo: {
     open: 'Ver un torneo de ejemplo',
     title: 'Torneo de ejemplo',
-    intro: 'Así se ve un torneo en Polo cuando termina: el tablero, los juegos, la Calcutta y las cuentas cerradas al peso.',
-    introHint: 'Es un ejemplo: los jugadores y los campos son inventados. Toca un nombre o un número para ver cómo se calculó.',
+    intro:
+      'Así se ve un torneo en Polo cuando termina: el tablero, los juegos, la Calcutta y las cuentas cerradas al peso.',
+    introHint:
+      'Es un ejemplo: los jugadores y los campos son inventados. Toca un nombre o un número para ver cómo se calculó.',
     foot: 'Aquí nadie captura nada. En un torneo tuyo, cada jugador entra con su cara y un PIN, y todos ven esto en vivo.',
     organize: 'Organizar un torneo',
     shareText: 'Mira cómo se ve un torneo de golf en Polo:',
@@ -3976,15 +4696,18 @@ export const t = {
     noMoney: 'Sin dinero',
     withMoney: 'Con dinero',
     noMoneyHint: 'Sin dinero: los tableros y los juegos, sin premios, pagos, montos ni la Calcutta.',
-    withMoneyHint: 'Con dinero: también lo que cada quien gana, paga y debe, y la Calcutta con sus precios. La subasta en la tele lo necesita.',
+    withMoneyHint:
+      'Con dinero: también lo que cada quien gana, paga y debe, y la Calcutta con sus precios. La subasta en la tele lo necesita.',
     create: 'Crear enlace para ver',
     rotate: 'Cambiar enlace',
-    rotateBody: 'El enlace de ahora deja de funcionar al instante, también en la tele. Comparte el nuevo con quien deba tenerlo.',
+    rotateBody:
+      'El enlace de ahora deja de funcionar al instante, también en la tele. Comparte el nuevo con quien deba tenerlo.',
     off: 'Apagar',
     offBody: 'Nadie podrá ver el torneo con este enlace. Si después creas otro, será uno nuevo.',
     /** Turning money on for a link that already exists: whoever has it sees the money from now on. */
     moneyOnTitle: 'Mostrar el dinero',
-    moneyOnBody: 'Quien ya tenga este enlace verá el dinero desde ahora. Si lo compartiste en el grupo y el dinero es solo para la tele, primero toca «Cambiar enlace».',
+    moneyOnBody:
+      'Quien ya tenga este enlace verá el dinero desde ahora. Si lo compartiste en el grupo y el dinero es solo para la tele, primero toca «Cambiar enlace».',
     tv: 'Abrir en modo TV',
     created: 'Enlace creado.',
     rotated: 'Enlace cambiado: el anterior ya no funciona.',
@@ -4010,7 +4733,8 @@ export const t = {
     history: {
       created: (money: boolean) => `Se creó el enlace para ver, ${money ? 'con dinero' : 'sin dinero'}`,
       rotated: 'Se cambió el enlace para ver: el anterior dejó de funcionar',
-      money: (money: boolean) => (money ? 'El enlace para ver ahora muestra el dinero' : 'El enlace para ver ya no muestra el dinero'),
+      money: (money: boolean) =>
+        money ? 'El enlace para ver ahora muestra el dinero' : 'El enlace para ver ya no muestra el dinero',
       off: 'Se apagó el enlace para ver',
     },
   },
@@ -4053,7 +4777,11 @@ export type Copy = typeof t
 const allowanceText = (pct: number) => (pct === 100 ? '' : `, jugando al ${pct}% del hándicap`)
 /** What a game pays out, at the start of a sentence (COPY-14): its own bote, or its premio from the bolsa. */
 const paidWord = (side: boolean) => (side ? 'El bote' : 'El premio')
-const TEAM_MODE: Record<'scramble' | 'bestBall' | 'shamble', string> = { scramble: 'Scramble', bestBall: 'Mejor bola', shamble: 'Shamble' }
+const TEAM_MODE: Record<'scramble' | 'bestBall' | 'shamble', string> = {
+  scramble: 'Scramble',
+  bestBall: 'Mejor bola',
+  shamble: 'Shamble',
+}
 /** How a rounding mode reads, with an example (MONEY-14: it always said «mitad hacia arriba»). */
 const ROUNDING: Record<'halfUp' | 'halfDown' | 'nearestEven' | 'floor' | 'ceil', string> = {
   halfUp: 'redondeado al entero, el medio hacia arriba (17.5 queda en 18)',
@@ -4063,13 +4791,20 @@ const ROUNDING: Record<'halfUp' | 'halfDown' | 'nearestEven' | 'floor' | 'ceil',
   ceil: 'redondeado hacia arriba (17.1 queda en 18)',
 }
 /** «del 10 al 18, del 13 al 18, del 16 al 18 y el 18»: the last holes the tiebreak looks at, from `countbackWindows`. */
-const lastHoles = (windows: Array<[number, number]>) => andList(windows.map(([a, b]) => (a === b ? `el ${a}` : `del ${a} al ${b}`)))
-const GLOSSARY: Record<'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford' | 'pickUp' | 'putts' | 'tee' | 'tiebreak' | 'buyback', string> = {
+const lastHoles = (windows: Array<[number, number]>) =>
+  andList(windows.map(([a, b]) => (a === b ? `el ${a}` : `del ${a} al ${b}`)))
+const GLOSSARY: Record<
+  'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford' | 'pickUp' | 'putts' | 'tee' | 'tiebreak' | 'buyback',
+  string
+> = {
   par: 'Par: los golpes que marca cada hoyo. Birdie es uno menos, águila dos menos y albatros tres menos; bogey es uno más y doble bogey, dos más.',
-  handicap: 'Hándicap: el nivel de cada jugador. Le da golpes de ventaja, que se restan de sus golpes en los hoyos más difíciles.',
-  strokeIndex: 'Índice de golpe: el número de cada hoyo del 1 al 18 que dice qué tan difícil es; los golpes de ventaja van primero a los de índice más bajo.',
+  handicap:
+    'Hándicap: el nivel de cada jugador. Le da golpes de ventaja, que se restan de sus golpes en los hoyos más difíciles.',
+  strokeIndex:
+    'Índice de golpe: el número de cada hoyo del 1 al 18 que dice qué tan difícil es; los golpes de ventaja van primero a los de índice más bajo.',
   net: 'Gross y neto: gross son los golpes que hiciste; neto, esos golpes menos los de ventaja.',
-  stableford: 'Stableford: cada hoyo da puntos por cómo quedaste contra el par en neto (par neto 2 puntos, cada golpe menos uno más). Gana quien suma más.',
+  stableford:
+    'Stableford: cada hoyo da puntos por cómo quedaste contra el par en neto (par neto 2 puntos, cada golpe menos uno más). Gana quien suma más.',
   pickUp: 'Levantar: recoger la bola y dejar el hoyo cuando ya no vas a sumar.',
   putts: 'Putts: los golpes en el green, la parte del pasto corto alrededor del hoyo.',
   tee: 'Tee: el lugar de salida de cada hoyo; hay varios, de más atrás a más adelante, y cada uno tiene su par e índice de golpe.',
@@ -4077,7 +4812,10 @@ const GLOSSARY: Record<'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford'
   buyback: 'Recompra: el jugador le compra a su dueño una parte de sí mismo y cobra esa parte.',
 }
 /** How a side pot pays, in the prize check. */
-const SIDE_PAYOUT: Record<'skins' | 'lowScore' | 'eventPot' | 'match' | 'contest' | 'custom', (split: number[]) => string> = {
+const SIDE_PAYOUT: Record<
+  'skins' | 'lowScore' | 'eventPot' | 'match' | 'contest' | 'custom',
+  (split: number[]) => string
+> = {
   lowScore: (split) => `reparte ${split.map((p) => `${p}%`).join(' / ')}`,
   skins: () => 'se reparte por skin',
   contest: () => 'se reparte por hoyo ganado',
@@ -4149,7 +4887,8 @@ export const explain: ExplainCatalog = {
     `Levantó en un par ${p.par}${p.net ? `, con ${golpes(p.received)} de ventaja en este hoyo (índice de golpe ${p.si})` : ''}: cuenta ${golpes(p.counted)}${p.net ? ' netos' : ''}, ${toParWordsOf(p.toPar)}`,
   'strokes.played': (p) =>
     `${golpes(p.gross)} en un par ${p.par}${p.net ? `, con ${golpes(p.received)} de ventaja en este hoyo (índice de golpe ${p.si}): ${p.counted} netos, ${toParWordsOf(p.toPar)}` : `: ${toParWordsOf(p.toPar)}`}`,
-  'strokes.pickupRule': (p) => `Un hoyo levantado cuenta como doble bogey neto: par ${p.par} + ${golpes(p.received)} de ventaja + 2 = ${p.par + p.received + 2}`,
+  'strokes.pickupRule': (p) =>
+    `Un hoyo levantado cuenta como doble bogey neto: par ${p.par} + ${golpes(p.received)} de ventaja + 2 = ${p.par + p.received + 2}`,
   'strokes.pickupNet': (p) => `${p.par + p.received + 2} − ${p.received} = ${p.counted} neto`,
   'strokes.net': (p) => `${p.gross} − ${p.received} = ${p.counted} neto`,
 
@@ -4171,15 +4910,21 @@ export const explain: ExplainCatalog = {
   },
   'hcp.courseTitle': (p) => `Hándicap de campo ${handicapText(p.value)}`,
   // The WHS formula in three short sentences.
-  'hcp.courseScale': (p) => `El índice se ajusta a la dificultad del tee: índice ${p.index < 0 ? `${handicapText(p.index)}, en la cuenta ${num(p.index)},` : num(p.index)} × slope ${p.slope} ÷ 113 = ${num(p.scaled)}`,
-  'hcp.courseRating': (p) => `Se suma lo que el rating del tee pasa del par: rating ${num(p.rating)} − par ${p.par} = ${num(p.diff)}`,
-  'hcp.courseSum': (p) => `${num(p.scaled)} ${p.diff < 0 ? '−' : '+'} ${num(Math.abs(p.diff))} = ${num(p.raw)}, redondeado ${num(p.value)}${written(p.value)}: el hándicap de campo`,
+  'hcp.courseScale': (p) =>
+    `El índice se ajusta a la dificultad del tee: índice ${p.index < 0 ? `${handicapText(p.index)}, en la cuenta ${num(p.index)},` : num(p.index)} × slope ${p.slope} ÷ 113 = ${num(p.scaled)}`,
+  'hcp.courseRating': (p) =>
+    `Se suma lo que el rating del tee pasa del par: rating ${num(p.rating)} − par ${p.par} = ${num(p.diff)}`,
+  'hcp.courseSum': (p) =>
+    `${num(p.scaled)} ${p.diff < 0 ? '−' : '+'} ${num(Math.abs(p.diff))} = ${num(p.raw)}, redondeado ${num(p.value)}${written(p.value)}: el hándicap de campo`,
   // A link to watch carries no reason (the Comité's free text stays with the members, STRAT-05).
-  'hcp.override': (p) => `Ajuste del Comité: de ${handicapText(p.from)} a ${handicapText(p.to)}${p.reason ? ` (${p.reason})` : ''}`,
-  'hcp.nine': (p) => `Ronda de 9 hoyos: la mitad, ${handicapText(p.half)}, repartida en los nueve hoyos del más difícil al más fácil`,
+  'hcp.override': (p) =>
+    `Ajuste del Comité: de ${handicapText(p.from)} a ${handicapText(p.to)}${p.reason ? ` (${p.reason})` : ''}`,
+  'hcp.nine': (p) =>
+    `Ronda de 9 hoyos: la mitad, ${handicapText(p.half)}, repartida en los nueve hoyos del más difícil al más fácil`,
   'est.title': (p) => `Índice estimado ${handicapText(p.value)}`,
   'est.diffs': (p) => `Diferenciales: ${num(p.d[0])} (buen día), ${num(p.d[1])} (normal), ${num(p.d[2])} (mal día)`,
-  'est.weighted': (p) => `${p.w[0]} × ${num(p.d[0])} + ${p.w[1]} × ${num(p.d[1])} + ${p.w[2]} × ${num(p.d[2])} = ${num(p.result)}`,
+  'est.weighted': (p) =>
+    `${p.w[0]} × ${num(p.d[0])} + ${p.w[1]} × ${num(p.d[1])} + ${p.w[2]} × ${num(p.d[2])} = ${num(p.result)}`,
   'est.rounded': (p) => `Redondeado a 1 decimal: ${num(p.value)}${p.written ? written(p.value) : ''}`,
   'est.cap': (p) => `Tope ${num(p.cap)}: ${num(p.value)}`,
   'est.reordered': () => 'Las rondas venían en otro orden; se acomodaron de mejor a peor.',
@@ -4197,15 +4942,20 @@ export const explain: ExplainCatalog = {
   'cut.day': (p, f) => `El día ${p.day} ${p.steps.map(f.msg).join('; ')}`,
   'cut.plusKeeps': (p) => `Juega con ${handicapText(p.value)}: no recibe golpes, así que el recorte no le quita nada`,
   // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
-  'cut.applied': (p) => `Con el recorte: ${p.playing} − ${p.cut} = ${p.after < 0 ? `${minus(p.after)}, no baja de 0: 0` : p.after}`,
+  'cut.applied': (p) =>
+    `Con el recorte: ${p.playing} − ${p.cut} = ${p.after < 0 ? `${minus(p.after)}, no baja de 0: 0` : p.after}`,
   'core.noCourse': (p) => `Día ${p.day}: sin campo cargado; se usa par 4 en todos los hoyos.`,
 
   // The formats' warnings.
-  'match.needsPairs': (p) => `Día ${p.day ?? '?'}, grupo ${p.group}: un fourball necesita dos parejas ya sorteadas en ese grupo.`,
-  'match.needsTwo': (p) => `Día ${p.day ?? '?'}, grupo ${p.group}: un partido individual necesita exactamente dos jugadores.`,
-  'team.noTeams': () => 'Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.',
+  'match.needsPairs': (p) =>
+    `Día ${p.day ?? '?'}, grupo ${p.group}: un fourball necesita dos parejas ya sorteadas en ese grupo.`,
+  'match.needsTwo': (p) =>
+    `Día ${p.day ?? '?'}, grupo ${p.group}: un partido individual necesita exactamente dos jugadores.`,
+  'team.noTeams': () =>
+    'Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.',
   'bracket.tooFew': () => 'Todavía no hay suficientes jugadores para armar el cuadro.',
-  'bracket.offBracket': (p, f) => `Día ${p.day}: ${p.off === 1 ? 'un partido de los grupos no es' : `${p.off} partidos de los grupos no son`} del cuadro (${f.msg(p.round)}). ${p.off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`,
+  'bracket.offBracket': (p, f) =>
+    `Día ${p.day}: ${p.off === 1 ? 'un partido de los grupos no es' : `${p.off} partidos de los grupos no son`} del cuadro (${f.msg(p.round)}). ${p.off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`,
   'bracket.tied': (p, f) => `${f.msg(p.round)}: hay un partido empatado; el Comité decide quién pasa.`,
   // Places and prizes. COPY-19: the place and what it pays, in a sentence; a tie says whose prizes it joins and how it splits them.
   'rank.unfilled': (p, f) => {
@@ -4216,13 +4966,18 @@ export const explain: ExplainCatalog = {
     return `${p.label}${p.day != null ? `, Día ${p.day}` : ''}: ${what} (${why}): ${f.money(p.amount)} sin asignar. El Comité decide.`
   },
   'prize.place': (p, f) => `El ${ordinal(String(p.place))} lugar paga ${f.money(p.amount)}`,
-  'prize.tie': (p, f) => `Empataron ${p.n} en el ${ordinal(String(p.place))} lugar: juntan los premios del ${andList(p.places.map((n) => ordinal(String(n))))}, ${f.money(p.total)}`,
-  'prize.tieSplit': (p, f) => `${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
+  'prize.tie': (p, f) =>
+    `Empataron ${p.n} en el ${ordinal(String(p.place))} lugar: juntan los premios del ${andList(p.places.map((n) => ordinal(String(n))))}, ${f.money(p.total)}`,
+  'prize.tieSplit': (p, f) =>
+    `${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
   'prize.tied': (p, f) => `Empatados: ${andList(p.names.map(f.msg))}`,
-  'individual.incomplete': (p, f) => `Tarjeta incompleta, hoyos jugados: ${andList(p.cards.map((c) => `${f.msg(c.name)} (${c.thru} de ${c.of})`))}. ${p.cards.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`,
+  'individual.incomplete': (p, f) =>
+    `Tarjeta incompleta, hoyos jugados: ${andList(p.cards.map((c) => `${f.msg(c.name)} (${c.thru} de ${c.of})`))}. ${p.cards.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`,
   // COPY-19: where the prize comes from, in words: the place and the figure, and «si terminara ahora» while it runs.
-  'individual.where': (p, f) => `${f.msg(p.name)} ${p.final ? 'terminó' : 'va'} ${ordinal(p.place)} con ${t.common.figure(p.figure, p.value, p.kind)}${p.final ? '' : ', si el torneo terminara ahora'}`,
-  'individual.teamSplit': (p, f) => `${f.msg(p.team)} lo reparte entre ${p.n}: ${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
+  'individual.where': (p, f) =>
+    `${f.msg(p.name)} ${p.final ? 'terminó' : 'va'} ${ordinal(p.place)} con ${t.common.figure(p.figure, p.value, p.kind)}${p.final ? '' : ', si el torneo terminara ahora'}`,
+  'individual.teamSplit': (p, f) =>
+    `${f.msg(p.team)} lo reparte entre ${p.n}: ${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
   // Why one entrant sits above another on an equal figure. Strokes are held negated so more is better; the line
   // turns them back into to-par figures («+4», «E», «−1»).
   'countback.title': (p, f) => `${p.tied ? 'Empate' : 'Desempate'} con ${f.msg(p.name)}`,
@@ -4234,35 +4989,49 @@ export const explain: ExplainCatalog = {
   // Match play's countback is the last day's match, holes up (the Reglamento says so), not the last holes' scores.
   'countback.matchPoints': () => 'Iguales en puntos de partido',
   'countback.matchShare': () => 'Iguales: se reparten los premios de los lugares que ocupan.',
-  'countback.matchNone': (p) => (p.over ? `Día ${p.day}: ninguno jugó partido ese día` : `Día ${p.day}: todavía no juegan su partido`),
-  'countback.matchSame': (p, f) => `Día ${p.day}, ${p.done ? 'cómo terminó' : 'cómo va'} su partido: ${f.msg(p.aName)} ${holesUp(p.a)}${t.common.versus}${f.msg(p.bName)} ${holesUp(p.b)}`,
-  'countback.matchSides': (p, f) => `Día ${p.day}: ${f.msg(p.aName)} ${matchSide(p.aSide, p.a)}${t.common.versus}${f.msg(p.bName)} ${matchSide(p.bSide, p.b)}`,
+  'countback.matchNone': (p) =>
+    p.over ? `Día ${p.day}: ninguno jugó partido ese día` : `Día ${p.day}: todavía no juegan su partido`,
+  'countback.matchSame': (p, f) =>
+    `Día ${p.day}, ${p.done ? 'cómo terminó' : 'cómo va'} su partido: ${f.msg(p.aName)} ${holesUp(p.a)}${t.common.versus}${f.msg(p.bName)} ${holesUp(p.b)}`,
+  'countback.matchSides': (p, f) =>
+    `Día ${p.day}: ${f.msg(p.aName)} ${matchSide(p.aSide, p.a)}${t.common.versus}${f.msg(p.bName)} ${matchSide(p.bSide, p.b)}`,
 
   // The side games.
   'pairs.notPairs': () => 'El grupo no está formado por parejas completas.',
   'pairs.wrongKinds': (p) => `El grupo no es ${andList(p.kinds.map((k) => `una pareja ${k}`))}.`,
   'pairs.eachTitle': (p, f) => `${f.money(p.each)} cada uno`,
-  'pairs.split': (p, f) => `El premio es de la pareja: ${f.money(p.total)} entre los dos = ${f.money(p.each)} cada uno${p.odd ? `, más ${f.money(p.odd)} para ${p.to}` : ''}`,
+  'pairs.split': (p, f) =>
+    `El premio es de la pareja: ${f.money(p.total)} entre los dos = ${f.money(p.each)} cada uno${p.odd ? `, más ${f.money(p.odd)} para ${p.to}` : ''}`,
   'bestRound.day': (p) => `${ptsText(p.points)} el día ${p.day}`,
   'bestRound.countback': (p) => `${windowLabel(p.window)}: ${p.aName} ${p.a} – ${p.bName} ${p.b}`,
   'putts.total': (p) => `${p.putts} putts en ${p.holes} hoyos`,
   'putts.pickups': (p) => `Hoyos levantados: cuentan ${p.min} putts como mínimo`,
   // The game's own name, in a sentence (STRAT-11): «la Víbora», or whatever the organizer called it.
-  'snake.holder': (p) => `Terminó la ronda con ${labelInSentence(p.game)}: fue el último en hacer ${p.threshold} putts o más, en el hoyo ${p.hole}`,
+  'snake.holder': (p) =>
+    `Terminó la ronda con ${labelInSentence(p.game)}: fue el último en hacer ${p.threshold} putts o más, en el hoyo ${p.hole}`,
   'snake.holderPays': (p) => `Quien termina con ${labelInSentence(p.game)} no cobra`,
-  'snake.survivor': (p) => `Terminó la ronda sin ${labelInSentence(p.game)}: ${p.holder} se quedó con ${labelInSentence(p.game)}`,
+  'snake.survivor': (p) =>
+    `Terminó la ronda sin ${labelInSentence(p.game)}: ${p.holder} se quedó con ${labelInSentence(p.game)}`,
   'snake.survivorGets': (p, f) => `Cada uno de los demás del grupo cobra ${f.money(p.amount)} de la bolsa`,
-  'snake.nobody': (p, f) => `Nadie del grupo hizo ${p.threshold} putts o más: los ${f.money(p.pot)} se reparten entre los ${p.n}`,
+  'snake.nobody': (p, f) =>
+    `Nadie del grupo hizo ${p.threshold} putts o más: los ${f.money(p.pot)} se reparten entre los ${p.n}`,
 
   // The Calcutta.
-  'auction.finish': (p) => `${andList(p.names)} ${p.names.length === 1 ? 'termina' : 'terminan'} ${finishText(p.at)}: ${pctText(p.share)} del pozo`,
+  'auction.finish': (p) =>
+    `${andList(p.names)} ${p.names.length === 1 ? 'termina' : 'terminan'} ${finishText(p.at)}: ${pctText(p.share)} del pozo`,
   'auction.teamShare': (p) => `Un equipo: ${pctText(p.share)} ÷ ${p.n} = ${pctText(p.share / p.n)} cada uno`,
-  'auction.tie': (p) => `Empate a ${p.places} en el ${finishText(p.at)}: ${p.shares.map(pctText).join(' + ')} = ${pctText(p.share)}`,
-  'auction.tieTeams': (p) => `${pctText(p.share)} ÷ ${p.teams} equipos = ${pctText(p.share / p.teams)} por equipo, repartido entre sus jugadores`,
+  'auction.tie': (p) =>
+    `Empate a ${p.places} en el ${finishText(p.at)}: ${p.shares.map(pctText).join(' + ')} = ${pctText(p.share)}`,
+  'auction.tieTeams': (p) =>
+    `${pctText(p.share)} ÷ ${p.teams} equipos = ${pctText(p.share / p.teams)} por equipo, repartido entre sus jugadores`,
   'auction.tieEach': (p) => `${pctText(p.share)} ÷ ${p.n} = ${pctText(p.share / p.n)} cada uno`,
   'auction.nobodyAt': (p) => `Nadie ocupa el ${ordinal(String(p.place))} lugar`,
-  'auction.tierNone': (p) => (p.any ? `Todos los de la categoría ${p.tier} ya cobran un lugar mejor` : `No hay jugadores de la categoría ${p.tier}`),
-  'auction.bestOfTier': (p) => `Mejor de la categoría ${p.tier} que no cobra otro lugar: ${andList(p.names)} (${ordinal(String(p.place))})`,
+  'auction.tierNone': (p) =>
+    p.any
+      ? `Todos los de la categoría ${p.tier} ya cobran un lugar mejor`
+      : `No hay jugadores de la categoría ${p.tier}`,
+  'auction.bestOfTier': (p) =>
+    `Mejor de la categoría ${p.tier} que no cobra otro lugar: ${andList(p.names)} (${ordinal(String(p.place))})`,
   'auction.tieSplit': (p) => `Empate: se reparte entre ${p.n}`,
   'auction.lastCashes': () => 'Quien quedó último ya cobra un lugar mejor',
   'auction.last': (p) => `Último lugar: ${andList(p.names)}`,
@@ -4273,9 +5042,14 @@ export const explain: ExplainCatalog = {
   'auction.plusRounding': (p, f) => `Más ${f.money(p.rounding)} del redondeo de todo el pozo: ${f.money(p.paid)}`,
   'auction.ownerPct': (p) => `${p.pct}% de ${p.name}`,
   // Whose owner takes the pot's rounding pesos, and why him.
-  'auction.rounding': (p) => (p.champion ? 'Resto del redondeo al dueño del campeón' : `Resto del redondeo al dueño de ${p.name}, que cobra el premio más alto`),
-  'auction.unfilled': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar (${andList(p.slots.map(f.msg))}). El Comité decide.`,
-  'auction.noResult': (p, f) => `${p.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${f.money(p.pot)} sin asignar. El Comité decide.`,
+  'auction.rounding': (p) =>
+    p.champion
+      ? 'Resto del redondeo al dueño del campeón'
+      : `Resto del redondeo al dueño de ${p.name}, que cobra el premio más alto`,
+  'auction.unfilled': (p, f) =>
+    `${p.label}: ${f.money(p.amount)} sin asignar (${andList(p.slots.map(f.msg))}). El Comité decide.`,
+  'auction.noResult': (p, f) =>
+    `${p.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${f.money(p.pot)} sin asignar. El Comité decide.`,
   // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11).
   'auction.unsold': (p) => {
     const n = p.names.length
@@ -4283,21 +5057,31 @@ export const explain: ExplainCatalog = {
   },
 
   // The instance games.
-  'game.places': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}`,
+  'game.places': (p, f) =>
+    `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}`,
   'game.unitsPot': (p, f) =>
     `${potText(f.money(p.pot), p.side)} se reparte entre ${p.total === 1 ? `el único ${unitWord(p.unit, 1)}` : `los ${p.total} ${unitWord(p.unit, 2)}`} que se ganaron: ${Number.isInteger(p.per) ? f.money(p.per) : `${f.money(Math.floor(p.per))} y centavos`} cada uno`,
-  'game.unitsWon': (p, f) => `${p.name} ganó ${p.units} ${unitWord(p.unit, p.units)}: ${f.money(p.amount)}${p.rounding ? `, con ${f.money(p.rounding)} del redondeo` : ''}`,
-  'game.refund': (p, f) => `Nadie ganó un ${unitWord(p.unit, 1)}: se devuelve a cada quien su entrada, ${f.money(p.buyIn)}`,
-  'game.unwon': (p, f) => `${p.label}: nadie ganó un ${unitWord(p.unit, 1)}; ${f.money(p.pot)} quedan sin asignar. El Comité decide.`,
+  'game.unitsWon': (p, f) =>
+    `${p.name} ganó ${p.units} ${unitWord(p.unit, p.units)}: ${f.money(p.amount)}${p.rounding ? `, con ${f.money(p.rounding)} del redondeo` : ''}`,
+  'game.refund': (p, f) =>
+    `Nadie ganó un ${unitWord(p.unit, 1)}: se devuelve a cada quien su entrada, ${f.money(p.buyIn)}`,
+  'game.unwon': (p, f) =>
+    `${p.label}: nadie ganó un ${unitWord(p.unit, 1)}; ${f.money(p.pot)} quedan sin asignar. El Comité decide.`,
   'bet.units': (p, f) => `${p.name}: ${p.units} ${unitWord(p.unit, p.units)} × ${f.money(p.stake)}`,
   'bet.net': (p, f) => `Neto: ${f.money(p.gross)} − ${f.money(p.back)} que ${p.winner} le debía = ${f.money(p.amount)}`,
   'bet.pays': (p, f) => `${p.payer} paga ${f.money(p.amount)}`,
-  'match.bet': (p, f) => `${p.day != null ? `Día ${p.day}, ` : ''}${f.msg(p.segment)}${p.press ? `, presión ${p.press} (desde el ${p.from})` : ''}: ${andList(p.side)} ${p.up} arriba${p.decided ? '' : ' (si terminara ahora)'}, ${f.money(p.stake)}`,
-  'match.invalid': (p) => `${p.label}: ${p.n === 1 ? 'un partido tiene' : `${p.n} partidos tienen`} jugadores que no están en el juego.`,
-  'contest.disputed': (p) => `${p.label}: ${p.holes.length === 1 ? 'un hoyo en disputa' : `${p.holes.length} hoyos en disputa`} (${p.holes.join(', ')}). El Comité decide.`,
+  'match.bet': (p, f) =>
+    `${p.day != null ? `Día ${p.day}, ` : ''}${f.msg(p.segment)}${p.press ? `, presión ${p.press} (desde el ${p.from})` : ''}: ${andList(p.side)} ${p.up} arriba${p.decided ? '' : ' (si terminara ahora)'}, ${f.money(p.stake)}`,
+  'match.invalid': (p) =>
+    `${p.label}: ${p.n === 1 ? 'un partido tiene' : `${p.n} partidos tienen`} jugadores que no están en el juego.`,
+  'contest.disputed': (p) =>
+    `${p.label}: ${p.holes.length === 1 ? 'un hoyo en disputa' : `${p.holes.length} hoyos en disputa`} (${p.holes.join(', ')}). El Comité decide.`,
 
   // The settlement (MONEY-07): every number people pay by, explained.
-  'settle.part': (p, f) => (p.of ? t.settleWhy.partOf(f.msg(p.label), f.signedMoney(p.amount), f.money(p.of)) : t.settleWhy.part(f.msg(p.label), f.signedMoney(p.amount))),
+  'settle.part': (p, f) =>
+    p.of
+      ? t.settleWhy.partOf(f.msg(p.label), f.signedMoney(p.amount), f.money(p.of))
+      : t.settleWhy.part(f.msg(p.label), f.signedMoney(p.amount)),
   'settle.squared': (p) => t.moneyScreen.squared(p.from, p.to),
   'settle.pays': (p, f) => t.moneyScreen.pays(p.from, p.to, f.money(p.amount), p.bankerSelf),
   'settle.nets': () => t.settleWhy.nets,
@@ -4345,10 +5129,17 @@ export const explain: ExplainCatalog = {
 
   // The tournament's warnings.
   'outdated.game': (p) => t.outdated.game(p.label),
-  'putts.missing': (p) => t.missingPutts.warning(p.who.map((w) => t.missingPutts.who(w.name, w.days)), p.games),
-  'pool.short': (p, f) => `Los premios suman ${f.money(p.prizes)} y las inscripciones ${f.money(p.entries)}: faltan ${f.money(p.missing)}. El Comité ajusta los premios en Comité, sección Torneo.`,
-  'pool.surplus': (p, f) => `Las inscripciones suman ${f.money(p.entries)} y los premios ${f.money(p.prizes)}: sobran ${f.money(p.left)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
-  'pool.unreachable': (p, f) => `${p.label}: ${f.msg(p.detail)}, ${f.money(p.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`,
+  'putts.missing': (p) =>
+    t.missingPutts.warning(
+      p.who.map((w) => t.missingPutts.who(w.name, w.days)),
+      p.games,
+    ),
+  'pool.short': (p, f) =>
+    `Los premios suman ${f.money(p.prizes)} y las inscripciones ${f.money(p.entries)}: faltan ${f.money(p.missing)}. El Comité ajusta los premios en Comité, sección Torneo.`,
+  'pool.surplus': (p, f) =>
+    `Las inscripciones suman ${f.money(p.entries)} y los premios ${f.money(p.prizes)}: sobran ${f.money(p.left)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
+  'pool.unreachable': (p, f) =>
+    `${p.label}: ${f.msg(p.detail)}, ${f.money(p.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`,
 
   // «Cerrar torneo» (MONEY-05): what blocks, and what only warns.
   'close.missingRounds': (p) => t.closeGate.missingRounds(p.days),
@@ -4363,28 +5154,43 @@ export const explain: ExplainCatalog = {
   'close.rejectedUnavailable': () => t.closeGate.rejectedUnavailable,
   'close.owed': (p, f) => t.closeGate.owed(p.people, f.money(p.amount)),
 
-  'bracket.needsRounds': (p) => `El cuadro necesita ${p.rounds} ${p.rounds === 1 ? 'ronda' : 'rondas'} y el torneo tiene ${p.have}.`,
+  'bracket.needsRounds': (p) =>
+    `El cuadro necesita ${p.rounds} ${p.rounds === 1 ? 'ronda' : 'rondas'} y el torneo tiene ${p.have}.`,
 
   // A format's rules (ARCH-05 stage 2): the info sheet and the Reglamento's «Individual».
   'format.stableford': () => 'Stableford',
-  'format.stablefordPoints': () => 'Cada hoyo da puntos según lo que hagas contra el par, ya restados tus golpes de ventaja (eso es el neto).',
+  'format.stablefordPoints': () =>
+    'Cada hoyo da puntos según lo que hagas contra el par, ya restados tus golpes de ventaja (eso es el neto).',
   // COPY-12: the whole table, albatross included (§5.3), and one hole worked through.
-  'format.stablefordTable': () => 'En neto, doble bogey o peor da 0 puntos, bogey 1, par 2, birdie 3, águila 4 y albatros 5.',
-  'format.stablefordExample': () => 'Por ejemplo: si haces 5 en un par 4 y tienes un golpe de ventaja en ese hoyo, cuentas 4, par neto: 2 puntos.',
-  'format.stablefordPickUp': () => 'Levantar (recoger la bola cuando ya no vas a sumar) cuenta 0 puntos, así que levantar no arruina la tarjeta.',
+  'format.stablefordTable': () =>
+    'En neto, doble bogey o peor da 0 puntos, bogey 1, par 2, birdie 3, águila 4 y albatros 5.',
+  'format.stablefordExample': () =>
+    'Por ejemplo: si haces 5 en un par 4 y tienes un golpe de ventaja en ese hoyo, cuentas 4, par neto: 2 puntos.',
+  'format.stablefordPickUp': () =>
+    'Levantar (recoger la bola cuando ya no vas a sumar) cuenta 0 puntos, así que levantar no arruina la tarjeta.',
   'format.stablefordWins': (p) => `Gana quien más puntos sume${allowanceText(p.pct)}.`,
   'format.strokePlay': (p) => (p.net ? 'Stroke play neto' : 'Stroke play gross'),
   'format.strokeCount': () => 'Se cuentan todos los golpes de la vuelta. Gana quien menos haga.',
-  'format.strokeNet': (p) => (p.net ? `Cada quien descuenta sus golpes de ventaja${allowanceText(p.pct)}.` : 'Sin hándicap: golpes tal cual, palo contra palo.'),
-  'format.strokePickUp': () => 'Si levantas, el hoyo cuenta como doble bogey neto (par más tus golpes de ventaja, más dos).',
-  'format.strokeBoard': () => 'La tabla muestra cuántos golpes llevas sobre o bajo par, y ordena por eso: no importa en qué hoyo vaya cada quien.',
+  'format.strokeNet': (p) =>
+    p.net
+      ? `Cada quien descuenta sus golpes de ventaja${allowanceText(p.pct)}.`
+      : 'Sin hándicap: golpes tal cual, palo contra palo.',
+  'format.strokePickUp': () =>
+    'Si levantas, el hoyo cuenta como doble bogey neto (par más tus golpes de ventaja, más dos).',
+  'format.strokeBoard': () =>
+    'La tabla muestra cuántos golpes llevas sobre o bajo par, y ordena por eso: no importa en qué hoyo vaya cada quien.',
   'format.strokeIncomplete': () => 'Al cierre, una tarjeta incompleta queda después de las completas.',
   'format.matchPlay': (p) => (p.fourball ? 'Match play, fourball' : 'Match play, individual'),
-  'format.matchSides': (p) => (p.fourball ? 'Dos parejas por grupo. En cada hoyo cuenta la mejor bola de cada pareja.' : 'Uno contra uno: el grupo de dos jugadores es el partido.'),
+  'format.matchSides': (p) =>
+    p.fourball
+      ? 'Dos parejas por grupo. En cada hoyo cuenta la mejor bola de cada pareja.'
+      : 'Uno contra uno: el grupo de dos jugadores es el partido.',
   'format.matchHoles': () => 'Gana el hoyo quien menos golpes haga; el partido se gana por hoyos, no por golpes.',
-  'format.matchStrokes': (p) => (p.net ? 'Con los golpes de ventaja de cada quien.' : 'Sin hándicap: palo contra palo.'),
+  'format.matchStrokes': (p) =>
+    p.net ? 'Con los golpes de ventaja de cada quien.' : 'Sin hándicap: palo contra palo.',
   'format.matchPoints': () => 'Un partido ganado vale 1 punto, uno empatado ½, uno perdido 0.',
-  'format.matchOver': () => 'El partido se acaba cuando alguien va más arriba que los hoyos que quedan: eso es un «3&2».',
+  'format.matchOver': () =>
+    'El partido se acaba cuando alguien va más arriba que los hoyos que quedan: eso es un «3&2».',
   'format.team': (p) => TEAM_MODE[p.mode],
   'format.teamHow': (p) =>
     ({
@@ -4392,61 +5198,116 @@ export const explain: ExplainCatalog = {
       bestBall: 'Cada quien juega su propia bola; en cada hoyo cuenta la mejor del equipo.',
       shamble: 'Todos tiran de salida, el equipo escoge el mejor drive y de ahí cada quien juega su bola.',
     })[p.mode],
-  'format.teamBall': (p) => (p.points ? 'Cada hoyo cuenta los puntos Stableford de la mejor bola del equipo.' : 'Cada hoyo cuenta los golpes de la mejor bola del equipo.'),
+  'format.teamBall': (p) =>
+    p.points
+      ? 'Cada hoyo cuenta los puntos Stableford de la mejor bola del equipo.'
+      : 'Cada hoyo cuenta los golpes de la mejor bola del equipo.',
   'format.teamStrokes': (p) => (p.net ? 'Con los golpes de ventaja de cada quien.' : 'Sin hándicap.'),
-  'format.teamWins': (p) => (p.points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes contra el par.'),
-  'format.teamIncomplete': () => 'Al cierre, un equipo con hoyos sin capturar queda después de los que completaron la tarjeta.',
+  'format.teamWins': (p) =>
+    p.points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes contra el par.',
+  'format.teamIncomplete': () =>
+    'Al cierre, un equipo con hoyos sin capturar queda después de los que completaron la tarjeta.',
 
   // An instance game's rules: the catalog's info sheet, its card's first line and the Reglamento.
   'gameRules.skins': (p) => `En cada hoyo, quien hace menos golpes ${p.net ? 'netos' : 'gross'}, solo, gana un skin.`,
-  'gameRules.skinsTies': (p) => (p.carry ? 'Si hay empate nadie gana y el skin se acumula al siguiente hoyo.' : 'Si hay empate nadie gana ese hoyo.'),
+  'gameRules.skinsTies': (p) =>
+    p.carry ? 'Si hay empate nadie gana y el skin se acumula al siguiente hoyo.' : 'Si hay empate nadie gana ese hoyo.',
   'gameRules.skinsPot': (p) => `${paidWord(p.side)} se reparte entre los skins ganados.`,
-  'gameRules.lowScore': (p) => (p.basis === 'points' ? 'Gana quien hace más puntos Stableford.' : `Gana la tarjeta ${p.basis === 'net' ? 'neta' : 'gross'} más baja contra el par. Levantar cuenta como doble bogey neto.`),
-  'gameRules.lowScope': (p) => (p.perRound ? `Un premio por día (${paidWord(p.side).toLowerCase()} se divide entre los días).` : 'Un solo premio sumando todos sus días.'),
-  'gameRules.lowSplit': (p) => `Reparto: ${andList(p.split.map((x, i) => `${ordinal(String(i + 1))} ${x}%`))}. Empates se reparten.`,
+  'gameRules.lowScore': (p) =>
+    p.basis === 'points'
+      ? 'Gana quien hace más puntos Stableford.'
+      : `Gana la tarjeta ${p.basis === 'net' ? 'neta' : 'gross'} más baja contra el par. Levantar cuenta como doble bogey neto.`,
+  'gameRules.lowScope': (p) =>
+    p.perRound
+      ? `Un premio por día (${paidWord(p.side).toLowerCase()} se divide entre los días).`
+      : 'Un solo premio sumando todos sus días.',
+  'gameRules.lowSplit': (p) =>
+    `Reparto: ${andList(p.split.map((x, i) => `${ordinal(String(i + 1))} ${x}%`))}. Empates se reparten.`,
   'gameRules.threePutt': () => 'Cada vez que alguien hace tres putts o más, le paga a cada uno de los demás.',
   'gameRules.event': (p) => `Cada ${p.eagle ? 'águila' : 'birdie'} o mejor (${p.net ? 'neto' : 'gross'}) cuenta.`,
   'gameRules.eventDirect': () => 'Cada uno lo cobra de cada uno de los demás.',
   'gameRules.eventPot': (p) => `${paidWord(p.side)} se reparte según cuántos hizo cada quien.`,
-  'gameRules.match': (p) => (p.nassau ? 'Nassau: tres apuestas por ronda, la ida (1–9), la vuelta (10–18) y el total.' : 'Match play a 18 hoyos: gana quien gana más hoyos.'),
-  'gameRules.matchBasis': (p) => `Por hoyo, ${p.net ? 'neto, cada quien con sus golpes de ventaja' : 'gross'}.${p.pairs ? ` En parejas cuenta ${p.pairs === 'bestBall' ? 'la mejor bola' : 'la suma de los dos'}.` : ''}`,
-  'gameRules.press': (p) => `Presión automática: al ir ${p.at} abajo arranca otra apuesta desde el siguiente hoyo (máximo ${p.max} por vuelta).`,
+  'gameRules.match': (p) =>
+    p.nassau
+      ? 'Nassau: tres apuestas por ronda, la ida (1–9), la vuelta (10–18) y el total.'
+      : 'Match play a 18 hoyos: gana quien gana más hoyos.',
+  'gameRules.matchBasis': (p) =>
+    `Por hoyo, ${p.net ? 'neto, cada quien con sus golpes de ventaja' : 'gross'}.${p.pairs ? ` En parejas cuenta ${p.pairs === 'bestBall' ? 'la mejor bola' : 'la suma de los dos'}.` : ''}`,
+  'gameRules.press': (p) =>
+    `Presión automática: al ir ${p.at} abajo arranca otra apuesta desde el siguiente hoyo (máximo ${p.max} por vuelta).`,
   'gameRules.matchComite': () => 'Los partidos los arma el Comité.',
   'gameRules.contest': (p) => {
-    const names = { closest: 'más cerca del hoyo', longDrive: 'drive más largo', greenie: 'greenie (llega al green desde la salida en un par 3 y hace par o mejor)', sandy: 'sandy (sale de la trampa y hace par o mejor)', custom: p.label }
-    const holes = p.holes === 'par3' ? 'en todos los par 3' : p.holes === 'all' ? 'en todos los hoyos' : p.holes.length === 1 ? `en el hoyo ${p.holes[0]}` : `en los hoyos ${andList(p.holes.map(String))}`
+    const names = {
+      closest: 'más cerca del hoyo',
+      longDrive: 'drive más largo',
+      greenie: 'greenie (llega al green desde la salida en un par 3 y hace par o mejor)',
+      sandy: 'sandy (sale de la trampa y hace par o mejor)',
+      custom: p.label,
+    }
+    const holes =
+      p.holes === 'par3'
+        ? 'en todos los par 3'
+        : p.holes === 'all'
+          ? 'en todos los hoyos'
+          : p.holes.length === 1
+            ? `en el hoyo ${p.holes[0]}`
+            : `en los hoyos ${andList(p.holes.map(String))}`
     return `Concurso de ${names[p.kind]}, ${holes}. El grupo marca al ganador en la tarjeta.`
   },
   'gameRules.customComite': () => 'El Comité marca a los ganadores al final.',
   'gameRules.noMoney': () => 'Sin dinero: por la gloria.',
-  'gameRules.side': (p, f) => `Bote aparte: cada quien que entra pone ${f.money(p.buyIn)}; el bote solo le paga a los que entraron.`,
+  'gameRules.side': (p, f) =>
+    `Bote aparte: cada quien que entra pone ${f.money(p.buyIn)}; el bote solo le paga a los que entraron.`,
   'gameRules.main': (p, f) => `El premio sale de la bolsa principal: ${f.money(p.amount)}.`,
-  'gameRules.direct': (p, f) => `Directo entre jugadores: ${f.money(p.stake)}${p.perBet ? ' por apuesta' : ' por cada uno'}.`,
-  'gameRules.rounds': (p) => (p.rounds === 'all' ? 'Todas las rondas.' : p.rounds.length === 1 ? `Solo el día ${p.rounds[0]}.` : `Días ${andList(p.rounds.map(String))}.`),
+  'gameRules.direct': (p, f) =>
+    `Directo entre jugadores: ${f.money(p.stake)}${p.perBet ? ' por apuesta' : ' por cada uno'}.`,
+  'gameRules.rounds': (p) =>
+    p.rounds === 'all'
+      ? 'Todas las rondas.'
+      : p.rounds.length === 1
+        ? `Solo el día ${p.rounds[0]}.`
+        : `Días ${andList(p.rounds.map(String))}.`,
   'gameRules.list': () => 'Solo juegan los que se anotaron.',
 
   // The Reglamento (§9.8, COPY-11, COPY-12): its sections and lines, from the settings.
-  'rules.section': (p) => ({ summary: 'En corto', field: 'El campo', handicaps: 'Hándicaps', cards: 'Las tarjetas', governance: 'El Comité', glossary: 'Palabras de golf' })[p.id],
+  'rules.section': (p) =>
+    ({
+      summary: 'En corto',
+      field: 'El campo',
+      handicaps: 'Hándicaps',
+      cards: 'Las tarjetas',
+      governance: 'El Comité',
+      glossary: 'Palabras de golf',
+    })[p.id],
   // «En corto»: the money first, as a person asks for it (COPY-12).
-  'rules.fee': (p, f) => `Cada jugador paga ${f.money(p.fee)} de inscripción. Con ${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, la bolsa es de ${f.money(p.pot)}.`,
+  'rules.fee': (p, f) =>
+    `Cada jugador paga ${f.money(p.fee)} de inscripción. Con ${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, la bolsa es de ${f.money(p.pot)}.`,
   'rules.noFee': () => 'No hay inscripción.',
   'rules.noMoney': () => 'Se juega sin dinero: por la gloria.',
   /** Each game with what it takes from the bolsa, «Individual ($20,000)». */
-  'rules.prizes': (p, f) => `De la bolsa salen los premios: ${andList(p.prizes.map((x) => `${f.msg(x.label)} (${f.money(x.amount)})`))}.`,
+  'rules.prizes': (p, f) =>
+    `De la bolsa salen los premios: ${andList(p.prizes.map((x) => `${f.msg(x.label)} (${f.money(x.amount)})`))}.`,
   'rules.kept': (p, f) => `${f.money(p.amount)} de la bolsa no son premio: se apartan para los gastos del torneo.`,
-  'rules.auctionApart': (p) => `${p.game} va aparte de la bolsa: se subasta a cada jugador, y lo que pagan los compradores forma su propio pozo, que se reparte completo entre los dueños de los que mejor terminan.`,
-  'rules.sidePots': (p) => `${andList(p.games)} ${p.games.length === 1 ? 'tiene su propio bote' : 'tienen su propio bote'}: solo ponen y cobran los que entran.`,
-  'rules.bets': (p) => `${andList(p.games)} se ${p.games.length === 1 ? 'paga' : 'pagan'} directo entre jugadores, sin pasar por la bolsa.`,
+  'rules.auctionApart': (p) =>
+    `${p.game} va aparte de la bolsa: se subasta a cada jugador, y lo que pagan los compradores forma su propio pozo, que se reparte completo entre los dueños de los que mejor terminan.`,
+  'rules.sidePots': (p) =>
+    `${andList(p.games)} ${p.games.length === 1 ? 'tiene su propio bote' : 'tienen su propio bote'}: solo ponen y cobran los que entran.`,
+  'rules.bets': (p) =>
+    `${andList(p.games)} se ${p.games.length === 1 ? 'paga' : 'pagan'} directo entre jugadores, sin pasar por la bolsa.`,
   'rules.banker': (p) => `${p.name} es el banquero: junta el dinero y paga los premios.`,
   'rules.noBanker': () => 'El Comité dice quién es el banquero: quien junta el dinero y paga los premios.',
-  'rules.settle': () => 'En Dinero se ve en todo momento lo que cada quien ganaría si el torneo terminara ahora, y al final, quién le paga a quién.',
+  'rules.settle': () =>
+    'En Dinero se ve en todo momento lo que cada quien ganaría si el torneo terminara ahora, y al final, quién le paga a quién.',
   'rules.field': (p) =>
-    `${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, ${p.days === 1 ? 'un día' : `${p.days} días`}${p.holes && p.holes.length ? ` de ${orList([...new Set(p.holes)].sort((a, b) => a - b).map(String))} hoyos` : ''}, en grupos de hasta ${p.groupSize}.`,
+    `${p.n === 1 ? '1 jugador' : `${p.n} jugadores`}, ${p.days === 1 ? 'un día' : `${p.days} días`}${p.holes?.length ? ` de ${orList([...new Set(p.holes)].sort((a, b) => a - b).map(String))} hoyos` : ''}, en grupos de hasta ${p.groupSize}.`,
   'rules.tiers': (p) => `Categorías por hándicap: ${andList(p.tiers)}, asignadas por el Comité.`,
   'rules.scratch': () => 'Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.',
-  'rules.hcpWhat': () => 'El hándicap dice el nivel de cada quien: a más hándicap, más golpes de ventaja, que se le restan a sus golpes para que todos compitan parejo.',
-  'rules.hcpBase': () => 'El Comité pone el hándicap base de cada jugador: su índice oficial, un estimado de tres rondas suyas o un número que escribe a mano.',
-  'rules.hcpPlaying': (p) => `Se juega con el ${p.pct}% del hándicap base, con tope de ${p.cap}, ${ROUNDING[p.rounding]}: ese es el hándicap de juego.`,
+  'rules.hcpWhat': () =>
+    'El hándicap dice el nivel de cada quien: a más hándicap, más golpes de ventaja, que se le restan a sus golpes para que todos compitan parejo.',
+  'rules.hcpBase': () =>
+    'El Comité pone el hándicap base de cada jugador: su índice oficial, un estimado de tres rondas suyas o un número que escribe a mano.',
+  'rules.hcpPlaying': (p) =>
+    `Se juega con el ${p.pct}% del hándicap base, con tope de ${p.cap}, ${ROUNDING[p.rounding]}: ese es el hándicap de juego.`,
   'rules.hcpStrokes': () =>
     'Los golpes de ventaja se reparten por hoyo según su índice de golpe, del 1 (el más difícil) al 18 (el más fácil), en el tee que juegas: con hándicap de juego 16, recibes un golpe en los hoyos de índice 1 al 16. Un hándicap plus (por debajo de 0) los devuelve, empezando por el hoyo más fácil.',
   'rules.hcpNine': () => 'En una ronda de 9 hoyos cuenta la mitad del hándicap de juego.',
@@ -4462,14 +5323,16 @@ export const explain: ExplainCatalog = {
       ? `Recorte del día 2: si en el día 1 haces más de ${points(p.threshold)}, para el día 2 se te recorta 1 golpe por ${each} por encima, máximo ${p.max}. Nunca se suman golpes.`
       : `Recorte de hándicap: si en un día haces más de ${points(p.threshold)}, al día siguiente se te recorta 1 golpe por ${each} por encima, máximo ${p.max}${p.cumulative ? ' cada vez; los recortes de los días se acumulan' : '; cada día se calcula solo con el anterior'}. Nunca se suman golpes.`
   },
-  'rules.hcpOverride': () => 'El Comité puede ajustar un hándicap con un motivo escrito, y queda en el historial que ve todo el torneo.',
+  'rules.hcpOverride': () =>
+    'El Comité puede ajustar un hándicap con un motivo escrito, y queda en el historial que ve todo el torneo.',
   // The tiebreak by the last holes, said once in words (COPY-12); several days start it from the last one.
   'rules.tiebreak': (p) =>
     `Desempate por los últimos hoyos: si dos empatan, va adelante quien fue mejor ${p.days > 1 ? `el último día, luego en los hoyos ${lastHoles(p.windows)}` : `en los hoyos ${lastHoles(p.windows)}`}. Si sigue el empate, ${p.prizes ? 'se reparten los premios de los lugares que ocupan' : 'comparten el lugar'}.`,
   // Match play breaks a tie on the last match: holes up, not the last holes' scores.
   'rules.matchTiebreak': (p) =>
     `Empate en puntos: va adelante quien terminó mejor su partido${p.days > 1 ? ' del último día' : ''} (más hoyos arriba, o menos abajo). Si sigue el empate, ${p.prizes ? 'se reparten los premios de los lugares que ocupan' : 'comparten el lugar'}.`,
-  'rules.places': (p, f) => `Premios: ${andList(p.prizes.map((x, i) => `${ordinal(String(i + 1))} ${f.money(x.amount)}${x.pct == null ? '' : ` (${x.pct}%)`}`))}.`,
+  'rules.places': (p, f) =>
+    `Premios: ${andList(p.prizes.map((x, i) => `${ordinal(String(i + 1))} ${f.money(x.amount)}${x.pct == null ? '' : ` (${x.pct}%)`}`))}.`,
   'rules.noPrize': () => 'Sin premio en dinero.',
   // Only a name the organizer gave last place: «El último lugar gana Último lugar.» named a trophy nobody set up.
   'rules.lastPlace': (p) => `El último lugar gana ${p.label}.`,
@@ -4480,27 +5343,34 @@ export const explain: ExplainCatalog = {
       : `${prize ? `${prize} al` : 'Gana el'} mejor total Stableford del día.`
   },
   'rules.bestRoundCut': () => 'Desde el día 2 cuenta el hándicap ya recortado.',
-  'rules.bestRoundTie': (p) => `Empate: va adelante quien fue mejor en los hoyos ${lastHoles(p.windows)} de ese día; si sigue, se reparte.`,
+  'rules.bestRoundTie': (p) =>
+    `Empate: va adelante quien fue mejor en los hoyos ${lastHoles(p.windows)} de ese día; si sigue, se reparte.`,
   'rules.pairs': (p) => {
     const rule = andList(p.pairing.map(([a, b]) => `${a} con ${b}`))
     return `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas ${p.auction ? `al terminar la noche de ${labelInSentence(p.auction)}` : 'por el Comité'}.${p.honoree ? ` ${p.honoree} escoge a su pareja.` : ''}`
   },
-  'rules.pairsPoints': () => 'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes de ventaja.',
+  'rules.pairsPoints': () =>
+    'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes de ventaja.',
   'rules.pairsPrizes': (p, f) =>
     `Premios por pareja: ${andList(p.prizes.map((x, i) => `${ordinal(String(i + 1))} ${f.money(x)}`))}, la mitad para cada uno. Empate: ${p.days > 1 ? 'gana la pareja con más puntos el último día; si sigue, se reparte' : 'se reparte'}.`,
-  'rules.pairsTogether': (p) => `Las parejas juegan juntas${p.days > 1 ? (p.days === 2 ? ' los dos días' : ` los ${p.days} días`) : ''}: cada grupo es de dos parejas.`,
+  'rules.pairsTogether': (p) =>
+    `Las parejas juegan juntas${p.days > 1 ? (p.days === 2 ? ' los dos días' : ` los ${p.days} días`) : ''}: cada grupo es de dos parejas.`,
   // `game` is the snake's own label.
   'rules.snake': (p) =>
     `En cada grupo, ${labelInSentence(p.game)} pasa a quien hace ${p.threshold} putts o más en un hoyo (los putts son los golpes en el green). Si dos o más lo hacen en el mismo hoyo, pasa al que embocó al último.`,
   'rules.snakePaid': (p, f) =>
     `Al terminar la ronda, cada uno de los que no tienen ${labelInSentence(p.game)} cobra ${f.money(p.per)} de la bolsa (${f.money(p.pot)} por grupo). Si nadie hizo ${p.threshold} putts, los ${f.money(p.pot)} se reparten entre todos los del grupo.`,
   'rules.snakeFree': (p) => `Es sin dinero: lo que cuenta es no terminar la ronda con ${labelInSentence(p.game)}.`,
-  'rules.fewestPutts': (p, f) => `${p.prize == null ? 'Gana' : `${f.money(p.prize)} a`} quien haga menos putts en todo el torneo: solo cuentan los golpes en el green. Un hoyo levantado cuenta ${p.pickup} putts. Empate: se reparte.`,
-  'rules.auction': (p) => `${p.game} es una subasta: antes del día 1 se subasta a cada jugador, en orden sorteado, y quien lo compra (su dueño) cobra si a ese jugador le va bien.`,
+  'rules.fewestPutts': (p, f) =>
+    `${p.prize == null ? 'Gana' : `${f.money(p.prize)} a`} quien haga menos putts en todo el torneo: solo cuentan los golpes en el green. Un hoyo levantado cuenta ${p.pickup} putts. Empate: se reparte.`,
+  'rules.auction': (p) =>
+    `${p.game} es una subasta: antes del día 1 se subasta a cada jugador, en orden sorteado, y quien lo compra (su dueño) cobra si a ese jugador le va bien.`,
   'rules.auctionBids': (p, f) =>
     `Cada jugador abre la puja por sí mismo en ${f.money(p.opening)} y las pujas suben de ${f.money(p.increment)} en ${f.money(p.increment)}. Si nadie puja más, se queda con él mismo. Máximo ${p.max} jugadores por dueño${p.selfCounts ? ', contándose a sí mismo' : ''}.`,
-  'rules.buyback': (p) => `Recompra: al caer el martillo, el jugador puede comprarle a su dueño hasta el ${p.pct}% de sí mismo pagándole esa parte del precio (el 50% cuesta la mitad), y cobra esa misma parte.`,
-  'rules.auctionPot': (p, f) => `El pozo es la suma de lo que se pagó por todos y se reparte completo: ${andList(p.slots.map((s) => `${f.msg(s.slot)} ${Math.round(s.share * 100)}%`))}.`,
+  'rules.buyback': (p) =>
+    `Recompra: al caer el martillo, el jugador puede comprarle a su dueño hasta el ${p.pct}% de sí mismo pagándole esa parte del precio (el 50% cuesta la mitad), y cobra esa misma parte.`,
+  'rules.auctionPot': (p, f) =>
+    `El pozo es la suma de lo que se pagó por todos y se reparte completo: ${andList(p.slots.map((s) => `${f.msg(s.slot)} ${Math.round(s.share * 100)}%`))}.`,
   'rules.auctionOne': (p) =>
     `Cada jugador cobra como máximo un lugar, el mejor que le toque${p.tiers.length ? `: si uno de la categoría ${orList(p.tiers)} queda en un lugar mejor, su lugar de categoría pasa al siguiente de su categoría` : ''}. Lo de cada lugar se reparte entre los dueños del jugador según su parte, y los empates se reparten.`,
   'rules.auctionOwed': () => 'Al cerrar la subasta, la app muestra quién debe qué.',
@@ -4509,34 +5379,43 @@ export const explain: ExplainCatalog = {
   'rules.cardsEnter': () => 'Cada grupo captura sus hoyos en la app: golpes, putts y si alguien levantó.',
   'rules.cards': (p) =>
     ({
-      pairs: 'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. Ya firmada, solo el Comité la corrige, con un motivo.',
-      marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada quien; nadie firma la suya. Ya firmada, solo el Comité la corrige, con un motivo.',
+      pairs:
+        'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. Ya firmada, solo el Comité la corrige, con un motivo.',
+      marker:
+        'Al terminar el día, otro jugador del grupo firma la tarjeta de cada quien; nadie firma la suya. Ya firmada, solo el Comité la corrige, con un motivo.',
       none: 'Las tarjetas no se firman: el grupo corrige sus hoyos mientras el día está en juego, y después el Comité.',
     })[p.mode],
   // COPY-12: «manda la hoja» read as «send the sheet»; the page is what the app computes, and §5 already says it prevails.
-  'rules.governance': () => 'El Comité tiene la última palabra. Cada corrección queda registrada con quién, cuándo y por qué, y la ve todo el torneo.',
-  'rules.governancePage': () => 'Si una hoja impresa dice otra cosa, vale esta página, que es lo que calcula la app, y el Comité lo aclara.',
+  'rules.governance': () =>
+    'El Comité tiene la última palabra. Cada corrección queda registrada con quién, cuándo y por qué, y la ve todo el torneo.',
+  'rules.governancePage': () =>
+    'Si una hoja impresa dice otra cosa, vale esta página, que es lo que calcula la app, y el Comité lo aclara.',
   // «Palabras de golf»: each shown only when the tournament's rules use it (COPY-12).
   'rules.glossary': (p) => GLOSSARY[p.word],
-  'rules.glossaryAuction': (p) => `${p.game}: la subasta de jugadores. El dueño de un jugador cobra si a ese jugador le va bien.`,
+  'rules.glossaryAuction': (p) =>
+    `${p.game}: la subasta de jugadores. El dueño de un jugador cobra si a ese jugador le va bien.`,
 
   // The prize check's lines (§5.8): what each amount is made of.
   'pool.amounts': (p, f) => p.amounts.map((x) => f.money(x)).join(' + ') || 'sin premios',
   'pool.perDay': (p, f) => `${p.days} ${p.days === 1 ? 'día' : 'días'} × ${f.money(p.amount)}`,
-  'pool.snakeGroups': (p) => `${andList(p.sizes.map((r) => r.map((n) => `${n}`).join('+')))} jugadores por grupo${p.missing ? `, ${p.missing} ${p.missing === 1 ? 'día' : 'días'} por armar` : ''}`,
-  'pool.snakePlanned': (p, f) => `${p.groups} ${p.groups === 1 ? 'grupo' : 'grupos'} × ${p.days} ${p.days === 1 ? 'día' : 'días'} × ${f.money(p.perGroup)}`,
+  'pool.snakeGroups': (p) =>
+    `${andList(p.sizes.map((r) => r.map((n) => `${n}`).join('+')))} jugadores por grupo${p.missing ? `, ${p.missing} ${p.missing === 1 ? 'día' : 'días'} por armar` : ''}`,
+  'pool.snakePlanned': (p, f) =>
+    `${p.groups} ${p.groups === 1 ? 'grupo' : 'grupos'} × ${p.days} ${p.days === 1 ? 'día' : 'días'} × ${f.money(p.perGroup)}`,
   'pool.rest': (p, f) => `lo que queda: ${p.split.map((x) => `${x.pct}% ${f.money(x.amount)}`).join(' / ')}`,
   'pool.house': () => t.setup.houseCut,
   'pool.side': (p, f) => `${p.n} × ${f.money(p.buyIn)} = ${f.money(p.pot)}, ${SIDE_PAYOUT[p.type](p.split)}`,
   'pool.bet': (p, f) => `${f.money(p.stake)} ${STAKE_UNIT[p.per]}`,
-  'pool.places': (p) => `${p.places} ${p.places === 1 ? 'lugar' : 'lugares'} con premio y ${p.reachable === 1 ? `1 ${UNFILLED_UNIT[p.unit][0]}` : `${p.reachable} ${UNFILLED_UNIT[p.unit][1]}`}`,
+  'pool.places': (p) =>
+    `${p.places} ${p.places === 1 ? 'lugar' : 'lugares'} con premio y ${p.reachable === 1 ? `1 ${UNFILLED_UNIT[p.unit][0]}` : `${p.reachable} ${UNFILLED_UNIT[p.unit][1]}`}`,
 
   // Settings that pass the schema but make no sense (MONEY-13).
   'sense.cap': () => t.admin.sense.cap,
   'sense.cutMax': (p) => t.admin.sense.cutMax(p.max),
   'sense.houseCut': (p, f) => t.admin.sense.houseCut(f.money(p.cut), f.money(p.pot)),
   'sense.placeTwice': (p) => t.admin.sense.placeTwice(t.rules.slotName('place', p.place, undefined, p.lastPlace)),
-  'sense.placeUnreachable': (p) => t.admin.sense.placeUnreachable(`${p.place}.º`, `${p.count} ${UNFILLED_UNIT[p.unit][p.count === 1 ? 0 : 1]}`),
+  'sense.placeUnreachable': (p) =>
+    t.admin.sense.placeUnreachable(`${p.place}.º`, `${p.count} ${UNFILLED_UNIT[p.unit][p.count === 1 ? 0 : 1]}`),
   'sense.tierTwice': (p) => t.admin.sense.tierTwice(p.tier),
   'sense.lastTwice': (p) => t.admin.sense.lastTwice(p.label),
   'sense.buyback': (p) => t.admin.sense.buyback(p.max),
@@ -4549,10 +5428,12 @@ export const explain: ExplainCatalog = {
   'settings.estimateWeights': () => 'Los pesos del estimado de hándicap deben sumar 1.',
   'settings.payoutShares': () => 'El reparto de la Calcutta debe sumar 100%.',
   'settings.tiersUnique': () => 'Dos categorías tienen el mismo nombre.',
-  'settings.payoutTier': (p) => `La categoría «${p.tier}» del reparto de la Calcutta no existe en las categorías del torneo.`,
+  'settings.payoutTier': (p) =>
+    `La categoría «${p.tier}» del reparto de la Calcutta no existe en las categorías del torneo.`,
   'settings.gameId': (p) => `Dos juegos usan el mismo id «${p.id}».`,
   'settings.individualSplit': (p) => `El reparto individual suma ${p.sum}%, debe sumar 100%.`,
-  'settings.pairingTier': (p) => `La categoría «${p.tier}» de la regla de parejas no existe en las categorías del torneo.`,
+  'settings.pairingTier': (p) =>
+    `La categoría «${p.tier}» de la regla de parejas no existe en las categorías del torneo.`,
   'settings.gameSource': (p) => `${p.label}: este juego no se paga así.`,
   'settings.threePuttDirect': (p) => `${p.label}: los tres putts se cobran directo entre jugadores.`,
   'settings.gameSplit': (p) => `${p.label}: el reparto suma ${p.sum}%, debe sumar 100%.`,
@@ -4580,13 +5461,41 @@ export const explain: ExplainCatalog = {
   'unassigned.held': (p) => t.unassigned.heldLabel(p.game, p.day, p.group),
   'unassigned.heldNote': (p) => t.unassigned.heldNote(p.hole),
   'auction.slot': (p) =>
-    p.slot === 'rounding' ? 'Redondeo' : p.slot === 'place' ? (p.place === 1 ? 'Campeón' : p.place === 2 ? 'Subcampeón' : `${ordinal(String(p.place))} lugar`) : p.slot === 'bestOfTier' ? `Mejor ${p.tier}` : p.lastPlace,
+    p.slot === 'rounding'
+      ? 'Redondeo'
+      : p.slot === 'place'
+        ? p.place === 1
+          ? 'Campeón'
+          : p.place === 2
+            ? 'Subcampeón'
+            : `${ordinal(String(p.place))} lugar`
+        : p.slot === 'bestOfTier'
+          ? `Mejor ${p.tier}`
+          : p.lastPlace,
   'auction.slots': (p, f) => p.slots.map(f.msg).join(' + '),
   'name.team': (p) => `Equipo ${p.n}`,
   'name.pair': (p) => andList(p.names),
   'figure.label': (p) => ({ points: 'Puntos', gross: 'Gross', net: 'Neto' })[p.unit],
-  'bracket.round': (p) => (p.matches === 1 ? 'Final' : p.matches === 2 ? 'Semifinal' : p.matches === 4 ? 'Cuartos de final' : p.matches === 8 ? 'Octavos de final' : `Ronda de ${p.matches * 2}`),
-  'match.segment': (p) => (p.key === 'front' ? 'Ida' : p.key === 'back' ? 'Vuelta' : p.key === 'total' ? 'Total' : p.holes < 18 ? `${p.holes} hoyos` : 'Partido'),
+  'bracket.round': (p) =>
+    p.matches === 1
+      ? 'Final'
+      : p.matches === 2
+        ? 'Semifinal'
+        : p.matches === 4
+          ? 'Cuartos de final'
+          : p.matches === 8
+            ? 'Octavos de final'
+            : `Ronda de ${p.matches * 2}`,
+  'match.segment': (p) =>
+    p.key === 'front'
+      ? 'Ida'
+      : p.key === 'back'
+        ? 'Vuelta'
+        : p.key === 'total'
+          ? 'Total'
+          : p.holes < 18
+            ? `${p.holes} hoyos`
+            : 'Partido',
 
   // A game's board: its sections' titles, its rows' figures and its notes.
   'board.units': (p) => `${p.n} ${unitWord(p.unit, p.n)}`,
@@ -4603,31 +5512,47 @@ export const explain: ExplainCatalog = {
   'board.voided': (p) => `No cuenta (sin par): ${andList(p.names)}`,
   'board.decidedWin': () => 'Ganó',
   'board.skinsRiding': (p) => `Se acumulan ${p.n} ${unitWord('skin', p.n)} para el hoyo ${p.hole}.`,
-  'board.skinsUnclaimed': (p) => `${p.n} ${p.n === 1 ? 'skin quedó' : 'skins quedaron'} sin ganador al final de la ronda.`,
-  'board.skinsRule': (p) => `${p.net ? 'Neto' : 'Gross'}${p.carry ? ', empates se acumulan' : ', empates no se acumulan'}.`,
+  'board.skinsUnclaimed': (p) =>
+    `${p.n} ${p.n === 1 ? 'skin quedó' : 'skins quedaron'} sin ganador al final de la ronda.`,
+  'board.skinsRule': (p) =>
+    `${p.net ? 'Neto' : 'Gross'}${p.carry ? ', empates se acumulan' : ', empates no se acumulan'}.`,
   'board.skinStake': (p, f) => `Cada skin vale ${f.money(p.stake)} de cada jugador.`,
-  'board.eventStake': (p, f) => (p.unit === 'threePutt' ? `Cada tres putts le cuesta ${f.money(p.stake)} a quien los hace, para cada uno de los demás.` : `Cada ${unitWord(p.unit, 1)} cobra ${f.money(p.stake)} de cada uno de los demás.`),
+  'board.eventStake': (p, f) =>
+    p.unit === 'threePutt'
+      ? `Cada tres putts le cuesta ${f.money(p.stake)} a quien los hace, para cada uno de los demás.`
+      : `Cada ${unitWord(p.unit, 1)} cobra ${f.money(p.stake)} de cada uno de los demás.`,
   'board.eventRule': (p) => `${p.net ? 'Neto' : 'Gross'}, ${p.eagle ? 'águila' : 'birdie'} o mejor.`,
   'board.holeStake': (p, f) => `Cada hoyo ganado cobra ${f.money(p.stake)} de cada uno de los demás.`,
   'board.disputedNote': () => 'Hay hoyos en disputa: el Comité decide en Comité, Juegos.',
-  'board.customDecided': (p) => (p.decided ? 'Decidido por el Comité.' : 'El Comité marca a los ganadores en Comité, Juegos.'),
+  'board.customDecided': (p) =>
+    p.decided ? 'Decidido por el Comité.' : 'El Comité marca a los ganadores en Comité, Juegos.',
   'board.customStake': (p, f) => `Cada uno de los que no ganaron le paga ${f.money(p.stake)} a cada ganador.`,
   // A game's money in words (COPY-14): a «bote» is only ever what a game's own entrants paid.
   'board.potUnits': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte por cada ${unitWord(p.unit, 1)}.`,
   'board.potHoles': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte entre los hoyos ganados.`,
   'board.potWinners': (p, f) => `${potText(f.money(p.pot), p.side)} es para los ganadores.`,
-  'board.potPlaces': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}.`,
-  'board.lowRule': (p) => `${p.basis === 'points' ? 'Más puntos Stableford' : `La tarjeta ${p.basis === 'net' ? 'neta' : 'gross'} más baja contra el par`}${p.perRound ? ', por día' : ''}.`,
+  'board.potPlaces': (p, f) =>
+    `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}.`,
+  'board.lowRule': (p) =>
+    `${p.basis === 'points' ? 'Más puntos Stableford' : `La tarjeta ${p.basis === 'net' ? 'neta' : 'gross'} más baja contra el par`}${p.perRound ? ', por día' : ''}.`,
   'board.lowIncomplete': (p) =>
     `${p.day != null ? `Día ${p.day}: ` : ''}tarjeta incompleta, hoyos jugados: ${andList(p.who.map((w) => `${w.name} (${w.thru} de ${p.holes})`))}. Queda${p.who.length === 1 ? '' : 'n'} después de las tarjetas completas.`,
   'board.matchStatus': (p) => matchStatus(p.up, p.decided, p.remaining, p.plural),
-  'board.matchPress': (p) => (p.side == null ? matchStatus(p.up, p.decided, p.remaining, false) : `${andList(p.side)} ${matchStatus(p.up, p.decided, p.remaining, p.side.length > 1).toLowerCase()}`),
-  'board.matchThru': (p, f) => [p.thru ? `después de ${p.thru}` : 'sin empezar', ...p.presses.map((x) => `presión desde el ${x.from}: ${f.msg(x.status)}`)].join(', '),
+  'board.matchPress': (p) =>
+    p.side == null
+      ? matchStatus(p.up, p.decided, p.remaining, false)
+      : `${andList(p.side)} ${matchStatus(p.up, p.decided, p.remaining, p.side.length > 1).toLowerCase()}`,
+  'board.matchThru': (p, f) =>
+    [
+      p.thru ? `después de ${p.thru}` : 'sin empezar',
+      ...p.presses.map((x) => `presión desde el ${x.from}: ${f.msg(x.status)}`),
+    ].join(', '),
   'board.matchMoney': () => 'Van',
   'board.matchPays': (p) => `${andList(p.side)} paga${p.side.length > 1 ? 'n' : ''}`,
   'board.signedMoney': (p, f) => `+${f.money(p.amount)}`,
   'board.matchTitle': (p) => `${p.day != null ? `Día ${p.day}: ` : ''}${andList(p.a)} contra ${andList(p.b)}`,
-  'board.matchRule': (p, f) => `${p.nassau ? 'Nassau: ida, vuelta y total' : 'Match play a 18'}, ${p.net ? 'neto' : 'gross'}${p.stake ? `, ${f.money(p.stake)} por apuesta` : ''}.`,
+  'board.matchRule': (p, f) =>
+    `${p.nassau ? 'Nassau: ida, vuelta y total' : 'Match play a 18'}, ${p.net ? 'neto' : 'gross'}${p.stake ? `, ${f.money(p.stake)} por apuesta` : ''}.`,
   'board.matchPressRule': (p) => `Presión automática al ir ${p.at} abajo (máximo ${p.max} por vuelta).`,
   'board.noMatches': () => 'Todavía no hay partidos: el Comité los arma en Comité, Juegos.',
 }

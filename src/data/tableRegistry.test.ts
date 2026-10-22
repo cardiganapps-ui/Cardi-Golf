@@ -43,9 +43,13 @@ const NOT_ON_THE_BOARDS: Record<string, string> = {
 function tournamentTables(): string[] {
   const sql = migrationsSql()
   const blocks = new Map<string, string>()
-  for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi)) blocks.set(m[1]!, m[2]!)
-  for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)\s+add column (?:if not exists )?([a-z_]+)/gi)) blocks.set(m[1]!, `${blocks.get(m[1]!) ?? ''}\n${m[2]!} `)
-  return [...blocks].filter(([, body]) => /(^|\s|,)(tournament_id|round_id|lot_id|group_id)\s/m.test(body)).map(([table]) => table)
+  for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi))
+    blocks.set(m[1]!, m[2]!)
+  for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)\s+add column (?:if not exists )?([a-z_]+)/gi))
+    blocks.set(m[1]!, `${blocks.get(m[1]!) ?? ''}\n${m[2]!} `)
+  return [...blocks]
+    .filter(([, body]) => /(^|\s|,)(tournament_id|round_id|lot_id|group_id)\s/m.test(body))
+    .map(([table]) => table)
 }
 
 describe('the tournament’s table registry (ARCH-16)', () => {

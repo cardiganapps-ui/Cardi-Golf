@@ -17,27 +17,61 @@ describe('the simulator’s strokes are the engine’s (ARCH-16)', () => {
     // A plus handicap and an override, so neither the sign nor the Comité's figure can be dropped on the way.
     snap.players[0] = { ...snap.players[0]!, handicapSource: 'manual', baseHcp: -3 }
     const r1 = snap.rounds[0]!.id
-    snap.handicapOverrides.push({ roundId: r1, playerId: snap.players[1]!.id, playingHcp: 7, reason: 'prueba', by: null, at: '2027-04-09T15:00:00Z' })
+    snap.handicapOverrides.push({
+      roundId: r1,
+      playerId: snap.players[1]!.id,
+      playingHcp: 7,
+      reason: 'prueba',
+      by: null,
+      at: '2027-04-09T15:00:00Z',
+    })
     const rows = snapshotToRows(snap)
     const state = computeTournament(snap, parseSettings(snap.tournament.settings))
     for (const round of snap.rounds.filter((r) => r.status !== 'cancelled')) {
       const day = dayStrokes(
-        { tournament: rows.tournaments[0]!, players: rows.players, rounds: rows.rounds, courses: rows.courses, tees: rows.tees, holes: rows.holes, roundTees: rows.round_tees, scores: rows.scores, overrides: rows.handicap_overrides },
+        {
+          tournament: rows.tournaments[0]!,
+          players: rows.players,
+          rounds: rows.rounds,
+          courses: rows.courses,
+          tees: rows.tees,
+          holes: rows.holes,
+          roundTees: rows.round_tees,
+          scores: rows.scores,
+          overrides: rows.handicap_overrides,
+        },
         round.id,
       )
       for (const p of snap.players) {
         const pr = state.core.rounds[round.id]![p.id]!
         expect(day.playingHcp.get(p.id)).toBe(pr.playingHcp)
-        expect([...day.holes.get(p.id)!.values()]).toEqual(pr.holes.map((h) => ({ par: h.par, strokeIndex: h.strokeIndex, strokesReceived: h.strokesReceived })))
+        expect([...day.holes.get(p.id)!.values()]).toEqual(
+          pr.holes.map((h) => ({ par: h.par, strokeIndex: h.strokeIndex, strokesReceived: h.strokesReceived })),
+        )
       }
     }
     expect(state.core.rounds[r1]![snap.players[1]!.id]!.playingHcp).toBe(7)
-    expect(state.core.rounds[r1]![snap.players[0]!.id]!.playingHcp).toBeLessThan(0)
+    expect(state.core.rounds[r1]![snap.players[0].id]!.playingHcp).toBeLessThan(0)
   })
 
   it('refuses settings this build cannot read rather than simulate on defaults', () => {
     const rows = snapshotToRows(getFixture('minimal4-live')!.snapshot)
     const t = { ...rows.tournaments[0]!, settings: { ...(rows.tournaments[0]!.settings as object), fromTheFuture: 1 } }
-    expect(() => dayStrokes({ tournament: t, players: [], rounds: [], courses: [], tees: [], holes: [], roundTees: [], scores: [], overrides: [] }, 'r1')).toThrow(/settings/)
+    expect(() =>
+      dayStrokes(
+        {
+          tournament: t,
+          players: [],
+          rounds: [],
+          courses: [],
+          tees: [],
+          holes: [],
+          roundTees: [],
+          scores: [],
+          overrides: [],
+        },
+        'r1',
+      ),
+    ).toThrow(/settings/)
   })
 })

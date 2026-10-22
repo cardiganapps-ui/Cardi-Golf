@@ -15,18 +15,45 @@ import { words } from '../testing/words'
 const PARS = PAR_72.map(([p]) => p)
 // PAR_72 par 3s: holes 3, 7, 11, 16.
 
-const money = (over: Partial<GameMoney>): GameMoney => ({ source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100], ...over })
+const money = (over: Partial<GameMoney>): GameMoney => ({
+  source: 'none',
+  buyIn: 0,
+  amount: 0,
+  stake: 0,
+  split: [100],
+  ...over,
+})
 
 function setup(games: GameConfig[], players = 4): Snapshot {
   const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games }
-  const snap = makeSnapshot({ settings, players: Array.from({ length: players }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })), rounds: [makeRound(1)] })
-  for (let i = 1; i <= players; i++) for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', `p${i}`, h, PARS[h - 1]!))
+  const snap = makeSnapshot({
+    settings,
+    players: Array.from({ length: players }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })),
+    rounds: [makeRound(1)],
+  })
+  for (let i = 1; i <= players; i++)
+    for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', `p${i}`, h, PARS[h - 1]!))
   return snap
 }
-const award = (hole: number, playerId: string, groupId: string | null = 'g1', gameId = 'ctp'): HoleAward => ({ roundId: 'r1', groupId, hole, gameId, playerId })
+const award = (hole: number, playerId: string, groupId: string | null = 'g1', gameId = 'ctp'): HoleAward => ({
+  roundId: 'r1',
+  groupId,
+  hole,
+  gameId,
+  playerId,
+})
 const run = (snap: Snapshot) => computeTournament(snap, snap.tournament.settings as TournamentSettings)
 
-const ctp = (m: GameMoney): GameConfig => ({ id: 'ctp', type: 'contest', label: 'Más cerca', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'closest', holes: 'par3' }, money: m })
+const ctp = (m: GameMoney): GameConfig => ({
+  id: 'ctp',
+  type: 'contest',
+  label: 'Más cerca',
+  enabled: true,
+  rounds: 'all',
+  entrants: 'all',
+  options: { kind: 'closest', holes: 'par3' },
+  money: m,
+})
 
 describe('hole contests', () => {
   it('closest to the pin on the par 3s: 4 × $100 = $400 over 2 holes won → $200 each', () => {
@@ -34,7 +61,12 @@ describe('hole contests', () => {
     snap.holeAwards = [award(3, 'p1'), award(7, 'p2')]
     const st = run(snap)
     const s = st.games.ctp!.state as ContestState
-    expect(s.holes.map((h) => [h.hole, h.status])).toEqual([[3, 'won'], [7, 'won'], [11, 'open'], [16, 'open']])
+    expect(s.holes.map((h) => [h.hole, h.status])).toEqual([
+      [3, 'won'],
+      [7, 'won'],
+      [11, 'open'],
+      [16, 'open'],
+    ])
     expect(Object.fromEntries(st.prizes.map((p) => [p.playerId, p.amount]))).toEqual({ p1: 200, p2: 200 })
   })
 
@@ -52,10 +84,13 @@ describe('hole contests', () => {
     expect(st.prizes.map((p) => [p.playerId, p.amount])).toEqual([['p3', 400]])
   })
 
-  it('a ruling is the Comité\'s by its source, a claim the group\'s by its own (0042, DB-03)', () => {
+  it("a ruling is the Comité's by its source, a claim the group's by its own (0042, DB-03)", () => {
     const snap = setup([ctp(money({ source: 'side', buyIn: 100 }))])
     // Group 2 claimed p3 for the 3rd, group 1 claimed p1: disputed, whatever the rows' order.
-    snap.holeAwards = [{ ...award(3, 'p1', 'g1'), source: 'group' }, { ...award(3, 'p3', 'g2'), source: 'group' }]
+    snap.holeAwards = [
+      { ...award(3, 'p1', 'g1'), source: 'group' },
+      { ...award(3, 'p3', 'g2'), source: 'group' },
+    ]
     expect((run(snap).games.ctp!.state as ContestState).holes[0]!.status).toBe('disputed')
     // Group 2 dissolved: since 0042 its claim goes with it (it used to stay with no group, a ruling for p3 nobody made).
     snap.holeAwards = [{ ...award(3, 'p1', 'g1'), source: 'group' }]
@@ -63,7 +98,16 @@ describe('hole contests', () => {
   })
 
   it('greenies: one per group allowed, and only with par or better', () => {
-    const g: GameConfig = { id: 'gr', type: 'contest', label: 'Greenies', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'greenie', holes: 'par3' }, money: money({ source: 'direct', stake: 20 }) }
+    const g: GameConfig = {
+      id: 'gr',
+      type: 'contest',
+      label: 'Greenies',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { kind: 'greenie', holes: 'par3' },
+      money: money({ source: 'direct', stake: 20 }),
+    }
     const snap = setup([g])
     snap.scores.find((s) => s.playerId === 'p4' && s.hole === 7)!.strokes = 4 // bogey on the 7th
     snap.holeAwards = [award(3, 'p1', 'g1', 'gr'), award(3, 'p2', 'g2', 'gr'), award(7, 'p4', 'g2', 'gr')]
@@ -72,12 +116,24 @@ describe('hole contests', () => {
     expect(s.units).toEqual({ p1: 1, p2: 1, p3: 0, p4: 0 })
     expect(s.holes[1]!.voided).toEqual(['p4'])
     // J1 and J2: $20 from each of the other three; they net each other out.
-    const bets = st.money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}:${f.amount}`).sort()
+    const bets = st.money.flows
+      .filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}:${f.amount}`)
+      .sort()
     expect(bets).toEqual(['p3>p1:20', 'p3>p2:20', 'p4>p1:20', 'p4>p2:20'])
   })
 
   it('chosen holes only: a claim on another hole is ignored', () => {
-    const g: GameConfig = { id: 'ctp', type: 'contest', label: 'Drive', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'longDrive', holes: [5, 14] }, money: money({ source: 'main', amount: 300 }) }
+    const g: GameConfig = {
+      id: 'ctp',
+      type: 'contest',
+      label: 'Drive',
+      enabled: true,
+      rounds: 'all',
+      entrants: 'all',
+      options: { kind: 'longDrive', holes: [5, 14] },
+      money: money({ source: 'main', amount: 300 }),
+    }
     const snap = setup([g])
     snap.holeAwards = [award(5, 'p2'), award(3, 'p1')]
     const st = run(snap)
@@ -98,7 +154,9 @@ describe('a contest nobody won (MONEY-10)', () => {
     expect(run(snap).prizes).toEqual([])
     over(snap)
     const st = run(snap)
-    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']))
+    expect(st.prizes.map((p) => [p.playerId, p.amount, words(p.label)])).toEqual(
+      ['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']),
+    )
     expect(words(st.prizes[0]!.why).steps).toEqual(['Nadie ganó un hoyo: se devuelve a cada quien su entrada, $100'])
     expect(st.money.banker.balanced).toBe(true)
     expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual([])
@@ -110,7 +168,9 @@ describe('a contest nobody won (MONEY-10)', () => {
     over(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual(['Más cerca: un hoyo en disputa (3). El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual([
+      'Más cerca: un hoyo en disputa (3). El Comité decide.',
+    ])
   })
 
   it('a pot from the inscriptions stays unassigned, and the Comité is told how much', () => {
@@ -120,7 +180,9 @@ describe('a contest nobody won (MONEY-10)', () => {
     over(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(words(st.flags.warnings).filter((w) => w.startsWith('Drive'))).toEqual(['Drive: nadie ganó un hoyo; $400 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Drive'))).toEqual([
+      'Drive: nadie ganó un hoyo; $400 quedan sin asignar. El Comité decide.',
+    ])
   })
 
   it('direct bets nobody won move no money and need nothing', () => {
@@ -134,7 +196,16 @@ describe('a contest nobody won (MONEY-10)', () => {
 })
 
 describe('apuesta libre', () => {
-  const custom = (m: GameMoney): GameConfig => ({ id: 'tacos', type: 'custom', label: 'El que coma más tacos', enabled: true, rounds: 'all', entrants: 'all', options: { description: 'En la cena del sábado' }, money: m })
+  const custom = (m: GameMoney): GameConfig => ({
+    id: 'tacos',
+    type: 'custom',
+    label: 'El que coma más tacos',
+    enabled: true,
+    rounds: 'all',
+    entrants: 'all',
+    options: { description: 'En la cena del sábado' },
+    money: m,
+  })
 
   it('nothing moves until the Comité marks a winner', () => {
     const snap = setup([custom(money({ source: 'side', buyIn: 100 }))])
@@ -143,7 +214,10 @@ describe('apuesta libre', () => {
 
   it('side pot: 4 × $100, two winners with shares 2:1 → $267 / $133', () => {
     const snap = setup([custom(money({ source: 'side', buyIn: 100 }))])
-    snap.gameResults = [{ gameId: 'tacos', playerId: 'p1', share: 2 }, { gameId: 'tacos', playerId: 'p2', share: 1 }]
+    snap.gameResults = [
+      { gameId: 'tacos', playerId: 'p1', share: 2 },
+      { gameId: 'tacos', playerId: 'p2', share: 1 },
+    ]
     const st = run(snap)
     expect(Object.fromEntries(st.prizes.map((p) => [p.playerId, p.amount]))).toEqual({ p1: 267, p2: 133 })
     expect(st.money.banker.balanced).toBe(true)
@@ -152,14 +226,23 @@ describe('apuesta libre', () => {
   it('direct: each loser pays $50 to the winner', () => {
     const snap = setup([custom(money({ source: 'direct', stake: 50 }))])
     snap.gameResults = [{ gameId: 'tacos', playerId: 'p4', share: 1 }]
-    const bets = run(snap).money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}:${f.amount}`).sort()
+    const bets = run(snap)
+      .money.flows.filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}:${f.amount}`)
+      .sort()
     expect(bets).toEqual(['p1>p4:50', 'p2>p4:50', 'p3>p4:50'])
   })
 
   it('direct with two winners: losers pay both, winners do not pay each other', () => {
     const snap = setup([custom(money({ source: 'direct', stake: 50 }))])
-    snap.gameResults = [{ gameId: 'tacos', playerId: 'p1', share: 1 }, { gameId: 'tacos', playerId: 'p2', share: 1 }]
-    const bets = run(snap).money.flows.filter((f) => f.kind === 'bet').map((f) => `${f.from}>${f.to}`).sort()
+    snap.gameResults = [
+      { gameId: 'tacos', playerId: 'p1', share: 1 },
+      { gameId: 'tacos', playerId: 'p2', share: 1 },
+    ]
+    const bets = run(snap)
+      .money.flows.filter((f) => f.kind === 'bet')
+      .map((f) => `${f.from}>${f.to}`)
+      .sort()
     expect(bets).toEqual(['p3>p1', 'p3>p2', 'p4>p1', 'p4>p2'])
   })
 })

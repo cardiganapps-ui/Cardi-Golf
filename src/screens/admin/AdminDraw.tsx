@@ -44,7 +44,9 @@ export function AdminDraw() {
   const saved = drawOrder(snapshot.pairs, pairing)
   // A redraw keeps the honoree's pick unless he picks again.
   const [pick, setPick] = useState<string | null>(() => {
-    const mine = honoree && snapshot.pairs.find((p) => p.pickedByHonoree && (p.player1Id === honoree.id || p.player2Id === honoree.id))
+    const mine =
+      honoree &&
+      snapshot.pairs.find((p) => p.pickedByHonoree && (p.player1Id === honoree.id || p.player2Id === honoree.id))
     return mine ? (mine.player1Id === honoree.id ? mine.player2Id : mine.player1Id) : null
   })
   /** How many of the saved pairs this phone shows: a draw just made comes out a pair at a time, as on the TV. */
@@ -65,8 +67,12 @@ export function AdminDraw() {
 
   const fixed = useMemo((): DrawnPair[] => {
     if (!honoree || !pick) return []
-    const kind = pairing.find(([x, y]) => (x === honoree.tier && y === eligibleTier) || (y === honoree.tier && x === eligibleTier))
-    return [{ player1Id: honoree.id, player2Id: pick, kind: kind ? `${kind[0]}${kind[1]}` : '?', pickedByHonoree: true }]
+    const kind = pairing.find(
+      ([x, y]) => (x === honoree.tier && y === eligibleTier) || (y === honoree.tier && x === eligibleTier),
+    )
+    return [
+      { player1Id: honoree.id, player2Id: pick, kind: kind ? `${kind[0]}${kind[1]}` : '?', pickedByHonoree: true },
+    ]
   }, [honoree, pick, pairing, eligibleTier])
 
   async function draw() {
@@ -93,7 +99,13 @@ export function AdminDraw() {
       // Saved as it is drawn, nameless; the tournament stays on Calcutta night until «Empezar el torneo».
       await saveDraw(
         tournamentId,
-        pairs.map((p) => ({ name: null, player1_id: p.player1Id, player2_id: p.player2Id, kind: p.kind, picked_by_honoree: p.pickedByHonoree })),
+        pairs.map((p) => ({
+          name: null,
+          player1_id: p.player1Id,
+          player2_id: p.player2Id,
+          kind: p.kind,
+          picked_by_honoree: p.pickedByHonoree,
+        })),
         snapshot.rounds.some((r) => r.number === 1) ? round1Groups : null,
         false,
       )
@@ -103,7 +115,8 @@ export function AdminDraw() {
       if (reduced) return
       // The first pair at once, then one every DRAW_STEP.
       setRevealed(1)
-      for (let n = 2; n <= pairs.length; n++) timers.current.push(window.setTimeout(() => setRevealed(n), DRAW_STEP * 1000 * (n - 1)))
+      for (let n = 2; n <= pairs.length; n++)
+        timers.current.push(window.setTimeout(() => setRevealed(n), DRAW_STEP * 1000 * (n - 1)))
     } catch (e) {
       // Nothing was replaced: the draw on screen is still the saved one.
       setRevealed(Infinity)
@@ -168,7 +181,14 @@ export function AdminDraw() {
           </div>
           <div className={a.tiles} role="radiogroup" aria-label={D.eligible}>
             {eligible.map((p) => (
-              <button key={p.id} type="button" role="radio" aria-checked={pick === p.id} className={`${a.tile} ${pick === p.id ? a.tileOn : ''}`} onClick={() => setPick(p.id)}>
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={pick === p.id}
+                className={`${a.tile} ${pick === p.id ? a.tileOn : ''}`}
+                onClick={() => setPick(p.id)}
+              >
                 <Avatar name={p.displayName} url={p.avatarUrl} />
                 <span className={a.tileText}>{p.displayName}</span>
               </button>
@@ -181,7 +201,12 @@ export function AdminDraw() {
 
       {saved.length > 0 && <p className={a.help}>{D.existing}</p>}
       {/* Once there is a draw, redrawing is the rare thing: the night's next step («Empezar el torneo») is the primary one. */}
-      <button className={`btn ${saved.length > 0 ? 'btn--secondary' : 'btn--primary'}`} type="button" disabled={busy || missingTiers || (!!honoree && eligible.length > 0 && !pick)} onClick={() => (saved.length > 0 ? setAskRedraw(true) : void draw())}>
+      <button
+        className={`btn ${saved.length > 0 ? 'btn--secondary' : 'btn--primary'}`}
+        type="button"
+        disabled={busy || missingTiers || (!!honoree && eligible.length > 0 && !pick)}
+        onClick={() => (saved.length > 0 ? setAskRedraw(true) : void draw())}
+      >
         {busy ? t.common.saving : saved.length > 0 ? D.redraw : D.draw}
       </button>
       <p className={a.help}>
@@ -206,14 +231,26 @@ export function AdminDraw() {
             {shown.map((p) => {
               const both = t.common.andList([name(p.player1Id), name(p.player2Id)])
               return (
-                <motion.div key={p.id} className={styles.pairCard} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={easeSlow}>
+                <motion.div
+                  key={p.id}
+                  className={styles.pairCard}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={easeSlow}
+                >
                   <span className={styles.rings} aria-hidden="true">
                     <IconRings />
                   </span>
                   <Avatar name={name(p.player1Id)} url={byId.get(p.player1Id)?.avatarUrl} size="sm" />
                   <Avatar name={name(p.player2Id)} url={byId.get(p.player2Id)?.avatarUrl} size="sm" />
                   <div className={styles.pairText}>
-                    <input className="input" placeholder={D.namePlaceholder(name(p.player1Id), name(p.player2Id))} value={names[p.id] ?? p.name ?? ''} onChange={(e) => setNames({ ...names, [p.id]: e.target.value })} aria-label={D.nameOf(both)} />
+                    <input
+                      className="input"
+                      placeholder={D.namePlaceholder(name(p.player1Id), name(p.player2Id))}
+                      value={names[p.id] ?? p.name ?? ''}
+                      onChange={(e) => setNames({ ...names, [p.id]: e.target.value })}
+                      aria-label={D.nameOf(both)}
+                    />
                     <span className={a.rowSub}>
                       {both}, {p.kind}
                       {p.pickedByHonoree ? `, ${D.pickedByHonoree}` : ''}
@@ -225,7 +262,12 @@ export function AdminDraw() {
           </AnimatePresence>
           {revealed >= saved.length && (
             <div className={a.chipRow}>
-              <button className="btn btn--secondary" type="button" disabled={busy || renamed.length === 0} onClick={() => void onSaveNames()}>
+              <button
+                className="btn btn--secondary"
+                type="button"
+                disabled={busy || renamed.length === 0}
+                onClick={() => void onSaveNames()}
+              >
                 {D.saveNames}
               </button>
               {auctionNight && (
@@ -239,7 +281,15 @@ export function AdminDraw() {
         </section>
       )}
 
-      <ConfirmSheet open={askRedraw} title={D.redraw} body={D.redrawConfirm} busy={busy} confirmLabel={D.redraw} onConfirm={() => void draw()} onClose={() => setAskRedraw(false)} />
+      <ConfirmSheet
+        open={askRedraw}
+        title={D.redraw}
+        body={D.redrawConfirm}
+        busy={busy}
+        confirmLabel={D.redraw}
+        onConfirm={() => void draw()}
+        onClose={() => setAskRedraw(false)}
+      />
     </div>
   )
 }

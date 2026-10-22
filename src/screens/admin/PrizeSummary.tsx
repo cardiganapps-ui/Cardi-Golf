@@ -12,7 +12,17 @@ import { renderMsg } from '../../i18n/explain'
 import styles from './PrizeSummary.module.css'
 
 /** The money plan, in the currency being set up (the wizard's draft, or the tournament's settings). */
-export function PrizeSummary({ check, players, issues, currency: cur }: { check: PrizeCheck | null; players: number; issues?: string[]; currency: string }) {
+export function PrizeSummary({
+  check,
+  players,
+  issues,
+  currency: cur,
+}: {
+  check: PrizeCheck | null
+  players: number
+  issues?: string[]
+  currency: string
+}) {
   const A = t.admin.tournament
   const words = (m: Msg) => renderMsg(m, cur)
   return (
@@ -42,7 +52,9 @@ export function PrizeSummary({ check, players, issues, currency: cur }: { check:
             </span>
             <span className={styles.amount}>{formatMoney(check.entryPot, cur)}</span>
           </div>
-          <span className={`${styles.verdict} ${check.balanced ? '' : styles.verdictOff}`}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference), cur))}</span>
+          <span className={`${styles.verdict} ${check.balanced ? '' : styles.verdictOff}`}>
+            {check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference), cur))}
+          </span>
           {/* MONEY-09: a balanced pool can still pay a place nobody can occupy. */}
           {check.unreachable.length > 0 && (
             <>

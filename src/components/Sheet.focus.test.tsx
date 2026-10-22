@@ -88,7 +88,11 @@ describe('a sheet is modal for the keyboard (A11Y-03)', () => {
     await user.click(screen.getByRole('button', { name: 'Abrir jugador' }))
     await settle()
     const sheet = screen.getByRole('dialog', { name: 'Jugador' })
-    const stops = [within(sheet).getByRole('button', { name: t.common.close }), within(sheet).getByRole('textbox', { name: 'Nombre' }), within(sheet).getByRole('button', { name: 'Guardar' })]
+    const stops = [
+      within(sheet).getByRole('button', { name: t.common.close }),
+      within(sheet).getByRole('textbox', { name: 'Nombre' }),
+      within(sheet).getByRole('button', { name: 'Guardar' }),
+    ]
     // Focus starts on the sheet itself.
     expect(document.activeElement).toBe(sheet)
     const seen: Element[] = []

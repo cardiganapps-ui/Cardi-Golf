@@ -44,15 +44,18 @@ export const TiebreakSheet = memo(function TiebreakSheet(p: {
 })
 
 /** Nothing touched on a hole nobody played, seconds after the last save: a double tap, or did all of them make par? */
-export const DefaultsSheet = memo(function DefaultsSheet(p: { open: boolean; hole: number; onBack: () => void; onConfirm: () => void }) {
+export const DefaultsSheet = memo(function DefaultsSheet(p: {
+  open: boolean
+  hole: number
+  onBack: () => void
+  onConfirm: () => void
+}) {
   return (
     <Sheet open={p.open} onClose={p.onBack} title={S.allDefaultsTitle(p.hole)}>
       <div className="stack">
         <p className="help">{S.allDefaultsHint}</p>
         <div className="row">
-          <Button onClick={p.onBack}>
-            {S.allDefaultsBack}
-          </Button>
+          <Button onClick={p.onBack}>{S.allDefaultsBack}</Button>
           <Button variant="primary" className="grow" onClick={p.onConfirm}>
             {S.allDefaultsConfirm}
           </Button>
@@ -63,7 +66,11 @@ export const DefaultsSheet = memo(function DefaultsSheet(p: { open: boolean; hol
 })
 
 /** Strokes of 10 or more or putts of 5 or more: «¿Seguro?», one line each, before the hole saves. */
-export const UnusualSheet = memo(function UnusualSheet(p: { lines: readonly string[] | null; onFix: () => void; onConfirm: () => void }) {
+export const UnusualSheet = memo(function UnusualSheet(p: {
+  lines: readonly string[] | null
+  onFix: () => void
+  onConfirm: () => void
+}) {
   return (
     <Sheet open={!!p.lines} onClose={p.onFix} title={S.weirdTitle}>
       <div className="stack">
@@ -73,9 +80,7 @@ export const UnusualSheet = memo(function UnusualSheet(p: { lines: readonly stri
           ))}
         </ul>
         <div className="row">
-          <Button onClick={p.onFix}>
-            {S.weirdFix}
-          </Button>
+          <Button onClick={p.onFix}>{S.weirdFix}</Button>
           <Button variant="primary" className="grow" onClick={p.onConfirm}>
             {S.weirdConfirm}
           </Button>

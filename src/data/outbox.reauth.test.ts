@@ -25,7 +25,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { enterAs, holeAward, holeScore, installFakePhone, PIN, SESSION_KEY, settle } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueAward, enqueueScore, flush, queuedFor, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueAward, enqueueScore, flush, queuedFor, startOutbox, useOutbox } =
+  await import('./outbox')
 const { ensureSession, useAuth } = await import('./auth')
 const { claimPlayer, myMembership } = await import('./api')
 const { useTournament } = await import('./tournamentStore')
@@ -112,7 +113,12 @@ describe('a session that lapsed in a dead zone', () => {
     await settle(useOutbox)
 
     // They went out by themselves, as the player: the new session's token, which the server takes for p1.
-    expect(server.writeRequests().slice(1).map((r) => [(r.body as { player_id: string }).player_id, r.as, r.result])).toEqual([
+    expect(
+      server
+        .writeRequests()
+        .slice(1)
+        .map((r) => [(r.body as { player_id: string }).player_id, r.as, r.result]),
+    ).toEqual([
       ['p1', fresh, 201],
       ['p2', fresh, 201],
     ])
@@ -148,8 +154,12 @@ describe('the token a push checked', () => {
 
     // A hole award is one call (0044): the old answer goes and the new one comes in, as the player too.
     await whileAnotherTabSignsOut(() => enqueueAward('t1', holeAward(14, ['p2'])))
-    expect(server.writeRequests('rpc/save_group_awards').map((r) => [r.method, r.as, r.result])).toEqual([['POST', player, 200]])
-    expect(server.tables.hole_awards).toEqual([expect.objectContaining({ hole: 14, game_id: 'closest', player_id: 'p2' })])
+    expect(server.writeRequests('rpc/save_group_awards').map((r) => [r.method, r.as, r.result])).toEqual([
+      ['POST', player, 200],
+    ])
+    expect(server.tables.hole_awards).toEqual([
+      expect.objectContaining({ hole: 14, game_id: 'closest', player_id: 'p2' }),
+    ])
     expect(server.score('p2', 14)).toMatchObject({ strokes: 5 })
     expect(useOutbox.getState()).toMatchObject({ pending: 0, rejected: [] })
   })

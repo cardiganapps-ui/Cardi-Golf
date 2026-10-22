@@ -13,9 +13,14 @@ describe('WHS arithmetic (shared cases)', () => {
     expect(whsCourseHandicap(c.index10, c.slope, c.rating10, c.par)).toBe(c.expect)
   })
   // ARCH-16: the tournament engine's course handicap is the same arithmetic, explained.
-  it.each(cases.courseHcp)('the engine reads the course handicap of $index10 on $slope/$rating10 as $expect too', (c) => {
-    expect(courseHandicap(c.index10 / 10, { slope: c.slope, rating: c.rating10 / 10, par: c.par }).value).toBe(c.expect)
-  })
+  it.each(cases.courseHcp)(
+    'the engine reads the course handicap of $index10 on $slope/$rating10 as $expect too',
+    (c) => {
+      expect(courseHandicap(c.index10 / 10, { slope: c.slope, rating: c.rating10 / 10, par: c.par }).value).toBe(
+        c.expect,
+      )
+    },
+  )
   // One allocation in the product (MONEY-21): the engine's strokes received are the SQL's whs_strokes.
   it.each(cases.strokes)('course handicap $ch on SI $si → $expect strokes', (c) => {
     expect(strokesReceived(c.ch, c.si)).toBe(c.expect)

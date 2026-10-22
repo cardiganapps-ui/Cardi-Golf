@@ -20,24 +20,39 @@ const SIS = [7, 11, 17, 3, 1, 13, 15, 9, 5, 8, 18, 2, 12, 4, 10, 16, 6, 14]
 afterEach(() => cleanup())
 
 function editor(onSave = vi.fn()) {
-  render(<CourseEditor draft={{ name: 'Solmar', tees: [blankTee()] }} notes={[]} busy={false} onSave={onSave} onCancel={() => undefined} />)
+  render(
+    <CourseEditor
+      draft={{ name: 'Solmar', tees: [blankTee()] }}
+      notes={[]}
+      busy={false}
+      onSave={onSave}
+      onCancel={() => undefined}
+    />,
+  )
   return onSave
 }
 const saveButton = () => screen.getByRole('button', { name: t.common.save }) as HTMLButtonElement
 const rows = () => screen.getAllByRole('row').slice(1, 19)
-const cell = (hole: number, label: (n: number) => string) => within(rows()[hole - 1]!).getByLabelText(label(hole)) as HTMLInputElement
+const cell = (hole: number, label: (n: number) => string) =>
+  within(rows()[hole - 1]!).getByLabelText(label(hole)) as HTMLInputElement
 
 describe('a card started from scratch (UX-16)', () => {
   it('opens with every par and index empty, and will not save', () => {
     editor()
-    expect(rows().map((_, i) => [cell(i + 1, C.parOf).value, cell(i + 1, C.siOf).value])).toEqual(PARS.map(() => ['', '']))
+    expect(rows().map((_, i) => [cell(i + 1, C.parOf).value, cell(i + 1, C.siOf).value])).toEqual(
+      PARS.map(() => ['', '']),
+    )
     expect(saveButton().disabled).toBe(true)
     expect(screen.getByText(`Azules: ${C.holesUntyped(PARS.map((_, i) => i + 1))}`)).toBeTruthy()
   })
 
   it('saves once the card is pasted in, with what was pasted', async () => {
     const onSave = editor()
-    await act(async () => fireEvent.change(screen.getByPlaceholderText(/^4 4 3 5/), { target: { value: `${PARS.join(' ')}\n${SIS.join(' ')}` } }))
+    await act(async () =>
+      fireEvent.change(screen.getByPlaceholderText(/^4 4 3 5/), {
+        target: { value: `${PARS.join(' ')}\n${SIS.join(' ')}` },
+      }),
+    )
     await act(async () => fireEvent.click(screen.getByRole('button', { name: C.pasteApply })))
     expect(saveButton().disabled).toBe(false)
     await act(async () => fireEvent.click(saveButton()))
@@ -65,7 +80,10 @@ describe('validateTee', () => {
   })
 
   it('a whole card is judged as before: repeated indexes are still caught', () => {
-    const tee = { ...blankTee(), holes: PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: SIS[i]!, yards: null })) }
+    const tee = {
+      ...blankTee(),
+      holes: PARS.map((par, i) => ({ number: i + 1, par, strokeIndex: SIS[i]!, yards: null })),
+    }
     expect(validateTee(tee)).toEqual([])
     tee.holes[0] = { ...tee.holes[0]!, strokeIndex: 2 }
     expect(validateTee(tee)).toEqual([C.siNotPermutation])

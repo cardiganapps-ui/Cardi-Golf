@@ -32,7 +32,14 @@ function offending(text: string, strokes: boolean): string[] {
   return text
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l === '?' || /\bpts\b/.test(l) || /Putter/.test(l) || /Carrera de puntos/.test(l) || (strokes && /\bpuntos?\b/i.test(l) && !l.includes('(•)')))
+    .filter(
+      (l) =>
+        l === '?' ||
+        /\bpts\b/.test(l) ||
+        /Putter/.test(l) ||
+        /Carrera de puntos/.test(l) ||
+        (strokes && /\bpuntos?\b/i.test(l) && !l.includes('(•)')),
+    )
 }
 
 for (const f of FORMATS) {
@@ -41,7 +48,10 @@ for (const f of FORMATS) {
       await open(page, `/t/_/${f.name}${path}`)
       if (path === '/juegos') {
         // The overview, then the main event's own board (the first game).
-        expect(offending(await page.locator('main').first().innerText(), f.strokes), `${f.name} Juegos overview`).toEqual([])
+        expect(
+          offending(await page.locator('main').first().innerText(), f.strokes),
+          `${f.name} Juegos overview`,
+        ).toEqual([])
         await page.locator('main button[type="button"]').first().click()
         await page.waitForTimeout(300)
       }
@@ -60,7 +70,10 @@ for (const f of FORMATS) {
       }).observe(document.body, { childList: true, subtree: true })
     })
     // The leaderboard card.
-    await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: t.share.leaderboard }).first().click()])
+    await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: t.share.leaderboard }).first().click(),
+    ])
     // The first row's sheet, and that player's card.
     await page.locator('main button[aria-label]').filter({ hasText: /\S/ }).first().click()
     const sheet = page.getByRole('dialog')
@@ -112,7 +125,10 @@ test('match play: a decided match reads the same for both sides, and says who wo
   const rows = page.locator('main button[aria-label]')
   // Each row's day, read off its third column from the end (day, thru, total).
   const days = await rows.evaluateAll((els) =>
-    els.map((e) => ({ label: e.getAttribute('aria-label') ?? '', color: e.children.length >= 3 ? getComputedStyle(e.children[e.children.length - 3]!).color : '' })),
+    els.map((e) => ({
+      label: e.getAttribute('aria-label') ?? '',
+      color: e.children.length >= 3 ? getComputedStyle(e.children[e.children.length - 3]).color : '',
+    })),
   )
   const won = days.filter((d) => /ganó \d+&\d+/.test(d.label)).map((d) => d.color)
   const lost = days.filter((d) => /perdió \d+&\d+/.test(d.label)).map((d) => d.color)
@@ -146,7 +162,9 @@ test('stroke play: the race reads best on top, the fewest strokes against par', 
   // The race's figure axis: its labels end at the plot's left edge (text-anchor end), written against par.
   const ticks = page.locator('[role="img"] text[text-anchor="end"]')
   await expect(ticks.first()).toBeVisible()
-  const read = await ticks.evaluateAll((els) => els.map((e) => ({ y: Number(e.getAttribute('y')), text: (e.textContent ?? '').trim() })))
+  const read = await ticks.evaluateAll((els) =>
+    els.map((e) => ({ y: Number(e.getAttribute('y')), text: (e.textContent ?? '').trim() })),
+  )
   const values = read
     .filter((v) => TO_PAR.test(v.text))
     .sort((a, b) => a.y - b.y)

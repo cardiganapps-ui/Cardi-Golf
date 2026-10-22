@@ -12,7 +12,8 @@ import { expect, open, test } from './base'
  * (sheetHistory.ts). A back pressed before that lands on the entry and is
  * spent there, as it would be for a person that fast; wait it out first.
  */
-const sheetEntryGone = (page: Page) => expect.poll(() => page.evaluate(() => !!(history.state as Record<string, unknown> | null)?.poloSheet)).toBe(false)
+const sheetEntryGone = (page: Page) =>
+  expect.poll(() => page.evaluate(() => !!(history.state as Record<string, unknown> | null)?.poloSheet)).toBe(false)
 
 test('back closes the open sheet, then the nested one first, before leaving the screen (PWA-05)', async ({ page }) => {
   await open(page, '/fixture')
@@ -34,7 +35,9 @@ test('back closes the open sheet, then the nested one first, before leaving the 
   await expect(page).toHaveURL(/\/fixture$/)
 })
 
-test('a sheet closed with «Cerrar» leaves no step behind: the next back leaves the screen (PWA-05)', async ({ page }) => {
+test('a sheet closed with «Cerrar» leaves no step behind: the next back leaves the screen (PWA-05)', async ({
+  page,
+}) => {
   await open(page, '/fixture')
   await open(page, '/t/_/full12-live')
   await page.locator('button[class*="leaderRow"]').first().click()
@@ -54,7 +57,9 @@ test('a reload with a sheet open costs no back press: the first back leaves the 
   await page.locator('main').first().waitFor()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   // The sheet's entry was stepped off at start.
-  await expect.poll(() => page.evaluate(() => !!(history.state as { poloSheet?: boolean } | null)?.poloSheet)).toBe(false)
+  await expect
+    .poll(() => page.evaluate(() => !!(history.state as { poloSheet?: boolean } | null)?.poloSheet))
+    .toBe(false)
   await page.goBack()
   await expect(page).toHaveURL(/\/fixture$/)
 })
@@ -62,7 +67,10 @@ test('a reload with a sheet open costs no back press: the first back leaves the 
 test('Tarjeta: a half-entered hole is still there after back and forward (PWA-05)', async ({ page }) => {
   await open(page, '/t/_/full12-live')
   await page.getByRole('link', { name: new RegExp(`^${t.nav.card}`) }).click()
-  const row = page.getByRole('group').filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) }).first()
+  const row = page
+    .getByRole('group')
+    .filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) })
+    .first()
   const strokes = row.getByRole('group', { name: /^Golpes de / })
   const before = Number((await strokes.textContent())!.replace(/\D+/g, ''))
   const plus = row.getByRole('button', { name: /^Golpes de .*: más$/ })
@@ -75,11 +83,15 @@ test('Tarjeta: a half-entered hole is still there after back and forward (PWA-05
   await expect(row.getByRole('group', { name: /^Golpes de / })).toContainText(String(before + 2))
 })
 
-test('Tarjeta: «¿Seguro?» then «¿Quién embocó al último?»: the second sheet stays and the hole saves (PWA-05)', async ({ page }) => {
+test('Tarjeta: «¿Seguro?» then «¿Quién embocó al último?»: the second sheet stays and the hole saves (PWA-05)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live/tarjeta')
   const hole = page.locator('[class*="holeNum"]').first()
   const before = (await hole.textContent())!.trim()
-  const rows = page.getByRole('group').filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) })
+  const rows = page
+    .getByRole('group')
+    .filter({ has: page.getByRole('button', { name: new RegExp(`^${t.card.pickedUp}, `) }) })
   const a = rows.nth(0)
   const b = rows.nth(1)
   // A: two over and five putts (unusual: «¿Seguro?»). B: three putts. Two at three or more: «¿Quién embocó al último?».
@@ -126,7 +138,9 @@ test('a link followed from inside a sheet leaves no dead back step behind (PWA-0
   await expect(page).toHaveURL(/\/fixture$/)
 })
 
-test('a sheet with typed work asks before back throws it away; back on the question keeps editing (UX-15, PWA-05)', async ({ page }) => {
+test('a sheet with typed work asks before back throws it away; back on the question keeps editing (UX-15, PWA-05)', async ({
+  page,
+}) => {
   await open(page, '/fixture')
   await open(page, '/t/_/full12-live/admin/jugadores')
   const url = page.url()
@@ -148,7 +162,10 @@ test('a sheet with typed work asks before back throws it away; back on the quest
   expect(page.url()).toBe(url)
   // «Cerrar», then «Descartar»: gone, and the next back leaves the screen.
   await form.getByRole('button', { name: t.common.close }).click()
-  await page.getByRole('dialog', { name: t.common.discardTitle }).getByRole('button', { name: t.common.discard }).click()
+  await page
+    .getByRole('dialog', { name: t.common.discardTitle })
+    .getByRole('button', { name: t.common.discard })
+    .click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(page.url()).toBe(url)
   await sheetEntryGone(page)

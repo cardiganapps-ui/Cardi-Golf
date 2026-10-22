@@ -14,7 +14,23 @@ import { expect, open, test } from './base'
 import { t } from '../../src/i18n/es-MX'
 
 const PAGES: Record<string, string[]> = {
-  'full12-live': ['', 'tarjeta', 'juegos', 'dinero', 'mas', 'reglamento', 'stats', 'admin/torneo', 'admin/jugadores', 'admin/rondas', 'admin/grupos', 'admin/scores', 'admin/calcutta', 'admin/parejas', 'admin/datos'],
+  'full12-live': [
+    '',
+    'tarjeta',
+    'juegos',
+    'dinero',
+    'mas',
+    'reglamento',
+    'stats',
+    'admin/torneo',
+    'admin/jugadores',
+    'admin/rondas',
+    'admin/grupos',
+    'admin/scores',
+    'admin/calcutta',
+    'admin/parejas',
+    'admin/datos',
+  ],
   'full12-finished': ['', 'dinero', 'juegos'],
   'minimal4-live': ['', 'tarjeta', 'dinero'],
   'minimal4-setup': ['', 'admin/torneo'],
@@ -42,7 +58,9 @@ const ROOMS: Array<[string, number, number]> = [
 
 async function seriousViolations(page: import('@playwright/test').Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 
 for (const [fixture, paths] of Object.entries(PAGES)) {
@@ -52,8 +70,14 @@ for (const [fixture, paths] of Object.entries(PAGES)) {
         await page.setViewportSize({ width, height: 852 })
         await open(page, `/t/_/${fixture}/${path}`)
         expect(pageErrors, 'uncaught errors').toEqual([])
-        expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
-        expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the phone').toBe(width)
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+          'horizontal scroll (px)',
+        ).toBeLessThanOrEqual(0)
+        expect(
+          await page.evaluate(() => window.innerWidth),
+          'the page zoomed out to fit something wider than the phone',
+        ).toBe(width)
         expect(await seriousViolations(page)).toEqual([])
       })
     }
@@ -67,7 +91,10 @@ for (const width of PHONES) {
     await open(page, '/c/_')
     await expect(page.getByRole('checkbox', { name: t.crews.approval })).toBeVisible()
     expect(pageErrors, 'uncaught errors').toEqual([])
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      'horizontal scroll (px)',
+    ).toBeLessThanOrEqual(0)
     expect(await seriousViolations(page)).toEqual([])
   })
 }
@@ -80,8 +107,14 @@ for (const path of ['salud', 'resumen', 'campos', 'campos/c-quivira']) {
       await page.setViewportSize({ width, height: 852 })
       await open(page, `/admin/_/${path}`)
       expect(pageErrors, 'uncaught errors').toEqual([])
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
-      expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the phone').toBe(width)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+        'horizontal scroll (px)',
+      ).toBeLessThanOrEqual(0)
+      expect(
+        await page.evaluate(() => window.innerWidth),
+        'the page zoomed out to fit something wider than the phone',
+      ).toBe(width)
       expect(await seriousViolations(page)).toEqual([])
     })
   }
@@ -93,8 +126,14 @@ for (const [path, width, height] of ROOMS) {
     await page.goto(`/t/_/${path}`, { waitUntil: 'networkidle' })
     await page.waitForTimeout(500)
     expect(pageErrors, 'uncaught errors').toEqual([])
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
-    expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the screen').toBe(width)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      'horizontal scroll (px)',
+    ).toBeLessThanOrEqual(0)
+    expect(
+      await page.evaluate(() => window.innerWidth),
+      'the page zoomed out to fit something wider than the screen',
+    ).toBe(width)
     expect(await seriousViolations(page)).toEqual([])
   })
 }

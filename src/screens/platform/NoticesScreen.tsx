@@ -47,7 +47,10 @@ export function NoticesScreen() {
   useEffect(() => {
     if (mode !== 'one' || to || q.trim().length < 2) return
     const id = window.setTimeout(() => {
-      api.people({ q, filter: 'accounts', limit: 8 }).then((r) => setFound(r.rows), () => setFound([]))
+      api.people({ q, filter: 'accounts', limit: 8 }).then(
+        (r) => setFound(r.rows),
+        () => setFound([]),
+      )
     }, 250)
     return () => window.clearTimeout(id)
   }, [api, mode, to, q])
@@ -57,7 +60,14 @@ export function NoticesScreen() {
 
   const urlOk = !url.trim() || safeNoticeUrl(url.trim()) != null
   const limitReached = mode === 'all' && audience.sentToday >= 2
-  const ready = title.trim().length >= 1 && title.trim().length <= 60 && body.trim().length >= 1 && body.trim().length <= 280 && urlOk && (mode === 'all' || !!to) && !limitReached
+  const ready =
+    title.trim().length >= 1 &&
+    title.trim().length <= 60 &&
+    body.trim().length >= 1 &&
+    body.trim().length <= 280 &&
+    urlOk &&
+    (mode === 'all' || !!to) &&
+    !limitReached
   const reach = mode === 'all' ? audience.profiles : 1
 
   async function send() {
@@ -109,10 +119,23 @@ export function NoticesScreen() {
           </div>
         ) : (
           <>
-            <Input type="search" value={q} placeholder={t.platform.people.search} aria-label={N.pick} onChange={(e) => setQ(e.target.value)} />
+            <Input
+              type="search"
+              value={q}
+              placeholder={t.platform.people.search}
+              aria-label={N.pick}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <div className={s.rows} role="listbox" aria-label={N.pick}>
               {(q.trim().length < 2 ? [] : found).map((r) => (
-                <button key={r.id} type="button" role="option" aria-selected={false} className={`${s.row} ${s.rowPick}`} onClick={() => setTo(r)}>
+                <button
+                  key={r.id}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className={`${s.row} ${s.rowPick}`}
+                  onClick={() => setTo(r)}
+                >
                   <span className={s.rowText}>
                     <span className={s.rowTitle}>{personName(r)}</span>
                     <span className={s.rowSub}>{r.email}</span>
@@ -132,7 +155,14 @@ export function NoticesScreen() {
           <textarea className="input" rows={3} value={body} maxLength={280} onChange={(e) => setBody(e.target.value)} />
         </Field>
         <Field label={N.url} hint={N.urlHint} error={urlOk ? null : N.urlBad}>
-          <Input value={url} placeholder="/crews" autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={(e) => setUrl(e.target.value)} />
+          <Input
+            value={url}
+            placeholder="/crews"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={(e) => setUrl(e.target.value)}
+          />
         </Field>
         {(title.trim() || body.trim()) && (
           <div className={s.pushPreview} aria-label={N.preview}>

@@ -81,7 +81,11 @@ function Missing() {
 }
 
 function mount(at: string) {
-  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false })
+  useTournament.setState({
+    tournamentId: fx.snapshot.tournament.id,
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+  })
   render(
     <MemoryRouter initialEntries={[at]}>
       <Routes>

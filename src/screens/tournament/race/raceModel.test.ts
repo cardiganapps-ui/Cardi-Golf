@@ -4,7 +4,19 @@
  * sentence. Pure: no DOM.
  */
 import { describe, expect, it } from 'vitest'
-import { axisLength, highlights, holeOf, layoutRace, niceTicks, placeLabels, placesAt, pointAt, summarize, valueAt, type RaceEntrant } from './raceModel'
+import {
+  axisLength,
+  highlights,
+  holeOf,
+  layoutRace,
+  niceTicks,
+  placeLabels,
+  placesAt,
+  pointAt,
+  summarize,
+  valueAt,
+  type RaceEntrant,
+} from './raceModel'
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `p${i + 1}`)
 
@@ -77,7 +89,15 @@ describe('the axis is the days as they are', () => {
     expect(holeOf(days, 27)).toEqual({ day: 2, hole: 9 })
   })
   it('marks the turn and the last hole of an 18-hole day, the last of a 9-hole one, a band per day', () => {
-    const l = layoutRace({ entrants: [], days, lowerIsBetter: false, width: 400, height: 280, labelWidth: 60, axisWidth: 30 })
+    const l = layoutRace({
+      entrants: [],
+      days,
+      lowerIsBetter: false,
+      width: 400,
+      height: 280,
+      labelWidth: 60,
+      axisWidth: 30,
+    })
     expect(l.xTicks.map((x) => [x.at, x.label])).toEqual([
       [9, '9'],
       [18, '18'],
@@ -88,7 +108,15 @@ describe('the axis is the days as they are', () => {
   })
   it('four days of 18 on a phone: still a band each', () => {
     const four = [1, 2, 3, 4].map((number) => ({ number, holes: 18 }))
-    const l = layoutRace({ entrants: [], days: four, lowerIsBetter: false, width: 343, height: 280, labelWidth: 80, axisWidth: 30 })
+    const l = layoutRace({
+      entrants: [],
+      days: four,
+      lowerIsBetter: false,
+      width: 343,
+      height: 280,
+      labelWidth: 80,
+      axisWidth: 30,
+    })
     expect(l.bands).toHaveLength(4)
     expect(l.n).toBe(72)
   })
@@ -106,14 +134,25 @@ describe('scales and paths', () => {
     // plot 30..170 for 4 holes: 35 px a hole.
     expect(l.x(0)).toBe(30)
     expect(l.x(4)).toBe(170)
-    const pts = l.paths.a!.split(/[ML]/).filter(Boolean).map((p) => p.split(' ').map(Number))
+    const pts = l.paths
+      .a!.split(/[ML]/)
+      .filter(Boolean)
+      .map((p) => p.split(' ').map(Number))
     expect(pts.map(([x]) => x)).toEqual([30, 65, 100, 135])
     expect(pts.map(([, y]) => y)).toEqual([0, 2, 5, 7].map((v) => Math.round(l.y(v) * 10) / 10))
     expect(l.paths.b!.match(/L/g)).toHaveLength(2)
   })
   it('more is better on top; under strokes fewer is, so the scale turns over', () => {
     expect(l.y(7)).toBeLessThan(l.y(0))
-    const s = layoutRace({ entrants: [{ id: 'a', label: 'A', values: [-1, -3, 2] }], days, lowerIsBetter: true, width: 230, height: 280, labelWidth: 60, axisWidth: 30 })
+    const s = layoutRace({
+      entrants: [{ id: 'a', label: 'A', values: [-1, -3, 2] }],
+      days,
+      lowerIsBetter: true,
+      width: 230,
+      height: 280,
+      labelWidth: 60,
+      axisWidth: 30,
+    })
     expect(s.y(-3)).toBeLessThan(s.y(2))
   })
   it('a point between two holes reads on the straight segment between them', () => {
@@ -177,7 +216,11 @@ describe('labels at the end of the lines', () => {
     expect(y).toEqual({ a: 14, b: 37, c: 51, d: 120 })
   })
   it('a crowd taller than the plot spreads over its whole height', () => {
-    const y = placeLabels(ids(6).map((id) => ({ id, y: 30 })), 10, 50)
+    const y = placeLabels(
+      ids(6).map((id) => ({ id, y: 30 })),
+      10,
+      50,
+    )
     expect(Math.min(...Object.values(y))).toBe(10)
     expect(Math.max(...Object.values(y))).toBe(50)
   })
@@ -199,7 +242,13 @@ describe('places and the sentence (A11Y-20)', () => {
   })
   it('who is in front at the end, and since when: the hole after the last one he did not lead alone', () => {
     // Beto led after hole 3; tied after hole 4; Ana alone from hole 5 (the 2nd of day 2).
-    expect(summarize(race, days, false)).toEqual({ leaders: ['a'], value: 13, holes: 6, tookLead: { day: 2, hole: 2 }, wireToWire: false })
+    expect(summarize(race, days, false)).toEqual({
+      leaders: ['a'],
+      value: 13,
+      holes: 6,
+      tookLead: { day: 2, hole: 2 },
+      wireToWire: false,
+    })
   })
   it('in front from the first hole to the last', () => {
     const wire = [race[0]!, { ...race[2]!, values: [1, 2, 3, 4, 5, 6] }]
@@ -207,7 +256,12 @@ describe('places and the sentence (A11Y-20)', () => {
   })
   it('a shared lead names them all and no moment', () => {
     const tie = [race[0]!, { ...race[1]!, values: [2, 4, 7, 8, 10, 13] }]
-    expect(summarize(tie, days, false)).toMatchObject({ leaders: ['a', 'b'], value: 13, tookLead: null, wireToWire: false })
+    expect(summarize(tie, days, false)).toMatchObject({
+      leaders: ['a', 'b'],
+      value: 13,
+      tookLead: null,
+      wireToWire: false,
+    })
   })
   it('nothing played: nothing to say', () => {
     expect(summarize([{ id: 'a', label: 'A', values: [] }], days, false)).toBeNull()

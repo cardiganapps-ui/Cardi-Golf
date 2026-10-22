@@ -53,5 +53,9 @@ export function whsIndex10(diffsNewestFirst: number[]): { index10: number | null
   const used = order.slice(0, rule.count).map((x) => x.i)
   const sum = order.slice(0, rule.count).reduce((s, x) => s + x.d, 0)
   const avg10 = fdiv(2 * sum + rule.count, 2 * rule.count)
-  return { index10: Math.min(avg10 + rule.adjust10, WHS_CAP10), used: used.sort((a, b) => a - b), considered: recent.length }
+  return {
+    index10: Math.min(avg10 + rule.adjust10, WHS_CAP10),
+    used: used.sort((a, b) => a - b),
+    considered: recent.length,
+  }
 }

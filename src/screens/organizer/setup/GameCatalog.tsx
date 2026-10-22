@@ -27,7 +27,15 @@ const W = t.organizer.wizard
 const C = t.setup.catalog
 const CATEGORIES: CatalogCategory[] = ['main', 'hole', 'round', 'matches', 'specials', 'free']
 
-export function GameCatalog({ value, onChange, field }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void; field: FieldShape }) {
+export function GameCatalog({
+  value,
+  onChange,
+  field,
+}: {
+  value: TournamentSettings
+  onChange: (v: TournamentSettings) => void
+  field: FieldShape
+}) {
   const [more, setMore] = useState<string | null>(null)
   const words = useWords()
   const set = (fn: (d: TournamentSettings) => void) => {
@@ -61,18 +69,37 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                       <span className={styles.cardTitle}>{mod.label}</span>
                       <span className={styles.cardBlurb}>{C.modules[e.id].blurb}</span>
                     </span>
-                    <InfoButton why={{ title: label(mod.label), steps: moduleRules(e.id, value, field) }} label={W.formatInfo(mod.label)} title={W.formatInfoTitle} />
-                    <Toggle label="" ariaLabel={mod.label} checked={mod.enabled} onChange={(v) => set((d) => (d.modules[e.id].enabled = v))} />
+                    <InfoButton
+                      why={{ title: label(mod.label), steps: moduleRules(e.id, value, field) }}
+                      label={W.formatInfo(mod.label)}
+                      title={W.formatInfoTitle}
+                    />
+                    <Toggle
+                      label=""
+                      ariaLabel={mod.label}
+                      checked={mod.enabled}
+                      onChange={(v) => set((d) => (d.modules[e.id].enabled = v))}
+                    />
                   </div>
                   {mod.enabled && e.id === 'snake' && (
                     <Field label={U.puttsThreshold(value.modules.snake.label)}>
-                      <NumberField label={U.puttsThreshold(value.modules.snake.label)} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
+                      <NumberField
+                        label={U.puttsThreshold(value.modules.snake.label)}
+                        value={value.modules.snake.puttsThreshold}
+                        min={2}
+                        max={10}
+                        onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))}
+                      />
                     </Field>
                   )}
                   {mod.enabled && e.later && <span className="help">{C.modules[e.id].later}</span>}
                   {mod.enabled && e.id !== 'individual' && (
                     <Field label={U.name}>
-                      <input className="input input--sm" value={mod.label} onChange={(ev) => set((d) => (d.modules[e.id].label = ev.target.value))} />
+                      <input
+                        className="input input--sm"
+                        value={mod.label}
+                        onChange={(ev) => set((d) => (d.modules[e.id].label = ev.target.value))}
+                      />
                     </Field>
                   )}
                 </div>
@@ -89,8 +116,16 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                           <span className={styles.cardTitle}>{g.label}</span>
                           <span className={styles.cardBlurb}>{words(describeGame(g)[0]!)}</span>
                         </span>
-                        <InfoButton why={{ title: label(g.label), steps: describeGame(g) }} label={W.formatInfo(g.label)} title={W.formatInfoTitle} />
-                        <Button variant="ghost" size="sm" onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}>
+                        <InfoButton
+                          why={{ title: label(g.label), steps: describeGame(g) }}
+                          label={W.formatInfo(g.label)}
+                          title={W.formatInfoTitle}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}
+                        >
                           {U.remove}
                         </Button>
                       </div>
@@ -104,7 +139,11 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                     </div>
                   ))}
                   {instances.length > 0 ? (
-                    <Button size="sm" style={{ alignSelf: 'flex-start' }} onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
+                    <Button
+                      size="sm"
+                      style={{ alignSelf: 'flex-start' }}
+                      onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}
+                    >
                       {U.addAnother}: {C.games[e.key]!.title}
                     </Button>
                   ) : (
@@ -114,8 +153,16 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                           <span className={styles.cardTitle}>{C.games[e.key]!.title}</span>
                           <span className={styles.cardBlurb}>{C.games[e.key]!.blurb}</span>
                         </span>
-                        <InfoButton why={{ title: label(C.games[e.key]!.title), steps: describeGame(e.create('preview')) }} label={W.formatInfo(C.games[e.key]!.title)} title={W.formatInfoTitle} />
-                        <Button variant="primary" size="sm" onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
+                        <InfoButton
+                          why={{ title: label(C.games[e.key]!.title), steps: describeGame(e.create('preview')) }}
+                          label={W.formatInfo(C.games[e.key]!.title)}
+                          title={W.formatInfoTitle}
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}
+                        >
                           {U.add}
                         </Button>
                       </div>
@@ -128,7 +175,14 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
         )
       })}
       <Sheet open={!!moreGame} onClose={() => setMore(null)} title={moreGame?.label}>
-        {moreGame && <MoreFields game={moreGame} rounds={value.rounds} onChange={(fn) => setGame(moreGame.id, fn)} onDone={() => setMore(null)} />}
+        {moreGame && (
+          <MoreFields
+            game={moreGame}
+            rounds={value.rounds}
+            onChange={(fn) => setGame(moreGame.id, fn)}
+            onDone={() => setMore(null)}
+          />
+        )}
       </Sheet>
     </div>
   )
@@ -136,35 +190,74 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
 
 /** The two or three choices that define a game, right on its card. */
 function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (g: GameConfig) => void) => void }) {
-  const seg = <T extends string>(name: string, value: T, options: T[], labels: Record<string, string>, apply: (v: T) => void) => <Segmented label={name} value={value} options={options.map((o) => ({ value: o, label: labels[o] ?? o }))} onChange={apply} />
+  const seg = <T extends string>(
+    name: string,
+    value: T,
+    options: T[],
+    labels: Record<string, string>,
+    apply: (v: T) => void,
+  ) => (
+    <Segmented
+      label={name}
+      value={value}
+      options={options.map((o) => ({ value: o, label: labels[o] ?? o }))}
+      onChange={apply}
+    />
+  )
   switch (g.type) {
     case 'skins':
       return (
         <div className={styles.fieldRow}>
-          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'skins' && (x.options.basis = v)))}
-          <Toggle label={U.carry} checked={g.options.carryOver} onChange={(v) => onChange((x) => x.type === 'skins' && (x.options.carryOver = v))} />
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) =>
+            onChange((x) => x.type === 'skins' && (x.options.basis = v)),
+          )}
+          <Toggle
+            label={U.carry}
+            checked={g.options.carryOver}
+            onChange={(v) => onChange((x) => x.type === 'skins' && (x.options.carryOver = v))}
+          />
         </div>
       )
     case 'lowScore':
       return (
         <div className={styles.fieldRow}>
-          {seg(U.choose.basis, g.options.basis, ['net', 'gross', 'points'], U.basis, (v) => onChange((x) => x.type === 'lowScore' && (x.options.basis = v)))}
-          {seg(U.choose.scope, g.options.scope, ['perRound', 'overall'], U.scope, (v) => onChange((x) => x.type === 'lowScore' && (x.options.scope = v)))}
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross', 'points'], U.basis, (v) =>
+            onChange((x) => x.type === 'lowScore' && (x.options.basis = v)),
+          )}
+          {seg(U.choose.scope, g.options.scope, ['perRound', 'overall'], U.scope, (v) =>
+            onChange((x) => x.type === 'lowScore' && (x.options.scope = v)),
+          )}
         </div>
       )
     case 'eventPot':
       return (
         <div className={styles.fieldRow}>
-          {g.options.event !== 'threePutt' && seg(U.choose.event, g.options.event, ['birdie', 'eagle'], U.event, (v) => onChange((x) => x.type === 'eventPot' && (x.options.event = v)))}
-          {g.options.event !== 'threePutt' && seg(U.choose.basis, g.options.basis, ['gross', 'net'], U.basis, (v) => onChange((x) => x.type === 'eventPot' && (x.options.basis = v)))}
+          {g.options.event !== 'threePutt' &&
+            seg(U.choose.event, g.options.event, ['birdie', 'eagle'], U.event, (v) =>
+              onChange((x) => x.type === 'eventPot' && (x.options.event = v)),
+            )}
+          {g.options.event !== 'threePutt' &&
+            seg(U.choose.basis, g.options.basis, ['gross', 'net'], U.basis, (v) =>
+              onChange((x) => x.type === 'eventPot' && (x.options.basis = v)),
+            )}
         </div>
       )
     case 'match':
       return (
         <div className={styles.fieldRow}>
-          {seg(U.choose.format, g.options.format, ['nassau', 'match'], U.format, (v) => onChange((x) => x.type === 'match' && (x.options.format = v)))}
-          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'match' && (x.options.basis = v)))}
-          {seg(U.press, String(g.options.pressAt), ['0', '2', '3'], { '0': U.pressOff, '2': U.pressAt(2), '3': U.pressAt(3) }, (v) => onChange((x) => x.type === 'match' && (x.options.pressAt = Number(v))))}
+          {seg(U.choose.format, g.options.format, ['nassau', 'match'], U.format, (v) =>
+            onChange((x) => x.type === 'match' && (x.options.format = v)),
+          )}
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) =>
+            onChange((x) => x.type === 'match' && (x.options.basis = v)),
+          )}
+          {seg(
+            U.press,
+            String(g.options.pressAt),
+            ['0', '2', '3'],
+            { '0': U.pressOff, '2': U.pressAt(2), '3': U.pressAt(3) },
+            (v) => onChange((x) => x.type === 'match' && (x.options.pressAt = Number(v))),
+          )}
         </div>
       )
     case 'contest': {
@@ -172,8 +265,22 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
       const mode = holes === 'par3' ? 'par3' : holes === 'all' ? 'all' : 'pick'
       return (
         <div className="stack">
-          {g.options.kind !== 'longDrive' && g.options.kind !== 'closest' && seg(U.choose.kind, g.options.kind, ['greenie', 'sandy'], U.kind, (v) => onChange((x) => x.type === 'contest' && (x.options.kind = v)))}
-          {seg(U.choose.holes, mode, ['par3', 'all', 'pick'], { par3: U.holesPar3, all: U.holesAll, pick: U.holesPick }, (v) => onChange((x) => x.type === 'contest' && (x.options.holes = v === 'pick' ? (Array.isArray(holes) ? holes : [18]) : v)))}
+          {g.options.kind !== 'longDrive' &&
+            g.options.kind !== 'closest' &&
+            seg(U.choose.kind, g.options.kind, ['greenie', 'sandy'], U.kind, (v) =>
+              onChange((x) => x.type === 'contest' && (x.options.kind = v)),
+            )}
+          {seg(
+            U.choose.holes,
+            mode,
+            ['par3', 'all', 'pick'],
+            { par3: U.holesPar3, all: U.holesAll, pick: U.holesPick },
+            (v) =>
+              onChange(
+                (x) =>
+                  x.type === 'contest' && (x.options.holes = v === 'pick' ? (Array.isArray(holes) ? holes : [18]) : v),
+              ),
+          )}
           {Array.isArray(holes) && (
             <div className={styles.holePicks} role="group" aria-label={U.holes}>
               {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => (
@@ -185,7 +292,9 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
                   onClick={() =>
                     onChange((x) => {
                       if (x.type !== 'contest' || !Array.isArray(x.options.holes)) return
-                      const next = x.options.holes.includes(h) ? x.options.holes.filter((y) => y !== h) : [...x.options.holes, h].sort((a, b) => a - b)
+                      const next = x.options.holes.includes(h)
+                        ? x.options.holes.filter((y) => y !== h)
+                        : [...x.options.holes, h].sort((a, b) => a - b)
                       if (next.length) x.options.holes = next
                     })
                   }
@@ -205,7 +314,12 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
             <input className="input" value={g.label} onChange={(e) => onChange((x) => (x.label = e.target.value))} />
           </Field>
           <Field label={U.description}>
-            <input className="input" value={g.options.description} placeholder={U.descriptionPlaceholder} onChange={(e) => onChange((x) => x.type === 'custom' && (x.options.description = e.target.value))} />
+            <input
+              className="input"
+              value={g.options.description}
+              placeholder={U.descriptionPlaceholder}
+              onChange={(e) => onChange((x) => x.type === 'custom' && (x.options.description = e.target.value))}
+            />
           </Field>
         </div>
       )
@@ -213,7 +327,17 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
 }
 
 /** Everything else: name, days, pair scoring and press limits. */
-function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; rounds: number; onChange: (fn: (g: GameConfig) => void) => void; onDone: () => void }) {
+function MoreFields({
+  game: g,
+  rounds,
+  onChange,
+  onDone,
+}: {
+  game: GameConfig
+  rounds: number
+  onChange: (fn: (g: GameConfig) => void) => void
+  onDone: () => void
+}) {
   const words = useWords()
   const days = Array.from({ length: rounds }, (_, i) => i + 1)
   const on = (d: number) => g.rounds === 'all' || g.rounds.includes(d)
@@ -247,10 +371,21 @@ function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; r
       )}
       {g.type === 'match' && (
         <>
-          <Segmented value={g.options.pairScoring} options={(['bestBall', 'aggregate'] as const).map((v) => ({ value: v, label: U.pairScoring[v]! }))} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.pairScoring = v))} label={U.choose.pairScoring} />
+          <Segmented
+            value={g.options.pairScoring}
+            options={(['bestBall', 'aggregate'] as const).map((v) => ({ value: v, label: U.pairScoring[v]! }))}
+            onChange={(v) => onChange((x) => x.type === 'match' && (x.options.pairScoring = v))}
+            label={U.choose.pairScoring}
+          />
           {g.options.pressAt > 0 && (
             <Field label={U.maxPresses}>
-              <NumberField label={U.maxPresses} value={g.options.maxPresses} min={1} max={5} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.maxPresses = v))} />
+              <NumberField
+                label={U.maxPresses}
+                value={g.options.maxPresses}
+                min={1}
+                max={5}
+                onChange={(v) => onChange((x) => x.type === 'match' && (x.options.maxPresses = v))}
+              />
             </Field>
           )}
         </>

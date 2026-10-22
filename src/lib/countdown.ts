@@ -6,9 +6,21 @@
 
 /** The zone's offset from UTC at an instant, in ms (positive east of Greenwich). */
 function offsetAt(instant: number, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(instant))
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date(instant))
   const n = (type: string) => Number(parts.find((p) => p.type === type)?.value)
-  return Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second')) - Math.floor(instant / 1000) * 1000
+  return (
+    Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second')) -
+    Math.floor(instant / 1000) * 1000
+  )
 }
 
 /**
@@ -33,7 +45,9 @@ export function zonedInstant(date: string, time: string | null, timeZone: string
 /** The calendar date of an instant in `timeZone`, as «YYYY-MM-DD». */
 export function zonedDate(instant: number, timeZone: string): string {
   try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(instant))
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(
+      new Date(instant),
+    )
   } catch {
     return new Date(instant).toISOString().slice(0, 10)
   }
@@ -63,6 +77,10 @@ export function untilDay(date: string, time: string | null, timeZone: string, no
     return { unit: 'today', hours: Math.floor(mins / 60), minutes: mins % 60 }
   }
   // Calendar days, not 24-hour blocks: tomorrow at 7 is «mañana» at 11 p.m. tonight.
-  const days = Math.round((Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) - Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10))) / 86_400_000)
+  const days = Math.round(
+    (Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) -
+      Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10))) /
+      86_400_000,
+  )
   return days === 1 ? { unit: 'tomorrow' } : { unit: 'days', n: days }
 }

@@ -51,7 +51,12 @@ export function StatsScreen() {
 
   // Race data: each entrant's cumulative figure after each hole he played, as the engine gives it.
   const series = useMemo(() => {
-    const none = { entrants: [] as RaceEntrant[], stable: [] as string[], me: null as string | null, honoree: null as string | null }
+    const none = {
+      entrants: [] as RaceEntrant[],
+      stable: [] as string[],
+      me: null as string | null,
+      honoree: null as string | null,
+    }
     if (!data || !stats) return none
     const honoreeId = data.snapshot.players.find((p) => p.isHonoree)?.id ?? null
     if (raceKind === 'pairs' && data.state.modules.pairs) {
@@ -62,13 +67,22 @@ export function StatsScreen() {
         const b = stats.players[pr.playerIds[1]]?.pointsRace ?? []
         const n = Math.max(a.length, b.length)
         const values: number[] = []
-        for (let i = 0; i < n; i++) values.push((a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0))
+        for (let i = 0; i < n; i++)
+          values.push((a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0))
         return { id: pr.pairId, label: words(pr.name), values }
       })
-      const pairOf = (pid: string | null) => (pid ? (pairs.find((pr) => pr.playerIds.includes(pid))?.pairId ?? null) : null)
-      return { entrants, stable: data.snapshot.pairs.map((p) => p.id), me: pairOf(me.playerId), honoree: pairOf(honoreeId) }
+      const pairOf = (pid: string | null) =>
+        pid ? (pairs.find((pr) => pr.playerIds.includes(pid))?.pairId ?? null) : null
+      return {
+        entrants,
+        stable: data.snapshot.pairs.map((p) => p.id),
+        me: pairOf(me.playerId),
+        honoree: pairOf(honoreeId),
+      }
     }
-    const entrants = order.filter((id) => stats.players[id]).map((id) => ({ id, label: nameOf(id), values: stats.players[id]!.race }))
+    const entrants = order
+      .filter((id) => stats.players[id])
+      .map((id) => ({ id, label: nameOf(id), values: stats.players[id]!.race }))
     return { entrants, stable: players.map((p) => p.id), me: me.playerId, honoree: honoreeId }
   }, [data, stats, raceKind, nameOf, order, players, me.playerId, words])
   /** The event's days on the race's axis, as they are: 1..N of 9 or 18 holes. */
@@ -88,7 +102,8 @@ export function StatsScreen() {
   const hasData = Object.values(stats.players).some((s) => s.holesPlayed > 0)
   const showRace = playersRace || !!state.modules.pairs
   const net = stats.scoring === 'net'
-  const avgText = (h: { avg: number; avgPoints: number }) => (strokes ? S.avgToPar(h.avg) : `${h.avgPoints} ${S.avgPoints}`)
+  const avgText = (h: { avg: number; avgPoints: number }) =>
+    strokes ? S.avgToPar(h.avg) : `${h.avgPoints} ${S.avgPoints}`
 
   return (
     <div className={styles.screen}>
@@ -111,7 +126,12 @@ export function StatsScreen() {
                     <div className={styles.awardWinners}>
                       {a.playerIds.map((pid) => (
                         <button key={pid} type="button" className={styles.winner} onClick={() => setOpen(pid)}>
-                          <Avatar name={nameOf(pid)} url={byId.get(pid)?.avatarUrl} size="sm" honoree={byId.get(pid)?.isHonoree} />
+                          <Avatar
+                            name={nameOf(pid)}
+                            url={byId.get(pid)?.avatarUrl}
+                            size="sm"
+                            honoree={byId.get(pid)?.isHonoree}
+                          />
                           <span>{nameOf(pid)}</span>
                         </button>
                       ))}
@@ -128,15 +148,30 @@ export function StatsScreen() {
                     <span className={styles.momentLabel}>{S.moment}</span>
                     <span>
                       {strokes
-                        ? S.momentStrokes(nameOf(stats.moment.playerId), stats.moment.hole, stats.moment.roundNumber, stats.moment.value, net)
-                        : S.momentText(nameOf(stats.moment.playerId), stats.moment.hole, stats.moment.roundNumber, stats.moment.points)}
+                        ? S.momentStrokes(
+                            nameOf(stats.moment.playerId),
+                            stats.moment.hole,
+                            stats.moment.roundNumber,
+                            stats.moment.value,
+                            net,
+                          )
+                        : S.momentText(
+                            nameOf(stats.moment.playerId),
+                            stats.moment.hole,
+                            stats.moment.roundNumber,
+                            stats.moment.points,
+                          )}
                     </span>
                   </div>
                 )}
                 {stats.cursedHole && (
                   <div className={styles.moment}>
                     <span className={styles.momentLabel}>{S.cursed}</span>
-                    <span>{strokes ? S.cursedStrokes(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avg) : S.cursedText(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avgPoints)}</span>
+                    <span>
+                      {strokes
+                        ? S.cursedStrokes(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avg)
+                        : S.cursedText(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avgPoints)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -144,79 +179,97 @@ export function StatsScreen() {
           </section>
 
           {showRace && (
-          <section className={styles.section}>
-            <h2>{raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}</h2>
-            {state.modules.pairs && playersRace && (
-              <Segmented
-                value={raceKind}
-                options={[
-                  { value: 'players', label: settings.modules.individual.label },
-                  { value: 'pairs', label: settings.modules.pairs.label },
-                ]}
-                onChange={setRace}
-                label={S.raceKind}
+            <section className={styles.section}>
+              <h2>{raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}</h2>
+              {state.modules.pairs && playersRace && (
+                <Segmented
+                  value={raceKind}
+                  options={[
+                    { value: 'players', label: settings.modules.individual.label },
+                    { value: 'pairs', label: settings.modules.pairs.label },
+                  ]}
+                  onChange={setRace}
+                  label={S.raceKind}
+                />
+              )}
+              <RaceChart
+                key={raceKind}
+                title={raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}
+                hint={strokesRace ? S.raceHintStrokes : S.raceHint}
+                entrants={series.entrants}
+                stable={series.stable}
+                days={days}
+                strokes={strokesRace}
+                format={format}
+                pairs={raceKind === 'pairs'}
+                me={series.me}
+                honoree={series.honoree}
+                honoreeLabel={settings.labels.honoree}
+                pickKey={`cardi-golf:race-pick:${tournamentId}:${raceKind}`}
               />
-            )}
-            <RaceChart
-              key={raceKind}
-              title={raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}
-              hint={strokesRace ? S.raceHintStrokes : S.raceHint}
-              entrants={series.entrants}
-              stable={series.stable}
-              days={days}
-              strokes={strokesRace}
-              format={format}
-              pairs={raceKind === 'pairs'}
-              me={series.me}
-              honoree={series.honoree}
-              honoreeLabel={settings.labels.honoree}
-              pickKey={`cardi-golf:race-pick:${tournamentId}:${raceKind}`}
-            />
-          </section>
+            </section>
           )}
 
           <section className={styles.section}>
             <h2>{S.course}</h2>
             <div className={styles.course}>
-              {stats.rounds.filter((r) => r.holes.length > 0).map((r) => (
-                <div key={r.roundId} className={styles.round}>
-                  <div className={styles.roundHead}>
-                    <strong>{t.round.day(r.roundNumber)}</strong>
-                    <div className={styles.roundFacts}>
-                      {r.hardest && (
-                        <span>
-                          {S.hardest}: {r.hardest.hole} ({strokes ? S.avgToPar(r.hardest.avg) : `${r.hardest.avgPoints} ${S.avgPoints}`})
-                        </span>
-                      )}
-                      {r.easiest && (
-                        <span>
-                          {S.easiest}: {r.easiest.hole} ({strokes ? S.avgToPar(r.easiest.avg) : `${r.easiest.avgPoints} ${S.avgPoints}`})
-                        </span>
-                      )}
+              {stats.rounds
+                .filter((r) => r.holes.length > 0)
+                .map((r) => (
+                  <div key={r.roundId} className={styles.round}>
+                    <div className={styles.roundHead}>
+                      <strong>{t.round.day(r.roundNumber)}</strong>
+                      <div className={styles.roundFacts}>
+                        {r.hardest && (
+                          <span>
+                            {S.hardest}: {r.hardest.hole} (
+                            {strokes ? S.avgToPar(r.hardest.avg) : `${r.hardest.avgPoints} ${S.avgPoints}`})
+                          </span>
+                        )}
+                        {r.easiest && (
+                          <span>
+                            {S.easiest}: {r.easiest.hole} (
+                            {strokes ? S.avgToPar(r.easiest.avg) : `${r.easiest.avgPoints} ${S.avgPoints}`})
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {/* Each hole's average was a title attribute, out of reach on a phone and of most screen readers (A11Y-20): a tap shows it, and the button says it. */}
+                    <div className={styles.holeBars}>
+                      {r.holes.map((h) => {
+                        const said = S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h))
+                        const on = bar?.roundId === r.roundId && bar.hole === h.hole
+                        return (
+                          <button
+                            key={h.hole}
+                            type="button"
+                            className={styles.holeBar}
+                            aria-label={said}
+                            aria-pressed={on}
+                            onClick={() => setBar(on ? null : { roundId: r.roundId, hole: h.hole })}
+                          >
+                            {/* Taller is easier: more points, or fewer strokes against par (two under reads as four points). */}
+                            <span
+                              className={`${styles.bar} ${h.hole === r.hardest?.hole ? styles.barHard : h.hole === r.easiest?.hole ? styles.barEasy : ''}`}
+                              style={{
+                                height: `${Math.max(0, Math.min(100, ((strokes ? 2 - h.avg : h.avgPoints) / 4) * 100))}%`,
+                              }}
+                            />
+                            <span className={styles.holeLabel}>{h.hole}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p className={styles.barReadout}>
+                      {(() => {
+                        const h = bar?.roundId === r.roundId ? r.holes.find((x) => x.hole === bar.hole) : undefined
+                        return h
+                          ? S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h))
+                          : S.raceChart.holeBarHint
+                      })()}
+                    </p>
                   </div>
-                  {/* Each hole's average was a title attribute, out of reach on a phone and of most screen readers (A11Y-20): a tap shows it, and the button says it. */}
-                  <div className={styles.holeBars}>
-                    {r.holes.map((h) => {
-                      const said = S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h))
-                      const on = bar?.roundId === r.roundId && bar.hole === h.hole
-                      return (
-                        <button key={h.hole} type="button" className={styles.holeBar} aria-label={said} aria-pressed={on} onClick={() => setBar(on ? null : { roundId: r.roundId, hole: h.hole })}>
-                          {/* Taller is easier: more points, or fewer strokes against par (two under reads as four points). */}
-                          <span className={`${styles.bar} ${h.hole === r.hardest?.hole ? styles.barHard : h.hole === r.easiest?.hole ? styles.barEasy : ''}`} style={{ height: `${Math.max(0, Math.min(100, ((strokes ? 2 - h.avg : h.avgPoints) / 4) * 100))}%` }} />
-                          <span className={styles.holeLabel}>{h.hole}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className={styles.barReadout}>
-                    {(() => {
-                      const h = bar?.roundId === r.roundId ? r.holes.find((x) => x.hole === bar.hole) : undefined
-                      return h ? S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h)) : S.raceChart.holeBarHint
-                    })()}
-                  </p>
-                </div>
-              ))}
+                ))}
             </div>
           </section>
 
@@ -268,7 +321,9 @@ export function StatsScreen() {
                         {state.modules.snake && <td className="num">{s.snakeHoles}</td>}
                         <td className="num">{s.longestStreak}</td>
                         <td className="num">
-                          {strokes ? `${S.signed(s.valueByPar[3])} / ${S.signed(s.valueByPar[4])} / ${S.signed(s.valueByPar[5])}` : `${s.pointsByPar[3]} / ${s.pointsByPar[4]} / ${s.pointsByPar[5]}`}
+                          {strokes
+                            ? `${S.signed(s.valueByPar[3])} / ${S.signed(s.valueByPar[4])} / ${S.signed(s.valueByPar[5])}`
+                            : `${s.pointsByPar[3]} / ${s.pointsByPar[4]} / ${s.pointsByPar[5]}`}
                         </td>
                       </tr>
                     )

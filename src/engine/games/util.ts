@@ -29,7 +29,11 @@ export function holeOf(ctx: GameContext, roundId: Id, playerId: Id, hole: number
 
 /** A count per player (skins, birdies, holes won) ranked by the shared rule: most first, ties share («T2»). */
 export function rankedUnits(entries: Array<[Id, number]>): Array<{ id: Id; units: number; label: string }> {
-  return flattenRanks(rankField(entries, { keys: [([, u]) => u], ties: 'share' })).map((r) => ({ id: r.item[0], units: r.item[1], label: r.label }))
+  return flattenRanks(rankField(entries, { keys: [([, u]) => u], ties: 'share' })).map((r) => ({
+    id: r.item[0],
+    units: r.item[1],
+    label: r.label,
+  }))
 }
 
 export function moneyByPlayer(prizes: Array<{ playerId: Id; amount: number; payerId?: Id }>): Map<Id, number> {

@@ -21,7 +21,10 @@ const server = vi.hoisted(() => ({ link: null as null | { token: string; money: 
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc }), supabaseConfigured: true }))
 const audit = vi.hoisted(() => ({ entries: [] as AuditEntry[] }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit: vi.fn(async () => audit.entries) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  tournamentAudit: vi.fn(async () => audit.entries),
+}))
 
 const { SpectatorLinkCard } = await import('./SpectatorLinkCard')
 const { Toaster } = await import('../../components/ui')
@@ -32,7 +35,8 @@ const S = t.spectator
 const STALE = 'El enlace para ver cambió en otro teléfono mientras lo veías: revisa cómo quedó y vuelve a elegir'
 const fx = getFixture('full12-live')!
 const token = () => `tok${String(++server.n).padStart(21, '0')}`
-const json = (l: typeof server.link) => (l ? { token: l.token, money: l.money, createdAt: '2027-04-08T20:00:00Z', rotatedAt: null } : null)
+const json = (l: typeof server.link) =>
+  l ? { token: l.token, money: l.money, createdAt: '2027-04-08T20:00:00Z', rotatedAt: null } : null
 
 beforeEach(() => {
   server.link = null
@@ -43,7 +47,10 @@ beforeEach(() => {
     if (name === 'save_spectator_link') {
       // As 0053 does: a save made against another link than the one stored is refused, and nothing changes.
       const seen = args.p_seen as null | { token: string; money: boolean }
-      if (!server.link !== !seen || (server.link && seen && (server.link.token !== seen.token || server.link.money !== seen.money))) {
+      if (
+        !server.link !== !seen ||
+        (server.link && seen && (server.link.token !== seen.token || server.link.money !== seen.money))
+      ) {
         return { data: null, error: { code: '22023', message: STALE } }
       }
       if (!server.link) server.link = { token: token(), money: args.p_money as boolean }
@@ -63,10 +70,25 @@ afterEach(() => {
 })
 
 function mount() {
-  useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fx-full',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 'fx-full',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <SpectatorLinkCard />
         <Toaster />
       </TournamentContext.Provider>
@@ -117,7 +139,7 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(server.link.money).toBe(false)
     await confirm(S.moneyOnTitle, S.withMoney)
     await waitFor(() => expect(choice(S.withMoney).getAttribute('aria-checked')).toBe('true'))
-    expect(server.link!.money).toBe(true)
+    expect(server.link.money).toBe(true)
     fireEvent.click(choice(S.noMoney))
     await waitFor(() => expect(server.link!.money).toBe(false))
   })
@@ -131,9 +153,9 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(await screen.findByText(S.rotateBody)).toBeTruthy()
     await confirm(S.rotate, S.rotate)
     await waitFor(() => expect(screen.queryByText(`${window.location.origin}/v/${old}`)).toBeNull())
-    expect(server.link!.token).not.toBe(old)
-    expect(server.link!.money).toBe(true)
-    expect(screen.getByText(`${window.location.origin}/v/${server.link!.token}`)).toBeTruthy()
+    expect(server.link.token).not.toBe(old)
+    expect(server.link.money).toBe(true)
+    expect(screen.getByText(`${window.location.origin}/v/${server.link.token}`)).toBeTruthy()
   })
 
   it('«Apagar» asks, then there is no link', async () => {
@@ -174,7 +196,10 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(await screen.findByText(STALE)).toBeTruthy()
     await waitFor(() => expect(choice(S.noMoney).getAttribute('aria-checked')).toBe('true'))
     expect(server.link).toEqual({ token: first, money: false })
-    expect(calls().find(([n]) => n === 'save_spectator_link')).toEqual(['save_spectator_link', { p_tournament_id: 'fx-full', p_money: true, p_seen: { token: first, money: true }, p_new_token: true }])
+    expect(calls().find(([n]) => n === 'save_spectator_link')).toEqual([
+      'save_spectator_link',
+      { p_tournament_id: 'fx-full', p_money: true, p_seen: { token: first, money: true }, p_new_token: true },
+    ])
     // Another phone gives it a new token; this card's «Con dinero» (asked first) is refused against the old one.
     server.link = { token: token(), money: false }
     fireEvent.click(choice(S.withMoney))
@@ -195,7 +220,19 @@ describe('Enlace para ver (STRAT-05)', () => {
 describe('Comité › Historial says each step of the link, never the link (STRAT-05)', () => {
   it('made, money on, a new token, turned off', async () => {
     let id = 0
-    const e = (x: Partial<AuditEntry>): AuditEntry => ({ id: ++id, at: '2027-04-08T20:00:00Z', table: 'spectator_links', action: 'UPDATE', rowId: 'fx-full', platform: false, actor: null, reason: null, before: null, after: null, ...x })
+    const e = (x: Partial<AuditEntry>): AuditEntry => ({
+      id: ++id,
+      at: '2027-04-08T20:00:00Z',
+      table: 'spectator_links',
+      action: 'UPDATE',
+      rowId: 'fx-full',
+      platform: false,
+      actor: null,
+      reason: null,
+      before: null,
+      after: null,
+      ...x,
+    })
     audit.entries = [
       e({ action: 'INSERT', after: { money: false, rotated_at: null } }),
       e({ before: { money: false, rotated_at: null }, after: { money: true, rotated_at: null } }),
@@ -205,11 +242,21 @@ describe('Comité › Historial says each step of the link, never the link (STRA
     useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(structuredClone(fx.snapshot)) })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: 'fx-full',
+            slug: 'nacho',
+            lookup: fx.lookup,
+            me: { playerId: null, isOrganizer: true, isComite: true },
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <AdminHistory />
         </TournamentContext.Provider>
       </MemoryRouter>,
     )
-    for (const line of [S.history.created(false), S.history.money(true), S.history.rotated, S.history.off]) expect(await screen.findByText(line)).toBeTruthy()
+    for (const line of [S.history.created(false), S.history.money(true), S.history.rotated, S.history.off])
+      expect(await screen.findByText(line)).toBeTruthy()
   })
 })

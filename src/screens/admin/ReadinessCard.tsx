@@ -21,14 +21,22 @@ export function ReadinessCard() {
   const headId = useId()
   // Gone for quick rounds and finished tournaments, and under way with every day left cancelled (no next day to
   // prepare): there it shows nothing, so it asks nothing.
-  const shown = !!data && !data.snapshot.tournament.quick && data.snapshot.tournament.status !== 'finished' && (data.snapshot.tournament.status === 'setup' || !!nextRound(data.snapshot))
+  const shown =
+    !!data &&
+    !data.snapshot.tournament.quick &&
+    data.snapshot.tournament.status !== 'finished' &&
+    (data.snapshot.tournament.status === 'setup' || !!nextRound(data.snapshot))
   const entry = useEntryInfo(tournamentId, data, { enabled: shown })
   if (!data || !shown) return null
   const { snapshot, settings, state } = data
   const R = t.admin.ready
   const setup = snapshot.tournament.status === 'setup'
   const next = nextRound(snapshot)
-  const items = readiness(snapshot, settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: state.bracket })
+  const items = readiness(snapshot, settings, {
+    pins: entry?.pins ?? null,
+    linked: entry?.linked,
+    bracket: state.bracket,
+  })
   if (items.every((i) => i.done)) {
     // «Listo» only once the PINs are known, and only when the engine warns about nothing the list doesn't say: the Torneo tab reads 0.
     const clear = setupBadge(items, state.flags.warnings, state.flags.missingModules.length) === 0

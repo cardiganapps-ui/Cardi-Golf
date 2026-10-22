@@ -123,14 +123,21 @@ const money = (x: number) => Math.round(x * 100) / 100
 const ROUNDING: Msg = msg('auction.slot', { slot: 'rounding', place: null, tier: null, lastPlace: '' })
 
 function slotLabel(slot: AuctionPayoutSlot, ctx: ModuleContext): Msg {
-  return msg('auction.slot', { slot: slot.slot, place: slot.slot === 'place' ? slot.place : null, tier: slot.slot === 'bestOfTier' ? slot.tier : null, lastPlace: ctx.settings.labels.lastPlace })
+  return msg('auction.slot', {
+    slot: slot.slot,
+    place: slot.slot === 'place' ? slot.place : null,
+    tier: slot.slot === 'bestOfTier' ? slot.tier : null,
+    lastPlace: ctx.settings.labels.lastPlace,
+  })
 }
 
 export function buildLots(ctx: ModuleContext): LotState[] {
   const { snapshot, settings } = ctx
   const lots: LotState[] = []
   for (const lot of [...snapshot.calcuttaLots].sort((a, b) => a.lotNumber - b.lotNumber)) {
-    const bids = snapshot.calcuttaBids.filter((b) => b.lotId === lot.id).sort((a, b) => b.amount - a.amount || a.createdAt.localeCompare(b.createdAt))
+    const bids = snapshot.calcuttaBids
+      .filter((b) => b.lotId === lot.id)
+      .sort((a, b) => b.amount - a.amount || a.createdAt.localeCompare(b.createdAt))
     const top = bids[0]
     const buyback = snapshot.calcuttaBuybacks.find((b) => b.lotId === lot.id)
     const price = lot.status === 'sold' ? (lot.price ?? 0) : (top?.amount ?? settings.auction.openingBid)
@@ -204,7 +211,10 @@ export function assignSlots(
       const share = covered.reduce((s, x) => s + x.share, 0)
       const members = g ? g.members.filter((m) => !cashed.has(m)) : []
       for (const c of covered) placeDone.add(c)
-      const label = covered.length === 1 ? slotLabel(slot, ctx) : msg('auction.slots', { slots: covered.map((c) => slotLabel(c, ctx)) })
+      const label =
+        covered.length === 1
+          ? slotLabel(slot, ctx)
+          : msg('auction.slots', { slots: covered.map((c) => slotLabel(c, ctx)) })
       if (!members.length) {
         results.push(unfilledSlot(slot, label, share, pot, msg('auction.nobodyAt', { place: slot.place })))
         continue
@@ -213,16 +223,33 @@ export function assignSlots(
       // Teams: a tied place goes per team, then per player within each team.
       const teams = (g!.entrants ?? []).map((e) => e.filter((m) => members.includes(m))).filter((e) => e.length)
       const uneven = teams.length > 1 && new Set(teams.map((e) => e.length)).size > 1
-      const weights = uneven ? Object.fromEntries(teams.flatMap((e) => e.map((m) => [m, 1 / teams.length / e.length]))) : undefined
+      const weights = uneven
+        ? Object.fromEntries(teams.flatMap((e) => e.map((m) => [m, 1 / teams.length / e.length])))
+        : undefined
       const at = finishOf(g!)
       const steps =
         places === 1
-          ? [msg('auction.finish', { names: members.map(nameOf), at, share }), ...(members.length > 1 ? [msg('auction.teamShare', { share, n: members.length })] : [])]
+          ? [
+              msg('auction.finish', { names: members.map(nameOf), at, share }),
+              ...(members.length > 1 ? [msg('auction.teamShare', { share, n: members.length })] : []),
+            ]
           : [
               msg('auction.tie', { places, at, shares: covered.map((c) => c.share), share }),
-              uneven ? msg('auction.tieTeams', { share, teams: teams.length }) : msg('auction.tieEach', { share, n: members.length }),
+              uneven
+                ? msg('auction.tieTeams', { share, teams: teams.length })
+                : msg('auction.tieEach', { share, n: members.length }),
             ]
-      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
+      results.push({
+        slot,
+        label,
+        share,
+        playerIds: members,
+        amount: money(pot * share),
+        places: covered.map((c) => c.place),
+        unfilled: false,
+        why: { title: label, steps },
+        ...(weights ? { weights } : {}),
+      })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -231,29 +258,48 @@ export function assignSlots(
       const g = groups.find((x) => x.members.some((m) => tierOf.get(m) === slot.tier && !cashed.has(m)))
       if (!g) {
         const anyOfTier = snapshot.players.some((p) => p.tier === slot.tier)
-        results.push(unfilledSlot(slot, label, slot.share, pot, msg('auction.tierNone', { tier: slot.tier, any: anyOfTier })))
+        results.push(
+          unfilledSlot(slot, label, slot.share, pot, msg('auction.tierNone', { tier: slot.tier, any: anyOfTier })),
+        )
         continue
       }
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
-      const steps = [msg('auction.bestOfTier', { tier: slot.tier, names: members.map(nameOf), place: g.finish ?? g.position })]
+      const steps = [
+        msg('auction.bestOfTier', { tier: slot.tier, names: members.map(nameOf), place: g.finish ?? g.position }),
+      ]
       if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
+      results.push({
+        slot,
+        label,
+        share: slot.share,
+        playerIds: members,
+        amount: money(pot * slot.share),
+        unfilled: false,
+        why: { title: label, steps },
+      })
       for (const m of members) cashed.add(m)
       continue
     }
-    if (slot.slot === 'lastPlace') {
-      const label = slotLabel(slot, ctx)
-      const g = groups.at(-1)
-      const members = g ? g.members.filter((m) => !cashed.has(m)) : []
-      if (!members.length) {
-        results.push(unfilledSlot(slot, label, slot.share, pot, say('auction.lastCashes')))
-        continue
-      }
-      const steps = [msg('auction.last', { names: members.map(nameOf) })]
-      if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
-      results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
-      for (const m of members) cashed.add(m)
+    // What is left is the last place's slot.
+    const label = slotLabel(slot, ctx)
+    const g = groups.at(-1)
+    const members = g ? g.members.filter((m) => !cashed.has(m)) : []
+    if (!members.length) {
+      results.push(unfilledSlot(slot, label, slot.share, pot, say('auction.lastCashes')))
+      continue
     }
+    const steps = [msg('auction.last', { names: members.map(nameOf) })]
+    if (members.length > 1) steps.push(msg('auction.tieSplit', { n: members.length }))
+    results.push({
+      slot,
+      label,
+      share: slot.share,
+      playerIds: members,
+      amount: money(pot * slot.share),
+      unfilled: false,
+      why: { title: label, steps },
+    })
+    for (const m of members) cashed.add(m)
   }
   return results
 }
@@ -269,11 +315,16 @@ function finishOf(g: { position: number; finish?: number }): { finish: number; a
  * and whoever finished behind him moves up. `finish` keeps the leaderboard's
  * place for the explanation.
  */
-export function inCalcutta(groups: Array<{ position: number; members: Id[]; entrants?: Id[][] }>, sold: ReadonlySet<Id>) {
+export function inCalcutta(
+  groups: Array<{ position: number; members: Id[]; entrants?: Id[][] }>,
+  sold: ReadonlySet<Id>,
+) {
   const out: Array<{ position: number; members: Id[]; places: number; entrants: Id[][]; finish: number }> = []
   let position = 1
   for (const g of groups) {
-    const entrants = (g.entrants ?? g.members.map((m) => [m])).map((e) => e.filter((m) => sold.has(m))).filter((e) => e.length)
+    const entrants = (g.entrants ?? g.members.map((m) => [m]))
+      .map((e) => e.filter((m) => sold.has(m)))
+      .filter((e) => e.length)
     if (!entrants.length) continue
     out.push({ position, members: entrants.flat(), places: entrants.length, entrants, finish: g.position })
     position += entrants.length
@@ -283,7 +334,15 @@ export function inCalcutta(groups: Array<{ position: number; members: Id[]; entr
 
 /** Whole pesos (MONEY-08): the centavos of an unfilled slot go with the rounding, so payouts and what stays in the bank add up to the pot. */
 function unfilledSlot(slot: AuctionPayoutSlot, label: Msg, share: number, pot: number, reason: Msg): AssignedSlot {
-  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: label, steps: [reason, say('auction.staysInBank')] } }
+  return {
+    slot,
+    label,
+    share,
+    playerIds: [],
+    amount: Math.floor(money(pot * share)),
+    unfilled: true,
+    why: { title: label, steps: [reason, say('auction.staysInBank')] },
+  }
 }
 
 /**
@@ -300,7 +359,8 @@ export function payoutsToOwners(lots: LotState[], slots: AssignedSlot[], pot: nu
     o.lines.push(line)
   }
   let distributed = 0
-  let target: { ownerId: Id; playerId: Id; slot: number; champion: boolean } | null = null
+  // Written inside the forEach below, so declared wide: TypeScript would read it as always null.
+  let target = null as { ownerId: Id; playerId: Id; slot: number; champion: boolean } | null
   const unfilledTotal = slots.filter((s) => s.unfilled).reduce((sum, s) => sum + s.amount, 0)
   slots.forEach((s, i) => {
     if (s.unfilled) return
@@ -336,18 +396,24 @@ export function payoutsToOwners(lots: LotState[], slots: AssignedSlot[], pot: nu
 function withPesos(slots: AssignedSlot[], payouts: Record<Id, OwnerPayout>, pot: number): SlotResult[] {
   const floored = slots.map(() => 0)
   const rounding = slots.map(() => 0)
-  for (const p of Object.values(payouts)) for (const l of p.lines) (l.rounding ? rounding : floored)[l.slot]! += l.amount
+  for (const p of Object.values(payouts))
+    for (const l of p.lines) (l.rounding ? rounding : floored)[l.slot]! += l.amount
   return slots.map((s, i) => {
     const raw = money(pot * s.share)
     const steps = [...s.why.steps]
     if (s.unfilled) {
-      steps.splice(1, 0, msg('auction.shareOf', { share: s.share, pot, raw }), ...(raw !== s.amount ? [msg('auction.wholeUnfilled', { amount: s.amount })] : []))
+      steps.splice(
+        1,
+        0,
+        msg('auction.shareOf', { share: s.share, pot, raw }),
+        ...(raw !== s.amount ? [msg('auction.wholeUnfilled', { amount: s.amount })] : []),
+      )
       return { ...s, pesos: s.amount, why: { ...s.why, steps } }
     }
     const paid = floored[i]! + rounding[i]!
     steps.push(msg('auction.shareOf', { share: s.share, pot, raw }))
     if (floored[i] !== raw) steps.push(msg('auction.whole', { amount: floored[i]! }))
-    if (rounding[i]) steps.push(msg('auction.plusRounding', { rounding: rounding[i]!, paid }))
+    if (rounding[i]) steps.push(msg('auction.plusRounding', { rounding: rounding[i], paid }))
     return { ...s, pesos: paid, why: { ...s.why, steps } }
   })
 }
@@ -359,7 +425,12 @@ function withPesos(slots: AssignedSlot[], payouts: Record<Id, OwnerPayout>, pot:
  * auction, before anyone has a result (MONEY-16).
  */
 export function planStakes(ctx: ModuleContext, pot: number): Stake[] {
-  const out = ctx.settings.auction.payout.map((slot) => ({ slot, label: slotLabel(slot, ctx), share: slot.share, pesos: Math.floor(money(pot * slot.share)) }))
+  const out = ctx.settings.auction.payout.map((slot) => ({
+    slot,
+    label: slotLabel(slot, ctx),
+    share: slot.share,
+    pesos: Math.floor(money(pot * slot.share)),
+  }))
   const left = pot - out.reduce((s, x) => s + x.pesos, 0)
   if (left > 0 && out.length) {
     const champion = out.findIndex((x) => x.slot.slot === 'place' && x.slot.place === 1)
@@ -378,7 +449,8 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
     const pot = sold.reduce((s, l) => s + l.price, 0)
     const holdings = ownerHoldings(lots, ctx)
     const anyScores = Object.values(ctx.core.totals).some((t) => t.thru > 0)
-    const groups = anyScores || ctx.tournamentFinal ? inCalcutta(rankIndividual(ctx), new Set(sold.map((l) => l.playerId))) : []
+    const groups =
+      anyScores || ctx.tournamentFinal ? inCalcutta(rankIndividual(ctx), new Set(sold.map((l) => l.playerId))) : []
     const assigned = pot > 0 && groups.length ? assignSlots(ctx, pot, groups) : []
     const payouts = payoutsToOwners(lots, assigned, pot)
     const slots = withPesos(assigned, payouts, pot)
@@ -419,14 +491,22 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
     const label = settings.modules.auction.label
     const out: Msg[] = []
     const unfilled = state.slots.filter((s) => s.unfilled)
-    if (unfilled.length) out.push(msg('auction.unfilled', { label, amount: state.unfilled, slots: unfilled.map((s) => s.label) }))
+    if (unfilled.length)
+      out.push(msg('auction.unfilled', { label, amount: state.unfilled, slots: unfilled.map((s) => s.label) }))
     // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
-    if (tournamentFinal && state.pot > 0 && state.slots.length === 0) out.push(msg('auction.noResult', { label, pot: state.pot }))
+    if (tournamentFinal && state.pot > 0 && state.slots.length === 0)
+      out.push(msg('auction.noResult', { label, pot: state.pot }))
     // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
     const unsold = state.lots.filter((l) => l.status !== 'sold')
-    const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
+    const playing =
+      tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
     if (playing && unsold.length && state.soldCount > 0) {
-      out.push(msg('auction.unsold', { label, names: unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId) }))
+      out.push(
+        msg('auction.unsold', {
+          label,
+          names: unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId),
+        }),
+      )
     }
     return out
   },
@@ -445,7 +525,14 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
           final: state.final,
           why: {
             title: msg('amount', { amount: line.amount }),
-            steps: line.rounding ? [msg('auction.rounding', { champion: !!state.slots[line.slot]?.places?.includes(1), name: nameOf(line.playerId) })] : [msg('auction.ownerPct', { pct: line.pct, name: nameOf(line.playerId) })],
+            steps: line.rounding
+              ? [
+                  msg('auction.rounding', {
+                    champion: !!state.slots[line.slot]?.places?.includes(1),
+                    name: nameOf(line.playerId),
+                  }),
+                ]
+              : [msg('auction.ownerPct', { pct: line.pct, name: nameOf(line.playerId) })],
           },
         })
       }
@@ -453,4 +540,3 @@ export const auctionModule: GameModule<AuctionState, 'auction'> = {
     return out
   },
 }
-

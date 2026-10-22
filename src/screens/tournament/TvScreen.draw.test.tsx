@@ -22,11 +22,18 @@ import { TvScreen } from './TvScreen'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 let snap: Snapshot
-const load = () => useTournament.setState({ tournamentId: 'fixture:draw', data: dataFromSnapshot(structuredClone(snap)), loading: false, error: null, realtime: 'off' })
+const load = () =>
+  useTournament.setState({
+    tournamentId: 'fixture:draw',
+    data: dataFromSnapshot(structuredClone(snap)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
 /** The TV on a fixture, changed first; `land` changes the boards as a realtime reload would. */
 function tv(fixture: string, change?: (s: Snapshot) => void) {
   const fx = getFixture(fixture)!
@@ -35,7 +42,16 @@ function tv(fixture: string, change?: (s: Snapshot) => void) {
   load()
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <TvScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -61,7 +77,7 @@ afterEach(() => {
 })
 
 describe('the pairs draw on the TV (UX-17)', () => {
-  it('after the last sale, a draw saved while the TV is on comes out a pair at a time, the groom\'s pick first', () => {
+  it("after the last sale, a draw saved while the TV is on comes out a pair at a time, the groom's pick first", () => {
     tv('draw12', (s) => void (s.pairs = []))
     expect(screen.getByText(t.auction.allSold)).toBeTruthy()
     // A draw is saved nameless; the pairs name themselves after.
@@ -88,7 +104,9 @@ describe('the pairs draw on the TV (UX-17)', () => {
     expect(pairsOnScreen()).toHaveLength(6)
     expect(screen.getByText('Los Cuñados')).toBeTruthy()
     // Named, the groom's pair still says he picked.
-    expect(document.querySelector('[data-pair="dp4"]')!.textContent).toContain(`${t.common.andList([nameOf('p4'), nameOf('p7')])}, ${t.tv.drawPicked(nameOf('p4'))}`)
+    expect(document.querySelector('[data-pair="dp4"]')!.textContent).toContain(
+      `${t.common.andList([nameOf('p4'), nameOf('p7')])}, ${t.tv.drawPicked(nameOf('p4'))}`,
+    )
     // An unnamed pair reads as its two players, and their categories under them.
     const row = document.querySelector('[data-pair="dp2"]')!
     expect(row.textContent).toContain(t.common.andList([nameOf('p2'), nameOf('p11')]))
@@ -106,7 +124,9 @@ describe('the pairs draw on the TV (UX-17)', () => {
     // The pairs were drawn before the auction ended; lot 10 is the last one open.
     tv('auction12', (s) => {
       s.pairs = drawn()
-      for (const l of s.calcuttaLots) if (l.lotNumber > 10) Object.assign(l, { status: 'sold', price: 500, ownerId: l.playerId, soldAt: '2027-04-08T21:30:00.000Z' })
+      for (const l of s.calcuttaLots)
+        if (l.lotNumber > 10)
+          Object.assign(l, { status: 'sold', price: 500, ownerId: l.playerId, soldAt: '2027-04-08T21:30:00.000Z' })
     })
     expect(screen.getByText(t.auction.lot(10))).toBeTruthy()
     land((s) => {
@@ -131,7 +151,13 @@ describe('the order out of the hat (MOT-05)', () => {
 
   it('opening the first lot takes the board to its card', () => {
     tv('hat12')
-    land((s) => void Object.assign(s.calcuttaLots.find((l) => l.lotNumber === 1)!, { status: 'open' }))
+    land(
+      (s) =>
+        void Object.assign(
+          s.calcuttaLots.find((l) => l.lotNumber === 1)!,
+          { status: 'open' },
+        ),
+    )
     expect(document.querySelector('[class*="_hatItem_"]')).toBeNull()
     expect(screen.getByText(t.auction.lot(1))).toBeTruthy()
   })

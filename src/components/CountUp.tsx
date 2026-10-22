@@ -13,7 +13,19 @@ import { useEffect, useRef, useState } from 'react'
 import { REVEAL } from '../design/motion'
 import styles from './CountUp.module.css'
 
-export function CountUp({ value, format, delayMs = 0, seconds = REVEAL.countUp, from: initial = 0 }: { value: number; format: (n: number) => string; delayMs?: number; seconds?: number; from?: number }) {
+export function CountUp({
+  value,
+  format,
+  delayMs = 0,
+  seconds = REVEAL.countUp,
+  from: initial = 0,
+}: {
+  value: number
+  format: (n: number) => string
+  delayMs?: number
+  seconds?: number
+  from?: number
+}) {
   const reduce = useReducedMotionConfig()
   const [shown, setShown] = useState(initial)
   // What is on screen now, so a value that changes mid-count carries on from there.

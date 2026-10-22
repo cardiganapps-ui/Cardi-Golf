@@ -51,7 +51,17 @@ describe('Funnel', () => {
   })
 
   it('draws no bars when nobody created a tournament', () => {
-    render(<Funnel f={{ ...funnel, northStar: 0, finished: 0, organizers: 0, steps: funnel.steps.map((x) => ({ ...x, tournaments: 0, organizers: 0 })) }} />)
+    render(
+      <Funnel
+        f={{
+          ...funnel,
+          northStar: 0,
+          finished: 0,
+          organizers: 0,
+          steps: funnel.steps.map((x) => ({ ...x, tournaments: 0, organizers: 0 })),
+        }}
+      />,
+    )
     expect(screen.queryByRole('list')).toBeNull()
     expect(screen.getByText('Ningún organizador ha creado un torneo en este periodo.')).toBeTruthy()
   })
@@ -62,8 +72,18 @@ describe('Funnel', () => {
         f={{
           ...funnel,
           courses: {
-            first: { tournaments: 3, withCourse: 3, found: { search: 1, photo: 0, manual: 0 }, added: { search: 1, photo: 2, manual: 0 } },
-            all: { tournaments: 4, withCourse: 4, found: { search: 3, photo: 1, manual: 1 }, added: { search: 0, photo: 0, manual: 0 } },
+            first: {
+              tournaments: 3,
+              withCourse: 3,
+              found: { search: 1, photo: 0, manual: 0 },
+              added: { search: 1, photo: 2, manual: 0 },
+            },
+            all: {
+              tournaments: 4,
+              withCourse: 4,
+              found: { search: 3, photo: 1, manual: 1 },
+              added: { search: 0, photo: 0, manual: 0 },
+            },
           },
         }}
       />,
@@ -79,7 +99,12 @@ describe('Funnel', () => {
     const { unmount } = render(<Funnel f={funnel} />)
     expect(screen.queryByText('Cómo llegó cada campo')).toBeNull()
     unmount()
-    const none = { tournaments: 2, withCourse: 0, found: { search: 0, photo: 0, manual: 0 }, added: { search: 0, photo: 0, manual: 0 } }
+    const none = {
+      tournaments: 2,
+      withCourse: 0,
+      found: { search: 0, photo: 0, manual: 0 },
+      added: { search: 0, photo: 0, manual: 0 },
+    }
     render(<Funnel f={{ ...funnel, courses: { first: none, all: none } }} />)
     expect(screen.getAllByText('Ningún torneo tiene campo todavía.')).toHaveLength(2)
   })

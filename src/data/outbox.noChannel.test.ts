@@ -12,7 +12,14 @@ vi.mock('./tournamentStore', () => ({
   liveSeq: () => 0,
   liveClock: () => Date.now(),
   useTournament: {
-    getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }),
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
   },
 }))
 
@@ -28,7 +35,12 @@ it('starts, saves a hole and sends it, with no channel to tell other tabs', asyn
     return { status: 'ok', rows: [], conflicts: [], rejected: [], unchanged: [] }
   })
   await startOutbox()
-  await enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p2', fields: { strokes: 5 }, base: {} }] })
+  await enqueueHole('t1', {
+    round_id: 'r1',
+    hole: 4,
+    entered_by: 'p1',
+    entries: [{ player_id: 'p2', fields: { strokes: 5 }, base: {} }],
+  })
   await vi.waitFor(() => expect(sent).toHaveLength(1))
   expect(_outboxTest.queue()).toEqual([])
 })

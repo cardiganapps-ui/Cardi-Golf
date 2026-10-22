@@ -20,25 +20,58 @@ import { words } from '../testing/words'
 describe('explanations read as sentences (COPY-19)', () => {
   it('a hole: what was played, in words, then the points’ arithmetic with its «+ 2» said', () => {
     // §6: par 4, SI 3, PH 16 (1 stroke): gross 5 → 2 pts.
-    const why = words(holeWhy({ par: 4, strokeIndex: 3, strokesReceived: 1, gross: 5, net: 4, points: 2, pickedUp: false, played: true }))
+    const why = words(
+      holeWhy({
+        par: 4,
+        strokeIndex: 3,
+        strokesReceived: 1,
+        gross: 5,
+        net: 4,
+        points: 2,
+        pickedUp: false,
+        played: true,
+      }),
+    )
     expect(why.title).toBe('2 pts')
     expect(why.steps).toEqual([
       '5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 3): 4 neto, par neto, 2 pts',
       '5 − 1 = 4 neto',
       'Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 1 − 5 + 2 = 2 pts',
     ])
-    expect(words(holeWhy({ par: 4, strokeIndex: 3, strokesReceived: 1, gross: null, net: null, points: 0, pickedUp: true, played: true })).steps).toEqual(['Levantó (dejó el hoyo sin terminarlo): cuenta 0 pts'])
+    expect(
+      words(
+        holeWhy({
+          par: 4,
+          strokeIndex: 3,
+          strokesReceived: 1,
+          gross: null,
+          net: null,
+          points: 0,
+          pickedUp: true,
+          played: true,
+        }),
+      ).steps,
+    ).toEqual(['Levantó (dejó el hoyo sin terminarlo): cuenta 0 pts'])
   })
 
   it('the handicap chain: each step says what it does', () => {
     // §6: base 20 → 80% = 16; base 60 → capped at 54 → 43.
-    expect(words(playingHandicap(20, FIRST_TOURNAMENT_SETTINGS.handicap).why).steps).toEqual(['Se juega con el 80%: 80% de 20 = 16'])
-    expect(words(playingHandicap(60, FIRST_TOURNAMENT_SETTINGS.handicap).why).steps).toEqual(['Hándicap 60; el tope es 54, así que cuenta 54', 'Se juega con el 80%: 80% de 54 = 43.2', 'Redondeado al entero: 43'])
+    expect(words(playingHandicap(20, FIRST_TOURNAMENT_SETTINGS.handicap).why).steps).toEqual([
+      'Se juega con el 80%: 80% de 20 = 16',
+    ])
+    expect(words(playingHandicap(60, FIRST_TOURNAMENT_SETTINGS.handicap).why).steps).toEqual([
+      'Hándicap 60; el tope es 54, así que cuenta 54',
+      'Se juega con el 80%: 80% de 54 = 43.2',
+      'Redondeado al entero: 43',
+    ])
   })
 
   it('the day-2 cut: what he made and what it costs, after «El día 1»', () => {
     const cut = FIRST_TOURNAMENT_SETTINGS.day2Cut
-    expect(words(nextRoundCut(37, cut).why).steps).toEqual(['hizo 37 pts: 37 − 36 = 1 pt de más', 'se recorta 1 golpe por cada 2 puntos de más: 1 ÷ 2 = 0.5, 0 golpes'])
+    expect(words(nextRoundCut(37, cut).why).steps).toEqual([
+      'hizo 37 pts: 37 − 36 = 1 pt de más',
+      'se recorta 1 golpe por cada 2 puntos de más: 1 ÷ 2 = 0.5, 0 golpes',
+    ])
     expect(words(nextRoundCut(47, cut).why).steps.at(-1)).toBe('el máximo es 4')
     expect(words(nextRoundCut(35, cut).why).steps).toEqual(['hizo 35 pts, no más de 36: sin recorte'])
     // §6: PH1 16, P1 42 → PH2 13, in the playing handicap's own explanation.
@@ -46,7 +79,11 @@ describe('explanations read as sentences (COPY-19)', () => {
     fillRound(snap, 'r1', 11)
     const st = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS)
     const day2 = Object.values(st.core.rounds.r2!).find((pr) => pr.cut > 0)!
-    expect(words(day2.playingHcpWhy).steps.some((s) => /^El día 1 hizo \d+ pts: \d+ − 36 = \d+ pts? de más; se recorta 1 golpe por cada 2 puntos de más: /.test(s))).toBe(true)
+    expect(
+      words(day2.playingHcpWhy).steps.some((s) =>
+        /^El día 1 hizo \d+ pts: \d+ − 36 = \d+ pts? de más; se recorta 1 golpe por cada 2 puntos de más: /.test(s),
+      ),
+    ).toBe(true)
     expect(words(day2.playingHcpWhy).steps.some((s) => s.startsWith('Con el recorte: '))).toBe(true)
   })
 
@@ -77,7 +114,8 @@ describe('explanations read as sentences (COPY-19)', () => {
       else if (typeof v === 'string') {
         if (copy) out.push(v)
       } else if (Array.isArray(v)) v.forEach((x) => walk(x, copy, out))
-      else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (k !== 'settings') walk(x, copy || COPY.has(k), out)
+      else if (v && typeof v === 'object')
+        for (const [k, x] of Object.entries(v)) if (k !== 'settings') walk(x, copy || COPY.has(k), out)
       return out
     }
     for (const name of FIXTURE_NAMES) {

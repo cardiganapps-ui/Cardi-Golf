@@ -1,0 +1,8 @@
+# ARCH-17: what Prettier leaves as it is (it also reads .gitignore).
+# Written by scripts/gen-db-types.mjs and held to the migrations byte for byte by the db job.
+src/data/database.types.ts
+# Review evidence and tooling, kept verbatim as the panel ran it.
+docs/review/**/evidence/**
+docs/review/method/**
+# Served as written: the service worker's import is fingerprinted by its bytes.
+public/

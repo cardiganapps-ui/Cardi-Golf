@@ -35,7 +35,11 @@ export interface LastTournament {
 }
 
 /** What a build kept: a value that doesn't read (another app's, or a slug that isn't one) is none, never a link to nowhere (ARCH-03). */
-const LastTournamentSchema = z.looseObject({ slug: z.string().min(1), name: z.string(), at: z.number().optional() }) satisfies z.ZodType<LastTournament>
+const LastTournamentSchema = z.looseObject({
+  slug: z.string().min(1),
+  name: z.string(),
+  at: z.number().optional(),
+}) satisfies z.ZodType<LastTournament>
 
 export function getLastTournament(): LastTournament | null {
   try {

@@ -30,15 +30,26 @@ export function CatalogCrews() {
   const outlet = useOutlet()
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
-  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('crews'), { q }, (p, offset) => api.crews({ ...p, limit: 50, offset }), !!q)
+  const { rows, total, error, loadingMore, reload, more } = usePaged(
+    usePlatformKey('crews'),
+    { q },
+    (p, offset) => api.crews({ ...p, limit: 50, offset }),
+    !!q,
+  )
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
       <div className={s.listPane}>
         <h2>{t.platform.sections.crews}</h2>
-        <Input type="search" value={q} placeholder={K.search} aria-label={K.search} onChange={(e) => setQ(e.target.value)} />
+        <Input
+          type="search"
+          value={q}
+          placeholder={K.search}
+          aria-label={K.search}
+          onChange={(e) => setQ(e.target.value)}
+        />
         {error ? (
-          <ErrorBox error={error} onRetry={() => void reload()} />
+          <ErrorBox error={error} onRetry={() => reload()} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -52,7 +63,7 @@ export function CatalogCrews() {
               ))}
             </div>
             {rows.length < total && (
-              <Button disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => more()}>
                 {t.platform.more}
               </Button>
             )}
@@ -60,7 +71,11 @@ export function CatalogCrews() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => void reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{K.pickOne}</p>}
+        {outlet ? (
+          <Outlet context={{ onChanged: () => reload() } satisfies TournamentsOutlet} />
+        ) : (
+          <p className={s.placeholder}>{K.pickOne}</p>
+        )}
       </div>
     </div>
   )
@@ -88,17 +103,34 @@ export function CrewDetail() {
   const [removing, setRemoving] = useState<PlatformCrew['members'][number] | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-
   const back = (
     <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {K.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
-  if (asking) return <>{back}<ViewReasonForm kind="crew" onOpen={load} /></>
+  if (error)
+    return (
+      <>
+        {back}
+        <ErrorBox error={error} onRetry={() => void load()} />
+      </>
+    )
+  if (asking)
+    return (
+      <>
+        {back}
+        <ViewReasonForm kind="crew" onOpen={load} />
+      </>
+    )
   if (c === undefined) return <Spinner rows={6} />
-  if (c === null) return <>{back}<p className={s.help}>{K.notFound}</p></>
+  if (c === null)
+    return (
+      <>
+        {back}
+        <p className={s.help}>{K.notFound}</p>
+      </>
+    )
   const crew = c
   const gone = () => {
     outlet?.onChanged()
@@ -130,7 +162,11 @@ export function CrewDetail() {
                 <Avatar name={m.displayName} url={m.avatarUrl} size="sm" />
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{m.displayName}</span>
-                  <span className={s.rowSub}>{[m.role === 'owner' ? K.owner : K.member, `@${m.handle}`, K.joined(relTime(m.joinedAt))].join(', ')}</span>
+                  <span className={s.rowSub}>
+                    {[m.role === 'owner' ? K.owner : K.member, `@${m.handle}`, K.joined(relTime(m.joinedAt))].join(
+                      ', ',
+                    )}
+                  </span>
                 </span>
               </Link>
               <Button variant="danger" size="sm" onClick={() => setRemoving(m)}>
@@ -153,7 +189,11 @@ export function CrewDetail() {
               <Link key={o.tournamentId} className={s.row} to={`../../torneos/${o.tournamentId}`} relative="path">
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{o.name}</span>
-                  <span className={s.rowSub}>{[t.platform.status[o.status], o.quick ? t.platform.chips.quick : null, relTime(o.createdAt)].filter(Boolean).join(', ')}</span>
+                  <span className={s.rowSub}>
+                    {[t.platform.status[o.status], o.quick ? t.platform.chips.quick : null, relTime(o.createdAt)]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </span>
                 </span>
               </Link>
             ))}
@@ -183,7 +223,13 @@ export function CrewDetail() {
       <ReasonSheet
         open={!!removing}
         title={removing ? K.removeTitle(removing.displayName) : ''}
-        body={crew.members.length === 1 ? K.removeBodyLast : removing?.profileId === crew.ownerId ? K.removeBodyOwner : K.removeBody}
+        body={
+          crew.members.length === 1
+            ? K.removeBodyLast
+            : removing?.profileId === crew.ownerId
+              ? K.removeBodyOwner
+              : K.removeBody
+        }
         confirmLabel={K.remove}
         danger
         onClose={() => setRemoving(null)}
@@ -211,7 +257,17 @@ export function CrewDetail() {
   )
 }
 
-function DeleteCrewSheet({ open, crew, onClose, onDeleted }: { open: boolean; crew: PlatformCrew; onClose: () => void; onDeleted: () => void }) {
+function DeleteCrewSheet({
+  open,
+  crew,
+  onClose,
+  onDeleted,
+}: {
+  open: boolean
+  crew: PlatformCrew
+  onClose: () => void
+  onDeleted: () => void
+}) {
   const api = usePlatformApi()
   const [confirm, setConfirm] = useState('')
   const [reason, setReason] = useState('')
@@ -245,9 +301,19 @@ function DeleteCrewSheet({ open, crew, onClose, onDeleted }: { open: boolean; cr
           <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
         <Field label={t.platform.reason} error={error}>
-          <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+          <Input
+            value={reason}
+            maxLength={200}
+            placeholder={t.platform.reasonPlaceholder}
+            onChange={(e) => setReason(e.target.value)}
+          />
         </Field>
-        <Button variant="danger" block disabled={busy || confirm.trim() !== crew.name || reason.trim().length < 3} onClick={() => void go()}>
+        <Button
+          variant="danger"
+          block
+          disabled={busy || confirm.trim() !== crew.name || reason.trim().length < 3}
+          onClick={() => void go()}
+        >
           {busy ? t.common.saving : K.delete}
         </Button>
       </div>

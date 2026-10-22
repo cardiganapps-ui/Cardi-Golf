@@ -9,13 +9,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { reloadingForNewBuild, resetChunkRecoveryForTests, startChunkRecovery } from './chunkReload'
 
 /** A tab: `stored` is its session storage, which a reload keeps. */
-function page({ online = true, storage = 'ok', stored = new Map<string, string>() }: { online?: boolean; storage?: 'ok' | 'throws'; stored?: Map<string, string> } = {}) {
+function page({
+  online = true,
+  storage = 'ok',
+  stored = new Map<string, string>(),
+}: { online?: boolean; storage?: 'ok' | 'throws'; stored?: Map<string, string> } = {}) {
   const win = new EventTarget()
   const reload = vi.fn()
   const refuse = () => {
     throw new DOMException('The operation is insecure.', 'SecurityError')
   }
-  const sessionStorage = storage === 'throws' ? { getItem: refuse, setItem: refuse } : { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) }
+  const sessionStorage =
+    storage === 'throws'
+      ? { getItem: refuse, setItem: refuse }
+      : { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) }
   Object.assign(win, { navigator: { onLine: online }, sessionStorage, location: { reload } })
   startChunkRecovery(win as unknown as Window)
   return { win, reload, stored }
@@ -81,7 +88,9 @@ describe('a screen of the build before a deploy (REL-13)', () => {
   })
 
   it('the server answers an old chunk with 404, not with the app (whose HTML the browser cannot run as a script)', () => {
-    const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8')) as { rewrites: Array<{ source: string; destination: string }> }
+    const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8')) as {
+      rewrites: Array<{ source: string; destination: string }>
+    }
     const spa = vercel.rewrites.find((r) => r.destination === '/index.html')!
     const rewritten = (path: string) => new RegExp(`^${spa.source}$`).test(path)
     expect(rewritten('/assets/StatsScreen-DKzuE5NK.js')).toBe(false)

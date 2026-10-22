@@ -42,7 +42,12 @@ beforeEach(() => {
   const snapshot = structuredClone(fx.snapshot)
   // A second day, finished: a question left on it is still this phone's to answer.
   snapshot.rounds.push({ ...snapshot.rounds[0]!, id: 'r2', number: 2, status: 'finished' })
-  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(snapshot), loading: false, error: null })
+  useTournament.setState({
+    tournamentId: fx.snapshot.tournament.id,
+    data: dataFromSnapshot(snapshot),
+    loading: false,
+    error: null,
+  })
 })
 afterEach(() => {
   cleanup()
@@ -55,9 +60,23 @@ describe('HoleConflicts', () => {
   it('says who saved first, their value and this phone’s, hole by hole', () => {
     useOutbox.setState({
       conflicts: [
-        conflict({ hole: 14, player_id: 'p4', clash: ['putts'], fields: { putts: 3 }, base: { strokes: 5, putts: 2, picked_up: false }, server: { strokes: 5, putts: 1, picked_up: false, entered_by: 'p4' } }),
+        conflict({
+          hole: 14,
+          player_id: 'p4',
+          clash: ['putts'],
+          fields: { putts: 3 },
+          base: { strokes: 5, putts: 2, picked_up: false },
+          server: { strokes: 5, putts: 1, picked_up: false, entered_by: 'p4' },
+        }),
         conflict({}),
-        conflict({ hole: 13, player_id: 'p1', clash: ['strokes', 'putts'], fields: { picked_up: true }, base: {}, server: { strokes: 7, putts: 1, picked_up: false, entered_by: 'unknown' } }),
+        conflict({
+          hole: 13,
+          player_id: 'p1',
+          clash: ['strokes', 'putts'],
+          fields: { picked_up: true },
+          base: {},
+          server: { strokes: 7, putts: 1, picked_up: false, entered_by: 'unknown' },
+        }),
       ],
     })
     render(<HoleConflicts roundId="r1" myPlayerId="p1" />)

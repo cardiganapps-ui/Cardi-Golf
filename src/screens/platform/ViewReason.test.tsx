@@ -17,18 +17,44 @@ const V = t.platform.view
 afterEach(cleanup)
 
 const tournament: PlatformTournament = {
-  id: 't1', slug: 'copa', name: 'Copa del Jueves', tagline: null, logoUrl: null, status: 'live', joinCode: 'COPA12', quick: false, practice: false,
-  protected: false, createdAt: '2026-10-01T00:00:00Z', timezone: 'America/Mazatlan', currency: 'MXN', crew: null, unlockedUntil: null,
-  organizers: [], rounds: [], counts: { players: 4, linked: 0, devices: 0, groups: 1, payments: 0, disputes: 0 }, audit: [],
+  id: 't1',
+  slug: 'copa',
+  name: 'Copa del Jueves',
+  tagline: null,
+  logoUrl: null,
+  status: 'live',
+  joinCode: 'COPA12',
+  quick: false,
+  practice: false,
+  protected: false,
+  createdAt: '2026-10-01T00:00:00Z',
+  timezone: 'America/Mazatlan',
+  currency: 'MXN',
+  crew: null,
+  unlockedUntil: null,
+  organizers: [],
+  rounds: [],
+  counts: { players: 4, linked: 0, devices: 0, groups: 1, payments: 0, disputes: 0 },
+  audit: [],
 }
-const crew: PlatformCrew = { id: 'c1', slug: 'jueves', name: 'Los jueves', createdAt: '2026-10-01T00:00:00Z', ownerId: 'p1', members: [], outings: [], activity: [] }
+const crew: PlatformCrew = {
+  id: 'c1',
+  slug: 'jueves',
+  name: 'Los jueves',
+  createdAt: '2026-10-01T00:00:00Z',
+  ownerId: 'p1',
+  members: [],
+  outings: [],
+  activity: [],
+}
 
 /** The server's rule: a reason the first time, none after. */
 function server() {
   let seen = false
   const ask = <T,>(value: T) =>
     vi.fn(async (_id: string, reason?: string) => {
-      if (!reason && !seen) throw new ApiError('Escribe por qué lo abres: queda en el registro, y lo ve a quien le toca.', 'PV001')
+      if (!reason && !seen)
+        throw new ApiError('Escribe por qué lo abres: queda en el registro, y lo ve a quien le toca.', 'PV001')
       seen = true
       return value
     })

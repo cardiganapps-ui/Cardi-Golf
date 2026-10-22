@@ -29,7 +29,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as gca from '../src/lib/courseProviders/golfcourseapi.ts'
 import * as oga from '../src/lib/courseProviders/opengolfapi.ts'
-import { golfCourseHeaders, golfCourseSearchUrl, golfCourseUrl, openGolfCourseUrl, openGolfHeaders, openGolfSearchUrl } from '../src/lib/courseProviders/endpoints.ts'
+import {
+  golfCourseHeaders,
+  golfCourseSearchUrl,
+  golfCourseUrl,
+  openGolfCourseUrl,
+  openGolfHeaders,
+  openGolfSearchUrl,
+} from '../src/lib/courseProviders/endpoints.ts'
 import { loadEnv, root } from './lib/env.mjs'
 
 export const PRODUCTION_URL = 'https://gmohwledjejlhcwqjnhd.supabase.co'
@@ -48,8 +55,10 @@ export function targetOf(url) {
     throw new Error(`--url ${url} is not a URL`)
   }
   const bare = `${u.protocol}//${u.host}`
-  if (bare === PRODUCTION_URL && (u.pathname === '/' || u.pathname === '')) return { url: PRODUCTION_URL, kind: 'production' }
-  if ((u.protocol === 'http:' || u.protocol === 'https:') && LOCAL_HOSTS.has(u.hostname)) return { url: bare, kind: 'local' }
+  if (bare === PRODUCTION_URL && (u.pathname === '/' || u.pathname === ''))
+    return { url: PRODUCTION_URL, kind: 'production' }
+  if ((u.protocol === 'http:' || u.protocol === 'https:') && LOCAL_HOSTS.has(u.hostname))
+    return { url: bare, kind: 'local' }
   throw new Error(`refusing ${bare}: the catalog is seeded into production or a local Supabase, nothing else`)
 }
 
@@ -147,7 +156,12 @@ export function candidates(entry, hits) {
   const city = entry.city ? fold(entry.city) : null
   return hits
     .filter((h) => keysMatch(dupeKey(h.name), key) || (h.clubName != null && keysMatch(dupeKey(h.clubName), key)))
-    .map((h) => ({ h, score: (city && h.location && fold(h.location).includes(city) ? 2 : 0) + (h.hasCard === true ? 1 : h.hasCard === false ? -2 : 0) }))
+    .map((h) => ({
+      h,
+      score:
+        (city && h.location && fold(h.location).includes(city) ? 2 : 0) +
+        (h.hasCard === true ? 1 : h.hasCard === false ? -2 : 0),
+    }))
     .filter((x) => x.h.hasCard !== false)
     .sort((a, b) => b.score - a.score)
     .map((x) => x.h)
@@ -207,7 +221,11 @@ export async function seed(o) {
   /** A provider that answered 429 is asked nothing more this run: its limit is a day's (OpenGolfAPI: 500 keyless). */
   const limited = { golfcourseapi: false, opengolfapi: false }
   /** @returns {Promise<any>} */
-  const getJson = async (/** @type {'golfcourseapi' | 'opengolfapi'} */ provider, /** @type {string} */ url, /** @type {Record<string, string>} */ headers) => {
+  const getJson = async (
+    /** @type {'golfcourseapi' | 'opengolfapi'} */ provider,
+    /** @type {string} */ url,
+    /** @type {Record<string, string>} */ headers,
+  ) => {
     if (limited[provider]) return null
     const ctl = new AbortController()
     const timer = setTimeout(() => ctl.abort(), 15_000)
@@ -252,10 +270,21 @@ export async function seed(o) {
       if (!rows.length || (Number.isFinite(total) && catalog.length >= total)) break
     }
   }
-  const inCatalog = (/** @type {string} */ name, /** @type {string | null | undefined} */ place, /** @type {string | null} */ source = null, /** @type {string | null} */ ext = null) =>
-    findInCatalog(catalog, { name, place, source, ext })
+  const inCatalog = (
+    /** @type {string} */ name,
+    /** @type {string | null | undefined} */ place,
+    /** @type {string | null} */ source = null,
+    /** @type {string | null} */ ext = null,
+  ) => findInCatalog(catalog, { name, place, source, ext })
 
-  const report = { at: new Date().toISOString(), target: o.target.kind, apply: o.apply, catalogRead: catalog != null, providers: { golfcourseapi: !!gcaKey, opengolfapi: true }, courses: /** @type {any[]} */ ([]) }
+  const report = {
+    at: new Date().toISOString(),
+    target: o.target.kind,
+    apply: o.apply,
+    catalogRead: catalog != null,
+    providers: { golfcourseapi: !!gcaKey, opengolfapi: true },
+    courses: /** @type {any[]} */ ([]),
+  }
   for (const [i, entry] of o.list.entries()) {
     if (i > 0) await sleep(o.pauseMs ?? 400)
     const line = { region: entry.region ?? null, name: entry.name, city: entry.city ?? null }
@@ -266,13 +295,18 @@ export async function seed(o) {
       continue
     }
     const [g, oo] = await Promise.all([
-      gcaKey ? getJson('golfcourseapi', golfCourseSearchUrl(entry.name), golfCourseHeaders(gcaKey)) : Promise.resolve(null),
+      gcaKey
+        ? getJson('golfcourseapi', golfCourseSearchUrl(entry.name), golfCourseHeaders(gcaKey))
+        : Promise.resolve(null),
       getJson('opengolfapi', openGolfSearchUrl(entry.name), openGolfHeaders(ogaKey)),
     ])
     const gHits = hitsOf(g, gca.mapSearchHit)
     const oHits = hitsOf(oo, oga.mapSearchHit)
     if (!gHits && !oHits) {
-      const why = limited.opengolfapi || limited.golfcourseapi ? 'provider limit reached: run it again tomorrow' : 'providers did not answer'
+      const why =
+        limited.opengolfapi || limited.golfcourseapi
+          ? 'provider limit reached: run it again tomorrow'
+          : 'providers did not answer'
       report.courses.push({ ...line, status: 'missing', why })
       log(`? ${entry.name}: ${why}`)
       continue
@@ -284,12 +318,17 @@ export async function seed(o) {
     for (const h of picks) {
       const body =
         h.provider === 'golfcourseapi'
-          ? await getJson('golfcourseapi', golfCourseUrl(h.externalId), golfCourseHeaders(/** @type {string} */ (gcaKey)))
+          ? await getJson(
+              'golfcourseapi',
+              golfCourseUrl(h.externalId),
+              golfCourseHeaders(/** @type {string} */ (gcaKey)),
+            )
           : await getJson('opengolfapi', openGolfCourseUrl(h.externalId), openGolfHeaders(ogaKey))
       if (!body) continue
       let course
       try {
-        course = h.provider === 'golfcourseapi' ? gca.mapCourse(body.course ?? body) : oga.mapCourse(body.course ?? body)
+        course =
+          h.provider === 'golfcourseapi' ? gca.mapCourse(body.course ?? body) : oga.mapCourse(body.course ?? body)
       } catch {
         continue
       }
@@ -319,14 +358,29 @@ export async function seed(o) {
     const { course, complete, dropped } = best
     const same = inCatalog(course.name, entry.city ?? course.location, course.provider, course.externalId)
     if (same) {
-      report.courses.push({ ...line, status: 'exists', existing: same.name, provider: course.provider, externalId: course.externalId })
+      report.courses.push({
+        ...line,
+        status: 'exists',
+        existing: same.name,
+        provider: course.provider,
+        externalId: course.externalId,
+      })
       log(`= ${entry.name}: already in the catalog as «${same.name}»`)
       continue
     }
-    const found = { ...line, provider: course.provider, externalId: course.externalId, providerName: course.name, tees: complete.map((t) => t.name), dropped }
+    const found = {
+      ...line,
+      provider: course.provider,
+      externalId: course.externalId,
+      providerName: course.name,
+      tees: complete.map((t) => t.name),
+      dropped,
+    }
     if (!o.apply) {
       report.courses.push({ ...found, status: 'would-import' })
-      log(`+ ${entry.name}: would import «${course.name}» from ${course.provider}, ${complete.length} tee(s)${dropped.length ? `, ${dropped.length} left out` : ''}`)
+      log(
+        `+ ${entry.name}: would import «${course.name}» from ${course.provider}, ${complete.length} tee(s)${dropped.length ? `, ${dropped.length} left out` : ''}`,
+      )
       continue
     }
     const r = await o.fetch(`${o.target.url}/rest/v1/rpc/catalog_import_course`, {
@@ -345,12 +399,30 @@ export async function seed(o) {
       log(`= ${entry.name}: already in the catalog as «${answer.name}»`)
       continue
     }
-    catalog?.push({ id: answer.id, name: course.name, source: course.provider, external_id: course.externalId, location: course.location ?? entry.city ?? null })
+    catalog?.push({
+      id: answer.id,
+      name: course.name,
+      source: course.provider,
+      external_id: course.externalId,
+      location: course.location ?? entry.city ?? null,
+    })
     report.courses.push({ ...found, status: 'imported', id: answer.id })
     log(`+ ${entry.name}: imported «${course.name}» from ${course.provider}, ${complete.length} tee(s)`)
   }
   const count = (/** @type {string} */ s) => report.courses.filter((c) => c.status === s).length
-  return { ...report, limited: Object.entries(limited).filter(([, v]) => v).map(([k]) => k), totals: { imported: count('imported'), wouldImport: count('would-import'), exists: count('exists'), missing: count('missing'), failed: count('failed') } }
+  return {
+    ...report,
+    limited: Object.entries(limited)
+      .filter(([, v]) => v)
+      .map(([k]) => k),
+    totals: {
+      imported: count('imported'),
+      wouldImport: count('would-import'),
+      exists: count('exists'),
+      missing: count('missing'),
+      failed: count('failed'),
+    },
+  }
 }
 
 async function main() {
@@ -364,18 +436,31 @@ async function main() {
   // A local target never gets production's key from .env.local: only what the environment already holds.
   const ownKey = process.env.SUPABASE_SECRET_KEY
   loadEnv()
-  const env = { ...process.env, SUPABASE_SECRET_KEY: target.kind === 'local' ? ownKey : process.env.SUPABASE_SECRET_KEY }
+  /** @type {Record<string, string | undefined>} */
+  const env = {
+    ...process.env,
+    SUPABASE_SECRET_KEY: target.kind === 'local' ? ownKey : process.env.SUPABASE_SECRET_KEY,
+  }
   const listFile = path.resolve(opt('--list') ?? path.join(root, 'docs', 'strategy', 'courses-mx.json'))
   const reportFile = path.resolve(opt('--report') ?? 'seed-courses-report.json')
   if (!existsSync(listFile)) throw new Error(`no list at ${listFile}`)
   const only = opt('--only')
-  const list = JSON.parse(await readFile(listFile, 'utf8')).courses.filter((/** @type {{ name: string }} */ c) => !only || fold(c.name).includes(fold(only)))
-  console.log(`${apply ? 'Importing into' : 'Dry run against'} ${target.kind} (${target.url}): ${list.length} course(s)${env.GOLFCOURSE_API_KEY ? '' : ', without GolfCourseAPI (no GOLFCOURSE_API_KEY)'}`)
+  const list = JSON.parse(await readFile(listFile, 'utf8')).courses.filter(
+    (/** @type {{ name: string }} */ c) => !only || fold(c.name).includes(fold(only)),
+  )
+  console.log(
+    `${apply ? 'Importing into' : 'Dry run against'} ${target.kind} (${target.url}): ${list.length} course(s)${env.GOLFCOURSE_API_KEY ? '' : ', without GolfCourseAPI (no GOLFCOURSE_API_KEY)'}`,
+  )
   const report = await seed({ list, fetch: globalThis.fetch, env, apply, target, log: (l) => console.log(l) })
   await writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`)
   const t = report.totals
-  console.log(`\n${apply ? `${t.imported} imported` : `${t.wouldImport} would be imported`}, ${t.exists} already in the catalog, ${t.missing} missing${t.failed ? `, ${t.failed} refused` : ''}. Report: ${reportFile}`)
-  if (!report.catalogRead) console.log('The catalog was not read (no SUPABASE_SECRET_KEY): «would be imported» does not know what it already has.')
+  console.log(
+    `\n${apply ? `${t.imported} imported` : `${t.wouldImport} would be imported`}, ${t.exists} already in the catalog, ${t.missing} missing${t.failed ? `, ${t.failed} refused` : ''}. Report: ${reportFile}`,
+  )
+  if (!report.catalogRead)
+    console.log(
+      'The catalog was not read (no SUPABASE_SECRET_KEY): «would be imported» does not know what it already has.',
+    )
   return t.failed ? 1 : 0
 }
 

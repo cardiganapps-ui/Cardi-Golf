@@ -634,11 +634,14 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 238,
+      "tests": [
+        "src/lib/ops.test.ts",
+        "eslint.config.js"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Off with reasons in eslint.config.js: no-non-null-assertion (3,539 index reads under noUncheckedIndexedAccess), four autofix-unsafe stylistic rules, five React Compiler rules (no compiler build); scripts get checkJs without strict null/implicit-any."
     },
     {
       "id": "ARCH-18",

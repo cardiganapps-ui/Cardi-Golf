@@ -63,7 +63,12 @@ export function AdminHandicaps() {
       {rounds.length === 0 && <EmptyState title={t.admin.sections.handicaps} body={H.noRounds} />}
       {rounds.length > 0 && (
         <>
-          <Segmented value={roundId} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />
+          <Segmented
+            value={roundId}
+            options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))}
+            onChange={setRoundId}
+            label={t.common.whichDay}
+          />
           {snapshot.players.length === 0 && <span className={a.help}>{t.admin.players.empty}</span>}
           <div className={a.rows}>
             {snapshot.players.map((p) => {
@@ -91,12 +96,26 @@ export function AdminHandicaps() {
                     <span className="sr-only">{`${H.plays} ${handicapText(pr.playingHcp)}`}</span>
                   </span>
                   <span className={a.rowActions}>
-                    <HowCalculated why={pr.playingHcpWhy} label="?" about={`${p.displayName}, ${H.plays} ${handicapText(pr.playingHcp)}`} />
-                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ playerId: p.id, value: Math.max(0, pr.playingHcp), reason: '' })}>
+                    <HowCalculated
+                      why={pr.playingHcpWhy}
+                      label="?"
+                      about={`${p.displayName}, ${H.plays} ${handicapText(pr.playingHcp)}`}
+                    />
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      type="button"
+                      onClick={() => setEditing({ playerId: p.id, value: Math.max(0, pr.playingHcp), reason: '' })}
+                    >
                       {t.common.edit}
                     </button>
                     {pr.overridden && (
-                      <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void clear(p.id)} aria-label={t.common.delete}>
+                      <button
+                        className="btn btn--ghost btn--sm"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void clear(p.id)}
+                        aria-label={t.common.delete}
+                      >
                         <IconClose />
                       </button>
                     )}
@@ -114,12 +133,28 @@ export function AdminHandicaps() {
             <p className={a.help}>{H.overrideHint}</p>
             {/* An override is 0 to 60 (handicap_overrides' check): a plus handicap (MONEY-21) is not one it sets. */}
             <Field label={t.live.playingHcp}>
-              <NumberField min={0} max={60} value={editing.value} onChange={(v) => setEditing({ ...editing, value: v })} />
+              <NumberField
+                min={0}
+                max={60}
+                value={editing.value}
+                onChange={(v) => setEditing({ ...editing, value: v })}
+              />
             </Field>
             <Field label={H.reason}>
-              <input className="input" value={editing.reason} onChange={(e) => setEditing({ ...editing, reason: e.target.value })} placeholder={H.reasonPlaceholder} autoFocus />
+              <input
+                className="input"
+                value={editing.reason}
+                onChange={(e) => setEditing({ ...editing, reason: e.target.value })}
+                placeholder={H.reasonPlaceholder}
+                autoFocus
+              />
             </Field>
-            <button className="btn btn--primary" type="button" disabled={busy || editing.reason.trim().length < 3} onClick={() => void save()}>
+            <button
+              className="btn btn--primary"
+              type="button"
+              disabled={busy || editing.reason.trim().length < 3}
+              onClick={() => void save()}
+            >
               {busy ? t.common.saving : t.common.save}
             </button>
           </div>

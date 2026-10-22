@@ -55,13 +55,21 @@ export function connectionOf(f: ConnectionFacts): Connection | null {
   return f.realtime === 'live' ? { kind: 'live', mayBeOld: false } : { kind: 'connecting', mayBeOld: false }
 }
 
-type StoreFacts = { data: unknown; tournamentId: string | null; source: ConnectionFacts['source']; realtime: ConnectionFacts['realtime']; error: string | null }
+interface StoreFacts {
+  data: unknown
+  tournamentId: string | null
+  source: ConnectionFacts['source']
+  realtime: ConnectionFacts['realtime']
+  error: string | null
+}
 export const factsOf = (s: StoreFacts, online: boolean): ConnectionFacts => ({
   online,
   hasData: !!s.data,
   fixture: s.tournamentId?.startsWith('fixture:') ?? false,
   // A link's design fixture (`/v/_/…`, `fixture:spectator:…`) reads as a healthy link: its boards are as live as a link's.
-  polled: (s.tournamentId?.startsWith(SPECTATOR_PREFIX) || s.tournamentId?.startsWith(`fixture:${SPECTATOR_PREFIX}`)) ?? false,
+  polled:
+    (s.tournamentId?.startsWith(SPECTATOR_PREFIX) || s.tournamentId?.startsWith(`fixture:${SPECTATOR_PREFIX}`)) ??
+    false,
   source: s.source,
   realtime: s.realtime,
   fetchFailed: s.error != null && !!s.data,

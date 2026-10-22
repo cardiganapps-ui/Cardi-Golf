@@ -7,15 +7,19 @@ import type { HoleResult } from '../../../engine/core/types'
 import type { Draft, KeptDraft } from '../tarjetaDrafts'
 
 /** What the server has for one player on a hole, as the kept draft and the card compare it: «gross:putts:pickedUp», or «-» for nothing. */
-export const serverValue = (h: HoleResult | undefined): string => (h?.played ? `${h.gross}:${h.putts}:${h.pickedUp}` : '-')
+export const serverValue = (h: HoleResult | undefined): string =>
+  h?.played ? `${h.gross}:${h.putts}:${h.pickedUp}` : '-'
 
 /** A played hole's saved values as a draft; null when nothing is saved. */
-export const savedDraft = (h: HoleResult | undefined): Draft | null => (h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : null)
+export const savedDraft = (h: HoleResult | undefined): Draft | null =>
+  h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : null
 
 /** What a hole opens on for one player: what is saved, else par for his own tee and 2 putts. */
-export const openingDraft = (h: HoleResult | undefined): Draft => savedDraft(h) ?? { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
+export const openingDraft = (h: HoleResult | undefined): Draft =>
+  savedDraft(h) ?? { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
 
-export const sameDraft = (a: Draft, b: Draft) => a.strokes === b.strokes && a.putts === b.putts && a.pickedUp === b.pickedUp
+export const sameDraft = (a: Draft, b: Draft) =>
+  a.strokes === b.strokes && a.putts === b.putts && a.pickedUp === b.pickedUp
 
 /** The drafts a hole opened on (or was last saved with), as kept: a JSON string, so a draft equal to them is «not editing». */
 export function parseDrafts(json: string): Record<string, Draft> {
@@ -27,14 +31,16 @@ export function parseDrafts(json: string): Record<string, Draft> {
 }
 
 /** Untouched defaults on an unplayed hole: the points badge stays quiet (P2). */
-export const isUntouched = (h: HoleResult, initial: Draft | undefined, d: Draft) => !h.played && !!initial && sameDraft(initial, d)
+export const isUntouched = (h: HoleResult, initial: Draft | undefined, d: Draft) =>
+  !h.played && !!initial && sameDraft(initial, d)
 
 /**
  * The name the card uses: the short one, or the full one when another in the group shares it (two «Diego»s
  * would be four identical controls again).
  */
 export function cardNameIn(players: ReadonlyArray<{ id: string; displayName: string }>) {
-  return (p: { id: string; displayName: string; fullName: string }) => (players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName)
+  return (p: { id: string; displayName: string; fullName: string }) =>
+    players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName
 }
 
 /**
@@ -43,7 +49,13 @@ export function cardNameIn(players: ReadonlyArray<{ id: string; displayName: str
  * over). One the server moved on from is dropped, except before the phone's queue is read: then the boards may
  * lack a hole the queue holds, and the draft is held until the hole opens again with the queue read (NEW-11).
  */
-export function restoreKept(o: { playerIds: readonly string[]; kept: KeptDraft | null; editable: (pid: string) => boolean; serverOf: (pid: string) => string; queueRead: boolean }) {
+export function restoreKept(o: {
+  playerIds: readonly string[]
+  kept: KeptDraft | null
+  editable: (pid: string) => boolean
+  serverOf: (pid: string) => string
+  queueRead: boolean
+}) {
   const restore: KeptDraft['players'] = {}
   const held: KeptDraft['players'] = {}
   for (const pid of o.playerIds) {
@@ -64,7 +76,13 @@ export function restoreKept(o: { playerIds: readonly string[]; kept: KeptDraft |
  * player the Comité put in the group while the hole was open gets what a new hole would give him. Null when
  * nothing on screen changes; else the drafts and the new starting point they are compared with.
  */
-export function takeServerValues(o: { playerIds: readonly string[]; drafts: Record<string, Draft>; initial: Record<string, Draft>; touched: ReadonlySet<string>; holeOf: (pid: string) => HoleResult | undefined }): { drafts: Record<string, Draft>; initial: Record<string, Draft> } | null {
+export function takeServerValues(o: {
+  playerIds: readonly string[]
+  drafts: Record<string, Draft>
+  initial: Record<string, Draft>
+  touched: ReadonlySet<string>
+  holeOf: (pid: string) => HoleResult | undefined
+}): { drafts: Record<string, Draft>; initial: Record<string, Draft> } | null {
   let next: Record<string, Draft> | null = null
   const initial = { ...o.initial }
   for (const pid of o.playerIds) {
@@ -87,7 +105,13 @@ export function takeServerValues(o: { playerIds: readonly string[]; drafts: Reco
  * What the phone keeps of the open hole (PWA-05): each player touched here with what the server had when he was
  * first touched, and the drafts held before the queue was read for the players not touched since.
  */
-export function keptPlayers(o: { held: KeptDraft['players']; touched: ReadonlySet<string>; drafts: Record<string, Draft>; baselines: ReadonlyMap<string, string>; serverOf: (pid: string) => string }): KeptDraft['players'] {
+export function keptPlayers(o: {
+  held: KeptDraft['players']
+  touched: ReadonlySet<string>
+  drafts: Record<string, Draft>
+  baselines: ReadonlyMap<string, string>
+  serverOf: (pid: string) => string
+}): KeptDraft['players'] {
   const keep: KeptDraft['players'] = {}
   for (const [pid, k] of Object.entries(o.held)) if (!o.touched.has(pid)) keep[pid] = k
   for (const pid of o.touched) {

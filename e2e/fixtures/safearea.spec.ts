@@ -61,7 +61,9 @@ for (const path of ['admin/scores', 'admin/torneo', 'admin/grupos', '', 'tarjeta
   })
 }
 
-test('landscape on a 13 mini, 50 px each side: the wide player sheet keeps its text clear (PWA-07)', async ({ page }) => {
+test('landscape on a 13 mini, 50 px each side: the wide player sheet keeps its text clear (PWA-07)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 812, height: 375 })
   await inset(page, { left: 50, right: 50, bottom: 21 })
   await open(page, '/t/_/full12-live')
@@ -74,7 +76,9 @@ test('landscape on a 13 mini, 50 px each side: the wide player sheet keeps its t
   expect(under, 'sheet text inside the 50 px side insets').toEqual([])
 })
 
-test('landscape: the player column already sits clear of the insets, so it keeps its 16 px gutter (PWA-07)', async ({ page }) => {
+test('landscape: the player column already sits clear of the insets, so it keeps its 16 px gutter (PWA-07)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 852, height: 393 })
   await inset(page, { left: 59, right: 59, bottom: 21 })
   await open(page, '/t/_/full12-live')

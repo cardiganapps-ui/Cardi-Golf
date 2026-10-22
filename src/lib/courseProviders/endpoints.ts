@@ -12,4 +12,5 @@ export const golfCourseHeaders = (key: string): Record<string, string> => ({ Aut
 export const openGolfSearchUrl = (q: string) => `${OPENGOLF_API}/v1/courses/search?q=${encodeURIComponent(q)}`
 export const openGolfCourseUrl = (id: string) => `${OPENGOLF_API}/api/v1/courses/${encodeURIComponent(id)}`
 /** Reads work without a key; the key raises the limits. */
-export const openGolfHeaders = (key: string | undefined): Record<string, string> => (key ? { Authorization: `Bearer ${key}` } : {})
+export const openGolfHeaders = (key: string | undefined): Record<string, string> =>
+  key ? { Authorization: `Bearer ${key}` } : {}

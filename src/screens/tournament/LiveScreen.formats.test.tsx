@@ -24,10 +24,25 @@ function live(fixture: string, edit?: (s: Snapshot) => void) {
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <LiveScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -37,9 +52,20 @@ function live(fixture: string, edit?: (s: Snapshot) => void) {
 const settingsOf = (s: Snapshot) => s.tournament.settings as TournamentSettings
 function playAs(s: Snapshot, format: Individual['format'], options: Partial<Individual['formatOptions']> = {}) {
   const st = settingsOf(s)
-  s.tournament.settings = { ...st, modules: { ...st.modules, individual: { ...st.modules.individual, format, formatOptions: { ...st.modules.individual.formatOptions, ...options } } } }
+  s.tournament.settings = {
+    ...st,
+    modules: {
+      ...st.modules,
+      individual: {
+        ...st.modules.individual,
+        format,
+        formatOptions: { ...st.modules.individual.formatOptions, ...options },
+      },
+    },
+  }
 }
-const honoree = (s: Snapshot, playerId: string) => void (s.players = s.players.map((p) => ({ ...p, isHonoree: p.id === playerId })))
+const honoree = (s: Snapshot, playerId: string) =>
+  void (s.players = s.players.map((p) => ({ ...p, isHonoree: p.id === playerId })))
 const finish = (s: Snapshot) => {
   s.tournament.status = 'finished'
   s.rounds = s.rounds.map((r) => ({ ...r, status: 'finished' }))
@@ -75,17 +101,38 @@ describe("En vivo: the honoree's card in each format (STRAT-03)", () => {
       finish(s)
       honoree(s, 'p3')
       s.tournament.settings = { ...settingsOf(s), labels: { ...settingsOf(s).labels, honoree: 'El novio' } }
-      s.groups = [makeGroup('r1', 1, ['p1', 'p8'], 1), makeGroup('r1', 2, ['p2', 'p7'], 1), makeGroup('r1', 3, ['p3', 'p6'], 10), makeGroup('r1', 4, ['p4', 'p5'], 10)]
+      s.groups = [
+        makeGroup('r1', 1, ['p1', 'p8'], 1),
+        makeGroup('r1', 2, ['p2', 'p7'], 1),
+        makeGroup('r1', 3, ['p3', 'p6'], 10),
+        makeGroup('r1', 4, ['p4', 'p5'], 10),
+      ]
       for (const p of ['p1', 'p2', 'p4', 'p6', 'p7']) card(s, p, PARS)
-      card(s, 'p8', PARS.map((par, i) => (i < 3 ? par + 1 : par)))
-      card(s, 'p3', PARS.map((par, i) => (i === 17 ? par + 1 : par)))
-      card(s, 'p5', PARS.map((par, i) => (i < 8 ? par + 1 : par)))
+      card(
+        s,
+        'p8',
+        PARS.map((par, i) => (i < 3 ? par + 1 : par)),
+      )
+      card(
+        s,
+        'p3',
+        PARS.map((par, i) => (i === 17 ? par + 1 : par)),
+      )
+      card(
+        s,
+        'p5',
+        PARS.map((par, i) => (i < 8 ? par + 1 : par)),
+      )
     })
     expect(document.querySelector('[class*="spotlightName"]')?.textContent).toBe('El novio: Gael H.')
     expect(spotlight()).toBe('6.º con 0 puntos, hoy perdió 1 abajo, hoyo 9: par')
     // His row on the board says it the same way, and so does the winner's.
-    expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe('6.º, Gael H., El novio, 0 puntos, hoy perdió 1 abajo, terminó')
-    expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe('3.º, Julián, 1 punto, hoy ganó 1 arriba, terminó')
+    expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe(
+      '6.º, Gael H., El novio, 0 puntos, hoy perdió 1 abajo, terminó',
+    )
+    expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe(
+      '3.º, Julián, 1 punto, hoy ganó 1 arriba, terminó',
+    )
     // And the day cell you see says it too: his «1 abajo», not the match's «1 arriba».
     const gael = screen.getByRole('button', { name: /^6\.º, Gael H\., / }).textContent
     expect(gael).toContain('1 abajo')

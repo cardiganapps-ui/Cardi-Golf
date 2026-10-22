@@ -26,13 +26,24 @@ const unitsGame: GameImpl<Map<string, number>> = {
   },
   prizes(units, ctx) {
     const name = (id: string) => id
-    return ctx.config.money.source === 'direct' ? directUnits(ctx, units, 'reward', 'part', name) : payUnits(ctx, units, 'part', name)
+    return ctx.config.money.source === 'direct'
+      ? directUnits(ctx, units, 'reward', 'part', name)
+      : payUnits(ctx, units, 'part', name)
   },
   board: () => ({ sections: [], notes: [] }),
 }
 
 function game(over: Partial<GameConfig> & { money: GameConfig['money'] }): GameConfig {
-  return { id: 'g1', type: 'custom', label: 'Apuesta', enabled: true, rounds: 'all', entrants: 'all', options: { description: '' }, ...over } as GameConfig
+  return {
+    id: 'g1',
+    type: 'custom',
+    label: 'Apuesta',
+    enabled: true,
+    rounds: 'all',
+    entrants: 'all',
+    options: { description: '' },
+    ...over,
+  } as GameConfig
 }
 
 function finished(settings: TournamentSettings): Snapshot {
@@ -57,7 +68,18 @@ describe('settings v2', () => {
 
   it('rejects a places split that does not add up to 100%', () => {
     const s = structuredClone(DEFAULT_SETTINGS)
-    s.games = [{ id: 'low', type: 'lowScore', label: 'Low neto', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', scope: 'overall' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [60, 30] } }]
+    s.games = [
+      {
+        id: 'low',
+        type: 'lowScore',
+        label: 'Low neto',
+        enabled: true,
+        rounds: 'all',
+        entrants: 'all',
+        options: { basis: 'net', scope: 'overall' },
+        money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [60, 30] },
+      },
+    ]
     expect(safeParseSettings(s).success).toBe(false)
     s.games[0]!.money.split = [60, 30, 10]
     expect(safeParseSettings(s).success).toBe(true)
@@ -65,7 +87,18 @@ describe('settings v2', () => {
 
   it('rejects three-putt fines through a pot, duplicate ids and a percent individual split off 100%', () => {
     const s = structuredClone(DEFAULT_SETTINGS)
-    s.games = [{ id: 'tp', type: 'eventPot', label: 'Tres putts', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'threePutt', basis: 'gross' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } }]
+    s.games = [
+      {
+        id: 'tp',
+        type: 'eventPot',
+        label: 'Tres putts',
+        enabled: true,
+        rounds: 'all',
+        entrants: 'all',
+        options: { event: 'threePutt', basis: 'gross' },
+        money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] },
+      },
+    ]
     expect(safeParseSettings(s).success).toBe(false)
     s.games[0]!.money.source = 'direct'
     expect(safeParseSettings(s).success).toBe(true)
@@ -80,7 +113,10 @@ describe('settings v2', () => {
 
 describe('side pots', () => {
   it('5 of 8 players enter: only they pay the buy-in and only they can win', () => {
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ entrants: 'list', money: { source: 'side', buyIn: 200, amount: 0, stake: 0, split: [100] } })] }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      games: [game({ entrants: 'list', money: { source: 'side', buyIn: 200, amount: 0, stake: 0, split: [100] } })],
+    }
     const snap = finished(settings)
     snap.gameEntries = ['p1', 'p2', 'p3', 'p4', 'p5'].map((playerId) => ({ gameId: 'g1', playerId }))
     const st = computeTournament(snap, settings, { games: { custom: unitsGame } })
@@ -106,7 +142,10 @@ describe('side pots', () => {
 
   it('a pot with no winner is not paid and the bank shows the difference', () => {
     const noUnits: GameImpl<Map<string, number>> = { ...unitsGame, compute: () => new Map() }
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } })] }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      games: [game({ money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } })],
+    }
     const st = computeTournament(finished(settings), settings, { games: { custom: noUnits } })
     expect(st.money.banker.difference).toBe(800)
     expect(st.money.banker.balanced).toBe(false)
@@ -139,7 +178,10 @@ describe('direct bets', () => {
     // Bets never touch the bank and net to zero.
     expect(st.money.banker.receives).toBe(0)
     expect(st.money.netSum).toBe(0)
-    const sum = ['p2', 'p3', 'p4'].reduce((s, id) => s + st.money.people[id]!.betsReceived - st.money.people[id]!.betsPaid, 0)
+    const sum = ['p2', 'p3', 'p4'].reduce(
+      (s, id) => s + st.money.people[id]!.betsReceived - st.money.people[id]!.betsPaid,
+      0,
+    )
     expect(sum).toBe(0)
     // "Vía banco" settles bets player to player.
     const direct = st.money.viaBank.filter((t) => t.from && t.to)
@@ -161,9 +203,13 @@ describe('main pot: house cut and percent split', () => {
     expect(check.lines.find((l) => l.moduleId === 'individual')!.amount).toBe(3000)
     expect(check.balanced).toBe(true)
     const st = computeTournament(snap, settings)
-    const paid = st.prizes.filter((p) => p.moduleId === 'individual').map((p) => p.amount).sort((a, b) => b - a)
+    const paid = st.prizes
+      .filter((p) => p.moduleId === 'individual')
+      .map((p) => p.amount)
+      .sort((a, b) => b - a)
     expect(paid.reduce((s, x) => s + x, 0)).toBe(3000)
-    if (st.modules.individual!.groups.slice(0, 3).every((g) => g.members.length === 1)) expect(paid).toEqual([1500, 900, 600])
+    if (st.modules.individual!.groups.slice(0, 3).every((g) => g.members.length === 1))
+      expect(paid).toEqual([1500, 900, 600])
     expect(st.money.banker.houseCut).toBe(1000)
     expect(st.money.banker.difference).toBe(0)
     expect(st.money.banker.balanced).toBe(true)
@@ -187,14 +233,20 @@ describe('main pot: house cut and percent split', () => {
 
 describe('registry', () => {
   it('a game type this build does not know is flagged, not crashed on', () => {
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } })] }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      games: [game({ money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } })],
+    }
     const st = computeTournament(finished(settings), settings, { games: { custom: undefined } })
     expect(st.flags.missingGames).toEqual(['g1'])
     expect(words(st.flags.warnings).some((w) => w.includes('Apuesta'))).toBe(true)
   })
 
   it('a disabled game contributes nothing', () => {
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ enabled: false, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } })] }
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      games: [game({ enabled: false, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } })],
+    }
     const st = computeTournament(finished(settings), settings, { games: { custom: unitsGame } })
     expect(st.games).toEqual({})
     expect(st.money.flows.some((f) => f.kind === 'side')).toBe(false)

@@ -14,9 +14,15 @@ const clipped = (page: Page) =>
       .filter((e) => {
         const own = Array.from(e.childNodes).some((n) => n.nodeType === 3 && /\d/.test(n.textContent ?? ''))
         const s = getComputedStyle(e)
-        return own && s.display !== 'inline' && s.display !== 'none' && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 0.5
+        return (
+          own &&
+          s.display !== 'inline' &&
+          s.display !== 'none' &&
+          e.clientWidth > 0 &&
+          e.scrollWidth > e.clientWidth + 0.5
+        )
       })
-      .map((e) => `«${e.textContent!.trim().slice(0, 40)}» ${e.scrollWidth} > ${e.clientWidth}`),
+      .map((e) => `«${e.textContent.trim().slice(0, 40)}» ${e.scrollWidth} > ${e.clientWidth}`),
   )
 
 for (const width of [375, 393]) {

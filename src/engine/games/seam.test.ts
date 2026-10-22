@@ -28,7 +28,11 @@ describe('rankField: one ranking rule, a tie policy per game', () => {
   ]
 
   it('compares the keys in turn, more ahead (fewer putts negated), and the tied share a place', () => {
-    const groups = rankField(field, { keys: [(x) => x.holes, (x) => -x.putts], ties: 'share', order: (x, y) => x.id.localeCompare(y.id) })
+    const groups = rankField(field, {
+      keys: [(x) => x.holes, (x) => -x.putts],
+      ties: 'share',
+      order: (x, y) => x.id.localeCompare(y.id),
+    })
     expect(groups.map((g) => [g.position, g.members.map((m) => m.id)])).toEqual([
       [1, ['b', 'd']],
       [3, ['a']],
@@ -37,7 +41,10 @@ describe('rankField: one ranking rule, a tie policy per game', () => {
   })
 
   it('a countback breaks what the keys leave tied, on the last holes', () => {
-    const cards = { x: { pointsByHole: pts(Array(18).fill(2)), holes: 18 }, y: { pointsByHole: pts([3, ...Array(16).fill(2), 1]), holes: 18 } }
+    const cards = {
+      x: { pointsByHole: pts(Array(18).fill(2)), holes: 18 },
+      y: { pointsByHole: pts([3, ...Array(16).fill(2), 1]), holes: 18 },
+    }
     const ids = ['y', 'x'] as const
     const shared = rankField([...ids], { keys: [() => 36], ties: 'share' })
     expect(shared.map((g) => g.members)).toEqual([['y', 'x']])
@@ -120,8 +127,26 @@ describe('the registries are typed by id and type', () => {
     for (const type of GAME_TYPES) expect(ALL_GAMES[type].type).toBe(type)
   })
 
-  const contest: GameConfig = { id: 'cerca', type: 'contest', label: 'Más cerca', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'closest', holes: 'par3' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } }
-  const skins: GameConfig = { id: 'skins', type: 'skins', label: 'Skins', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', carryOver: true }, money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } }
+  const contest: GameConfig = {
+    id: 'cerca',
+    type: 'contest',
+    label: 'Más cerca',
+    enabled: true,
+    rounds: 'all',
+    entrants: 'all',
+    options: { kind: 'closest', holes: 'par3' },
+    money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] },
+  }
+  const skins: GameConfig = {
+    id: 'skins',
+    type: 'skins',
+    label: 'Skins',
+    enabled: true,
+    rounds: 'all',
+    entrants: 'all',
+    options: { basis: 'net', carryOver: true },
+    money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] },
+  }
   const snap = makeFirstTournament()
   fillRound(snap, 'r1', 3)
   snap.holeAwards = [{ roundId: 'r1', groupId: snap.groups[0]!.id, hole: 3, gameId: 'cerca', playerId: 'p1' }]
@@ -137,7 +162,7 @@ describe('the registries are typed by id and type', () => {
     if (isGameOf(s, 'skins')) {
       expect(s.state.holes.length).toBeGreaterThan(0)
       // @ts-expect-error: a skins game has no contest's units by hole
-      void s.state.claims
+      expect(s.state.claims).toBeUndefined()
     }
     expect(isGameOf(s, 'contest')).toBe(false)
   })
@@ -159,9 +184,25 @@ describe('a game says its own warnings', () => {
   it('the Calcutta names a lot left unsold once play starts, through the contract (MONEY-11)', () => {
     const snap = makeFirstTournament()
     fillRound(snap, 'r1', 2)
-    snap.calcuttaLots = snap.players.map((p, i) => ({ id: `lot${i}`, playerId: p.id, lotNumber: i + 1, status: i === 0 ? 'pending' : 'sold', price: i === 0 ? null : 500, ownerId: i === 0 ? null : p.id, soldAt: null }))
+    snap.calcuttaLots = snap.players.map((p, i) => ({
+      id: `lot${i}`,
+      playerId: p.id,
+      lotNumber: i + 1,
+      status: i === 0 ? 'pending' : 'sold',
+      price: i === 0 ? null : 500,
+      ownerId: i === 0 ? null : p.id,
+      soldAt: null,
+    }))
     const state = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS)
-    const own = words(ALL_MODULES.auction.warnings!(state.modules.auction!, { snapshot: snap, settings: FIRST_TOURNAMENT_SETTINGS, core: state.core, tournamentFinal: state.tournamentFinal, roundFinal: { r1: false, r2: false } }))
+    const own = words(
+      ALL_MODULES.auction.warnings!(state.modules.auction!, {
+        snapshot: snap,
+        settings: FIRST_TOURNAMENT_SETTINGS,
+        core: state.core,
+        tournamentFinal: state.tournamentFinal,
+        roundFinal: { r1: false, r2: false },
+      }),
+    )
     expect(own).toEqual([expect.stringContaining('1 lote sin vender')])
     expect(words(state.flags.warnings)).toEqual(expect.arrayContaining(own))
   })

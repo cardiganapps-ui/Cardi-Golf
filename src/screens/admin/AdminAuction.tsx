@@ -11,7 +11,17 @@ import { Avatar, Field, Sheet } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { createLots, deleteBid, placeBid, reopenLot, resetAuction, sellLot, setBuyback, setLotStatus, updateTournament } from '../../data/api'
+import {
+  createLots,
+  deleteBid,
+  placeBid,
+  reopenLot,
+  resetAuction,
+  sellLot,
+  setBuyback,
+  setLotStatus,
+  updateTournament,
+} from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { shuffle } from '../../lib/pairing'
@@ -64,12 +74,18 @@ export function AdminAuction() {
 
   const holdings = useMemo(() => auction?.holdings ?? {}, [auction])
   const eligibleBidders = useMemo(
-    () => snapshot.players.filter((p) => (holdings[p.id] ?? 0) < cfg.maxPlayersPerOwner || (!cfg.selfOwnedCountsTowardMax && open?.playerId === p.id)),
+    () =>
+      snapshot.players.filter(
+        (p) =>
+          (holdings[p.id] ?? 0) < cfg.maxPlayersPerOwner || (!cfg.selfOwnedCountsTowardMax && open?.playerId === p.id),
+      ),
     [snapshot.players, holdings, cfg.maxPlayersPerOwner, cfg.selfOwnedCountsTowardMax, open],
   )
   const bidderList = useMemo(() => {
     const needle = norm(q.trim())
-    return needle ? snapshot.players.filter((p) => norm(p.displayName).includes(needle) || norm(p.fullName).includes(needle)) : snapshot.players
+    return needle
+      ? snapshot.players.filter((p) => norm(p.displayName).includes(needle) || norm(p.fullName).includes(needle))
+      : snapshot.players
   }, [q, snapshot.players])
 
   if (!settings.modules.auction.enabled) return <EmptyState title={A.title} body={t.live.comingSoon} />
@@ -87,7 +103,11 @@ export function AdminAuction() {
           <button className="btn btn--primary" type="button" onClick={() => setOrder(shuffle(draft))}>
             {A.drawOrder}
           </button>
-          <button className="btn btn--secondary btn--sm" type="button" onClick={() => setOrder([...snapshot.players].sort((x, y) => x.sortOrder - y.sortOrder).map((p) => p.id))}>
+          <button
+            className="btn btn--secondary btn--sm"
+            type="button"
+            onClick={() => setOrder([...snapshot.players].sort((x, y) => x.sortOrder - y.sortOrder).map((p) => p.id))}
+          >
             {A.manualOrder}
           </button>
         </div>
@@ -101,10 +121,22 @@ export function AdminAuction() {
                 <span className={a.rowTitle}>{name(pid)}</span>
               </span>
               <span className={a.rowActions}>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={i === 0} onClick={() => setOrder(move(draft, i, i - 1))} aria-label={t.common.moveUp}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={i === 0}
+                  onClick={() => setOrder(move(draft, i, i - 1))}
+                  aria-label={t.common.moveUp}
+                >
                   <IconArrowUp />
                 </button>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={i === draft.length - 1} onClick={() => setOrder(move(draft, i, i + 1))} aria-label={t.common.moveDown}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={i === draft.length - 1}
+                  onClick={() => setOrder(move(draft, i, i + 1))}
+                  aria-label={t.common.moveDown}
+                >
                   <IconArrowDown />
                 </button>
               </span>
@@ -135,9 +167,15 @@ export function AdminAuction() {
   const currentBid = open?.currentBid ?? null
   const bidAmount = currentBid?.amount ?? cfg.openingBid
   const bidderId = currentBid?.bidderId ?? open?.playerId ?? null
-  const lastBid = open ? [...snapshot.calcuttaBids.filter((b) => b.lotId === open.lotId)].sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0] : undefined
+  const lastBid = open
+    ? [...snapshot.calcuttaBids.filter((b) => b.lotId === open.lotId)].sort((x, y) =>
+        y.createdAt.localeCompare(x.createdAt),
+      )[0]
+    : undefined
   const player = current ? byId.get(current.playerId) : undefined
-  const pair = current ? snapshot.pairs.find((p) => p.player1Id === current.playerId || p.player2Id === current.playerId) : undefined
+  const pair = current
+    ? snapshot.pairs.find((p) => p.player1Id === current.playerId || p.player2Id === current.playerId)
+    : undefined
   const ph = current ? state.core.rounds[state.core.roundIds[0] ?? '']?.[current.playerId]?.playingHcp : undefined
 
   async function bid(delta: number | null) {
@@ -150,7 +188,12 @@ export function AdminAuction() {
     // Up in the increment from the bid standing (§5.9), as the server checks (MONEY-19).
     const steps = bidSteps(bidAmount, cfg.increment, amount)
     if (steps) {
-      toast(A.offStep(formatMoney(cfg.increment, cur), steps.map((x) => formatMoney(x, cur))))
+      toast(
+        A.offStep(
+          formatMoney(cfg.increment, cur),
+          steps.map((x) => formatMoney(x, cur)),
+        ),
+      )
       return
     }
     // The high bidder never raises himself: the auctioneer picks who shouted (UX-13).
@@ -168,7 +211,11 @@ export function AdminAuction() {
     setAskHammer(false)
     if (!open || !bidderId) return
     // Selling to himself still counts toward his limit when the setting says so (§18.3).
-    if (bidderId === open.playerId && cfg.selfOwnedCountsTowardMax && (holdings[bidderId] ?? 0) >= cfg.maxPlayersPerOwner) {
+    if (
+      bidderId === open.playerId &&
+      cfg.selfOwnedCountsTowardMax &&
+      (holdings[bidderId] ?? 0) >= cfg.maxPlayersPerOwner
+    ) {
       toast(A.selfAtLimit(cfg.maxPlayersPerOwner))
       return
     }
@@ -208,8 +255,12 @@ export function AdminAuction() {
                   <span className={styles.lotName}>{player.fullName}</span>
                   <span className={styles.lotSub}>
                     {player.tier ? `${player.tier}, ` : ''}
-                    {ph != null ? `${t.live.playingHcp.toLowerCase()} ${handicapText(ph)}` : `${t.live.hcp.toLowerCase()} ${handicapText(player.baseHcp)}`}
-                    {pair ? `, ${A.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
+                    {ph != null
+                      ? `${t.live.playingHcp.toLowerCase()} ${handicapText(ph)}`
+                      : `${t.live.hcp.toLowerCase()} ${handicapText(player.baseHcp)}`}
+                    {pair
+                      ? `, ${A.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}`
+                      : ''}
                   </span>
                 </div>
               </div>
@@ -221,7 +272,12 @@ export function AdminAuction() {
                   <span>{bidderId === open.playerId ? A.self : name(bidderId ?? '')}</span>
                 </div>
               ) : (
-                <button className="btn btn--primary btn--block" type="button" disabled={busy} onClick={() => void run(() => setLotStatus(current.lotId, 'open'))}>
+                <button
+                  className="btn btn--primary btn--block"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => setLotStatus(current.lotId, 'open'))}
+                >
                   {busy ? t.common.saving : A.open}
                 </button>
               )}
@@ -244,7 +300,16 @@ export function AdminAuction() {
                 <strong>{A.bidder}</strong>
                 {bidder && <span className={a.count}>{name(bidder)}</span>}
               </div>
-              {snapshot.players.length > SEARCH_FROM && <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={A.searchBidder} aria-label={A.searchBidder} />}
+              {snapshot.players.length > SEARCH_FROM && (
+                <input
+                  className="input"
+                  type="search"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={A.searchBidder}
+                  aria-label={A.searchBidder}
+                />
+              )}
               <div className={a.tiles} role="radiogroup" aria-label={A.bidder}>
                 {bidderList.map((p) => {
                   const ok = eligibleBidders.some((e) => e.id === p.id)
@@ -252,10 +317,27 @@ export function AdminAuction() {
                   // The one already on top can't be picked: he would only raise himself (UX-13).
                   const leading = p.id === bidderId
                   return (
-                    <button key={p.id} type="button" role="radio" aria-checked={bidder === p.id} className={`${a.tile} ${bidder === p.id ? a.tileOn : ''}`} disabled={!ok || leading} onClick={() => setBidder(p.id)} aria-label={leading ? A.leadingLabel(p.displayName) : ok ? p.displayName : `${p.displayName}, ${A.limitReached(held)}`}>
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={bidder === p.id}
+                      className={`${a.tile} ${bidder === p.id ? a.tileOn : ''}`}
+                      disabled={!ok || leading}
+                      onClick={() => setBidder(p.id)}
+                      aria-label={
+                        leading
+                          ? A.leadingLabel(p.displayName)
+                          : ok
+                            ? p.displayName
+                            : `${p.displayName}, ${A.limitReached(held)}`
+                      }
+                    >
                       <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
                       <span className={a.tileText}>{p.displayName}</span>
-                      <span className={styles.held}>{leading ? A.leading : ok ? (held > 0 ? held : '') : A.limitReached(held)}</span>
+                      <span className={styles.held}>
+                        {leading ? A.leading : ok ? (held > 0 ? held : '') : A.limitReached(held)}
+                      </span>
                     </button>
                   )
                 })}
@@ -263,32 +345,48 @@ export function AdminAuction() {
               {!bidder && <p className={styles.pickHint}>{A.pickBidder}</p>}
               <div className={styles.dock}>
                 <div className={styles.bidControls}>
-                {[cfg.increment, cfg.increment * 2, cfg.increment * 4].map((d) => (
-                  <button key={d} className="btn btn--secondary" type="button" disabled={busy || !bidder} onClick={() => void bid(d)}>
-                    {A.bid(formatMoney(d, cur))}
+                  {[cfg.increment, cfg.increment * 2, cfg.increment * 4].map((d) => (
+                    <button
+                      key={d}
+                      className="btn btn--secondary"
+                      type="button"
+                      disabled={busy || !bidder}
+                      onClick={() => void bid(d)}
+                    >
+                      {A.bid(formatMoney(d, cur))}
+                    </button>
+                  ))}
+                  <input
+                    className={`input input--num ${styles.custom}`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={A.customAmount}
+                    value={custom}
+                    onChange={(e) => setCustom(keepNumeric(e.target.value, 0, false))}
+                    aria-label={A.customAmount}
+                  />
+                  <button
+                    className="btn btn--secondary"
+                    type="button"
+                    disabled={busy || !bidder || !custom}
+                    onClick={() => void bid(null)}
+                  >
+                    {A.custom}
                   </button>
-                ))}
-                <input
-                  className={`input input--num ${styles.custom}`}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder={A.customAmount}
-                  value={custom}
-                  onChange={(e) => setCustom(keepNumeric(e.target.value, 0, false))}
-                  aria-label={A.customAmount}
-                />
-                <button className="btn btn--secondary" type="button" disabled={busy || !bidder || !custom} onClick={() => void bid(null)}>
-                  {A.custom}
-                </button>
-              </div>
-              <div className={styles.hammer}>
-                <button className="btn btn--ghost" type="button" disabled={busy || !lastBid} onClick={() => lastBid && void run(() => deleteBid(lastBid.id))}>
-                  <IconUndo /> {A.undo}
-                </button>
-                <button className="btn btn--primary" type="button" disabled={busy} onClick={() => setAskHammer(true)}>
-                  {busy ? t.common.saving : A.sold}
-                </button>
-              </div>
+                </div>
+                <div className={styles.hammer}>
+                  <button
+                    className="btn btn--ghost"
+                    type="button"
+                    disabled={busy || !lastBid}
+                    onClick={() => lastBid && void run(() => deleteBid(lastBid.id))}
+                  >
+                    <IconUndo /> {A.undo}
+                  </button>
+                  <button className="btn btn--primary" type="button" disabled={busy} onClick={() => setAskHammer(true)}>
+                    {busy ? t.common.saving : A.sold}
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -314,7 +412,13 @@ export function AdminAuction() {
                     </span>
                   </span>
                   <span className={a.fig}>{formatMoney(l.price, cur)}</span>
-                  <button className="btn btn--ghost btn--sm" type="button" disabled={busy || (!!open && open.lotId !== l.lotId)} title={open ? A.reopenWhileOpen : undefined} onClick={() => setAskReopen(l.lotId)}>
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    type="button"
+                    disabled={busy || (!!open && open.lotId !== l.lotId)}
+                    title={open ? A.reopenWhileOpen : undefined}
+                    onClick={() => setAskReopen(l.lotId)}
+                  >
                     <IconUndo /> {A.reopen}
                   </button>
                 </div>
@@ -341,7 +445,11 @@ export function AdminAuction() {
         <ConfirmSheet
           open={askHammer}
           title={A.hammerTitle}
-          body={bidderId === open.playerId ? A.hammerSelf(name(open.playerId), formatMoney(bidAmount, cur)) : A.hammerBody(name(open.playerId), name(bidderId), formatMoney(bidAmount, cur))}
+          body={
+            bidderId === open.playerId
+              ? A.hammerSelf(name(open.playerId), formatMoney(bidAmount, cur))
+              : A.hammerBody(name(open.playerId), name(bidderId), formatMoney(bidAmount, cur))
+          }
           busy={busy}
           confirmLabel={A.sold}
           onConfirm={() => void hammer()}
@@ -352,7 +460,11 @@ export function AdminAuction() {
         <ConfirmSheet
           open
           title={A.reopenTitle(name(reopening.playerId))}
-          body={A.reopenBody(formatMoney(reopening.price, cur), reopening.ownerId === reopening.playerId ? A.self : name(reopening.ownerId ?? ''), reopening.buybackPct > 0)}
+          body={A.reopenBody(
+            formatMoney(reopening.price, cur),
+            reopening.ownerId === reopening.playerId ? A.self : name(reopening.ownerId ?? ''),
+            reopening.buybackPct > 0,
+          )}
           danger
           busy={busy}
           confirmLabel={A.reopen}
@@ -360,7 +472,21 @@ export function AdminAuction() {
           onClose={() => setAskReopen(null)}
         />
       )}
-      <ConfirmSheet open={askReset} title={A.reset} body={A.resetConfirm} danger busy={busy} confirmLabel={A.reset} onConfirm={() => void run(async () => { await resetAuction(tournamentId); setAskReset(false) })} onClose={() => setAskReset(false)} />
+      <ConfirmSheet
+        open={askReset}
+        title={A.reset}
+        body={A.resetConfirm}
+        danger
+        busy={busy}
+        confirmLabel={A.reset}
+        onConfirm={() =>
+          void run(async () => {
+            await resetAuction(tournamentId)
+            setAskReset(false)
+          })
+        }
+        onClose={() => setAskReset(false)}
+      />
 
       <Sheet open={!!buybackFor} onClose={() => setBuybackFor(null)} title={A.buyback}>
         {buybackFor &&
@@ -372,14 +498,18 @@ export function AdminAuction() {
                 <p className={a.help}>{A.buybackHint(cfg.buybackMaxPct)}</p>
                 <Segmented
                   value={String(bbPct)}
-                  options={[0, 25, 50].filter((x) => x <= cfg.buybackMaxPct).map((x) => ({ value: String(x), label: x === 0 ? A.noBuyback : `${x}%` }))}
+                  options={[0, 25, 50]
+                    .filter((x) => x <= cfg.buybackMaxPct)
+                    .map((x) => ({ value: String(x), label: x === 0 ? A.noBuyback : `${x}%` }))}
                   onChange={(v) => setBbPct(Number(v))}
                   label={A.buyback}
                 />
                 <Field label={`${A.custom} (%)`}>
                   <NumberField min={0} max={cfg.buybackMaxPct} suffix="%" value={bbPct} onChange={setBbPct} />
                 </Field>
-                {bbPct > 0 && <p>{A.buybackPays(name(lot.playerId), formatMoney(amount, cur), name(lot.ownerId ?? ''))}</p>}
+                {bbPct > 0 && (
+                  <p>{A.buybackPays(name(lot.playerId), formatMoney(amount, cur), name(lot.ownerId ?? ''))}</p>
+                )}
                 <button
                   className="btn btn--primary"
                   type="button"

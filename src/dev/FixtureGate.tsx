@@ -55,16 +55,33 @@ export function FixtureGate() {
   useEffect(() => {
     if (!fixture) return
     useTournament.getState().unsubscribe()
-    useTournament.setState({ tournamentId: `fixture:${fixture.name}`, data: dataFromSnapshot(structuredClone(fixture.snapshot)), loading: false, ...netState(net) })
+    useTournament.setState({
+      tournamentId: `fixture:${fixture.name}`,
+      data: dataFromSnapshot(structuredClone(fixture.snapshot)),
+      loading: false,
+      ...netState(net),
+    })
     // The Comité's inbox is read from the server; a fixture's is what it says.
-    useRejectedInbox.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.inbox ?? []), status: 'ready', error: null, fixture: true })
+    useRejectedInbox.setState({
+      tournamentId: fixture.snapshot.tournament.id,
+      items: structuredClone(fixture.inbox ?? []),
+      status: 'ready',
+      error: null,
+      fixture: true,
+    })
     // And its phones (STRAT-02): what their heartbeats would say.
-    useTournamentDevices.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.devices ?? []), status: 'ready', fixture: true })
+    useTournamentDevices.setState({
+      tournamentId: fixture.snapshot.tournament.id,
+      items: structuredClone(fixture.devices ?? []),
+      status: 'ready',
+      fixture: true,
+    })
   }, [fixture, net])
 
   if (!fixture) return <FixtureIndex />
   // `?as=new-phone`: the same tournament on a phone that has not picked its face yet (the grid, then the PIN).
-  if (as === 'new-phone') return <EnterScreen lookup={fixture.lookup} onEntered={() => navigate(`/t/_/${fixture.name}`)} />
+  if (as === 'new-phone')
+    return <EnterScreen lookup={fixture.lookup} onEntered={() => void navigate(`/t/_/${fixture.name}`)} />
   if (tournamentId !== `fixture:${fixture.name}`) return null
   // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
   const me: Me =
@@ -74,7 +91,16 @@ export function FixtureGate() {
         ? { playerId: null, isOrganizer: false, isComite: false, via: 'platform', protected: true }
         : fixture.me
   return (
-    <TournamentContext.Provider value={{ tournamentId: fixture.snapshot.tournament.id, slug: `_/${fixture.name}`, lookup: fixture.lookup, me, refresh: noop, leave: noop }}>
+    <TournamentContext.Provider
+      value={{
+        tournamentId: fixture.snapshot.tournament.id,
+        slug: `_/${fixture.name}`,
+        lookup: fixture.lookup,
+        me,
+        refresh: noop,
+        leave: noop,
+      }}
+    >
       {/* Every money render reads the tournament's currency (ARCH-06). */}
       <TournamentCurrency>
         <Outlet />

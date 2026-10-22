@@ -39,6 +39,22 @@ export function pullArmed(offset: number): boolean {
  * Whether a touch may start a pull: the board screen, one finger, the page at its top, nothing under way,
  * no sheet open, and not from inside a dialog or a box scrolled down on its own.
  */
-export function pullMayStart(at: { enabled: boolean; refreshing: boolean; fingers: number; pageTop: number; sheetOpen: boolean; inDialog: boolean; boxScrolled: boolean }): boolean {
-  return at.enabled && !at.refreshing && at.fingers === 1 && at.pageTop <= 0 && !at.sheetOpen && !at.inDialog && !at.boxScrolled
+export function pullMayStart(at: {
+  enabled: boolean
+  refreshing: boolean
+  fingers: number
+  pageTop: number
+  sheetOpen: boolean
+  inDialog: boolean
+  boxScrolled: boolean
+}): boolean {
+  return (
+    at.enabled &&
+    !at.refreshing &&
+    at.fingers === 1 &&
+    at.pageTop <= 0 &&
+    !at.sheetOpen &&
+    !at.inDialog &&
+    !at.boxScrolled
+  )
 }

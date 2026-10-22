@@ -9,7 +9,11 @@ import { expect, open, test } from './base'
 test('the signal going and coming back moves nothing on the Tarjeta (MOT-17)', async ({ page, context }) => {
   await open(page, '/t/_/full12-live/tarjeta')
   // The second player's «+» for strokes, where the review measured it jump (357 → 394 px).
-  const plus = page.locator(`[role="group"][aria-label^="${t.card.strokesOf('')}"]`).nth(1).getByRole('button').last()
+  const plus = page
+    .locator(`[role="group"][aria-label^="${t.card.strokesOf('')}"]`)
+    .nth(1)
+    .getByRole('button')
+    .last()
   await expect(plus).toBeVisible()
   const save = page.getByRole('button', { name: new RegExp(`^(${t.card.save}|${t.card.saveLast})`) }).first()
   const where = async () => ({ plus: await plus.boundingBox(), save: await save.boundingBox() })

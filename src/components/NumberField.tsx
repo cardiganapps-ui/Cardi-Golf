@@ -158,7 +158,14 @@ export interface OptionalNumberFieldProps extends Shared {
 }
 
 /** A number where blank means something: "assumed", "not set", "no cap". */
-export function OptionalNumberField({ value, onChange, min = 0, max, decimals = 0, ...rest }: OptionalNumberFieldProps) {
+export function OptionalNumberField({
+  value,
+  onChange,
+  min = 0,
+  max,
+  decimals = 0,
+  ...rest
+}: OptionalNumberFieldProps) {
   const { text, setText, editing } = useNumericText(value, decimals)
   return (
     <NumericBox

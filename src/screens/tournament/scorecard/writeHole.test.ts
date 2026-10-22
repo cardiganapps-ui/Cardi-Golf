@@ -16,7 +16,10 @@ vi.mock('../../../data/outbox', async (importOriginal) => ({
 }))
 vi.mock('../../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../data/api')>()),
-  adminSaveHole: vi.fn(async (_round: string, hole: number, rows: unknown, reason: string | null) => void calls.push(['admin', { hole, rows, reason }])),
+  adminSaveHole: vi.fn(
+    async (_round: string, hole: number, rows: unknown, reason: string | null) =>
+      void calls.push(['admin', { hole, rows, reason }]),
+  ),
 }))
 
 import { adminSaveHole } from '../../../data/api'
@@ -57,9 +60,21 @@ describe('writeHole', () => {
           hole: 7,
           entered_by: 'a',
           entries: [
-            { player_id: 'a', fields: { putts: 3 }, base: rows.a, auto: false, dflt: { strokes: 4, putts: 2, picked_up: false } },
+            {
+              player_id: 'a',
+              fields: { putts: 3 },
+              base: rows.a,
+              auto: false,
+              dflt: { strokes: 4, putts: 2, picked_up: false },
+            },
             // His default is par for his own tee: a par 5 here.
-            { player_id: 'b', fields: { strokes: 5, putts: 2 }, base: {}, auto: true, dflt: { strokes: 5, putts: 2, picked_up: false } },
+            {
+              player_id: 'b',
+              fields: { strokes: 5, putts: 2 },
+              base: {},
+              auto: true,
+              dflt: { strokes: 5, putts: 2, picked_up: false },
+            },
           ],
         },
       ],
@@ -68,12 +83,21 @@ describe('writeHole', () => {
 
   it('what the phone saw at the first touch is the base, not the boards now', async () => {
     await writeHole(writer(), { a: d(6) }, 7, { seen: new Map([['a', {}]]) })
-    expect(calls[0]).toMatchObject(['hole', { entries: [{ player_id: 'a', base: {}, fields: { strokes: 6, putts: 2 } }] }])
+    expect(calls[0]).toMatchObject([
+      'hole',
+      { entries: [{ player_id: 'a', base: {}, fields: { strokes: 6, putts: 2 } }] },
+    ])
   })
 
   it('the Comité outside the group writes each player directly, as before (0026)', async () => {
     await writeHole(writer({ myPlayerId: 'z' }), { a: d(4), b: d(1, 0, true) }, 7)
-    expect(calls.map(([k, v]) => [k, (v as { player_id: string; strokes: number | null; entered_by: string }).player_id, (v as { strokes: number | null }).strokes])).toEqual([
+    expect(
+      calls.map(([k, v]) => [
+        k,
+        (v as { player_id: string; strokes: number | null; entered_by: string }).player_id,
+        (v as { strokes: number | null }).strokes,
+      ]),
+    ).toEqual([
       ['score', 'a', 4],
       ['score', 'b', null],
     ])
@@ -98,14 +122,24 @@ describe('writeHole', () => {
 
   it('a refused correction is the call’s refusal, after the phone’s own writes went', async () => {
     vi.mocked(adminSaveHole).mockRejectedValueOnce(new Error('Failed to fetch'))
-    await expect(writeHole(writer({ viaServer: () => true, awards: [{ gameId: 'cp', playerIds: ['a'] }] }), { a: d(4) }, 7, { lastHoled: 'a' })).rejects.toThrow('Failed to fetch')
+    await expect(
+      writeHole(writer({ viaServer: () => true, awards: [{ gameId: 'cp', playerIds: ['a'] }] }), { a: d(4) }, 7, {
+        lastHoled: 'a',
+      }),
+    ).rejects.toThrow('Failed to fetch')
     expect(calls.map(([k]) => k)).toEqual(['award', 'tiebreak'])
   })
 
   it('the snake’s answer goes with the hole; «No sabemos» sends none, and the Comité decides (UX-08)', async () => {
     await writeHole(writer(), { a: d(5, 3), b: d(5, 3) }, 7, { lastHoled: 'b' })
     expect(calls.map(([k]) => k)).toEqual(['hole', 'tiebreak'])
-    expect(calls[1]![1]).toEqual({ round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'b', decided_by: 'a' })
+    expect(calls[1]![1]).toEqual({
+      round_id: 'r1',
+      group_id: 'g1',
+      hole: 7,
+      last_holed_player_id: 'b',
+      decided_by: 'a',
+    })
     calls.length = 0
     await writeHole(writer(), { a: d(5, 3), b: d(5, 3) }, 7)
     expect(calls.map(([k]) => k)).toEqual(['hole'])
@@ -115,7 +149,14 @@ describe('writeHole', () => {
     const awards = [{ gameId: 'cp', playerIds: ['b'] }]
     await writeHole(writer({ awards }), { a: d(4) }, 7)
     expect(calls.map(([k]) => k)).toEqual(['hole', 'award'])
-    expect(calls[1]![1]).toEqual({ round_id: 'r1', group_id: 'g1', hole: 7, game_id: 'cp', player_ids: ['b'], decided_by: 'a' })
+    expect(calls[1]![1]).toEqual({
+      round_id: 'r1',
+      group_id: 'g1',
+      hole: 7,
+      game_id: 'cp',
+      player_ids: ['b'],
+      decided_by: 'a',
+    })
     calls.length = 0
     await writeHole(writer({ awards }), { a: d(4) }, 6)
     expect(calls.map(([k]) => k)).toEqual(['hole'])

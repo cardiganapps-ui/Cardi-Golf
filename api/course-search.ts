@@ -10,7 +10,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import * as gca from '../src/lib/courseProviders/golfcourseapi.js'
 import * as oga from '../src/lib/courseProviders/opengolfapi.js'
 import { mergeHits, parseRef, type ProviderSearchHit } from '../src/lib/courseProviders/types.js'
-import { golfCourseHeaders, golfCourseSearchUrl, golfCourseUrl, openGolfCourseUrl, openGolfHeaders, openGolfSearchUrl } from '../src/lib/courseProviders/endpoints.js'
+import {
+  golfCourseHeaders,
+  golfCourseSearchUrl,
+  golfCourseUrl,
+  openGolfCourseUrl,
+  openGolfHeaders,
+  openGolfSearchUrl,
+} from '../src/lib/courseProviders/endpoints.js'
 import { rateLimited, requireCourseManager } from '../src/server/auth.js'
 
 /** Longer than any course's name: a longer search is not one, and goes to no provider. */
@@ -109,7 +116,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const gHits = hitsOf(g, gca.mapSearchHit)
   const oHits = hitsOf(o, oga.mapSearchHit)
   if (!gHits && !oHits) {
-    res.status(503).json({ error: 'Búsqueda no disponible; sube una foto o captúralo a mano.', code: gcaKey ? 'down' : 'no_key' })
+    res
+      .status(503)
+      .json({ error: 'Búsqueda no disponible; sube una foto o captúralo a mano.', code: gcaKey ? 'down' : 'no_key' })
     return
   }
   res.status(200).json({ hits: mergeHits([gHits ?? [], oHits ?? []]).slice(0, 30), providers })

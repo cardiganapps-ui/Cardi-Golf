@@ -9,7 +9,9 @@ import { applyTextSize, markViewport, rootPxFor, systemBodyPx, watchTextSize } f
 
 /** The phone's Dynamic Type, as WebKit gives it: the keyword is supported and resolves to `bodyPx`. */
 function dynamicType(bodyPx: number | null) {
-  vi.spyOn(CSS, 'supports').mockImplementation((prop: string, value?: string) => bodyPx != null && prop === 'font' && value === '-apple-system-body')
+  vi.spyOn(CSS, 'supports').mockImplementation(
+    (prop: string, value?: string) => bodyPx != null && prop === 'font' && value === '-apple-system-body',
+  )
   const real = window.getComputedStyle.bind(window)
   vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
     if ((el as HTMLElement).dataset?.textProbe !== undefined) return { fontSize: `${bodyPx}px` } as CSSStyleDeclaration

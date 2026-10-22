@@ -8,12 +8,23 @@
  * fails is a transparent pixel, never a URL html-to-image would fetch.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { _shareTest, NO_IMAGE, codePointsIn, coversAny, fontEmbedCss, inlineImages, type PageFontFace } from './shareImage'
+import {
+  _shareTest,
+  NO_IMAGE,
+  codePointsIn,
+  coversAny,
+  fontEmbedCss,
+  inlineImages,
+  type PageFontFace,
+} from './shareImage'
 
 // Fontsource's subsets for one family, as the stylesheet declares them.
-const LATIN = 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD'
-const LATIN_EXT = 'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF'
-const VIETNAMESE = 'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB'
+const LATIN =
+  'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD'
+const LATIN_EXT =
+  'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF'
+const VIETNAMESE =
+  'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB'
 
 const face = (family: string, subset: string, range: string): PageFontFace => ({
   family,
@@ -21,7 +32,12 @@ const face = (family: string, subset: string, range: string): PageFontFace => ({
   unicodeRange: range,
   cssText: `@font-face { font-family: "${family}"; font-style: normal; font-weight: 100 900; src: url("/assets/${family}-${subset}.woff2") format("woff2-variations"); unicode-range: ${range}; }`,
 })
-const FACES = [face('archivo', 'latin', LATIN), face('archivo', 'latin-ext', LATIN_EXT), face('archivo', 'vietnamese', VIETNAMESE), face('fraunces', 'latin', LATIN)]
+const FACES = [
+  face('archivo', 'latin', LATIN),
+  face('archivo', 'latin-ext', LATIN_EXT),
+  face('archivo', 'vietnamese', VIETNAMESE),
+  face('fraunces', 'latin', LATIN),
+]
 
 const SPANISH = codePointsIn('Camilo Duarte, Íñigo: $1,500 − «Mejor ronda» ¿quién? 1.º')
 beforeEach(() => _shareTest.reset())
@@ -63,7 +79,8 @@ describe('a failure is never remembered (the session is not poisoned)', () => {
 
   it('an image that cannot load is a transparent pixel, out of the layout, for this render only; the others are inlined, and all restored after', async () => {
     const node = document.createElement('div')
-    node.innerHTML = '<img src="http://polo.test/logo.png" srcset="http://polo.test/logo@2x.png 2x"><img src="http://polo.test/avatar.jpg">'
+    node.innerHTML =
+      '<img src="http://polo.test/logo.png" srcset="http://polo.test/logo@2x.png 2x"><img src="http://polo.test/avatar.jpg">'
     const [logo, avatar] = Array.from(node.querySelectorAll('img'))
     const load = vi.fn(async (url: string) => {
       if (url.endsWith('avatar.jpg')) throw new TypeError('Failed to fetch')
@@ -128,7 +145,10 @@ describe('a logo the service worker cached as an opaque response (PWA-04)', () =
 describe('iOS shares only inside the tap', () => {
   it('when the render outlasted the tap, the ready image is offered for a second tap', async () => {
     const file = new File(['png'], 'tabla.png', { type: 'image/png' })
-    const share = vi.fn().mockRejectedValueOnce(new DOMException('not allowed', 'NotAllowedError')).mockResolvedValueOnce(undefined)
+    const share = vi
+      .fn()
+      .mockRejectedValueOnce(new DOMException('not allowed', 'NotAllowedError'))
+      .mockResolvedValueOnce(undefined)
     Object.assign(navigator, { canShare: () => true, share })
     let again: (() => Promise<string>) | null = null
     expect(await _shareTest.share(file, 'Tabla', undefined, (fn) => (again = fn))).toBe('cancelled')

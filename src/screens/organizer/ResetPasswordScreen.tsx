@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -18,7 +18,7 @@ export function ResetPasswordScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function submit(e: FormEvent) {
+  async function submit(e: SubmitEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
@@ -53,10 +53,19 @@ export function ResetPasswordScreen() {
         />
       )}
       {ready && signedIn && (
-        <form className={styles.form} onSubmit={submit}>
+        <form className={styles.form} onSubmit={(e) => void submit(e)}>
           <p className="help">{user?.email}</p>
           <Field label={t.auth.newPassword} hint={t.auth.passwordHint}>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required autoFocus />
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+              autoFocus
+            />
           </Field>
           {error && (
             <p className="error" role="alert">

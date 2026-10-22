@@ -13,7 +13,11 @@ import { MoneyBar } from '../organizer/setup/MoneyEditor'
 import { PrizeSummary } from './PrizeSummary'
 
 const A = t.admin.tournament
-const settings: TournamentSettings = { ...structuredClone(DEFAULT_SETTINGS), entryFee: 2000, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [3000, 500, 500, 2000] } }
+const settings: TournamentSettings = {
+  ...structuredClone(DEFAULT_SETTINGS),
+  entryFee: 2000,
+  prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [3000, 500, 500, 2000] },
+}
 
 afterEach(() => cleanup())
 
@@ -27,7 +31,13 @@ describe('a prize nobody can win, on screen (MONEY-09)', () => {
   })
 
   it('with a 4th player there is nothing to list', () => {
-    render(<PrizeSummary check={checkPrizePool({ ...settings, entryFee: 1500 }, { players: 4 })} players={4} currency="MXN" />)
+    render(
+      <PrizeSummary
+        check={checkPrizePool({ ...settings, entryFee: 1500 }, { players: 4 })}
+        players={4}
+        currency="MXN"
+      />,
+    )
     expect(screen.queryByText(A.unreachableTitle)).toBeNull()
   })
 

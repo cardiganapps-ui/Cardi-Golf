@@ -24,12 +24,16 @@ export function describeGame(g: GameConfig): Msg[] {
     case 'skins': {
       const o = g.options
       lines.push(msg('gameRules.skins', { net: o.basis === 'net' }), msg('gameRules.skinsTies', { carry: o.carryOver }))
-      if (g.money.source === 'side' || g.money.source === 'main') lines.push(msg('gameRules.skinsPot', { side: potSide(g) }))
+      if (g.money.source === 'side' || g.money.source === 'main')
+        lines.push(msg('gameRules.skinsPot', { side: potSide(g) }))
       break
     }
     case 'lowScore': {
       const o = g.options
-      lines.push(msg('gameRules.lowScore', { basis: o.basis }), msg('gameRules.lowScope', { perRound: o.scope === 'perRound', side: potSide(g) }))
+      lines.push(
+        msg('gameRules.lowScore', { basis: o.basis }),
+        msg('gameRules.lowScope', { perRound: o.scope === 'perRound', side: potSide(g) }),
+      )
       if (g.money.source !== 'none') lines.push(msg('gameRules.lowSplit', { split: g.money.split }))
       break
     }
@@ -38,13 +42,19 @@ export function describeGame(g: GameConfig): Msg[] {
       if (o.event === 'threePutt') lines.push(say('gameRules.threePutt'))
       else lines.push(msg('gameRules.event', { eagle: o.event === 'eagle', net: o.basis === 'net' }))
       if (o.event !== 'threePutt' && g.money.source === 'direct') lines.push(say('gameRules.eventDirect'))
-      if (g.money.source === 'side' || g.money.source === 'main') lines.push(msg('gameRules.eventPot', { side: potSide(g) }))
+      if (g.money.source === 'side' || g.money.source === 'main')
+        lines.push(msg('gameRules.eventPot', { side: potSide(g) }))
       break
     }
     case 'match': {
       const o = g.options
       lines.push(msg('gameRules.match', { nassau: o.format === 'nassau' }))
-      lines.push(msg('gameRules.matchBasis', { net: o.basis === 'net', pairs: o.matches.some((m) => m.a.length > 1) ? o.pairScoring : null }))
+      lines.push(
+        msg('gameRules.matchBasis', {
+          net: o.basis === 'net',
+          pairs: o.matches.some((m) => m.a.length > 1) ? o.pairScoring : null,
+        }),
+      )
       if (o.pressAt > 0) lines.push(msg('gameRules.press', { at: o.pressAt, max: o.maxPresses }))
       lines.push(say('gameRules.matchComite'))
       break

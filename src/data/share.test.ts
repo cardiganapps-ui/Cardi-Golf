@@ -28,8 +28,16 @@ describe('shareList', () => {
   })
 
   it('one row changed: a new list, the changed row new, every other row the previous object', () => {
-    const prev = [{ id: 1, v: 1 }, { id: 2, v: 1 }, { id: 3, v: 1 }]
-    const next = [{ id: 1, v: 1 }, { id: 2, v: 2 }, { id: 3, v: 1 }]
+    const prev = [
+      { id: 1, v: 1 },
+      { id: 2, v: 1 },
+      { id: 3, v: 1 },
+    ]
+    const next = [
+      { id: 1, v: 1 },
+      { id: 2, v: 2 },
+      { id: 3, v: 1 },
+    ]
     const out = shareList(prev, next)
     expect(out).not.toBe(prev)
     expect(out[0]).toBe(prev[0])

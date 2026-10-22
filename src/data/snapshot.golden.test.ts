@@ -61,13 +61,33 @@ function cabos(): Snapshot {
   const s = structuredClone(getFixture('full12-live')!.snapshot)
   s.courses[0]!.name = 'Solmar Golf Links'
   const negras: Hole[] = PAR_72.map(([par, si], i) => ({ number: i + 1, par, strokeIndex: si, yards: null }))
-  const rojas: Hole[] = negras.map((h) => ({ ...h, strokeIndex: h.number === 5 ? 18 : h.number === 11 ? 1 : h.strokeIndex, par: h.number === 18 ? 4 : h.par }))
+  const rojas: Hole[] = negras.map((h) => ({
+    ...h,
+    strokeIndex: h.number === 5 ? 18 : h.number === 11 ? 1 : h.strokeIndex,
+    par: h.number === 18 ? 4 : h.par,
+  }))
   s.courses.push({
     id: 'course-quivira',
     name: 'Quivira Los Cabos',
     tees: [
-      { id: 'tee-q-negras', courseId: 'course-quivira', name: 'Negras', color: 'black', rating: 74.1, slope: 142, holes: negras },
-      { id: 'tee-q-rojas', courseId: 'course-quivira', name: 'Rojas', color: 'red', rating: 63.7, slope: 107, holes: rojas },
+      {
+        id: 'tee-q-negras',
+        courseId: 'course-quivira',
+        name: 'Negras',
+        color: 'black',
+        rating: 74.1,
+        slope: 142,
+        holes: negras,
+      },
+      {
+        id: 'tee-q-rojas',
+        courseId: 'course-quivira',
+        name: 'Rojas',
+        color: 'red',
+        rating: 63.7,
+        slope: 107,
+        holes: rojas,
+      },
     ],
   })
   s.rounds.find((r) => r.id === 'r2')!.courseId = 'course-quivira'
@@ -77,7 +97,14 @@ function cabos(): Snapshot {
   ])
   const decimals: Record<string, number> = { p3: 10.4, p9: 21.9, p12: 32.6 }
   for (const p of s.players) p.baseHcp = decimals[p.id] ?? p.baseHcp
-  s.handicapOverrides.push({ roundId: 'r2', playerId: 'p10', playingHcp: 13, reason: 'Se lastimó la muñeca el día 1', by: 'p9', at: '2027-04-09T18:05:00Z' })
+  s.handicapOverrides.push({
+    roundId: 'r2',
+    playerId: 'p10',
+    playingHcp: 13,
+    reason: 'Se lastimó la muñeca el día 1',
+    by: 'p9',
+    at: '2027-04-09T18:05:00Z',
+  })
   s.snakeTiebreaks = [{ roundId: 'r2', groupId: 'r2g1', hole: 5, lastHoledPlayerId: 'p4' }]
   return s
 }
@@ -96,7 +123,10 @@ function everyTable(): Snapshot {
     { id: 'team1', name: 'Los de Solmar', number: 1, playerIds: ['p1', 'p2'], drawnAt: null },
     { id: 'team2', name: 'Los de Quivira', number: 2, playerIds: ['p3', 'p4'], drawnAt: null },
   ]
-  s.snakeTiebreaks.push({ roundId: 'r1', groupId: 'r1g3', hole: 10, lastHoledPlayerId: 'p9' }, { roundId: 'r1', groupId: 'r1g3', hole: 17, lastHoledPlayerId: 'p3' })
+  s.snakeTiebreaks.push(
+    { roundId: 'r1', groupId: 'r1g3', hole: 10, lastHoledPlayerId: 'p9' },
+    { roundId: 'r1', groupId: 'r1g3', hole: 17, lastHoledPlayerId: 'p3' },
+  )
   s.gameEntries = [
     { gameId: 'low', playerId: 'p1' },
     { gameId: 'low', playerId: 'p2' },
@@ -114,8 +144,32 @@ function everyTable(): Snapshot {
   ]
   // The Comité's assignments of unassigned money (0027), one of them voided.
   s.moneyAdjustments = [
-    { id: 'adj1', callId: 'call-adj1', sourceKey: 'bestRound', kind: 'award', toPlayerId: 'p2', amount: 600, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
-    { id: 'adj2', callId: 'call-adj2', sourceKey: 'calcutta', kind: 'house', toPlayerId: null, amount: 100, reason: 'Para la cena', createdAt: '2027-04-11T20:05:00+00:00', createdBy: 'org', voidedAt: '2027-04-11T20:06:00+00:00', voidReason: 'Error' },
+    {
+      id: 'adj1',
+      callId: 'call-adj1',
+      sourceKey: 'bestRound',
+      kind: 'award',
+      toPlayerId: 'p2',
+      amount: 600,
+      reason: 'Día 2 cancelado',
+      createdAt: '2027-04-11T20:00:00+00:00',
+      createdBy: 'org',
+      voidedAt: null,
+      voidReason: null,
+    },
+    {
+      id: 'adj2',
+      callId: 'call-adj2',
+      sourceKey: 'calcutta',
+      kind: 'house',
+      toPlayerId: null,
+      amount: 100,
+      reason: 'Para la cena',
+      createdAt: '2027-04-11T20:05:00+00:00',
+      createdBy: 'org',
+      voidedAt: '2027-04-11T20:06:00+00:00',
+      voidReason: 'Error',
+    },
   ]
   return s
 }
@@ -194,8 +248,21 @@ describe('golden: the Comité’s decisions (MONEY-05)', () => {
   it('two rows written by one call load back as one assignment, through the backup and the store', async () => {
     // A refund to two players is one call (`call_id`): one decision, paid or flagged whole, voided whole.
     const s = everyTable()
-    const call = { callId: 'call-refund', sourceKey: 'snake', kind: 'refund' as const, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:10:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }
-    s.moneyAdjustments = [...s.moneyAdjustments!, { ...call, id: 'adj3', toPlayerId: 'p3', amount: 150 }, { ...call, id: 'adj4', toPlayerId: 'p4', amount: 150 }]
+    const call = {
+      callId: 'call-refund',
+      sourceKey: 'snake',
+      kind: 'refund' as const,
+      reason: 'Día 2 cancelado',
+      createdAt: '2027-04-11T20:10:00+00:00',
+      createdBy: 'org',
+      voidedAt: null,
+      voidReason: null,
+    }
+    s.moneyAdjustments = [
+      ...s.moneyAdjustments!,
+      { ...call, id: 'adj3', toPlayerId: 'p3', amount: 150 },
+      { ...call, id: 'adj4', toPlayerId: 'p4', amount: 150 },
+    ]
     await loadThroughBackup(s)
     const { data, error } = useTournament.getState()
     expect(error).toBeNull()
@@ -237,27 +304,42 @@ describe('golden: the first tournament’s shape (QA-07)', () => {
     const day2 = (pid: string) => {
       const pr = r2[pid]!
       const hole = (n: number) => pr.holes.find((h) => h.hole === n)!
-      return [pr.tee?.id, pr.playingHcp, [hole(5).strokeIndex, hole(5).strokesReceived], [hole(11).strokeIndex, hole(11).strokesReceived], hole(18).par]
+      return [
+        pr.tee?.id,
+        pr.playingHcp,
+        [hole(5).strokeIndex, hole(5).strokesReceived],
+        [hole(11).strokeIndex, hole(11).strokesReceived],
+        hole(18).par,
+      ]
     }
     // Off 13, a stroke on SI 1–13: hole 5 is SI 1 from the back and SI 18 from the front; hole 11 the reverse.
     expect(day2('p6')).toEqual(['tee-q-negras', 13, [1, 1], [18, 0], 5])
     expect(day2('p10')).toEqual(['tee-q-rojas', 13, [18, 0], [1, 1], 4])
     // Every D player plays the forward card; everyone else the back one.
-    for (const [pid, pr] of Object.entries(r2)) expect(pr.tee?.id, pid).toBe(['p10', 'p11', 'p12'].includes(pid) ? 'tee-q-rojas' : 'tee-q-negras')
+    for (const [pid, pr] of Object.entries(r2))
+      expect(pr.tee?.id, pid).toBe(['p10', 'p11', 'p12'].includes(pid) ? 'tee-q-rojas' : 'tee-q-negras')
   })
 
   it('a base handicap with a decimal reaches the engine as typed: 80% of 21.9 = 17.52 → 18', async () => {
     const { data } = await loadCabos()
     expect(data.snapshot.players.find((p) => p.id === 'p9')!.baseHcp).toBe(21.9)
     expect(data.state.core.handicaps.p9!.base).toBe(21.9)
-    expect(words(data.state.core.rounds.r1!.p9!.playingHcpWhy).steps).toEqual(['Hándicap base 21.9', 'Se juega con el 80%: 80% de 21.9 = 17.52', 'Redondeado al entero: 18'])
+    expect(words(data.state.core.rounds.r1!.p9!.playingHcpWhy).steps).toEqual([
+      'Hándicap base 21.9',
+      'Se juega con el 80%: 80% de 21.9 = 17.52',
+      'Redondeado al entero: 18',
+    ])
   })
 
   it('the stored answer decides who holds the snake: p4 holed out last on the 5th, so the pass on the 6th counts too', async () => {
     const { data, stored } = await loadCabos()
     const group = (st: typeof data.state) => {
       const g = st.modules.snake!.groups.find((x) => x.groupId === 'r2g1')!
-      return { holder: g.holderId, pendingHole: g.pendingHole, passes: g.passes.map((p) => [p.hole, p.candidates, p.holderId]) }
+      return {
+        holder: g.holderId,
+        pendingHole: g.pendingHole,
+        passes: g.passes.map((p) => [p.hole, p.candidates, p.holderId]),
+      }
     }
     expect(group(data.state)).toEqual({
       holder: 'p10',
@@ -308,7 +390,13 @@ describe('the backup client (QA-07)', () => {
 
   it('a backup of another tournament is refused before anything reaches the server', async () => {
     server = fakeSupabase({})
-    const other: Backup = { version: 1, exportedAt: '2027-04-09T08:00:00.000Z', tournamentId: 'otro', slug: 'otro', tables: {} }
+    const other: Backup = {
+      version: 1,
+      exportedAt: '2027-04-09T08:00:00.000Z',
+      tournamentId: 'otro',
+      slug: 'otro',
+      tables: {},
+    }
     await expect(restoreBackup('fx-min', other)).rejects.toThrow('wrong-tournament')
     expect(server.rpcCalls).toEqual([])
   })
@@ -318,20 +406,34 @@ describe('the backup client (QA-07)', () => {
     server = fakeSupabase(snapshotToRows(fx.snapshot))
     const backup = await exportBackup(fx.snapshot.tournament.id)
     server.rpcResult = { data: { players: 4, rounds: 1, scores: fx.snapshot.scores.length }, error: null }
-    await expect(restoreBackup(fx.snapshot.tournament.id, backup)).resolves.toEqual({ players: 4, rounds: 1, scores: fx.snapshot.scores.length })
+    await expect(restoreBackup(fx.snapshot.tournament.id, backup)).resolves.toEqual({
+      players: 4,
+      rounds: 1,
+      scores: fx.snapshot.scores.length,
+    })
     expect(server.rpcCalls.map((c) => c.name)).toEqual(['restore_tournament'])
     const args = server.rpcCalls[0]!.args!
     expect(args.p_tournament_id).toBe(fx.snapshot.tournament.id)
     const sent = args.p_backup as Backup
     const shared = ['courses', 'tees', 'holes']
-    expect(Object.keys(sent.tables).sort()).toEqual(Object.keys(backup.tables).filter((t) => !shared.includes(t)).sort())
+    expect(Object.keys(sent.tables).sort()).toEqual(
+      Object.keys(backup.tables)
+        .filter((t) => !shared.includes(t))
+        .sort(),
+    )
     for (const t of Object.keys(sent.tables)) expect(sent.tables[t], t).toEqual(backup.tables[t])
   })
 
   it('a restore the server refuses keeps its code, for the copy', async () => {
     server = fakeSupabase({})
     server.rpcResult = { data: null, error: { message: 'El respaldo no trae la tabla players', code: '22023' } }
-    const backup: Backup = { version: 1, exportedAt: '2027-04-09T08:00:00.000Z', tournamentId: 'fx-min', slug: 'x', tables: { players: [] } }
+    const backup: Backup = {
+      version: 1,
+      exportedAt: '2027-04-09T08:00:00.000Z',
+      tournamentId: 'fx-min',
+      slug: 'x',
+      tables: { players: [] },
+    }
     const err = await restoreBackup('fx-min', backup).catch((e: unknown) => e)
     expect(err).toBeInstanceOf(ApiError)
     expect((err as InstanceType<typeof ApiError>).code).toBe('22023')

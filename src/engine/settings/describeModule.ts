@@ -46,12 +46,21 @@ function lastHoles(ctx: RulesContext): Array<[number, number]> {
 }
 
 /** A Calcutta slot's name: a place, the best of a tier, or last place. */
-export function slotName(slot: { slot: 'place' | 'bestOfTier' | 'lastPlace'; place?: number; tier?: string }, lastPlace: string): Msg {
+export function slotName(
+  slot: { slot: 'place' | 'bestOfTier' | 'lastPlace'; place?: number; tier?: string },
+  lastPlace: string,
+): Msg {
   return msg('rules.slot', { slot: slot.slot, place: slot.place ?? null, tier: slot.tier ?? null, lastPlace })
 }
 
 /** One module's rules, as the Reglamento writes them (codes, ARCH-05). */
-export function moduleRules(id: ModuleId, settings: TournamentSettings, field: FieldShape, honoreeName?: string | null, context?: RulesContext): Msg[] {
+export function moduleRules(
+  id: ModuleId,
+  settings: TournamentSettings,
+  field: FieldShape,
+  honoreeName?: string | null,
+  context?: RulesContext,
+): Msg[] {
   const amount = (n: number) => (n > 0 ? n : null)
   const m = settings.modules
   const ctx = context ?? rulesContext(settings)
@@ -61,12 +70,24 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
       const paid = amounts.some((x) => x > 0)
       const percent = settings.prizes.stablefordMode === 'percent'
       // The platform's generic label is no trophy: only a name the organizer gave it is.
-      const lastPlace = settings.labels.lastPlace.trim() && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace ? settings.labels.lastPlace : null
+      const lastPlace =
+        settings.labels.lastPlace.trim() && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace
+          ? settings.labels.lastPlace
+          : null
       return [
         ...formatFor(settings).describe(settings).steps,
-        paid ? msg('rules.places', { prizes: amounts.map((x, i) => ({ amount: x, pct: percent ? (settings.prizes.stableford[i] ?? null) : null })) }) : say('rules.noPrize'),
+        paid
+          ? msg('rules.places', {
+              prizes: amounts.map((x, i) => ({
+                amount: x,
+                pct: percent ? (settings.prizes.stableford[i] ?? null) : null,
+              })),
+            })
+          : say('rules.noPrize'),
         // Match play breaks a tie on its own countback (holes up in the last day's match), not on the last holes.
-        settings.modules.individual.format === 'matchPlay' ? msg('rules.matchTiebreak', { days: ctx.days, prizes: paid }) : msg('rules.tiebreak', { windows: lastHoles(ctx), days: ctx.days, prizes: paid }),
+        settings.modules.individual.format === 'matchPlay'
+          ? msg('rules.matchTiebreak', { days: ctx.days, prizes: paid })
+          : msg('rules.tiebreak', { windows: lastHoles(ctx), days: ctx.days, prizes: paid }),
         ...(lastPlace ? [msg('rules.lastPlace', { label: lastPlace })] : []),
       ]
     }
@@ -78,9 +99,15 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
       ]
     case 'pairs':
       return [
-        msg('rules.pairs', { pairing: m.pairs.pairing, auction: m.auction.enabled ? m.auction.label : null, honoree: m.pairs.honoreePicks ? (honoreeName ?? settings.labels.honoree) : null }),
+        msg('rules.pairs', {
+          pairing: m.pairs.pairing,
+          auction: m.auction.enabled ? m.auction.label : null,
+          honoree: m.pairs.honoreePicks ? (honoreeName ?? settings.labels.honoree) : null,
+        }),
         say('rules.pairsPoints'),
-        settings.prizes.pairs.some((x) => x > 0) ? msg('rules.pairsPrizes', { prizes: settings.prizes.pairs, days: ctx.days }) : say('rules.noPrize'),
+        settings.prizes.pairs.some((x) => x > 0)
+          ? msg('rules.pairsPrizes', { prizes: settings.prizes.pairs, days: ctx.days })
+          : say('rules.noPrize'),
         msg('rules.pairsTogether', { days: ctx.days }),
       ]
     case 'snake': {
@@ -88,18 +115,37 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
       const game = m.snake.label
       return [
         msg('rules.snake', { threshold, game }),
-        settings.prizes.snakePerSurvivor > 0 ? msg('rules.snakePaid', { per: settings.prizes.snakePerSurvivor, pot: snakePotPerGroup(settings), threshold, game }) : msg('rules.snakeFree', { game }),
+        settings.prizes.snakePerSurvivor > 0
+          ? msg('rules.snakePaid', {
+              per: settings.prizes.snakePerSurvivor,
+              pot: snakePotPerGroup(settings),
+              threshold,
+              game,
+            })
+          : msg('rules.snakeFree', { game }),
       ]
     }
     case 'fewestPutts':
-      return [msg('rules.fewestPutts', { prize: amount(settings.prizes.fewestPutts), pickup: settings.pickupPuttsForFewestPutts })]
+      return [
+        msg('rules.fewestPutts', {
+          prize: amount(settings.prizes.fewestPutts),
+          pickup: settings.pickupPuttsForFewestPutts,
+        }),
+      ]
     case 'auction': {
       const a = settings.auction
       return [
         msg('rules.auction', { game: m.auction.label }),
-        msg('rules.auctionBids', { opening: a.openingBid, increment: a.increment, max: a.maxPlayersPerOwner, selfCounts: a.selfOwnedCountsTowardMax }),
+        msg('rules.auctionBids', {
+          opening: a.openingBid,
+          increment: a.increment,
+          max: a.maxPlayersPerOwner,
+          selfCounts: a.selfOwnedCountsTowardMax,
+        }),
         ...(a.buybackMaxPct > 0 ? [msg('rules.buyback', { pct: a.buybackMaxPct })] : []),
-        msg('rules.auctionPot', { slots: a.payout.map((s) => ({ slot: slotName(s, settings.labels.lastPlace), share: s.share })) }),
+        msg('rules.auctionPot', {
+          slots: a.payout.map((s) => ({ slot: slotName(s, settings.labels.lastPlace), share: s.share })),
+        }),
         msg('rules.auctionOne', { tiers: a.payout.flatMap((s) => (s.slot === 'bestOfTier' ? [s.tier] : [])) }),
         say('rules.auctionOwed'),
       ]

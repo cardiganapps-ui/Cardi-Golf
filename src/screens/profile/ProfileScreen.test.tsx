@@ -33,13 +33,23 @@ it('«Mi dinero» says only you see the summary, and that everyone in each tourn
   // Said where it is read, not only present: nothing hides it.
   expectShown(hint)
   // Each figure opens that tournament's Dinero, where its members see the same net.
-  for (const m of mine.money!) expect(within(section).getByRole('link', { name: new RegExp(m.name) }).getAttribute('href')).toBe(`/t/${m.slug}/dinero`)
+  for (const m of mine.money!)
+    expect(
+      within(section)
+        .getByRole('link', { name: new RegExp(m.name) })
+        .getAttribute('href'),
+    ).toBe(`/t/${m.slug}/dinero`)
 })
 
-it('what makes «solo lo ves tú» true: the section is drawn for the profile\'s owner only', () => {
+it("what makes «solo lo ves tú» true: the section is drawn for the profile's owner only", () => {
   render(
     <MemoryRouter>
-      <ProfileView card={{ ...mine.card, isMe: false, related: true }} tournaments={mine.tournaments} rounds={mine.rounds} money={mine.money} />
+      <ProfileView
+        card={{ ...mine.card, isMe: false, related: true }}
+        tournaments={mine.tournaments}
+        rounds={mine.rounds}
+        money={mine.money}
+      />
     </MemoryRouter>,
   )
   expect(screen.queryByText(t.profile.money)).toBeNull()

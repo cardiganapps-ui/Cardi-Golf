@@ -31,7 +31,8 @@ export function entryScripts(html) {
 /** Each entry script with its gzipped size in bytes, and what is wrong: nothing, when `problems` is empty. */
 export function entryReport(dir, budgetKib = ENTRY_BUDGET_GZIP_KIB) {
   const problems = []
-  if (!existsSync(join(dir, 'index.html'))) return { files: [], kib: 0, problems: [`${dir}/index.html is missing: build first`] }
+  if (!existsSync(join(dir, 'index.html')))
+    return { files: [], kib: 0, problems: [`${dir}/index.html is missing: build first`] }
   const files = entryScripts(readFileSync(join(dir, 'index.html'), 'utf8')).map((path) => {
     if (!existsSync(join(dir, path))) {
       problems.push(`${path} is loaded by index.html but not in ${dir}`)
@@ -41,7 +42,10 @@ export function entryReport(dir, budgetKib = ENTRY_BUDGET_GZIP_KIB) {
   })
   if (!files.length) problems.push('index.html loads no module script')
   const kib = Math.round(files.reduce((n, f) => n + f.gzip, 0) / 1024)
-  if (kib > budgetKib) problems.push(`the first load's JavaScript is ${kib} KiB gzipped, over its budget of ${budgetKib} KiB: ${files.map((f) => `${f.path} ${Math.round(f.gzip / 1024)}`).join(', ')}`)
+  if (kib > budgetKib)
+    problems.push(
+      `the first load's JavaScript is ${kib} KiB gzipped, over its budget of ${budgetKib} KiB: ${files.map((f) => `${f.path} ${Math.round(f.gzip / 1024)}`).join(', ')}`,
+    )
   return { files, kib, problems }
 }
 

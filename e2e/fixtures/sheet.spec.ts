@@ -23,7 +23,12 @@ async function openSheet(page: Page) {
   })
 }
 
-type Frame = { at: number; present: boolean; opacity: number; top: number }
+interface Frame {
+  at: number
+  present: boolean
+  opacity: number
+  top: number
+}
 /**
  * From the Escape on (the clock starts in the key's own listener, so a busy machine can't start it late): every
  * frame for 600 ms, whether the dialog is in the DOM and how visible it is (its opacity times its backdrop's), and
@@ -46,7 +51,12 @@ async function watchClose(page: Page) {
       const tick = () => {
         const d = document.querySelector<HTMLElement>('[role="dialog"]')
         const op = d ? Number(getComputedStyle(d).opacity) * Number(getComputedStyle(d.parentElement!).opacity) : 0
-        w.frames_.push({ at: performance.now() - t0, present: !!d, opacity: op, top: d ? d.getBoundingClientRect().top : 0 })
+        w.frames_.push({
+          at: performance.now() - t0,
+          present: !!d,
+          opacity: op,
+          top: d ? d.getBoundingClientRect().top : 0,
+        })
         if (performance.now() - t0 < 600) requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
@@ -74,7 +84,9 @@ async function swipe(page: Page, x: number, y0: number, dy: number, ms: number, 
   }
 }
 
-test('Escape: the sheet stays on screen fading for its exit, then goes; the page is back at once (MOT-09)', async ({ page }) => {
+test('Escape: the sheet stays on screen fading for its exit, then goes; the page is back at once (MOT-09)', async ({
+  page,
+}) => {
   await openSheet(page)
   const top0 = (await page.locator(DIALOG).boundingBox())!.y
   await watchClose(page)
@@ -82,25 +94,37 @@ test('Escape: the sheet stays on screen fading for its exit, then goes; the page
   // No longer a dialog to a screen reader, at once…
   await expect(page.getByRole('dialog')).toHaveCount(0)
   // …and the page around it is live again; the only inert thing left is the sheet on its way out.
-  expect(await page.evaluate(() => Array.from(document.querySelectorAll('[inert]')).every((el) => el.querySelector('[role="dialog"]')))).toBe(true)
+  expect(
+    await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[inert]')).every((el) => el.querySelector('[role="dialog"]')),
+    ),
+  ).toBe(true)
   await expect.poll(async () => (await watched(page)).goneAt, { timeout: 3000 }).not.toBeNull()
   await page.waitForTimeout(700)
   const { frames, goneAt } = await watched(page)
-  const trace = JSON.stringify(frames.map((x) => [Math.round(x.at), x.present, x.opacity.toFixed(2), Math.round(x.top)]))
+  const trace = JSON.stringify(
+    frames.map((x) => [Math.round(x.at), x.present, x.opacity.toFixed(2), Math.round(x.top)]),
+  )
   // Still in the DOM for 100 ms or more after the key, then gone well within a second.
   expect(goneAt!, trace).toBeGreaterThanOrEqual(100)
   expect(goneAt!, trace).toBeLessThan(1000)
   // While it was there, more transparent from frame to frame, and visibly on its way: fading and lower.
   const leaving = frames.filter((x) => x.present)
-  for (let i = 1; i < leaving.length; i++) expect(leaving[i]!.opacity, trace).toBeLessThanOrEqual(leaving[i - 1]!.opacity + 1e-6)
-  expect(leaving.some((x) => x.opacity < 0.95 && x.top > top0), trace).toBe(true)
+  for (let i = 1; i < leaving.length; i++)
+    expect(leaving[i].opacity, trace).toBeLessThanOrEqual(leaving[i - 1].opacity + 1e-6)
+  expect(
+    leaving.some((x) => x.opacity < 0.95 && x.top > top0),
+    trace,
+  ).toBe(true)
   await expect(page.locator(DIALOG)).toHaveCount(0)
   expect(await page.evaluate(() => document.querySelectorAll('[inert]').length)).toBe(0)
   // Focus went back to the row that opened it.
   await expect(page.locator(ROW).first()).toBeFocused()
 })
 
-test('a 200 px drag down on the grabber closes the sheet; the sheet follows the finger on the way (MOT-09)', async ({ page }) => {
+test('a 200 px drag down on the grabber closes the sheet; the sheet follows the finger on the way (MOT-09)', async ({
+  page,
+}) => {
   await openSheet(page)
   const dialog = page.locator(DIALOG)
   const grab = dialog.locator('[data-sheet-grab]').first()

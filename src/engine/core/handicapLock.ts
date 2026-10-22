@@ -25,7 +25,8 @@ export function handicapsLocked(t: Pick<TournamentRow, 'status' | 'handicapsLock
  * the base. A base left over under an index is no change: no rule reads it.
  */
 export function handicapUsed(h: HandicapInputs): string {
-  if (h.handicapSource === 'estimate' && h.estimateInputs) return JSON.stringify(['estimate', h.estimateInputs.map((e) => [e.gross, e.rating, e.slope, e.par])])
+  if (h.handicapSource === 'estimate' && h.estimateInputs)
+    return JSON.stringify(['estimate', h.estimateInputs.map((e) => [e.gross, e.rating, e.slope, e.par])])
   if (h.handicapSource === 'index') return JSON.stringify(['index', h.handicapIndex ?? h.baseHcp])
   return JSON.stringify(['manual', h.baseHcp])
 }
@@ -48,7 +49,12 @@ export function handicapChanges(snapshot: Pick<Snapshot, 'players'>, settings: T
     const was = baseHandicap(note.from, settings)
     const now = baseHandicap(p, settings)
     if (was.source === now.source && was.base === now.base) continue
-    out.push({ playerId: p.id, from: { source: was.source, base: was.base }, to: { source: now.source, base: now.base }, changes: note.changes })
+    out.push({
+      playerId: p.id,
+      from: { source: was.source, base: was.base },
+      to: { source: now.source, base: now.base },
+      changes: note.changes,
+    })
   }
   return out
 }

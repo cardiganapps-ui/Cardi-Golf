@@ -49,7 +49,14 @@ describe('retries', () => {
     expect(sent(4)).toBe(1)
     expect(useOutbox.getState()).toMatchObject({ pending: 1, lastError: t.sync.errNetwork, rejected: [] })
 
-    for (const [n, wait] of [[2, 2000], [3, 4000], [4, 8000], [5, 16000], [6, 30000], [7, 30000]] as const) {
+    for (const [n, wait] of [
+      [2, 2000],
+      [3, 4000],
+      [4, 8000],
+      [5, 16000],
+      [6, 30000],
+      [7, 30000],
+    ] as const) {
       await vi.advanceTimersByTimeAsync(wait - 1)
       await settle(useOutbox)
       expect(sent(4), `nothing before ${wait} ms`).toBe(n - 1)
@@ -91,7 +98,11 @@ describe('retries', () => {
     await vi.advanceTimersByTimeAsync(1)
     await settle(useOutbox)
     expect(server.writeRequests()[0]!.result).toBe('aborted')
-    expect(_outboxTest.queue()[0]).toMatchObject({ key: 'score:r1:p1:15', attempts: 1, lastError: expect.stringMatching(/^RequestTimeout/) })
+    expect(_outboxTest.queue()[0]).toMatchObject({
+      key: 'score:r1:p1:15',
+      attempts: 1,
+      lastError: expect.stringMatching(/^RequestTimeout/),
+    })
     expect(useOutbox.getState()).toMatchObject({ pending: 2, lastError: t.sync.errNetwork, rejected: [] })
 
     // Retried by itself 2 s later; the hole behind it goes in the same pass.
@@ -109,7 +120,9 @@ describe('retries', () => {
     await enqueueScore('t1', holeScore('p4', 9, 4))
     await settle(useOutbox)
     expect(server.writeRequests().map((r) => r.result)).toEqual([403])
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p4:9', message: t.sync.errDenied })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p4:9', message: t.sync.errDenied }),
+    ])
     expect(useOutbox.getState()).toMatchObject({ pending: 0, lastError: t.sync.errDenied })
     expect(await _outboxTest.stored()).toEqual([])
     // On the phone, for the Comité, across a restart.
@@ -132,11 +145,19 @@ describe('retries', () => {
 
   it('sets aside a write the database cannot take as typed («invalid input»), as it does a refused one', async () => {
     // What PostgREST answers when a value does not parse as its column's type (22P02): sending it again changes nothing.
-    server.decide = (req) => (isWrite(req) ? { status: 400, body: { code: '22P02', details: null, hint: null, message: 'invalid input syntax for type uuid: "p1"' } } : 'answer')
+    server.decide = (req) =>
+      isWrite(req)
+        ? {
+            status: 400,
+            body: { code: '22P02', details: null, hint: null, message: 'invalid input syntax for type uuid: "p1"' },
+          }
+        : 'answer'
     await enqueueScore('t1', holeScore('p1', 12, 4))
     await settle(useOutbox)
     expect(useOutbox.getState()).toMatchObject({ pending: 0, lastError: t.sync.errDenied })
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:12', message: t.sync.errDenied })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p1:12', message: t.sync.errDenied }),
+    ])
     expect(await _outboxTest.stored()).toEqual([])
 
     await vi.advanceTimersByTimeAsync(10 * 60_000)
@@ -146,7 +167,10 @@ describe('retries', () => {
 
   it('retries a write refused for an expired session: that is not a refusal of the hole', async () => {
     let n = 0
-    server.decide = (req) => (isWrite(req) && n++ === 0 ? { status: 401, body: { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' } } : 'answer')
+    server.decide = (req) =>
+      isWrite(req) && n++ === 0
+        ? { status: 401, body: { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' } }
+        : 'answer'
     await enqueueScore('t1', holeScore('p1', 11, 6))
     await settle(useOutbox)
     expect(useOutbox.getState()).toMatchObject({ pending: 1, rejected: [] })

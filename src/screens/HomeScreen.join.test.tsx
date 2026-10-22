@@ -14,7 +14,10 @@ vi.mock('../data/auth', () => ({
   retryAuth: vi.fn(async () => undefined),
 }))
 vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../data/snapshotCache', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/snapshotCache')>()), hasCached: async () => false }))
+vi.mock('../data/snapshotCache', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/snapshotCache')>()),
+  hasCached: async () => false,
+}))
 vi.mock('./profile/MiPolo', () => ({ MiPolo: () => <p>Mi Polo</p> }))
 
 import { setLastTournament } from '../data/session'
@@ -35,7 +38,12 @@ function open(at = '/') {
   )
 }
 function standalone(on: boolean) {
-  window.matchMedia = ((q: string) => ({ matches: on && q === '(display-mode: standalone)', media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: on && q === '(display-mode: standalone)',
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+  })) as unknown as typeof window.matchMedia
 }
 const field = () => screen.getByLabelText(t.home.joinPlaceholder)
 const enter = () => screen.getByRole('button', { name: t.home.joinButton })

@@ -23,7 +23,17 @@ import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './CeremonyScreen.module.css'
-import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, IconSpoon, IconTarget, IconTrophy } from '../../components/icons'
+import {
+  IconFlame,
+  IconGavel,
+  IconMedal,
+  IconReceipt,
+  IconRings,
+  IconSnake,
+  IconSpoon,
+  IconTarget,
+  IconTrophy,
+} from '../../components/icons'
 import { celebrationColors } from '../../lib/tokens'
 import { REVEAL, ease, easeFast, easeSlow } from '../../design/motion'
 import { nearestAccent } from '../../design/accents'
@@ -86,7 +96,9 @@ function holds(content: HTMLElement, room: HTMLElement): boolean {
   const c = content.getBoundingClientRect()
   const r = room.getBoundingClientRect()
   if (c.height > r.height + 1 || c.width > r.width + 1) return false
-  return !Array.from(content.querySelectorAll<HTMLElement>('[data-name]')).some((n) => n.scrollWidth > n.clientWidth + 1)
+  return !Array.from(content.querySelectorAll<HTMLElement>('[data-name]')).some(
+    (n) => n.scrollWidth > n.clientWidth + 1,
+  )
 }
 
 /**
@@ -167,14 +179,25 @@ function PagedList({ rows, page, onPages }: { rows: ListRow[]; page: number; onP
   return (
     <div className={styles.paged}>
       <div ref={box} className={styles.listBox}>
-        <div className={styles.list} style={{ gridAutoFlow: 'column', gridTemplateRows: `repeat(${perColumn}, auto)`, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        <div
+          className={styles.list}
+          style={{
+            gridAutoFlow: 'column',
+            gridTemplateRows: `repeat(${perColumn}, auto)`,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          }}
+        >
           {shown.map((r) => (
             <Row key={r.key} row={r} />
           ))}
         </div>
       </div>
       {/* Always there, so the list's height doesn't change when a second page appears. */}
-      <p className={styles.range} aria-hidden={pages < 2 || undefined} style={pages < 2 ? { visibility: 'hidden' } : undefined}>
+      <p
+        className={styles.range}
+        aria-hidden={pages < 2 || undefined}
+        style={pages < 2 ? { visibility: 'hidden' } : undefined}
+      >
         {t.tv.range(at * perPage + 1, at * perPage + shown.length, rows.length)}
       </p>
     </div>
@@ -217,7 +240,9 @@ export function CeremonyScreen() {
      */
     const kind = figureKind(settings)
     const mainFig = (f: Figure) =>
-      kind === 'points' || kind === 'match' ? fig(f.value, C.withPoints) : fig(f.rank ?? f.value, (n) => t.common.figure(toParText(n), n, kind))
+      kind === 'points' || kind === 'match'
+        ? fig(f.value, C.withPoints)
+        : fig(f.rank ?? f.value, (n) => t.common.figure(toParText(n), n, kind))
     const entrants = new Map((m.individual?.rows ?? []).map((r) => [r.playerId, r.entrant]))
     const entrantLine = (id: string) => {
       const e = entrants.get(id)
@@ -233,26 +258,56 @@ export function CeremonyScreen() {
      */
     const comiteStep = (line: string, label: string, icon: ReactNode) => {
       const totals = new Map<string, number>()
-      for (const p of state.prizes) if (p.moduleId === 'adjustment' && p.sourceKey === line) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+      for (const p of state.prizes)
+        if (p.moduleId === 'adjustment' && p.sourceKey === line)
+          totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
       const rows = [...totals].sort((a, b) => b[1] - a[1])
-      if (rows.length) out.push({ id: `comite-${line}`, title: C.steps.byComite(label), icon, winners: [], list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })) })
+      if (rows.length)
+        out.push({
+          id: `comite-${line}`,
+          title: C.steps.byComite(label),
+          icon,
+          winners: [],
+          list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })),
+        })
     }
     // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
-    if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
-      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) }] })
+    if (m.individual?.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
+      out.push({
+        id: 'last',
+        title: settings.labels.lastPlace,
+        icon: <IconSpoon size={64} />,
+        winners: [
+          { playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) },
+        ],
+      })
     }
     if (m.fewestPutts) {
       const ids = Object.keys(m.fewestPutts.prizes)
       if (ids.length) {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
-        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: row ? [fig(row.putts, t.games.puttsFigure), fig(m.fewestPutts.prizes[ids[0]!]!.amount, money)] : undefined }] })
+        out.push({
+          id: 'putts',
+          title: settings.modules.fewestPutts.label,
+          icon: <IconTarget size={64} />,
+          winners: [
+            {
+              playerIds: ids,
+              line: andList(ids.map(nameOf)),
+              sub: row
+                ? [fig(row.putts, t.games.puttsFigure), fig(m.fewestPutts.prizes[ids[0]!]!.amount, money)]
+                : undefined,
+            },
+          ],
+        })
       }
       comiteStep('fewestPutts', settings.modules.fewestPutts.label, <IconTarget size={64} />)
     }
     if (m.snake) {
       const totals = new Map<string, number>()
       // The snake's own prizes and what the Comité gave or gave back from its line (a cancelled day, MONEY-05).
-      for (const p of state.prizes) if (fromLine(p, 'snake')) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+      for (const p of state.prizes)
+        if (fromLine(p, 'snake')) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
       const rows = [...totals].sort((a, b) => b[1] - a[1])
       if (rows.length) {
         const gold = state.stats.awards.find((a) => a.id === 'snakeGold')
@@ -260,7 +315,15 @@ export function CeremonyScreen() {
           id: 'snake',
           title: C.steps.snake(settings.modules.snake.label),
           icon: <IconSnake size={64} />,
-          winners: gold ? [{ playerIds: gold.playerIds, line: andList(gold.playerIds.map(nameOf)), sub: [t.stats.snakeAward(settings.modules.snake.label).name, fig(gold.value, C.holesHeld)] }] : [],
+          winners: gold
+            ? [
+                {
+                  playerIds: gold.playerIds,
+                  line: andList(gold.playerIds.map(nameOf)),
+                  sub: [t.stats.snakeAward(settings.modules.snake.label).name, fig(gold.value, C.holesHeld)],
+                },
+              ]
+            : [],
           list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })),
         })
       }
@@ -270,7 +333,18 @@ export function CeremonyScreen() {
         const ids = Object.keys(day.winners)
         if (!ids.length) continue
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
-        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? [fig(pts, C.withPoints), fig(day.winners[ids[0]!]!.amount, money)] : undefined }] })
+        out.push({
+          id: `best${day.roundNumber}`,
+          title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber),
+          icon: <IconFlame size={64} />,
+          winners: [
+            {
+              playerIds: ids,
+              line: andList(ids.map(nameOf)),
+              sub: pts != null ? [fig(pts, C.withPoints), fig(day.winners[ids[0]!]!.amount, money)] : undefined,
+            },
+          ],
+        })
       }
       comiteStep('bestRound', settings.modules.bestRound.label, <IconFlame size={64} />)
     }
@@ -290,7 +364,12 @@ export function CeremonyScreen() {
         title: g.config.label,
         icon: <IconTarget size={64} />,
         winners: [{ playerIds: top, line: andList(top.map(nameOf)), sub: [fig(rows[0]![1], money)] }],
-        list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: amt < 0 ? `−${formatMoney(-amt, cur)}` : formatMoney(amt, cur), under: amt < 0 })),
+        list: rows.map(([pid, amt]) => ({
+          key: pid,
+          name: nameOf(pid),
+          figure: amt < 0 ? `−${formatMoney(-amt, cur)}` : formatMoney(amt, cur),
+          under: amt < 0,
+        })),
       })
     }
     if (m.pairs) {
@@ -300,7 +379,11 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${ordinal(r.label)}, ${words(r.name)}`, sub: [andList(r.playerIds.map(nameOf)), fig(r.total, C.withPoints)] })),
+          winners: [...podium].reverse().map((r) => ({
+            playerIds: [...r.playerIds],
+            line: `${ordinal(r.label)}, ${words(r.name)}`,
+            sub: [andList(r.playerIds.map(nameOf)), fig(r.total, C.withPoints)],
+          })),
         })
       }
     }
@@ -309,13 +392,38 @@ export function CeremonyScreen() {
       for (let place = places; place >= 2; place--) {
         const rows = m.individual.rows.filter((r) => r.position === place)
         if (!rows.length) continue
-        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : [])] })) })
+        out.push({
+          id: `place${place}`,
+          title: C.steps.place(place),
+          icon: <IconMedal size={64} />,
+          winners: rows.map((r) => ({
+            playerIds: [...r.entrant.playerIds],
+            line: entrantLine(r.playerId),
+            sub: [
+              mainFig(r.figure),
+              ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : []),
+            ],
+          })),
+        })
       }
       // Places nobody filled, given by the Comité: before the champion, who closes the night.
       comiteStep('individual', settings.modules.individual.label, <IconMedal size={64} />)
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
-        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : [])] })) })
+        out.push({
+          id: 'champion',
+          title: C.steps.place(1),
+          icon: <IconTrophy size={64} />,
+          champion: true,
+          winners: champs.map((r) => ({
+            playerIds: [...r.entrant.playerIds],
+            line: entrantLine(r.playerId),
+            sub: [
+              mainFig(r.figure),
+              ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : []),
+            ],
+          })),
+        })
       }
     }
     if (m.auction && m.auction.soldCount > 0) {
@@ -335,18 +443,28 @@ export function CeremonyScreen() {
           figure: formatMoney(s.pesos, cur),
         })),
         // Nobody has cashed yet (no scores): the slots alone, not an empty list.
-        list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount, cur) })) : undefined,
+        list: payouts.length
+          ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount, cur) }))
+          : undefined,
         listTitle: C.auctionOwners,
       })
     }
-    const people = snapshot.players.map((p) => state.money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
+    const people = snapshot.players
+      .map((p) => state.money.people[p.id]!)
+      .filter(Boolean)
+      .sort((a, b) => b.net - a.net)
     if (people.length) {
       out.push({
         id: 'money',
         title: C.steps.money,
         icon: <IconReceipt size={64} />,
         winners: [],
-        list: people.map((p) => ({ key: p.playerId, name: nameOf(p.playerId), figure: formatSignedMoney(p.net, cur), under: p.net < 0 })),
+        list: people.map((p) => ({
+          key: p.playerId,
+          name: nameOf(p.playerId),
+          figure: formatSignedMoney(p.net, cur),
+          under: p.net < 0,
+        })),
       })
     }
     return out
@@ -362,7 +480,11 @@ export function CeremonyScreen() {
   useEffect(() => {
     if (!revealed || !step?.champion || reduce) return
     // One burst, as the trophy line lands.
-    const timer = setTimeout(() => burst({ particleCount: 200, spread: 100, startVelocity: 45, origin: { y: 0.6 }, colors: celebrationColors() }), REVEAL.trophy * 1000)
+    const timer = setTimeout(
+      () =>
+        burst({ particleCount: 200, spread: 100, startVelocity: 45, origin: { y: 0.6 }, colors: celebrationColors() }),
+      REVEAL.trophy * 1000,
+    )
     return () => clearTimeout(timer)
   }, [revealed, step?.id, step?.champion, reduce])
 
@@ -388,13 +510,14 @@ export function CeremonyScreen() {
    * mouse click that leaves it focused never turns Space into a skip. A held
    * key doesn't race through the reveals.
    */
-  const keys = useRef({ forward: () => {}, back: () => {} })
+  const keys = useRef<{ forward: () => void; back: () => void }>({ forward: () => undefined, back: () => undefined })
   keys.current = { forward, back: prev }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
       const onControl = e.target instanceof Element && !!e.target.closest('button, a, input, textarea, select')
-      const forward = e.key === 'ArrowRight' || e.key === 'PageDown' || (!onControl && (e.key === ' ' || e.key === 'Enter'))
+      const forward =
+        e.key === 'ArrowRight' || e.key === 'PageDown' || (!onControl && (e.key === ' ' || e.key === 'Enter'))
       const back = e.key === 'ArrowLeft' || e.key === 'PageUp'
       if (!forward && !back) return
       e.preventDefault()
@@ -416,7 +539,8 @@ export function CeremonyScreen() {
    */
   const body = useRef<HTMLDivElement>(null)
   // The step's own area: while the last step leaves, both are on the page.
-  const areaOf = (id: string | undefined) => (id ? body.current?.querySelector<HTMLElement>(`[data-area="${id}"]`) : null) ?? null
+  const areaOf = (id: string | undefined) =>
+    (id ? body.current?.querySelector<HTMLElement>(`[data-area="${id}"]`) : null) ?? null
   const [areaSize, setAreaSize] = useState('')
   /** The step whose winners are set as a compact list, at the area size that needed it: a bigger screen tries the full size again. */
   const [compact, setCompact] = useState<{ step: string; size: string } | null>(null)
@@ -429,7 +553,8 @@ export function CeremonyScreen() {
     let k = 1
     if (reveal.hasAttribute('data-fit')) k = bestZoom(area, '--fit', () => holds(reveal, area))
     // Beside a list, on a screen wide enough to put them side by side.
-    else if (winners && getComputedStyle(reveal).display === 'grid') k = bestZoom(winners, '--wfit', () => holds(winners, reveal))
+    else if (winners && getComputedStyle(reveal).display === 'grid')
+      k = bestZoom(winners, '--wfit', () => holds(winners, reveal))
     if (k < COMPACT_BELOW && step.winners.length > 1 && !isCompact) setCompact({ step: step.id, size: areaSize })
   }, [step, revealed, areaSize, data, isCompact])
   useLayoutEffect(() => {
@@ -444,7 +569,7 @@ export function CeremonyScreen() {
   const { snapshot, state } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   /** When the lists start, after the winners have landed. */
-  const listsAt = step && step.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
+  const listsAt = step?.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
 
   return (
     <div className={styles.stage} data-theme="light" data-accent={nearestAccent(snapshot.tournament.accentColor).id}>
@@ -465,40 +590,96 @@ export function CeremonyScreen() {
         {/* The next view comes in while the last one leaves, so the stage is never blank between steps (MOT-01). */}
         <AnimatePresence mode="popLayout" initial={false}>
           {idx < 0 && (
-            <motion.div key="start" className={styles.center} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: easeSlow }} exit={{ opacity: 0, transition: easeFast }} transition={easeSlow}>
+            <motion.div
+              key="start"
+              className={styles.center}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: easeSlow }}
+              exit={{ opacity: 0, transition: easeFast }}
+              transition={easeSlow}
+            >
               <p className={styles.hint}>{C.hint}</p>
-              <button className={buttonClass({ variant: 'primary' }, styles.bigBtn)} type="button" onClick={() => go(1)}>
+              <button
+                className={buttonClass({ variant: 'primary' }, styles.bigBtn)}
+                type="button"
+                onClick={() => go(1)}
+              >
                 {C.start}
               </button>
             </motion.div>
           )}
           {step && (
-            <motion.div key={step.id} className={styles.step} initial={{ opacity: 0, y: rise(16) }} animate={{ opacity: 1, y: 0, transition: easeSlow }} exit={{ opacity: 0, y: rise(-16), transition: easeFast }} transition={easeSlow}>
+            <motion.div
+              key={step.id}
+              className={styles.step}
+              initial={{ opacity: 0, y: rise(16) }}
+              animate={{ opacity: 1, y: 0, transition: easeSlow }}
+              exit={{ opacity: 0, y: rise(-16), transition: easeFast }}
+              transition={easeSlow}
+            >
               <span className={styles.stepIcon}>{step.icon}</span>
               <h2 className={styles.stepTitle}>{step.title}</h2>
               <div data-area={step.id} className={styles.area}>
                 {!revealed ? (
-                  <button className={buttonClass({ variant: 'primary' }, styles.bigBtn)} type="button" onClick={() => setRevealed(true)}>
+                  <button
+                    className={buttonClass({ variant: 'primary' }, styles.bigBtn)}
+                    type="button"
+                    onClick={() => setRevealed(true)}
+                  >
                     {C.reveal}
                   </button>
                 ) : (
-                  <div data-reveal className={styles.reveal} data-split={((step.winners.length > 0 || !!step.aside) && !!step.list) || undefined} data-list={!!step.list || undefined} data-fit={!step.list || undefined}>
+                  <div
+                    data-reveal
+                    className={styles.reveal}
+                    data-split={((step.winners.length > 0 || !!step.aside) && !!step.list) || undefined}
+                    data-list={!!step.list || undefined}
+                    data-fit={!step.list || undefined}
+                  >
                     {step.winners.length > 0 && (
-                      <div data-winners className={styles.winners} data-many={step.winners.length > 1 || undefined} data-compact={isCompact || undefined}>
+                      <div
+                        data-winners
+                        className={styles.winners}
+                        data-many={step.winners.length > 1 || undefined}
+                        data-compact={isCompact || undefined}
+                      >
                         {step.winners.map((w, i) => {
                           const from = i * REVEAL.nextWinner
                           return (
-                            <motion.div key={i} className={`${styles.winner} ${step.champion ? styles.champion : ''}`} initial={{ opacity: 0, y: rise(24) }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from) }}>
+                            <motion.div
+                              key={i}
+                              className={`${styles.winner} ${step.champion ? styles.champion : ''}`}
+                              initial={{ opacity: 0, y: rise(24) }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ ...easeSlow, delay: at(from) }}
+                            >
                               <div className={styles.avatars}>
                                 {w.playerIds.map((pid) => (
-                                  <Avatar key={pid} name={byId.get(pid)?.displayName ?? '?'} url={byId.get(pid)?.avatarUrl} size="lg" honoree={byId.get(pid)?.isHonoree} />
+                                  <Avatar
+                                    key={pid}
+                                    name={byId.get(pid)?.displayName ?? '?'}
+                                    url={byId.get(pid)?.avatarUrl}
+                                    size="lg"
+                                    honoree={byId.get(pid)?.isHonoree}
+                                  />
                                 ))}
                               </div>
-                              <motion.span data-name className={styles.winnerLine} initial={{ opacity: 0, y: rise(12) }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}>
+                              <motion.span
+                                data-name
+                                className={styles.winnerLine}
+                                initial={{ opacity: 0, y: rise(12) }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}
+                              >
                                 {w.line}
                               </motion.span>
                               {w.sub && (
-                                <motion.span className={styles.winnerSub} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...ease, delay: at(from + REVEAL.figures) }}>
+                                <motion.span
+                                  className={styles.winnerSub}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ ...ease, delay: at(from + REVEAL.figures) }}
+                                >
                                   {w.sub.map((part, j) => {
                                     // Read aloud as one line, «73 puntos, $10,000»; seen as plates.
                                     const comma = j < w.sub!.length - 1 && <span className="sr-only">, </span>
@@ -508,8 +689,15 @@ export function CeremonyScreen() {
                                         {comma}
                                       </span>
                                     ) : (
-                                      <span key={j} className={`${styles.plate} ${step.champion ? styles.plateLeader : ''}`}>
-                                        <CountUp value={part.value} format={part.format} delayMs={at(from + REVEAL.figures) * 1000} />
+                                      <span
+                                        key={j}
+                                        className={`${styles.plate} ${step.champion ? styles.plateLeader : ''}`}
+                                      >
+                                        <CountUp
+                                          value={part.value}
+                                          format={part.format}
+                                          delayMs={at(from + REVEAL.figures) * 1000}
+                                        />
                                         {comma}
                                       </span>
                                     )
@@ -517,9 +705,16 @@ export function CeremonyScreen() {
                                 </motion.span>
                               )}
                               {step.champion && (
-                                <motion.span className={styles.trophy} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...easeSlow, delay: at(from + REVEAL.trophy) }}>
+                                <motion.span
+                                  className={styles.trophy}
+                                  initial={{ opacity: 0, scale: 0.92 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ ...easeSlow, delay: at(from + REVEAL.trophy) }}
+                                >
                                   {/* The trophy is the tournament's own (labels.trophy); none named, none claimed. */}
-                                  {data?.settings.labels.trophy ? `${C.champion}. ${C.trophy(data.settings.labels.trophy)}` : `${C.champion}.`}
+                                  {data?.settings.labels.trophy
+                                    ? `${C.champion}. ${C.trophy(data.settings.labels.trophy)}`
+                                    : `${C.champion}.`}
                                 </motion.span>
                               )}
                             </motion.div>
@@ -528,7 +723,12 @@ export function CeremonyScreen() {
                       </div>
                     )}
                     {step.aside && (
-                      <motion.div className={styles.aside} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...ease, delay: at(listsAt) }}>
+                      <motion.div
+                        className={styles.aside}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ ...ease, delay: at(listsAt) }}
+                      >
                         <div className={styles.list}>
                           {step.aside.map((r) => (
                             <Row key={r.key} row={r} />
@@ -537,7 +737,12 @@ export function CeremonyScreen() {
                       </motion.div>
                     )}
                     {step.list && (
-                      <motion.div className={styles.listArea} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...ease, delay: at(listsAt) }}>
+                      <motion.div
+                        className={styles.listArea}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ ...ease, delay: at(listsAt) }}
+                      >
                         {step.listTitle && <h3 className={styles.listTitle}>{step.listTitle}</h3>}
                         <PagedList rows={step.list} page={shownPage} onPages={setPages} />
                       </motion.div>
@@ -548,7 +753,14 @@ export function CeremonyScreen() {
             </motion.div>
           )}
           {idx >= steps.length && (
-            <motion.div key="end" className={styles.center} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: easeSlow }} exit={{ opacity: 0, transition: easeFast }} transition={easeSlow}>
+            <motion.div
+              key="end"
+              className={styles.center}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: easeSlow }}
+              exit={{ opacity: 0, transition: easeFast }}
+              transition={easeSlow}
+            >
               <h2 className={styles.stepTitle}>{C.done}</h2>
               {/* The end of the trip is when a player on a PIN keeps what he played (STRAT-08). */}
               {state.tournamentFinal && <SaveResults board />}
@@ -561,7 +773,9 @@ export function CeremonyScreen() {
         <Button variant="ghost" disabled={idx < 0} onClick={prev}>
           {C.prev}
         </Button>
-        <span className={styles.progress}>{idx >= 0 ? `${Math.min(idx + 1, steps.length)} / ${steps.length}` : ''}</span>
+        <span className={styles.progress}>
+          {idx >= 0 ? `${Math.min(idx + 1, steps.length)} / ${steps.length}` : ''}
+        </span>
         <Button disabled={idx >= steps.length} onClick={forward}>
           {C.next}
         </Button>

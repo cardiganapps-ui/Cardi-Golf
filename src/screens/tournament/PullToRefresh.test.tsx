@@ -19,7 +19,10 @@ const fx = getFixture('minimal4-live')!
 const server = fakeSupabase(snapshotToRows(fx.snapshot))
 vi.mock('../../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  useTournamentProfiles: () => [[], () => undefined],
+}))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 
 const { t } = await import('../../i18n/es-MX')
@@ -35,7 +38,7 @@ const { PULL_RATE, PULL_SLOP_PX, PULL_THRESHOLD_PX } = await import('./pull')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  return cancelAnimation.call(this)
+  cancelAnimation.call(this)
 }
 
 /** The finger's travel that brings the mark just to its threshold. */
@@ -46,14 +49,32 @@ const realRefreshNow = useTournament.getState().refreshNow
 async function open(path = '', realtime: 'live' | 'error' = 'live') {
   let finish!: () => void
   const refreshNow = vi.fn(() => new Promise<void>((r) => (finish = r)))
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, source: 'server', realtime, error: null, updatedAt: Date.now(), refreshNow })
+  useTournament.setState({
+    tournamentId: 't-real',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    source: 'server',
+    realtime,
+    error: null,
+    updatedAt: Date.now(),
+    refreshNow,
+  })
   render(
     <MemoryRouter initialEntries={[`/t/nacho${path}`]}>
       <Routes>
         <Route
           path="/t/:slug"
           element={
-            <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+            <TournamentContext.Provider
+              value={{
+                tournamentId: 't-real',
+                slug: 'nacho',
+                lookup: fx.lookup,
+                me: fx.me,
+                refresh: async () => undefined,
+                leave: async () => undefined,
+              }}
+            >
               <TournamentShell />
             </TournamentContext.Provider>
           }
@@ -154,7 +175,7 @@ describe('a pull on the boards brings them again (PWA-15)', () => {
       fireEvent.click(screen.getAllByRole('button', { name: new RegExp(fx.snapshot.players[0]!.displayName) })[0]!)
     })
     const sheet = screen.getByRole('dialog')
-    await drag(FAR, 0, within(sheet).getAllByRole('button')[0]!)
+    await drag(FAR, 0, within(sheet).getAllByRole('button')[0])
     await drag(FAR)
     expect(refreshNow).not.toHaveBeenCalled()
   })

@@ -17,9 +17,12 @@ const dir = join(process.cwd(), 'supabase/migrations')
 /** The last definition of the function in the chain, and the file it is in. */
 function latestRestore(): { file: string; body: string } {
   let found: { file: string; body: string } | null = null
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+  for (const file of readdirSync(dir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()) {
     const sql = readFileSync(join(dir, file), 'utf8')
-    for (const m of sql.matchAll(/create or replace function public\.restore_tournament\(([\s\S]*?)\n\$\$;/gi)) found = { file, body: m[1]! }
+    for (const m of sql.matchAll(/create or replace function public\.restore_tournament\(([\s\S]*?)\n\$\$;/gi))
+      found = { file, body: m[1]! }
   }
   if (!found) throw new Error('no restore_tournament in supabase/migrations')
   return found
@@ -29,8 +32,13 @@ describe('restore_tournament brings back every table the backup carries (DB-02)'
   const { file, body } = latestRestore()
 
   it.each(RESTORED_TABLES.map((t) => [t]))('%s: read from the backup and written back', (table) => {
-    expect(body, `${file}: ${table} is never read from the backup`).toMatch(new RegExp(`create temp table r_${table}\\b[^;]*tb -> '${table}'`))
-    const written = table === 'tournaments' ? /update public\.tournaments t[\s\S]*from r_tournaments r/ : new RegExp(`insert into public\\.${table} \\(`)
+    expect(body, `${file}: ${table} is never read from the backup`).toMatch(
+      new RegExp(`create temp table r_${table}\\b[^;]*tb -> '${table}'`),
+    )
+    const written =
+      table === 'tournaments'
+        ? /update public\.tournaments t[\s\S]*from r_tournaments r/
+        : new RegExp(`insert into public\\.${table} \\(`)
     expect(body, `${file}: ${table} is never written back`).toMatch(written)
   })
 

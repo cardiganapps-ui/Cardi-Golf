@@ -34,35 +34,47 @@ describe('the consent line', () => {
     const terms = screen.getByRole('link', { name: `${C.terms} ${t.legal.newTab}` })
     expectNewTabLink(terms, '/terminos')
     expectNewTabLink(screen.getByRole('link', { name: `${C.privacy} ${t.legal.newTab}` }), '/privacidad')
-    expect(terms.closest('p')!.textContent).toBe('Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).')
+    expect(terms.closest('p')!.textContent).toBe(
+      'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).',
+    )
   })
 
-  it('«Al entrar»: short enough to sit above a tournament\'s faces, with an id for the field it describes', () => {
+  it("«Al entrar»: short enough to sit above a tournament's faces, with an id for the field it describes", () => {
     render(<LegalConsent enter id="consent" />)
     const terms = screen.getByRole('link', { name: `${C.termsShort} ${t.legal.newTab}` })
     expectNewTabLink(terms, '/terminos')
     expectNewTabLink(screen.getByRole('link', { name: `${C.privacy} ${t.legal.newTab}` }), '/privacidad')
     const line = terms.closest('p')!
     expect(line.id).toBe('consent')
-    expect(line.textContent).toBe('Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).')
+    expect(line.textContent).toBe(
+      'Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).',
+    )
   })
 })
 
 describe('the notes that end on the notice', () => {
-  it('the Comité, typing other people\'s data, is told who sees it', () => {
+  it("the Comité, typing other people's data, is told who sees it", () => {
     render(<OthersDataNotice id="others" />)
     const link = screen.getByRole('link', { name: `${t.legal.othersData.privacy} ${t.legal.newTab}` })
     expectNewTabLink(link, '/privacidad')
     const note = link.closest('p')!
     expect(note.id).toBe('others')
-    expect(note.textContent).toBe('Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).')
+    expect(note.textContent).toBe(
+      'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).',
+    )
   })
 
   // Word for word, not rebuilt from the strings they check (PR #88's second verifier turned both into their opposite and nothing failed).
   it('the push switch and the scorecard photo, word for word', () => {
     const notes = [
-      [t.legal.pushNote, 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'],
-      [t.legal.scorecardNote, 'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el Aviso de privacidad (se abre en otra pestaña).'],
+      [
+        t.legal.pushNote,
+        'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).',
+      ],
+      [
+        t.legal.scorecardNote,
+        'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el Aviso de privacidad (se abre en otra pestaña).',
+      ],
     ] as const
     for (const [note, text] of notes) {
       render(<NoticeNote note={note} />)

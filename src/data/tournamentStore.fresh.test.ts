@@ -36,7 +36,16 @@ afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
   vi.unstubAllGlobals()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 /** The seconds since `t0` at which a fetch began, over `seconds`. */
@@ -87,7 +96,7 @@ describe('a fetch of the boards that failed on the way (REL-10)', () => {
     expect(await fetchTimes(4 * 60)).toEqual([])
   })
 
-  it('a load of the open tournament that fails over the server\'s boards is retried the same way', async () => {
+  it("a load of the open tournament that fails over the server's boards is retried the same way", async () => {
     await ready()
     server.down = NO_SIGNAL
     await store().load(TID)

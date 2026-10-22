@@ -35,7 +35,12 @@ export function formatMoneyCents(amount: number, currency: string): string {
   if (cents % 100 === 0) return formatMoney(cents / 100, currency)
   let f = centsFormatters.get(currency)
   if (!f) {
-    f = new Intl.NumberFormat('es-MX', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    f = new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
     centsFormatters.set(currency, f)
   }
   return f.format(cents / 100).replace('-', '−')

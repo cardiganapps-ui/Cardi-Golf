@@ -59,9 +59,21 @@ export function CourseDetail() {
       {C.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
+  if (error)
+    return (
+      <>
+        {back}
+        <ErrorBox error={error} onRetry={() => void load()} />
+      </>
+    )
   if (c === undefined) return <Spinner rows={6} />
-  if (c === null) return <>{back}<p className={s.help}>{t.platform.notFound}</p></>
+  if (c === null)
+    return (
+      <>
+        {back}
+        <p className={s.help}>{t.platform.notFound}</p>
+      </>
+    )
   const course = c
   const rounds = course.usedBy.reduce((n, u) => n + u.rounds, 0)
 
@@ -106,7 +118,13 @@ export function CourseDetail() {
       <div className={s.screen}>
         <h2>{course.name}</h2>
         {rounds > 0 && <p className={s.help}>{C.editHint}</p>}
-        <CourseEditor draft={draft} notes={[]} busy={busy} onCancel={() => setDraft(null)} onSave={(d) => void save(d)} />
+        <CourseEditor
+          draft={draft}
+          notes={[]}
+          busy={busy}
+          onCancel={() => setDraft(null)}
+          onSave={(d) => void save(d)}
+        />
       </div>
     )
   }
@@ -119,14 +137,28 @@ export function CourseDetail() {
         <span className={s.chips}>
           {course.verifiedAt && <VerifiedBadge />}
           {course.dupes.length > 0 && <span className={s.flagCaution}>{C.chips.dupe}</span>}
-          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className={s.flagDanger}>{C.chips.broken}</span>}
+          {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && (
+            <span className={s.flagDanger}>{C.chips.broken}</span>
+          )}
         </span>
         <span className={s.help}>
-          {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(', ')}
+          {[
+            course.location,
+            C.source[course.source] ?? course.source,
+            C.created(course.creatorEmail, relTime(course.createdAt)),
+          ]
+            .filter(Boolean)
+            .join(', ')}
         </span>
         {course.attribution && <span className={s.help}>{course.attribution}</span>}
-        {course.verifiedAt && <span className={s.help}>{C.verifiedBy(course.verifiedVia, course.verifierEmail, relTime(course.verifiedAt))}</span>}
-        {course.correctedAt && <span className={s.help}>{C.correctedLine(course.correctorEmail, relTime(course.correctedAt))}</span>}
+        {course.verifiedAt && (
+          <span className={s.help}>
+            {C.verifiedBy(course.verifiedVia, course.verifierEmail, relTime(course.verifiedAt))}
+          </span>
+        )}
+        {course.correctedAt && (
+          <span className={s.help}>{C.correctedLine(course.correctorEmail, relTime(course.correctedAt))}</span>
+        )}
         <div className={s.actions}>
           <Button variant="primary" size="sm" disabled={busy} onClick={() => void edit()}>
             {C.edit}
@@ -175,7 +207,9 @@ export function CourseDetail() {
                   <span className={s.rowTitle}>{u.name}</span>
                   <span className={s.rowSub}>{C.usedLine(u.rounds)}</span>
                 </span>
-                <span className={s.rowEnd}>{u.protected && <span className={s.flagDanger}>{t.platform.chips.protected}</span>}</span>
+                <span className={s.rowEnd}>
+                  {u.protected && <span className={s.flagDanger}>{t.platform.chips.protected}</span>}
+                </span>
               </Link>
             ))}
           </div>
@@ -260,7 +294,9 @@ function TeeCard({ tee }: { tee: CourseTee }) {
         <strong>{tee.name}</strong>
         <span className={s.help}>{C.teeLine(tee.parTotal, tee.rating, tee.slope, tee.inUse)}</span>
       </div>
-      {tee.problems.length > 0 && <span className={s.problem}>{t.common.andList(tee.problems.map((p) => C.problems[p] ?? p))}</span>}
+      {tee.problems.length > 0 && (
+        <span className={s.problem}>{t.common.andList(tee.problems.map((p) => C.problems[p] ?? p))}</span>
+      )}
       {/* A list of holes, each said in words: it was a table of cells with no rows (axe: aria-required-children). */}
       <ol className={s.card} aria-label={C.cardOf(tee.name)}>
         {tee.holes.map((h) => (
@@ -300,7 +336,17 @@ function keepsFirst(x: PlatformCourse, y: PlatformCourse): boolean {
  * each tee of the one that goes is mapped to a kept tee with the same card
  * (pre-filled when there is one). The server checks it all again.
  */
-function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose: () => void; onMerged: (keepId: string) => void }) {
+function MergeSheet({
+  a,
+  b,
+  onClose,
+  onMerged,
+}: {
+  a: string
+  b: string
+  onClose: () => void
+  onMerged: (keepId: string) => void
+}) {
   const api = usePlatformApi()
   const [pair, setPair] = useState<[PlatformCourse, PlatformCourse] | null>(null)
   const [keepFirst, setKeepFirst] = useState(true)
@@ -312,11 +358,14 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
   useEffect(() => {
     Promise.all([api.course(a), api.course(b)]).then(
       ([x, y]) => {
-        if (!x || !y) return setError(t.platform.notFound)
+        if (!x || !y) {
+          setError(t.platform.notFound)
+          return
+        }
         setPair([x, y])
         setKeepFirst(keepsFirst(x, y))
       },
-      (e) => setError(humanError(e)),
+      (e: unknown) => setError(humanError(e)),
     )
   }, [api, a, b])
 
@@ -335,7 +384,8 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
       }),
     [drop, keep, map],
   )
-  const ready = !!keep && !!drop && rows.every((r) => r.state === 'ok' || r.state === 'dropped') && reason.trim().length >= 3
+  const ready =
+    !!keep && !!drop && rows.every((r) => r.state === 'ok' || r.state === 'dropped') && reason.trim().length >= 3
 
   async function go() {
     if (!keep || !drop) return
@@ -356,7 +406,11 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
     <Sheet open onClose={onClose} title={C.mergeTitle}>
       <div className={s.section}>
         {!pair ? (
-          error ? <p className={s.problem}>{error}</p> : <Spinner rows={4} />
+          error ? (
+            <p className={s.problem}>{error}</p>
+          ) : (
+            <Spinner rows={4} />
+          )
         ) : (
           <>
             <div className={s.mergePair}>
@@ -375,8 +429,16 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
             <p className={s.help}>{C.mergeBody(drop!.name, keep!.name)}</p>
             <span className="label">{C.mergeMapTitle}</span>
             {rows.map(({ d, state }) => (
-              <Field key={d.id} label={d.name} error={state === 'mismatch' ? C.mergeMismatch : state === 'needed' ? C.mergeNeedsMap : null}>
-                <select className="input" value={map[d.id] ?? ''} onChange={(e) => setMap({ ...map, [d.id]: e.target.value })}>
+              <Field
+                key={d.id}
+                label={d.name}
+                error={state === 'mismatch' ? C.mergeMismatch : state === 'needed' ? C.mergeNeedsMap : null}
+              >
+                <select
+                  className="input"
+                  value={map[d.id] ?? ''}
+                  onChange={(e) => setMap({ ...map, [d.id]: e.target.value })}
+                >
                   <option value="">{d.inUse ? '—' : C.mergeUnmapped}</option>
                   {keep!.tees.map((k) => (
                     <option key={k.id} value={k.id}>
@@ -387,7 +449,12 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
               </Field>
             ))}
             <Field label={t.platform.reason} error={error}>
-              <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+              <Input
+                value={reason}
+                maxLength={200}
+                placeholder={t.platform.reasonPlaceholder}
+                onChange={(e) => setReason(e.target.value)}
+              />
             </Field>
             <Button variant="primary" block disabled={busy || !ready} onClick={() => void go()}>
               {busy ? t.common.saving : C.merge}

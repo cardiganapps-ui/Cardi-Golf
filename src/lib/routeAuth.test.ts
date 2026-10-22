@@ -4,8 +4,13 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const db = vi.hoisted(() => ({ answer: { data: true, error: null } as { data: unknown; error: unknown }, rpcs: [] as string[] }))
-vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ rpc: async (fn: string) => (db.rpcs.push(fn), db.answer) }) }))
+const db = vi.hoisted(() => ({
+  answer: { data: true, error: null } as { data: unknown; error: unknown },
+  rpcs: [] as string[],
+}))
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({ rpc: async (fn: string) => (db.rpcs.push(fn), db.answer) }),
+}))
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -15,12 +20,14 @@ afterEach(() => {
 })
 
 const auth = () => import('../server/auth')
-const req = (headers: Record<string, unknown>, remoteAddress?: string) => ({ headers, socket: remoteAddress ? { remoteAddress } : undefined }) as never
+const req = (headers: Record<string, unknown>, remoteAddress?: string) =>
+  ({ headers, socket: remoteAddress ? { remoteAddress } : undefined }) as never
 
 describe('the per-address limit', () => {
   it('counts each route apart, by the first forwarded address, else the socket’s', async () => {
     const { rateLimited } = await auth()
-    for (let i = 0; i < 3; i++) expect(rateLimited(req({ 'x-forwarded-for': '203.0.113.1, 10.0.0.1' }), 'a', 3, 60_000)).toBe(false)
+    for (let i = 0; i < 3; i++)
+      expect(rateLimited(req({ 'x-forwarded-for': '203.0.113.1, 10.0.0.1' }), 'a', 3, 60_000)).toBe(false)
     expect(rateLimited(req({ 'x-forwarded-for': ['203.0.113.1'] }), 'a', 3, 60_000)).toBe(true)
     expect(rateLimited(req({ 'x-forwarded-for': '203.0.113.1' }), 'b', 3, 60_000)).toBe(false)
     expect(rateLimited(req({}, '192.0.2.4'), 'a', 3, 60_000)).toBe(false)
@@ -59,7 +66,11 @@ describe('the session check', () => {
     expect(await requireCourseManager(req({ authorization: 'Bearer t' }), ok.r)).toBe(true)
     expect(ok.out.status).toBe(0)
     expect(db.rpcs).toEqual(['can_manage_courses'])
-    for (const answer of [{ data: false, error: null }, { data: 'true', error: null }, { data: null, error: { message: 'x' } }]) {
+    for (const answer of [
+      { data: false, error: null },
+      { data: 'true', error: null },
+      { data: null, error: { message: 'x' } },
+    ]) {
       db.answer = answer
       const no = res()
       expect(await requireCourseManager(req({ authorization: 'Bearer t' }), no.r)).toBe(false)
@@ -73,7 +84,10 @@ describe('the session check', () => {
     const { requireCourseManager } = await auth()
     const out = res()
     expect(await requireCourseManager(req({ authorization: 'Bearer t' }), out.r)).toBe(false)
-    expect(out.out).toEqual({ status: 401, body: { error: 'Inicia sesión para usar esta función.', code: 'unauthorized' } })
+    expect(out.out).toEqual({
+      status: 401,
+      body: { error: 'Inicia sesión para usar esta función.', code: 'unauthorized' },
+    })
     expect(db.rpcs).toEqual([])
   })
 })

@@ -23,7 +23,12 @@ function matchSettings(rounds: number): TournamentSettings {
     rounds,
     modules: {
       ...structuredClone(DEFAULT_SETTINGS.modules),
-      individual: { enabled: true, label: 'Match play', format: 'matchPlay', formatOptions: { ...DEFAULT_SETTINGS.modules.individual.formatOptions, matchMode: 'singles' } },
+      individual: {
+        enabled: true,
+        label: 'Match play',
+        format: 'matchPlay',
+        formatOptions: { ...DEFAULT_SETTINGS.modules.individual.formatOptions, matchMode: 'singles' },
+      },
     },
   })
 }
@@ -32,7 +37,13 @@ function ctxOf(snap: Snapshot, settings: TournamentSettings): FormatContext {
   const core = computeCore(snap, settings)
   const roundFinal: Record<string, boolean> = {}
   for (const r of snap.rounds) roundFinal[r.id] = r.status === 'finished'
-  return { snapshot: snap, settings, core, roundFinal, tournamentFinal: snap.rounds.every((r) => r.status === 'finished') }
+  return {
+    snapshot: snap,
+    settings,
+    core,
+    roundFinal,
+    tournamentFinal: snap.rounds.every((r) => r.status === 'finished'),
+  }
 }
 
 describe('bracket shape', () => {
@@ -96,7 +107,11 @@ describe('bracket over a played tournament', () => {
     const snap = semisPlayed()
     const st = bracketState(ctxOf(snap, settings))
     expect(words(st.rounds[0]!.name)).toBe('Semifinal')
-    expect(st.rounds[0]!.matches.map((m) => `${words(m.sides[0].name)} v ${m.sides[1] ? words(m.sides[1].name) : undefined}`)).toEqual(['J1 v J4', 'J2 v J3'])
+    expect(
+      st.rounds[0]!.matches.map(
+        (m) => `${words(m.sides[0].name)} v ${m.sides[1] ? words(m.sides[1].name) : undefined}`,
+      ),
+    ).toEqual(['J1 v J4', 'J2 v J3'])
     expect(st.rounds[0]!.matches.every((m) => m.winner)).toBe(true)
     // The final is listed with the two winners, waiting for its groups.
     expect(words(st.rounds[1]!.name)).toBe('Final')
@@ -138,10 +153,16 @@ describe('bracket over a played tournament', () => {
     snap.rounds[0]!.status = 'finished'
     const st = bracketState(ctxOf(snap, one))
     expect(st.rounds[0]!.matches.every((m) => m.pending)).toBe(true)
-    expect(words(st.warnings)).toContain('Día 1: 2 partidos de los grupos no son del cuadro (Semifinal). Cuentan en la tabla; el cuadro avanza solo con sus partidos.')
+    expect(words(st.warnings)).toContain(
+      'Día 1: 2 partidos de los grupos no son del cuadro (Semifinal). Cuentan en la tabla; el cuadro avanza solo con sus partidos.',
+    )
     // Drawn as the bracket says, nothing to add.
     const ok = semisPlayed()
-    expect(words(bracketState(ctxOf(ok, settings)).warnings).filter((w) => w.includes('no son del cuadro') || w.includes('no es del cuadro'))).toEqual([])
+    expect(
+      words(bracketState(ctxOf(ok, settings)).warnings).filter(
+        (w) => w.includes('no son del cuadro') || w.includes('no es del cuadro'),
+      ),
+    ).toEqual([])
   })
 
   it('a field too small for a bracket says so', () => {

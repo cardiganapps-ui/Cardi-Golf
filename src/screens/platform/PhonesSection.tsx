@@ -50,7 +50,9 @@ export function PhonesSection({ tel }: { tel: Telemetry }) {
         <div className={s.healthCard}>
           <Status ok={d.seen ? d.pending === 0 && d.rejected === 0 : null}>{H.devices}</Status>
           <span>{H.devicesSeen(d.seen)}</span>
-          <span className={d.pending ? s.problem : s.help}>{H.devicesPending(d.pending, d.withPending, d.oldestPendingAt ? relTime(d.oldestPendingAt) : null)}</span>
+          <span className={d.pending ? s.problem : s.help}>
+            {H.devicesPending(d.pending, d.withPending, d.oldestPendingAt ? relTime(d.oldestPendingAt) : null)}
+          </span>
           {d.rejected > 0 && <span className={s.problem}>{H.devicesRejected(d.rejected)}</span>}
           {d.builds.map((b) => (
             <span key={`${b.build}`} className={s.help}>
@@ -63,7 +65,7 @@ export function PhonesSection({ tel }: { tel: Telemetry }) {
           {tel.vitals.length ? (
             tel.vitals.map((v) => (
               <span key={v.name}>
-                {(H.vital[v.name] ?? v.name)}: {vitalValue(v.name, v.p75)}
+                {H.vital[v.name] ?? v.name}: {vitalValue(v.name, v.p75)}
               </span>
             ))
           ) : (
@@ -99,4 +101,3 @@ export function PhonesSection({ tel }: { tel: Telemetry }) {
     </section>
   )
 }
-

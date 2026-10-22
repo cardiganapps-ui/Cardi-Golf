@@ -24,7 +24,11 @@ const flat = (n: number) => Array(18).fill(n) as number[]
 
 describe('Individual standings', () => {
   it('A and B both 70; Day 2 A 36, B 34 → A ahead', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { id: 'A', displayName: 'A' }), makePlayer(2, { id: 'B', displayName: 'B' })], rounds: 2, settings: S })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { id: 'A', displayName: 'A' }), makePlayer(2, { id: 'B', displayName: 'B' })],
+      rounds: 2,
+      settings: S,
+    })
     enterPoints(snap, 'r1', 'A', [...flat(2).slice(0, 16), 1, 1]) // 34
     enterPoints(snap, 'r2', 'A', flat(2)) // 36
     enterPoints(snap, 'r1', 'B', flat(2)) // 36
@@ -35,7 +39,11 @@ describe('Individual standings', () => {
   })
 
   it('equal Day 2; holes 10–18 A 18, B 17 → A ahead', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { id: 'A' }), makePlayer(2, { id: 'B' })], rounds: 2, settings: S })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { id: 'A' }), makePlayer(2, { id: 'B' })],
+      rounds: 2,
+      settings: S,
+    })
     enterPoints(snap, 'r1', 'A', flat(2))
     enterPoints(snap, 'r2', 'A', flat(2)) // back nine 18
     enterPoints(snap, 'r1', 'B', flat(2))
@@ -48,7 +56,11 @@ describe('Individual standings', () => {
   })
 
   it('equal all the way through hole 18 → tied; each gets ($10,000 + $5,000) / 2 = $7,500', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { id: 'A' }), makePlayer(2, { id: 'B' }), makePlayer(3, { id: 'C' })], rounds: 2, settings: S })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { id: 'A' }), makePlayer(2, { id: 'B' }), makePlayer(3, { id: 'C' })],
+      rounds: 2,
+      settings: S,
+    })
     for (const pid of ['A', 'B']) {
       enterPoints(snap, 'r1', pid, flat(2))
       enterPoints(snap, 'r2', pid, flat(2))

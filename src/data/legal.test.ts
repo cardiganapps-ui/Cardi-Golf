@@ -13,16 +13,24 @@ const getSession = vi.fn()
 /** This phone's PIN claim (`device_sessions`, RLS: its own row): none unless a test says so. */
 const claim = vi.fn(async () => ({ data: null as { player_id: string } | null, error: null }))
 const from = vi.fn(() => ({ select: () => ({ maybeSingle: claim }) }))
-vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession }, from }), authSettings: async () => null }))
+vi.mock('../lib/supabase', () => ({
+  supabaseConfigured: true,
+  supabase: () => ({ rpc, auth: { getSession }, from }),
+  authSettings: async () => null,
+}))
 
-const { acceptLegal, compareVersions, currentVersions, flushLegal, forgetLegal, legalUpdate, sayAdult } = await import('./legal')
+const { acceptLegal, compareVersions, currentVersions, flushLegal, forgetLegal, legalUpdate, sayAdult } =
+  await import('./legal')
 const { useAuth } = await import('./auth')
 const { claimPlayer } = await import('./api')
 
 const KEY = 'cardi-golf:legal'
 const cur = currentVersions()
 const answer = (privacy: string | null, terms: string | null) => ({
-  data: { privacy: privacy && { version: privacy, acceptedAt: '2026-10-12T00:00:00Z' }, terms: terms && { version: terms, acceptedAt: '2026-10-12T00:00:00Z' } },
+  data: {
+    privacy: privacy && { version: privacy, acceptedAt: '2026-10-12T00:00:00Z' },
+    terms: terms && { version: terms, acceptedAt: '2026-10-12T00:00:00Z' },
+  },
   error: null,
 })
 
@@ -30,7 +38,13 @@ function signIn(uid: string | null, anonymous = true) {
   useAuth.setState({ user: uid ? ({ id: uid, is_anonymous: anonymous } as User) : null })
   getSession.mockResolvedValue({ data: { session: uid ? { user: { id: uid, is_anonymous: anonymous } } : null } })
 }
-const sent = (context: string, user = expect.any(String)) => ({ p_privacy: cur.privacy, p_terms: cur.terms, p_context: context, p_age_seconds: expect.any(Number), p_user: user })
+const sent = (context: string, user = expect.any(String)) => ({
+  p_privacy: cur.privacy,
+  p_terms: cur.terms,
+  p_context: context,
+  p_age_seconds: expect.any(Number),
+  p_user: user,
+})
 
 beforeEach(() => {
   rpc.mockReset()
@@ -49,12 +63,17 @@ describe('versions', () => {
 })
 
 describe('18 or older (TRUST-13, confirm_adult in 0070)', () => {
-  it('an account\'s sign-up carries it to the server with the acceptance, once', async () => {
+  it("an account's sign-up carries it to the server with the acceptance, once", async () => {
     signIn('u1', false)
     sayAdult()
     rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms)).mockResolvedValueOnce({ data: null, error: null })
     expect(await acceptLegal('account')).toBe(true)
-    expect(rpc).toHaveBeenCalledWith('confirm_adult', { p_terms: cur.terms, p_context: 'account', p_age_seconds: expect.any(Number), p_user: 'u1' })
+    expect(rpc).toHaveBeenCalledWith('confirm_adult', {
+      p_terms: cur.terms,
+      p_context: 'account',
+      p_age_seconds: expect.any(Number),
+      p_user: 'u1',
+    })
     // Said for that sign-in only.
     rpc.mockClear()
     rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms))
@@ -77,7 +96,9 @@ describe('18 or older (TRUST-13, confirm_adult in 0070)', () => {
   it('a server without 0070 refuses the age and the acceptance still stands', async () => {
     signIn('u1', false)
     sayAdult()
-    rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms)).mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'not found' } })
+    rpc
+      .mockResolvedValueOnce(answer(cur.privacy, cur.terms))
+      .mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'not found' } })
     expect(await acceptLegal('account')).toBe(true)
     expect(JSON.parse(localStorage.getItem(KEY)!).pending).toBeUndefined()
   })
@@ -88,10 +109,12 @@ describe('acceptLegal', () => {
     rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms))
     expect(await acceptLegal('pin')).toBe(true)
     expect(rpc).toHaveBeenCalledWith('accept_legal', sent('pin'))
-    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ seen: { uid: 'u1', privacy: cur.privacy, terms: cur.terms } })
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+      seen: { uid: 'u1', privacy: cur.privacy, terms: cur.terms },
+    })
   })
 
-  it('sends how long ago it was given, and for whom, not the phone\'s clock', async () => {
+  it("sends how long ago it was given, and for whom, not the phone's clock", async () => {
     rpc.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     await acceptLegal('organizer')
     const stored = JSON.parse(localStorage.getItem(KEY)!)
@@ -185,12 +208,18 @@ describe('acceptLegal', () => {
   })
 
   it('a PIN the server took records it; a refused one does not', async () => {
-    rpc.mockImplementation(async (name: string) => (name === 'claim_player' ? { data: { ok: false, reason: 'wrong_pin', attemptsLeft: 4 }, error: null } : answer(cur.privacy, cur.terms)))
+    rpc.mockImplementation(async (name: string) =>
+      name === 'claim_player'
+        ? { data: { ok: false, reason: 'wrong_pin', attemptsLeft: 4 }, error: null }
+        : answer(cur.privacy, cur.terms),
+    )
     await claimPlayer('p1', '0000')
     await new Promise((r) => setTimeout(r, 0))
     await flushLegal()
     expect(rpc.mock.calls.map((c) => c[0])).toEqual(['claim_player'])
-    rpc.mockImplementation(async (name: string) => (name === 'claim_player' ? { data: { ok: true, playerId: 'p1' }, error: null } : answer(cur.privacy, cur.terms)))
+    rpc.mockImplementation(async (name: string) =>
+      name === 'claim_player' ? { data: { ok: true, playerId: 'p1' }, error: null } : answer(cur.privacy, cur.terms),
+    )
     await claimPlayer('p1', '1234')
     await new Promise((r) => setTimeout(r, 0))
     await flushLegal()
@@ -215,7 +244,7 @@ describe('legalUpdate', () => {
     expect(await legalUpdate()).toEqual({ privacy: true, terms: true, first: true })
   })
 
-  it('an anonymous phone whose claim can\'t be read is not judged', async () => {
+  it("an anonymous phone whose claim can't be read is not judged", async () => {
     rpc.mockResolvedValue(answer(null, null))
     claim.mockResolvedValueOnce({ data: null, error: { code: 'PGRST301', message: 'x' } } as never)
     expect(await legalUpdate()).toBeNull()

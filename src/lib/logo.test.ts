@@ -15,16 +15,80 @@ const WIDEST = 3
 
 /** Every place the logo shows: its rule, the height that rule declares, and the most pixels per CSS pixel it is drawn at. */
 const SLOTS = [
-  { slot: 'tournament header', file: 'screens/tournament/TournamentShell.module.css', rule: 'logo', height: '28px', px: 28, dpr: 3, autoWidth: false },
-  { slot: 'Entrar', file: 'components/primitives.module.css', rule: 'eventLogo', height: '40px', px: 40, dpr: 3, autoWidth: false },
-  { slot: 'Mi Polo and profiles', file: 'screens/profile/Profile.module.css', rule: 'logo', height: '40px', px: 40, dpr: 3, autoWidth: false },
-  { slot: 'Comité › Torneo', file: 'screens/admin/Admin.module.css', rule: 'logo', height: '64px', px: 64, dpr: 3, autoWidth: false },
+  {
+    slot: 'tournament header',
+    file: 'screens/tournament/TournamentShell.module.css',
+    rule: 'logo',
+    height: '28px',
+    px: 28,
+    dpr: 3,
+    autoWidth: false,
+  },
+  {
+    slot: 'Entrar',
+    file: 'components/primitives.module.css',
+    rule: 'eventLogo',
+    height: '40px',
+    px: 40,
+    dpr: 3,
+    autoWidth: false,
+  },
+  {
+    slot: 'Mi Polo and profiles',
+    file: 'screens/profile/Profile.module.css',
+    rule: 'logo',
+    height: '40px',
+    px: 40,
+    dpr: 3,
+    autoWidth: false,
+  },
+  {
+    slot: 'Comité › Torneo',
+    file: 'screens/admin/Admin.module.css',
+    rule: 'logo',
+    height: '64px',
+    px: 64,
+    dpr: 3,
+    autoWidth: false,
+  },
   // html-to-image's pixelRatio, checked below.
-  { slot: 'share card', file: 'components/ShareCard.module.css', rule: 'logo', height: '56px', px: 56, dpr: 2, autoWidth: false },
-  { slot: 'printed card', file: 'screens/tournament/PrintScreen.module.css', rule: 'logo', height: '44px', px: 44, dpr: PRINT_DPR, autoWidth: true },
+  {
+    slot: 'share card',
+    file: 'components/ShareCard.module.css',
+    rule: 'logo',
+    height: '56px',
+    px: 56,
+    dpr: 2,
+    autoWidth: false,
+  },
+  {
+    slot: 'printed card',
+    file: 'screens/tournament/PrintScreen.module.css',
+    rule: 'logo',
+    height: '44px',
+    px: 44,
+    dpr: PRINT_DPR,
+    autoWidth: true,
+  },
   // 9vh of a 1080-line screen, on a 2× one.
-  { slot: 'TV', file: 'screens/tournament/TvScreen.module.css', rule: 'logo', height: '9vh', px: 0.09 * 1080, dpr: 2, autoWidth: true },
-  { slot: 'ceremony', file: 'screens/tournament/CeremonyScreen.module.css', rule: 'logo', height: 'clamp(40px, min(9vh, 12vw), 120px)', px: 120, dpr: 2, autoWidth: true },
+  {
+    slot: 'TV',
+    file: 'screens/tournament/TvScreen.module.css',
+    rule: 'logo',
+    height: '9vh',
+    px: 0.09 * 1080,
+    dpr: 2,
+    autoWidth: true,
+  },
+  {
+    slot: 'ceremony',
+    file: 'screens/tournament/CeremonyScreen.module.css',
+    rule: 'logo',
+    height: 'clamp(40px, min(9vh, 12vw), 120px)',
+    px: 120,
+    dpr: 2,
+    autoWidth: true,
+  },
 ]
 
 function declaredHeight(file: string, rule: string): string | undefined {
@@ -58,12 +122,17 @@ describe('logoPath and logoSize', () => {
   const base = 'https://ref.supabase.co/storage/v1/object/public/tournament-assets/'
 
   it('a rendition is a new file every time, its size in its name, under the tournament', () => {
-    expect(logoPath(tid, { type: 'image/webp', width: 222, height: 240 }, 1700000000000)).toBe(`${tid}/logo-222x240-1700000000000.webp`)
+    expect(logoPath(tid, { type: 'image/webp', width: 222, height: 240 }, 1700000000000)).toBe(
+      `${tid}/logo-222x240-1700000000000.webp`,
+    )
     expect(logoPath(tid, { type: 'image/png', width: 160, height: 148 }, 1)).toBe(`${tid}/logo-160x148-1.png`)
   })
 
   it('every slot reads the size back from the URL, with or without the upload’s ?v=', () => {
-    expect(logoSize(`${base}${tid}/logo-222x240-1700000000000.webp?v=1700000000001`)).toEqual({ width: 222, height: 240 })
+    expect(logoSize(`${base}${tid}/logo-222x240-1700000000000.webp?v=1700000000001`)).toEqual({
+      width: 222,
+      height: 240,
+    })
     expect(logoSize(`${base}${tid}/logo-720x180-1.jpg`)).toEqual({ width: 720, height: 180 })
   })
 

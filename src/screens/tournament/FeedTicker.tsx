@@ -11,7 +11,13 @@ import { IconBird, IconFlag, IconRing, IconSnake, IconTarget } from '../../compo
 import { ease, easeBoard, still } from '../../design/motion'
 import { feedKey, feedLines, feedWords } from '../../lib/figureText'
 
-const ICON: Record<FeedEvent['kind'], ReactNode> = { birdie: <IconBird size={18} />, leadChange: <IconFlag size={18} />, snakePass: <IconSnake size={18} />, honoreeHole: <IconRing size={18} />, threePutt: <IconTarget size={18} /> }
+const ICON: Record<FeedEvent['kind'], ReactNode> = {
+  birdie: <IconBird size={18} />,
+  leadChange: <IconFlag size={18} />,
+  snakePass: <IconSnake size={18} />,
+  honoreeHole: <IconRing size={18} />,
+  threePutt: <IconTarget size={18} />,
+}
 
 /** Memoized: its own lines decide when it renders, not the screen around it (PERF-09). */
 export const FeedTicker = memo(function FeedTicker({ limit = 8, big = false }: { limit?: number; big?: boolean }) {
@@ -21,7 +27,9 @@ export const FeedTicker = memo(function FeedTicker({ limit = 8, big = false }: {
     const nameOf = (id: string) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
     // The lines are picked over the whole feed, so the ones shown read as the TV and every other phone read them (COPY-15).
     const texts = feedLines(data.state.feed, nameOf, feedWords(data.settings))
-    return data.state.feed.slice(0, limit).map((e, i) => ({ key: feedKey(e), kind: e.kind, text: texts[i]!, round: e.roundNumber }))
+    return data.state.feed
+      .slice(0, limit)
+      .map((e, i) => ({ key: feedKey(e), kind: e.kind, text: texts[i]!, round: e.roundNumber }))
   })
   // Under reduced motion the lines take their places at once: a height that grows is movement too.
   const reduce = useReducedMotion()
@@ -36,7 +44,14 @@ export const FeedTicker = memo(function FeedTicker({ limit = 8, big = false }: {
       */}
       <AnimatePresence initial={false}>
         {lines.map((e) => (
-          <motion.div key={e.key} className={styles.slot} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={reduce ? still : big ? easeBoard : ease}>
+          <motion.div
+            key={e.key}
+            className={styles.slot}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={reduce ? still : big ? easeBoard : ease}
+          >
             <div className={`${styles.item} ${e.kind === 'leadChange' ? styles.lead : ''}`}>
               <span className={styles.icon} aria-hidden="true">
                 {ICON[e.kind]}

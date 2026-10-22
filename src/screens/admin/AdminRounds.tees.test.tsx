@@ -11,8 +11,13 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ setRoundTee: vi.fn(async () => undefined) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), setRoundTee: api.setRoundTee }))
-vi.mock('./useCourses', () => ({ useCourses: () => ({ courses: [], loading: false, error: null, refresh: () => undefined }) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  setRoundTee: api.setRoundTee,
+}))
+vi.mock('./useCourses', () => ({
+  useCourses: () => ({ courses: [], loading: false, error: null, refresh: () => undefined }),
+}))
 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -32,7 +37,16 @@ function mount(edit: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: 't-rounds', data: dataFromSnapshot(snapshot) })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-rounds', slug: 'viaje', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-rounds',
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminRounds />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -45,7 +59,7 @@ afterEach(() => {
 })
 
 describe('Rondas: a tee of another course can be put back', () => {
-  it('a one-tee course with nobody\'s tee chosen: nothing to choose, no «Tee de cada jugador»', () => {
+  it("a one-tee course with nobody's tee chosen: nothing to choose, no «Tee de cada jugador»", () => {
     mount(() => undefined)
     expect(screen.queryByRole('button', { name: R.tees })).toBeNull()
   })
@@ -64,7 +78,12 @@ describe('Rondas: a tee of another course can be put back', () => {
 
   it('a tee of another loaded course is named', async () => {
     mount((s) => {
-      s.courses.push(makeCourse('quivira', [makeTee('rojas', 'quivira', { name: 'Rojas' }), makeTee('negras', 'quivira', { name: 'Negras' })]))
+      s.courses.push(
+        makeCourse('quivira', [
+          makeTee('rojas', 'quivira', { name: 'Rojas' }),
+          makeTee('negras', 'quivira', { name: 'Negras' }),
+        ]),
+      )
       s.rounds.push(makeRound(2, { status: 'scheduled', courseId: 'quivira' }))
       s.roundTees = [{ roundId: 'r1', playerId: 'p3', teeId: 'rojas' }]
     })

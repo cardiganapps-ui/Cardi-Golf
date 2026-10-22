@@ -61,9 +61,7 @@ export function SaveResults({ board = false }: { board?: boolean }) {
   return (
     // Not a landmark: on the Ceremonia it sits inside the stage's own region, which stays the one a screen reader walks.
     <div className={`${styles.save} ${board ? styles.board : ''}`} data-save-results>
-      <h2 className={styles.title}>
-        {S.title}
-      </h2>
+      <h2 className={styles.title}>{S.title}</h2>
       <p className={styles.body}>{S.body(name)}</p>
       <ul className={styles.gets}>
         {S.gets.map((g) => (
@@ -71,11 +69,19 @@ export function SaveResults({ board = false }: { board?: boolean }) {
         ))}
       </ul>
       {mode === 'convert' ? (
-        <Link className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)} to={`/entrar?next=${encodeURIComponent(back)}`}>
+        <Link
+          className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)}
+          to={`/entrar?next=${encodeURIComponent(back)}`}
+        >
           {S.action}
         </Link>
       ) : (
-        <button className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)} type="button" disabled={busy} onClick={() => void link()}>
+        <button
+          className={buttonClass({ variant: 'primary', block: !board }, board ? styles.bigBtn : undefined)}
+          type="button"
+          disabled={busy}
+          onClick={() => void link()}
+        >
           {busy ? t.common.saving : S.actionHere}
         </button>
       )}

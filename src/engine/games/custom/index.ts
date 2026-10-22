@@ -27,7 +27,8 @@ export const customGame: GameImpl<CustomState, Cfg> = {
   compute(ctx) {
     const inGame = new Set(ctx.entrants)
     const winners: Record<Id, number> = {}
-    for (const r of ctx.snapshot.gameResults) if (r.gameId === ctx.config.id && inGame.has(r.playerId) && r.share > 0) winners[r.playerId] = r.share
+    for (const r of ctx.snapshot.gameResults)
+      if (r.gameId === ctx.config.id && inGame.has(r.playerId) && r.share > 0) winners[r.playerId] = r.share
     return { winners, decided: Object.keys(winners).length > 0 }
   },
   prizes(state, ctx) {
@@ -38,7 +39,9 @@ export const customGame: GameImpl<CustomState, Cfg> = {
       // Every entrant who did not win pays the stake to each winner.
       const units = new Map(Object.keys(state.winners).map((id) => [id, 1]))
       const losers = ctx.entrants.filter((id) => !units.has(id))
-      return directUnits({ ...c, entrants: [...losers, ...units.keys()] }, units, 'reward', 'bet', name).filter((p) => !p.payerId || !units.has(p.payerId))
+      return directUnits({ ...c, entrants: [...losers, ...units.keys()] }, units, 'reward', 'bet', name).filter(
+        (p) => !p.payerId || !units.has(p.payerId),
+      )
     }
     // Shares may be fractional: scale to whole units first.
     const units = new Map(Object.entries(state.winners).map(([id, s]) => [id, Math.round(s * 100)]))
@@ -46,7 +49,12 @@ export const customGame: GameImpl<CustomState, Cfg> = {
   },
   board(state, ctx) {
     const money = moneyByPlayer(customGame.prizes(state, ctx))
-    const rows = Object.keys(state.winners).map((id) => ({ playerIds: [id], pos: '1', figure: msg('board.decidedWin', {}), money: money.get(id) ?? 0 }))
+    const rows = Object.keys(state.winners).map((id) => ({
+      playerIds: [id],
+      pos: '1',
+      figure: msg('board.decidedWin', {}),
+      money: money.get(id) ?? 0,
+    }))
     const notes: Msg[] = []
     if (ctx.config.options.description) notes.push(label(ctx.config.options.description))
     notes.push(msg('board.customDecided', { decided: state.decided }))

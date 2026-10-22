@@ -77,7 +77,10 @@ export function AdminHistory() {
     const m = new Map((rounds ?? []).map((r) => [r.id, r.number]))
     return (id: unknown) => (typeof id === 'string' ? (m.get(id) ?? null) : null)
   }, [rounds])
-  const sortedPlayers = useMemo(() => [...(players ?? [])].sort((x, y) => x.displayName.localeCompare(y.displayName, 'es')), [players])
+  const sortedPlayers = useMemo(
+    () => [...(players ?? [])].sort((x, y) => x.displayName.localeCompare(y.displayName, 'es')),
+    [players],
+  )
   const holeCount = Math.max(18, ...(rounds ?? []).map((r) => r.holes))
   const set = (patch: AuditFilter) => setFilter((f) => ({ ...f, ...patch }))
 
@@ -94,21 +97,40 @@ export function AdminHistory() {
     if (e.table === 'scores') {
       const player = name(row.player_id) ?? '?'
       const r = roundNo(row.round_id)
-      const hole = `${row.hole ?? '?'}${r && (rounds?.length ?? 0) > 1 ? ` (día ${r})` : ''}`
-      const before = e.action === 'INSERT' ? null : e.before?.picked_up ? 'levantó' : (e.before?.strokes as number | null) != null ? String(e.before?.strokes) : null
-      const after = e.action === 'DELETE' ? null : e.after?.picked_up ? 'levantó' : (e.after?.strokes as number | null) != null ? String(e.after?.strokes) : null
+      const hole = `${(row.hole as number | null | undefined) ?? '?'}${r && (rounds?.length ?? 0) > 1 ? ` (día ${r})` : ''}`
+      const before =
+        e.action === 'INSERT'
+          ? null
+          : e.before?.picked_up
+            ? 'levantó'
+            : (e.before?.strokes as number | null) != null
+              ? String(e.before?.strokes)
+              : null
+      const after =
+        e.action === 'DELETE'
+          ? null
+          : e.after?.picked_up
+            ? 'levantó'
+            : (e.after?.strokes as number | null) != null
+              ? String(e.after?.strokes)
+              : null
       return H.scoreLine(player, hole, before, after)
     }
     // A phone took a player with his PIN, or stopped holding him (TRUST-24). Only the Comité's «Sacar» has a reason.
     if (e.table === 'pin_claims') {
       const player = name(row.player_id) ?? '?'
       if (e.action === 'INSERT') return H.claim.took(player, H.claim.from[String(row.platform)] ?? H.claim.from.other!)
-      if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null) return e.reason ? H.claim.removed(player) : H.claim.left(player)
+      if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null)
+        return e.reason ? H.claim.removed(player) : H.claim.left(player)
     }
     // A PIN unlocked (0056), or set and changed (0064, DB-13): never the PIN itself.
     if (e.table === 'player_pins') {
       const player = name(row.player_id) ?? '?'
-      return e.after?.locked === false ? H.claim.unlocked(player) : e.action === 'INSERT' ? H.claim.pinSet(player) : H.claim.pinChanged(player)
+      return e.after?.locked === false
+        ? H.claim.unlocked(player)
+        : e.action === 'INSERT'
+          ? H.claim.pinSet(player)
+          : H.claim.pinChanged(player)
     }
     if (e.table === 'tournament_results') return H.results[e.action] ?? e.action
     // The link to watch (STRAT-05, 0053): made, given a new token, its money switched, or turned off. Its token is never in the history.
@@ -120,7 +142,12 @@ export function AdminHistory() {
       if (e.before?.money !== e.after?.money) return L.money(e.after?.money === true)
     }
     const what = t.platform.tables[e.table] ?? e.table
-    const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${row.number ?? ''}` : name(row.player_id)
+    const who =
+      e.table === 'players'
+        ? (row.display_name as string | undefined)
+        : e.table === 'rounds'
+          ? `${(row.number as number | null | undefined) ?? ''}`
+          : name(row.player_id)
     return `${what}${who ? ` ${who}` : ''}, ${verb}`
   }
   /** Who made it: once the player has entered on more than one phone, from which (TRUST-24). */
@@ -134,7 +161,9 @@ export function AdminHistory() {
     if (e.table !== 'scores') return null
     const row = e.after ?? e.before ?? {}
     const hole = typeof row.hole === 'number' ? row.hole : null
-    return typeof row.player_id === 'string' && typeof row.round_id === 'string' && hole ? { player: row.player_id, round: row.round_id, hole } : null
+    return typeof row.player_id === 'string' && typeof row.round_id === 'string' && hole
+      ? { player: row.player_id, round: row.round_id, hole }
+      : null
   }
 
   const filtered = any(filter)
@@ -145,7 +174,11 @@ export function AdminHistory() {
       <div className={a.filters}>
         <label className="field">
           <span className="label">{F.player}</span>
-          <select className="select" value={filter.player ?? ''} onChange={(e) => set({ player: e.target.value || undefined })}>
+          <select
+            className="select"
+            value={filter.player ?? ''}
+            onChange={(e) => set({ player: e.target.value || undefined })}
+          >
             <option value="">{F.all}</option>
             {sortedPlayers.map((p) => (
               <option key={p.id} value={p.id}>
@@ -157,7 +190,11 @@ export function AdminHistory() {
         {(rounds?.length ?? 0) > 1 && (
           <label className="field">
             <span className="label">{F.round}</span>
-            <select className="select" value={filter.round ?? ''} onChange={(e) => set({ round: e.target.value || undefined })}>
+            <select
+              className="select"
+              value={filter.round ?? ''}
+              onChange={(e) => set({ round: e.target.value || undefined })}
+            >
               <option value="">{F.all}</option>
               {[...(rounds ?? [])]
                 .sort((x, y) => x.number - y.number)
@@ -171,7 +208,11 @@ export function AdminHistory() {
         )}
         <label className="field">
           <span className="label">{F.hole}</span>
-          <select className="select" value={filter.hole ?? ''} onChange={(e) => set({ hole: e.target.value ? Number(e.target.value) : undefined })}>
+          <select
+            className="select"
+            value={filter.hole ?? ''}
+            onChange={(e) => set({ hole: e.target.value ? Number(e.target.value) : undefined })}
+          >
             <option value="">{F.all}</option>
             {Array.from({ length: holeCount }, (_, i) => i + 1).map((h) => (
               <option key={h} value={h}>
@@ -202,22 +243,22 @@ export function AdminHistory() {
               <div key={e.id} className={a.row}>
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{title(e)}</span>
-                  <span className={a.rowSub}>{[relTime(e.at), e.reason && H.reason(e.reason)].filter(Boolean).join(', ')}</span>
+                  <span className={a.rowSub}>
+                    {[relTime(e.at), e.reason && H.reason(e.reason)].filter(Boolean).join(', ')}
+                  </span>
                 </span>
                 <span className="chip chip--coral">{H.byPlatform}</span>
               </div>
             ) : (
-            <div key={e.id} className={a.row}>
-              <button type="button" className={a.rowBtn} onClick={() => setOpen(e)}>
-                <span className={a.rowText}>
-                  <span className={a.rowTitle}>{title(e)}</span>
-                  <span className={a.rowSub}>
-                    {[by(e), relTime(e.at), e.reason].filter(Boolean).join(', ')}
+              <div key={e.id} className={a.row}>
+                <button type="button" className={a.rowBtn} onClick={() => setOpen(e)}>
+                  <span className={a.rowText}>
+                    <span className={a.rowTitle}>{title(e)}</span>
+                    <span className={a.rowSub}>{[by(e), relTime(e.at), e.reason].filter(Boolean).join(', ')}</span>
                   </span>
-                </span>
-                {e.platform && <span className="chip chip--coral">{H.byPlatform}</span>}
-              </button>
-            </div>
+                  {e.platform && <span className="chip chip--coral">{H.byPlatform}</span>}
+                </button>
+              </div>
             ),
           )}
         </div>
@@ -227,11 +268,13 @@ export function AdminHistory() {
           className="btn btn--secondary"
           type="button"
           disabled={loadingMore}
-          onClick={async () => {
-            setLoadingMore(true)
-            await load(historyRows(entries).at(-1)?.id)
-            setLoadingMore(false)
-          }}
+          onClick={() =>
+            void (async () => {
+              setLoadingMore(true)
+              await load(historyRows(entries).at(-1)?.id)
+              setLoadingMore(false)
+            })()
+          }
         >
           {H.more}
         </button>
@@ -251,7 +294,11 @@ export function AdminHistory() {
                   <div key={f.key} className={a.row}>
                     <span className={a.rowText}>
                       <span className={a.rowTitle}>{fieldLabel(f.key)}</span>
-                      <span className={a.rowSub}>{open.action === 'UPDATE' ? H.change(show(f.before), show(f.after)) : show(open.action === 'INSERT' ? f.after : f.before)}</span>
+                      <span className={a.rowSub}>
+                        {open.action === 'UPDATE'
+                          ? H.change(show(f.before), show(f.after))
+                          : show(open.action === 'INSERT' ? f.after : f.before)}
+                      </span>
                     </span>
                   </div>
                 )

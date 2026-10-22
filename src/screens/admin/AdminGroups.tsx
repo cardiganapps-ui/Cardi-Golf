@@ -53,7 +53,9 @@ export function AdminGroups() {
   const [params, setParams] = useSearchParams()
   const asked = params.get('ronda')
   const playable = (id: string | null) => (id && rounds.some((r) => r.id === id) ? id : null)
-  const [roundId, setRoundId] = useState<string>(playable(asked) ?? playable(snapshot.tournament.currentRoundId) ?? rounds[0]?.id ?? '')
+  const [roundId, setRoundId] = useState<string>(
+    playable(asked) ?? playable(snapshot.tournament.currentRoundId) ?? rounds[0]?.id ?? '',
+  )
   const round = rounds.find((r) => r.id === roundId) ?? null
   const [drafts, setDrafts] = useState<DraftGroup[] | null>(null)
   const [picking, setPicking] = useState<number | null>(null)
@@ -69,7 +71,13 @@ export function AdminGroups() {
     return snapshot.groups
       .filter((g) => g.roundId === roundId)
       .sort((x, y) => x.number - y.number)
-      .map((g) => ({ id: g.id, number: g.number, teeTime: g.teeTime?.slice(0, 5) ?? '', startHole: g.startHole, playerIds: g.playerIds }))
+      .map((g) => ({
+        id: g.id,
+        number: g.number,
+        teeTime: g.teeTime?.slice(0, 5) ?? '',
+        startHole: g.startHole,
+        playerIds: g.playerIds,
+      }))
   }, [drafts, snapshot.groups, roundId])
 
   const assigned = useMemo(() => new Set(current.flatMap((g) => g.playerIds)), [current])
@@ -82,7 +90,10 @@ export function AdminGroups() {
       const inGroup = new Set(g.playerIds)
       const pairs = snapshot.pairs.filter((p) => inGroup.has(p.player1Id) && inGroup.has(p.player2Id))
       if (pairs.length * 2 !== g.playerIds.length) return G.warnIncomplete
-      const found = pairs.map((p) => p.kind ?? '').sort().join(',')
+      const found = pairs
+        .map((p) => p.kind ?? '')
+        .sort()
+        .join(',')
       if (kinds.length && found !== [...kinds].sort().join(',')) return G.warnKinds(t.common.plusList(kinds))
       return null
     })
@@ -99,7 +110,10 @@ export function AdminGroups() {
   function fromStandings() {
     const rows = state.modules.pairs?.rows ?? []
     const perGroup = Math.max(1, Math.floor(settings.groupSize / 2))
-    const groups = generateGroupsFromStandings(rows.map((r) => r.pairId), perGroup).map((pairIds) =>
+    const groups = generateGroupsFromStandings(
+      rows.map((r) => r.pairId),
+      perGroup,
+    ).map((pairIds) =>
       pairIds.flatMap((pid) => {
         const p = snapshot.pairs.find((x) => x.id === pid)!
         return [p.player1Id, p.player2Id]
@@ -147,9 +161,12 @@ export function AdminGroups() {
     setDrafts(withTimes(groups))
   }
 
-  const update = (i: number, patch: Partial<DraftGroup>) => setDrafts(current.map((g, j) => (j === i ? { ...g, ...patch } : g)))
-  const addGroup = () => setDrafts([...current, { number: current.length + 1, teeTime: '', startHole: 1, playerIds: [] }])
-  const removeGroup = (i: number) => setDrafts(current.filter((_, j) => j !== i).map((g, j) => ({ ...g, number: j + 1 })))
+  const update = (i: number, patch: Partial<DraftGroup>) =>
+    setDrafts(current.map((g, j) => (j === i ? { ...g, ...patch } : g)))
+  const addGroup = () =>
+    setDrafts([...current, { number: current.length + 1, teeTime: '', startHole: 1, playerIds: [] }])
+  const removeGroup = (i: number) =>
+    setDrafts(current.filter((_, j) => j !== i).map((g, j) => ({ ...g, number: j + 1 })))
   const togglePlayer = (gi: number, pid: string) => {
     const next = current.map((g) => ({ ...g, playerIds: g.playerIds.filter((x) => x !== pid) }))
     const g = next[gi]!
@@ -183,7 +200,16 @@ export function AdminGroups() {
     if (!round) return
     setBusy(true)
     try {
-      await saveGroups(round.id, current.map((g) => ({ id: g.id, number: g.number, tee_time: g.teeTime || null, start_hole: g.startHole, player_ids: g.playerIds })))
+      await saveGroups(
+        round.id,
+        current.map((g) => ({
+          id: g.id,
+          number: g.number,
+          tee_time: g.teeTime || null,
+          start_hole: g.startHole,
+          player_ids: g.playerIds,
+        })),
+      )
       await reload()
       setDrafts(null)
       toast(t.common.saved)
@@ -209,7 +235,12 @@ export function AdminGroups() {
       </div>
       {rounds.length === 0 && <EmptyState title={t.admin.sections.groups} body={t.admin.rounds.empty} />}
       {rounds.length > 0 && (
-        <Segmented value={roundId} options={rounds.map((r: Round) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={switchRound} label={t.common.whichDay} />
+        <Segmented
+          value={roundId}
+          options={rounds.map((r: Round) => ({ value: r.id, label: t.round.day(r.number) }))}
+          onChange={switchRound}
+          label={t.common.whichDay}
+        />
       )}
       {round && (
         <>
@@ -236,7 +267,11 @@ export function AdminGroups() {
               + {G.addGroup}
             </button>
           </div>
-          {pairsOn && round.number > 1 && <p className={a.help}>{G.standingsHint(standingsOrder(state.modules.pairs?.rows.length ?? 0, settings.groupSize))}</p>}
+          {pairsOn && round.number > 1 && (
+            <p className={a.help}>
+              {G.standingsHint(standingsOrder(state.modules.pairs?.rows.length ?? 0, settings.groupSize))}
+            </p>
+          )}
 
           <div className={styles.groups}>
             {current.map((g, i) => (
@@ -249,12 +284,28 @@ export function AdminGroups() {
                     <span className={a.rowSub}>{G.members(g.playerIds.length, settings.groupSize)}</span>
                   </span>
                   <span className={styles.groupControls}>
-                    <input className={`input ${styles.time}`} type="time" value={g.teeTime} onChange={(e) => update(i, { teeTime: e.target.value })} aria-label={G.teeTime} />
-                    <select className={`select ${styles.start}`} value={g.startHole} onChange={(e) => update(i, { startHole: Number(e.target.value) })} aria-label={G.startHole}>
+                    <input
+                      className={`input ${styles.time}`}
+                      type="time"
+                      value={g.teeTime}
+                      onChange={(e) => update(i, { teeTime: e.target.value })}
+                      aria-label={G.teeTime}
+                    />
+                    <select
+                      className={`select ${styles.start}`}
+                      value={g.startHole}
+                      onChange={(e) => update(i, { startHole: Number(e.target.value) })}
+                      aria-label={G.startHole}
+                    >
                       <option value={1}>{G.startAt(1)}</option>
                       <option value={10}>{G.startAt(10)}</option>
                     </select>
-                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => removeGroup(i)} aria-label={`${t.common.delete} ${t.card.group} ${g.number}`}>
+                    <button
+                      className="btn btn--ghost btn--sm"
+                      type="button"
+                      onClick={() => removeGroup(i)}
+                      aria-label={`${t.common.delete} ${t.card.group} ${g.number}`}
+                    >
                       <IconClose />
                     </button>
                   </span>
@@ -267,12 +318,24 @@ export function AdminGroups() {
                         <span className={a.rowTitle}>{name(pid)}</span>
                         {byId.get(pid)?.tier && <span className={a.rowSub}>{byId.get(pid)!.tier}</span>}
                       </span>
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => togglePlayer(i, pid)} aria-label={`${t.common.delete} ${name(pid)}`}>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() => togglePlayer(i, pid)}
+                        aria-label={`${t.common.delete} ${name(pid)}`}
+                      >
                         <IconClose />
                       </button>
                     </div>
                   ))}
-                  <button type="button" className={`${a.row} ${a.rowBtn}`} onClick={() => { setQ(''); setPicking(i) }}>
+                  <button
+                    type="button"
+                    className={`${a.row} ${a.rowBtn}`}
+                    onClick={() => {
+                      setQ('')
+                      setPicking(i)
+                    }}
+                  >
                     <span className="btn btn--ghost btn--sm">+ {G.addPlayer}</span>
                   </button>
                 </div>
@@ -280,9 +343,16 @@ export function AdminGroups() {
               </section>
             ))}
           </div>
-          {unassigned.length > 0 && <p className={a.warn}>{G.unassigned(t.common.andList(unassigned.map((p) => p.displayName)))}</p>}
+          {unassigned.length > 0 && (
+            <p className={a.warn}>{G.unassigned(t.common.andList(unassigned.map((p) => p.displayName)))}</p>
+          )}
           <div className={a.sticky}>
-            <button className="btn btn--primary btn--block" type="button" disabled={busy || !drafts} onClick={() => void save()}>
+            <button
+              className="btn btn--primary btn--block"
+              type="button"
+              disabled={busy || !drafts}
+              onClick={() => void save()}
+            >
               {busy ? t.common.saving : t.common.save}
             </button>
           </div>
@@ -304,7 +374,17 @@ export function AdminGroups() {
 
       <Sheet open={picking != null} onClose={() => setPicking(null)} title={G.addPlayer}>
         <div className="stack">
-          {snapshot.players.length > SEARCH_FROM && <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.admin.players.search} aria-label={t.admin.players.search} autoFocus />}
+          {snapshot.players.length > SEARCH_FROM && (
+            <input
+              className="input"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t.admin.players.search}
+              aria-label={t.admin.players.search}
+              autoFocus
+            />
+          )}
           <div className={a.rows}>
             {pickList.map((p) => {
               const inGroup = current.findIndex((g) => g.playerIds.includes(p.id))

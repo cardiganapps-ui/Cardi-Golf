@@ -57,7 +57,9 @@ describe('settingsWrite', () => {
 
   it('a row this build can’t read is never written: it used to be written whole from the defaults (ARCH-04)', () => {
     const after = { ...DEFAULT_SETTINGS, entryFee: 700 }
-    expect(() => settingsWrite({ prizes: 'roto' }, DEFAULT_SETTINGS, after, { readAll: true })).toThrow(SettingsOutdated)
+    expect(() => settingsWrite({ prizes: 'roto' }, DEFAULT_SETTINGS, after, { readAll: true })).toThrow(
+      SettingsOutdated,
+    )
     // A newer build's key, nested where this build writes the whole object back: `modules` would lose it.
     const newer = { ...raw, modules: { ...(raw.modules as object), wolf: { enabled: true, label: 'Wolf' } } }
     const label = edit((s) => (s.modules.snake.label = 'La Culebra'))
@@ -89,7 +91,10 @@ describe('mergeOver: the draft over the row after a refusal', () => {
 
   it('a key the row took out stays out, unless only the screen changed it', () => {
     expect(mergeOver(before, { ...before }, { a: 1, b: 1, c: 1 })).toEqual({ merged: { a: 1, b: 1, c: 1 }, lost: [] })
-    expect(mergeOver(before, { ...before, d: 9 }, { a: 1, b: 1, c: 1 })).toEqual({ merged: { a: 1, b: 1, c: 1 }, lost: ['d'] })
+    expect(mergeOver(before, { ...before, d: 9 }, { a: 1, b: 1, c: 1 })).toEqual({
+      merged: { a: 1, b: 1, c: 1 },
+      lost: ['d'],
+    })
   })
 
   it('on real settings: a label typed here over games changed elsewhere', () => {

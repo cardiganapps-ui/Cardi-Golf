@@ -5,7 +5,8 @@ export interface AuditFinding {
   advisories: Array<{ title: string; url: string }>
   through: string[]
 }
-export type AuditVerdict = { kind: 'clean' } | { kind: 'vulnerable'; findings: AuditFinding[] } | { kind: 'unreachable'; reason: string }
+export type AuditVerdict =
+  { kind: 'clean' } | { kind: 'vulnerable'; findings: AuditFinding[] } | { kind: 'unreachable'; reason: string }
 export declare const AUDIT_ARGS: string[]
 export declare function auditVerdict(stdout: string): AuditVerdict
 export declare function findingLines(findings: AuditFinding[]): string[]

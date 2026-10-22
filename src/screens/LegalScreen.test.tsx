@@ -54,7 +54,9 @@ describe('opened from a consent link', () => {
     expect(screen.getByRole('heading', { level: 1, name: L.terms.title })).toBeTruthy()
     expect(screen.getByTestId('nav').textContent).toBe('REPLACE')
     expect(screen.getByRole('button', { name: L.close })).toBeTruthy()
-    expect(screen.getByRole('link', { name: L.privacy.title }).getAttribute('href')).toBe('/privacidad?desde=formulario')
+    expect(screen.getByRole('link', { name: L.privacy.title }).getAttribute('href')).toBe(
+      '/privacidad?desde=formulario',
+    )
   })
 
   it('a browser that keeps the tab open: says how to get back, and offers «Volver a Polo» (P3: opened on its own, it was a dead end)', () => {
@@ -74,7 +76,7 @@ describe('opened from a consent link', () => {
   })
 })
 
-describe('opened any other way (the home footer, Google\'s consent screen, a typed address)', () => {
+describe("opened any other way (the home footer, Google's consent screen, a typed address)", () => {
   it('keeps «Volver a Polo»', () => {
     mount('/privacidad')
     // The brand and the button at the end, both home.
@@ -94,7 +96,11 @@ describe('opened any other way (the home footer, Google\'s consent screen, a typ
   it('both pages end on how to reach whoever runs Polo, word for word (the mailbox cannot receive yet, TRUST-01)', () => {
     for (const url of ['/privacidad', '/terminos?desde=formulario']) {
       mount(url)
-      expect(screen.getByText('Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.')).toBeTruthy()
+      expect(
+        screen.getByText(
+          'Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.',
+        ),
+      ).toBeTruthy()
       cleanup()
     }
   })

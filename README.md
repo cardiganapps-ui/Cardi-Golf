@@ -13,7 +13,7 @@ Plataforma para torneos de golf entre amigos: marcador en vivo, juegos, subasta 
 npm install
 cp .env.example .env.local   # valores públicos (VITE_*); los secretos van aparte
 npm run dev                  # http://localhost:5173
-npm run preflight            # typecheck → lint → test → build (lo mismo que CI)
+npm run preflight            # typecheck → lint → format:check → test → build (lo mismo que CI)
 git config core.hooksPath .githooks   # una vez: el mismo candado antes de cada push
 ```
 

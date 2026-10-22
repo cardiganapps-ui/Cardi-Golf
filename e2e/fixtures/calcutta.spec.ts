@@ -12,19 +12,24 @@ test('«Sortear el orden» shuffles the lot order into place (MOT-05)', async ({
   await expect(rows).toHaveCount(12)
   const before = await rows.allTextContents()
   // Every frame for 1.2 s after the tap: how far each row is from its place.
-  await page.locator('ol').first().evaluate((list) => {
-    const w = window as unknown as { offsets: number[][] }
-    w.offsets = []
-    const t0 = performance.now()
-    const tick = () => {
-      w.offsets.push(Array.from(list.children).map((li) => {
-        const m = getComputedStyle(li).transform
-        return m === 'none' ? 0 : Math.abs(new DOMMatrix(m).m42)
-      }))
-      if (performance.now() - t0 < 1200) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  })
+  await page
+    .locator('ol')
+    .first()
+    .evaluate((list) => {
+      const w = window as unknown as { offsets: number[][] }
+      w.offsets = []
+      const t0 = performance.now()
+      const tick = () => {
+        w.offsets.push(
+          Array.from(list.children).map((li) => {
+            const m = getComputedStyle(li).transform
+            return m === 'none' ? 0 : Math.abs(new DOMMatrix(m).m42)
+          }),
+        )
+        if (performance.now() - t0 < 1200) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
   await page.getByRole('button', { name: t.auction.drawOrder }).tap()
   await page.waitForTimeout(1400)
   const offsets = await page.evaluate(() => (window as unknown as { offsets: number[][] }).offsets)

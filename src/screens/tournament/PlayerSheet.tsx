@@ -30,14 +30,32 @@ import { buttonClass } from '../../components/buttonClass'
  * Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a
  * change (PERF-09). Closing, it keeps the last player until the sheet has left the screen (MOT-09).
  */
-export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
+export const PlayerSheet = memo(function PlayerSheet({
+  playerId,
+  onClose,
+}: {
+  playerId: string | null
+  onClose: () => void
+}) {
   const [last, setLast] = useState(playerId)
   if (playerId && playerId !== last) setLast(playerId)
   const id = playerId ?? last
-  return id ? <PlayerSheetOpen playerId={id} open={!!playerId} onClose={onClose} onExited={() => setLast(null)} /> : null
+  return id ? (
+    <PlayerSheetOpen playerId={id} open={!!playerId} onClose={onClose} onExited={() => setLast(null)} />
+  ) : null
 })
 
-function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: string; open: boolean; onClose: () => void; onExited: () => void }) {
+function PlayerSheetOpen({
+  playerId,
+  open,
+  onClose,
+  onExited,
+}: {
+  playerId: string
+  open: boolean
+  onClose: () => void
+  onExited: () => void
+}) {
   const cur = useCurrency()
   const words = useWords()
   const data = useTournament((s) => s.data)
@@ -49,22 +67,42 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
   const [profiles] = useTournamentProfiles(spectator ? null : tournamentId)
   const showMoney = useShowMoney()
   const p = data?.snapshot.players.find((x) => x.id === playerId)
-  const money = useMemo(() => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []), [data, playerId])
+  const money = useMemo(
+    () => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []),
+    [data, playerId],
+  )
   const rounds = useMemo(
-    () => (data && p ? data.state.core.roundIds.map((rid) => ({ round: data.snapshot.rounds.find((r) => r.id === rid)!, pr: data.state.core.rounds[rid]?.[p.id] })) : []),
+    () =>
+      data && p
+        ? data.state.core.roundIds.map((rid) => ({
+            round: data.snapshot.rounds.find((r) => r.id === rid)!,
+            pr: data.state.core.rounds[rid]?.[p.id],
+          }))
+        : [],
     [data, p],
   )
   // The engine's own counts, so the sheet and Estadísticas agree: on the score the event counts (net points, or the
   // net or gross score).
   const stats = useMemo(() => {
     const s = playerId ? data?.state.stats.players[playerId] : undefined
-    return { birdies: s?.grossBirdies ?? 0, netBirdies: s?.netBirdies ?? 0, pars: s?.pars ?? 0, bogeys: s?.bogeys ?? 0, worse: s?.doubleOrWorse ?? 0, pickups: s?.pickUps ?? 0 }
+    return {
+      birdies: s?.grossBirdies ?? 0,
+      netBirdies: s?.netBirdies ?? 0,
+      pars: s?.pars ?? 0,
+      bogeys: s?.bogeys ?? 0,
+      worse: s?.doubleOrWorse ?? 0,
+      pickups: s?.pickUps ?? 0,
+    }
   }, [data, playerId])
   if (!data || !p) return null
   const { snapshot, state, settings } = data
   // The pairs game's pair, under its label; a team format's pairs are teams, named in the header.
-  const pair = settings.modules.pairs.enabled ? snapshot.pairs.find((x) => x.player1Id === p.id || x.player2Id === p.id) : undefined
-  const partner = pair ? snapshot.players.find((x) => x.id === (pair.player1Id === p.id ? pair.player2Id : pair.player1Id)) : null
+  const pair = settings.modules.pairs.enabled
+    ? snapshot.pairs.find((x) => x.player1Id === p.id || x.player2Id === p.id)
+    : undefined
+  const partner = pair
+    ? snapshot.players.find((x) => x.id === (pair.player1Id === p.id ? pair.player2Id : pair.player1Id))
+    : null
   const auction = state.modules.auction
   const myLot = auction?.lots.find((l) => l.playerId === p.id && l.status === 'sold')
   const owned = auction?.lots.filter((l) => l.status === 'sold' && l.owners.some((o) => o.ownerId === p.id)) ?? []
@@ -105,7 +143,9 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
               {p.tier && <span className="tierBadge">{p.tier}</span>}
               {row && totals ? (
                 <span>
-                  {(team ? (f: string, w: string | null) => t.player.positionTeam(row.label, words(team.name), f, w) : (f: string, w: string | null) => t.player.position(row.label, f, w))(
+                  {(team
+                    ? (f: string, w: string | null) => t.player.positionTeam(row.label, words(team.name), f, w)
+                    : (f: string, w: string | null) => t.player.position(row.label, f, w))(
                     t.common.figure(row.figure.text, row.figure.value, kind),
                     whereNow(rounds),
                   )}
@@ -126,9 +166,19 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
             {hc && <HowCalculated why={[hc.why, ...rounds.filter((r) => r.pr).map((r) => r.pr!.playingHcpWhy)]} />}
           </div>
           <p className={styles.line}>
-            <strong>{t.player.handicapLine(hc?.base ?? p.baseHcp, hc?.source === 'manual' ? t.admin.players.baseHcp : t.admin.players.index)}</strong>
+            <strong>
+              {t.player.handicapLine(
+                hc?.base ?? p.baseHcp,
+                hc?.source === 'manual' ? t.admin.players.baseHcp : t.admin.players.index,
+              )}
+            </strong>
             {hc?.estimated ? ` (${t.admin.players.estimated})` : ''}
-            {rounds.filter((r) => r.pr).map(({ round, pr }) => `, ${t.player.dayHcp(round.number, pr!.playingHcp, pr!.cut)}${pr!.overridden ? ` (${t.admin.handicaps.override.toLowerCase()})` : ''}`)}
+            {rounds
+              .filter((r) => r.pr)
+              .map(
+                ({ round, pr }) =>
+                  `, ${t.player.dayHcp(round.number, pr!.playingHcp, pr!.cut)}${pr!.overridden ? ` (${t.admin.handicaps.override.toLowerCase()})` : ''}`,
+              )}
           </p>
           {hcpChange && <HandicapChanges change={hcpChange} timeZone={settings.timezone} />}
         </section>
@@ -157,7 +207,11 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
                 showPutts
                 onHole={(n) => {
                   const h = pr.holes[n - 1]
-                  if (h) setWhy({ title: t.player.whyHole(n), why: scoring === 'points' ? h.why : strokesWhy(h, scoring === 'net') })
+                  if (h)
+                    setWhy({
+                      title: t.player.whyHole(n),
+                      why: scoring === 'points' ? h.why : strokesWhy(h, scoring === 'net'),
+                    })
                 }}
               />
               {/* TRUST-14: what the Comité corrected on his card, and why, where everyone reads his card. */}
@@ -175,7 +229,9 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
         )}
 
         {/* TRUST-14: how each hole got to what it holds, for everyone in the tournament; never from a link to watch. */}
-        {!spectator && !fixture && rounds.some((r) => r.pr) && <CardHistory key={p.id} tournamentId={tournamentId} playerId={p.id} timeZone={settings.timezone} />}
+        {!spectator && !fixture && rounds.some((r) => r.pr) && (
+          <CardHistory key={p.id} tournamentId={tournamentId} playerId={p.id} timeZone={settings.timezone} />
+        )}
 
         {(pair || myLot || owned.length > 0) && (
           <section className={styles.section}>
@@ -191,12 +247,16 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
               <p className={styles.line}>
                 <span className="label">{settings.modules.auction.label}</span>
                 <br />
-                {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))}, {formatMoney(myLot.price, cur)}
+                {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))},{' '}
+                {formatMoney(myLot.price, cur)}
               </p>
             )}
             {owned.length > 0 && showMoney && (
               <p className={styles.line}>
-                {t.player.owns}: {t.common.andList(owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`))}
+                {t.player.owns}:{' '}
+                {t.common.andList(
+                  owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`),
+                )}
               </p>
             )}
           </section>
@@ -220,7 +280,8 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
                 {person && (
                   <div className={`${styles.row} ${styles.rowTotal}`}>
                     <span>
-                      {t.money.puts} {formatMoney(person.paid, cur)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives, cur)}
+                      {t.money.puts} {formatMoney(person.paid, cur)}, {t.money.receives.toLowerCase()}{' '}
+                      {formatMoney(person.receives, cur)}
                     </span>
                     <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
                       <Money amount={person.net} signed />
@@ -235,7 +296,10 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span className="label">{t.player.stats}</span>
-            <ShareCardButton what={{ kind: 'player', playerId: p.id }} className={buttonClass({ variant: 'ghost', size: 'sm' })} />
+            <ShareCardButton
+              what={{ kind: 'player', playerId: p.id }}
+              className={buttonClass({ variant: 'ghost', size: 'sm' })}
+            />
           </div>
           <div className={styles.stats}>
             <Stat label={t.player.birdies} v={stats.birdies} />
@@ -247,7 +311,12 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
             {putts && <Stat label={t.player.puttsAvg} v={putts.average} />}
             {putts && <Stat label={t.player.onePutts} v={putts.onePutts} />}
             {putts && <Stat label={t.player.threePutts} v={putts.threePutts} />}
-            {state.modules.snake && <Stat label={t.player.snakeHoles(settings.modules.snake.label)} v={state.modules.snake.holesHeld[p.id] ?? 0} />}
+            {state.modules.snake && (
+              <Stat
+                label={t.player.snakeHoles(settings.modules.snake.label)}
+                v={state.modules.snake.holesHeld[p.id] ?? 0}
+              />
+            )}
           </div>
         </section>
       </div>
@@ -266,10 +335,13 @@ function Stat({ label, v }: { label: string; v: number }) {
 }
 
 /** How far the player is, on the latest day he has played a hole of (COPY-26); null before his first hole. */
-function whereNow(rounds: ReadonlyArray<{ round: { holes: number; number: number }; pr: PlayerRound | undefined }>): string | null {
+function whereNow(
+  rounds: ReadonlyArray<{ round: { holes: number; number: number }; pr: PlayerRound | undefined }>,
+): string | null {
   for (let i = rounds.length - 1; i >= 0; i--) {
     const { round, pr } = rounds[i]!
-    if (pr && pr.thru > 0) return t.player.where(pr.thru, round.holes, round.number, rounds.length, i === rounds.length - 1)
+    if (pr && pr.thru > 0)
+      return t.player.where(pr.thru, round.holes, round.number, rounds.length, i === rounds.length - 1)
   }
   return null
 }

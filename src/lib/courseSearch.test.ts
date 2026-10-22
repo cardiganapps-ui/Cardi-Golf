@@ -9,7 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { callRoute, leaked, type RouteRequest } from './testing/route'
 
 /** Who the database says each token is: a Comité account may manage courses, a player may not. */
-const db = vi.hoisted(() => ({ clients: [] as Array<{ url: string; key: string; token: string | undefined }>, down: false }))
+const db = vi.hoisted(() => ({
+  clients: [] as Array<{ url: string; key: string; token: string | undefined }>,
+  down: false,
+}))
 vi.mock('@supabase/supabase-js', () => ({
   createClient: (url: string, key: string, opts: { global?: { headers?: Record<string, string> } }) => {
     const token = opts.global?.headers?.Authorization
@@ -26,21 +29,51 @@ vi.mock('@supabase/supabase-js', () => ({
   },
 }))
 
-const ENV = { VITE_SUPABASE_URL: 'https://db.invalid', VITE_SUPABASE_ANON_KEY: 'anon-key-public', GOLFCOURSE_API_KEY: 'gca-secret-key-111', OPENGOLF_API_KEY: 'oga-secret-key-222' }
+const ENV = {
+  VITE_SUPABASE_URL: 'https://db.invalid',
+  VITE_SUPABASE_ANON_KEY: 'anon-key-public',
+  GOLFCOURSE_API_KEY: 'gca-secret-key-111',
+  OPENGOLF_API_KEY: 'oga-secret-key-222',
+}
 const SECRETS = [ENV.GOLFCOURSE_API_KEY, ENV.OPENGOLF_API_KEY, 'comite-token']
 
-type Upstream = (url: string, headers: Record<string, string>, signal: AbortSignal | undefined) => Promise<Response> | Response
+type Upstream = (
+  url: string,
+  headers: Record<string, string>,
+  signal: AbortSignal | undefined,
+) => Promise<Response> | Response
 let upstream: Upstream
 const asked: Array<{ url: string; headers: Record<string, string> }> = []
 
-const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json' } })
-const QUIVIRA_GCA = { id: 'mz9gqcpj', club_name: 'Quivira Golf Club', course_name: 'Quivira', location: { city: 'Cabo San Lucas', country: 'Mexico', latitude: 22.87, longitude: -109.95 }, tees: { male: 5, female: 0 } }
-const QUIVIRA_OGA = { id: '7166efab', name: 'Quivira Golf Club', course_name: 'Quivira', city: 'Cabo San Lucas', latitude: 22.871, longitude: -109.951 }
-const SOLMAR_OGA = { id: '79fb43c9', name: 'Solmar Golf Links', city: 'Cabo San Lucas', latitude: 22.88, longitude: -109.92 }
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json' } })
+const QUIVIRA_GCA = {
+  id: 'mz9gqcpj',
+  club_name: 'Quivira Golf Club',
+  course_name: 'Quivira',
+  location: { city: 'Cabo San Lucas', country: 'Mexico', latitude: 22.87, longitude: -109.95 },
+  tees: { male: 5, female: 0 },
+}
+const QUIVIRA_OGA = {
+  id: '7166efab',
+  name: 'Quivira Golf Club',
+  course_name: 'Quivira',
+  city: 'Cabo San Lucas',
+  latitude: 22.871,
+  longitude: -109.951,
+}
+const SOLMAR_OGA = {
+  id: '79fb43c9',
+  name: 'Solmar Golf Links',
+  city: 'Cabo San Lucas',
+  latitude: 22.88,
+  longitude: -109.92,
+}
 /** Both providers up: GolfCourseAPI has Quivira with a card, OpenGolfAPI has Quivira and Solmar, location only. */
 const BOTH_UP: Upstream = (url) => {
   if (url.startsWith('https://api.golfcourseapi.com/v1/search')) return json({ courses: [QUIVIRA_GCA] })
-  if (url.startsWith('https://api.opengolfapi.org/v1/courses/search')) return json({ courses: [QUIVIRA_OGA, SOLMAR_OGA], total: 2 })
+  if (url.startsWith('https://api.opengolfapi.org/v1/courses/search'))
+    return json({ courses: [QUIVIRA_OGA, SOLMAR_OGA], total: 2 })
   return json({ error: 'not found' }, 404)
 }
 
@@ -72,7 +105,12 @@ async function search(query: Record<string, unknown>, init: RouteRequest = {}) {
 
 describe('the gate', () => {
   it('no session: 401 in Spanish, and nobody is asked, not the database nor a provider', async () => {
-    const tries: Array<Record<string, string>> = [{}, { authorization: 'comite-token' }, { authorization: 'Basic comite-token' }, { authorization: 'Bearer ' }]
+    const tries: Array<Record<string, string>> = [
+      {},
+      { authorization: 'comite-token' },
+      { authorization: 'Basic comite-token' },
+      { authorization: 'Bearer ' },
+    ]
     for (const headers of tries) {
       const r = await search({ q: 'Quivira' }, { headers })
       expect(r.status).toBe(401)
@@ -107,7 +145,8 @@ describe('the gate', () => {
 
   it('thirty searches a minute from one address; the next is 429, before the database is asked; another address goes on', async () => {
     const { default: handler } = await import('../../api/course-search')
-    const call = (ip: string) => callRoute(handler, { headers: { authorization: 'Bearer comite-token' }, query: { q: 'Quivira' }, ip })
+    const call = (ip: string) =>
+      callRoute(handler, { headers: { authorization: 'Bearer comite-token' }, query: { q: 'Quivira' }, ip })
     for (let i = 0; i < 30; i++) expect((await call('203.0.113.7')).status).toBe(200)
     const clients = db.clients.length
     const over = await call('203.0.113.7, 10.0.0.1')
@@ -120,7 +159,12 @@ describe('the gate', () => {
   it('the limit is a minute long', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     const { default: handler } = await import('../../api/course-search')
-    const call = () => callRoute(handler, { headers: { authorization: 'Bearer comite-token' }, query: { q: 'Quivira' }, ip: '203.0.113.8' })
+    const call = () =>
+      callRoute(handler, {
+        headers: { authorization: 'Bearer comite-token' },
+        query: { q: 'Quivira' },
+        ip: '203.0.113.8',
+      })
     for (let i = 0; i < 30; i++) await call()
     expect((await call()).status).toBe(429)
     vi.setSystemTime(Date.now() + 60_001)
@@ -134,10 +178,19 @@ describe('the search', () => {
     expect(r.status).toBe(200)
     expect(r.headers['cache-control']).toBe('no-store')
     expect(asked).toEqual([
-      { url: 'https://api.golfcourseapi.com/v1/search?search_query=Quivira%20%26%20Co', headers: { Authorization: 'Key gca-secret-key-111' } },
-      { url: 'https://api.opengolfapi.org/v1/courses/search?q=Quivira%20%26%20Co', headers: { Authorization: 'Bearer oga-secret-key-222' } },
+      {
+        url: 'https://api.golfcourseapi.com/v1/search?search_query=Quivira%20%26%20Co',
+        headers: { Authorization: 'Key gca-secret-key-111' },
+      },
+      {
+        url: 'https://api.opengolfapi.org/v1/courses/search?q=Quivira%20%26%20Co',
+        headers: { Authorization: 'Bearer oga-secret-key-222' },
+      },
     ])
-    const body = r.body as { hits: Array<{ provider: string; name: string; hasCard: boolean | null }>; providers: string[] }
+    const body = r.body as {
+      hits: Array<{ provider: string; name: string; hasCard: boolean | null }>
+      providers: string[]
+    }
     expect(body.providers).toEqual(['golfcourseapi', 'opengolfapi'])
     // Quivira once, from the provider with the card; Solmar, location only.
     expect(body.hits.map((h) => [h.provider, h.name, h.hasCard])).toEqual([
@@ -173,15 +226,24 @@ describe('the search', () => {
     upstream = (url) => (url.includes('golfcourseapi') ? json({ message: 'down' }, 500) : BOTH_UP(url, {}, undefined))
     const r = await search({ q: 'Quivira' })
     expect(r.status).toBe(200)
-    expect((r.body as { hits: Array<{ provider: string }> }).hits.map((h) => h.provider)).toEqual(['opengolfapi', 'opengolfapi'])
+    expect((r.body as { hits: Array<{ provider: string }> }).hits.map((h) => h.provider)).toEqual([
+      'opengolfapi',
+      'opengolfapi',
+    ])
   })
 
   it('a provider that answers something unreadable drops out too, never a 500', async () => {
     for (const bad of [{ courses: 'Quivira' }, { courses: [null] }, 'not json at all']) {
-      upstream = (url) => (url.includes('golfcourseapi') ? new Response(typeof bad === 'string' ? bad : JSON.stringify(bad)) : BOTH_UP(url, {}, undefined))
+      upstream = (url) =>
+        url.includes('golfcourseapi')
+          ? new Response(typeof bad === 'string' ? bad : JSON.stringify(bad))
+          : BOTH_UP(url, {}, undefined)
       const r = await search({ q: 'Quivira' })
       expect(r.status).toBe(200)
-      expect((r.body as { hits: Array<{ provider: string }> }).hits.map((h) => h.provider)).toEqual(['opengolfapi', 'opengolfapi'])
+      expect((r.body as { hits: Array<{ provider: string }> }).hits.map((h) => h.provider)).toEqual([
+        'opengolfapi',
+        'opengolfapi',
+      ])
     }
     upstream = () => json({ courses: { 0: QUIVIRA_GCA } })
     const both = await search({ q: 'Quivira' })
@@ -193,7 +255,11 @@ describe('the search', () => {
     const { default: handler } = await import('../../api/course-search')
     vi.useFakeTimers()
     upstream = (url, _h, signal) =>
-      url.includes('golfcourseapi') ? new Promise((_, reject) => signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))) : BOTH_UP(url, {}, undefined)
+      url.includes('golfcourseapi')
+        ? new Promise((_, reject) =>
+            signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))),
+          )
+        : BOTH_UP(url, {}, undefined)
     const pending = callRoute(handler, { headers: { authorization: 'Bearer comite-token' }, query: { q: 'Quivira' } })
     await vi.advanceTimersByTimeAsync(8_000)
     const r = await pending
@@ -209,7 +275,10 @@ describe('the search', () => {
     expect(down.status).toBe(503)
     expect(down.body).toEqual({ error: 'Búsqueda no disponible; sube una foto o captúralo a mano.', code: 'down' })
     vi.stubEnv('GOLFCOURSE_API_KEY', '')
-    expect((await search({ q: 'Quivira' })).body).toEqual({ error: 'Búsqueda no disponible; sube una foto o captúralo a mano.', code: 'no_key' })
+    expect((await search({ q: 'Quivira' })).body).toEqual({
+      error: 'Búsqueda no disponible; sube una foto o captúralo a mano.',
+      code: 'no_key',
+    })
   })
 
   it('both answer with nothing found: 200 and no hits', async () => {
@@ -221,7 +290,8 @@ describe('the search', () => {
 
   it('at most 25 hits from each provider and 30 in all', async () => {
     // Names that never contain one another, so none merge.
-    const many = (prefix: string) => Array.from({ length: 40 }, (_, i) => ({ id: `${prefix}${i}`, course_name: `${prefix}${i}x` }))
+    const many = (prefix: string) =>
+      Array.from({ length: 40 }, (_, i) => ({ id: `${prefix}${i}`, course_name: `${prefix}${i}x` }))
     upstream = (url) => json({ courses: many(url.includes('golfcourseapi') ? 'Alfa' : 'Beta') })
     const hits = ((await search({ q: 'campo' })).body as { hits: Array<{ provider: string }> }).hits
     expect(hits).toHaveLength(30)
@@ -230,7 +300,24 @@ describe('the search', () => {
 })
 
 describe('a course’s card', () => {
-  const GCA_CARD = { course: { id: 'mz9gqcpj', course_name: 'Quivira', club_name: 'Quivira Golf Club', tees: { male: [{ tee_name: 'Blue', course_rating: 69.4, slope_rating: 131, par_total: 72, holes: Array.from({ length: 18 }, (_, i) => ({ par: 4, yardage: 400, handicap: i + 1 })) }] } } }
+  const GCA_CARD = {
+    course: {
+      id: 'mz9gqcpj',
+      course_name: 'Quivira',
+      club_name: 'Quivira Golf Club',
+      tees: {
+        male: [
+          {
+            tee_name: 'Blue',
+            course_rating: 69.4,
+            slope_rating: 131,
+            par_total: 72,
+            holes: Array.from({ length: 18 }, (_, i) => ({ par: 4, yardage: 400, handicap: i + 1 })),
+          },
+        ],
+      },
+    },
+  }
 
   it('from GolfCourseAPI, with its key, the id encoded', async () => {
     upstream = (url) => (url === 'https://api.golfcourseapi.com/v1/courses/mz9gqcpj' ? json(GCA_CARD) : json({}, 404))
@@ -244,10 +331,16 @@ describe('a course’s card', () => {
   })
 
   it('from OpenGolfAPI, with the licence it asks for', async () => {
-    upstream = (url) => (url === 'https://api.opengolfapi.org/api/v1/courses/a%2Fb' ? json({ id: 'a/b', name: 'Solmar Golf Links' }) : json({}, 404))
+    upstream = (url) =>
+      url === 'https://api.opengolfapi.org/api/v1/courses/a%2Fb'
+        ? json({ id: 'a/b', name: 'Solmar Golf Links' })
+        : json({}, 404)
     const r = await search({ id: 'opengolfapi:a/b' })
     expect(r.status).toBe(200)
-    expect((r.body as { course: { attribution: string; tees: unknown[] } }).course).toMatchObject({ attribution: '© OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI', tees: [] })
+    expect((r.body as { course: { attribution: string; tees: unknown[] } }).course).toMatchObject({
+      attribution: '© OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI',
+      tees: [],
+    })
   })
 
   it('a GolfCourseAPI card without its key: 503 «no_key», and nobody asked', async () => {

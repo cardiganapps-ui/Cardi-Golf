@@ -14,7 +14,9 @@ import a from './Admin.module.css'
 const D = t.admin.devices
 
 function order(items: TournamentDevice[]): TournamentDevice[] {
-  return [...items].sort((x, y) => y.pending - x.pending || y.rejected - x.rejected || Date.parse(y.lastSeenAt) - Date.parse(x.lastSeenAt))
+  return [...items].sort(
+    (x, y) => y.pending - x.pending || y.rejected - x.rejected || Date.parse(y.lastSeenAt) - Date.parse(x.lastSeenAt),
+  )
 }
 
 export function DevicesCard({ tournamentId }: { tournamentId: string }) {
@@ -28,7 +30,12 @@ export function DevicesCard({ tournamentId }: { tournamentId: string }) {
     <section className={a.section} aria-labelledby="devices-title" aria-busy={s.status === 'loading'}>
       <div className={a.sectionTitle}>
         <strong id="devices-title">{D.title}</strong>
-        <button className="btn btn--ghost btn--sm" type="button" disabled={s.status === 'loading'} onClick={() => void loadTournamentDevices(tournamentId)}>
+        <button
+          className="btn btn--ghost btn--sm"
+          type="button"
+          disabled={s.status === 'loading'}
+          onClick={() => void loadTournamentDevices(tournamentId)}
+        >
           {D.refresh}
         </button>
       </div>
@@ -43,10 +50,14 @@ export function DevicesCard({ tournamentId }: { tournamentId: string }) {
               <span className={a.rowText}>
                 <span className={a.rowTitle}>{d.player ?? D.noPlayer}</span>
                 <span className={d.pending > 0 ? a.warn : a.rowSub}>
-                  {d.pending > 0 ? D.pending(d.pending, d.oldestPendingAt ? relTime(d.oldestPendingAt) : null) : D.clear}
+                  {d.pending > 0
+                    ? D.pending(d.pending, d.oldestPendingAt ? relTime(d.oldestPendingAt) : null)
+                    : D.clear}
                 </span>
                 {d.rejected > 0 && <span className={a.warn}>{D.rejected(d.rejected)}</span>}
-                <span className={a.help}>{D.seen(relTime(d.lastSeenAt), d.buildSha, !!d.buildSha && d.buildSha !== BUILD.sha)}</span>
+                <span className={a.help}>
+                  {D.seen(relTime(d.lastSeenAt), d.buildSha, !!d.buildSha && d.buildSha !== BUILD.sha)}
+                </span>
               </span>
             </div>
           ))}

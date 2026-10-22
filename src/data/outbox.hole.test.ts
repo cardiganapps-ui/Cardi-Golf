@@ -17,7 +17,8 @@ import type { Row } from './mappers'
 import { gate, holeScore, enterAs, installFakePhone, settle, until, type Outcome } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueHole, keepTheirs, sendMineAgain, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueHole, keepTheirs, sendMineAgain, startOutbox, useOutbox } =
+  await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 const { t } = await import('../i18n/es-MX')
@@ -42,7 +43,8 @@ afterEach(() => {
 })
 
 const boards = () => useTournament.getState().data!.snapshot
-const onBoards = (player: string, hole: number) => boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
+const onBoards = (player: string, hole: number) =>
+  boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
 /** This phone's save_hole calls (the other phone's go through the same door). */
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
 
@@ -53,9 +55,16 @@ function saveHole(hole: number, entries: HoleEntry[]) {
 const played = (strokes: number, putts = 2): HoleEntry['fields'] => ({ strokes, putts })
 
 /** The other phone of the group (p3's), saving through the same door with its own session. */
-async function otherPhoneSaves(hole: number, entries: Array<{ player_id: string; fields: Row; base: Row }>, mutation = `other-${hole}-${entries.map((e) => e.player_id).join('')}`) {
+async function otherPhoneSaves(
+  hole: number,
+  entries: Array<{ player_id: string; fields: Row; base: Row }>,
+  mutation = `other-${hole}-${entries.map((e) => e.player_id).join('')}`,
+) {
   if (!(server.tables.device_sessions ?? []).some((d) => d.auth_user_id === 'phone-b')) {
-    server.tables.device_sessions = [...(server.tables.device_sessions ?? []), { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' }]
+    server.tables.device_sessions = [
+      ...(server.tables.device_sessions ?? []),
+      { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' },
+    ]
   }
   const token = server.auth.sessionFor('phone-b')
   // The other phone has signal, whatever this one has.
@@ -81,7 +90,11 @@ async function comiteInbox(): Promise<Row[]> {
   try {
     const res = await server.fetch(`${server.url}/rest/v1/rpc/rejected_inbox`, {
       method: 'POST',
-      headers: { apikey: server.anonKey, Authorization: `Bearer ${server.auth.sessionFor('comite')}`, 'Content-Type': 'application/json' },
+      headers: {
+        apikey: server.anonKey,
+        Authorization: `Bearer ${server.auth.sessionFor('comite')}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ p_tournament_id: 't1' }),
     })
     return (await res.json()) as Row[]
@@ -98,7 +111,11 @@ async function comiteResolve(id: string, action: 'apply' | 'dismiss', reason: st
   try {
     const res = await server.fetch(`${server.url}/rest/v1/rpc/resolve_rejected_write`, {
       method: 'POST',
-      headers: { apikey: server.anonKey, Authorization: `Bearer ${server.auth.sessionFor('comite')}`, 'Content-Type': 'application/json' },
+      headers: {
+        apikey: server.anonKey,
+        Authorization: `Bearer ${server.auth.sessionFor('comite')}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ p_id: id, p_action: action, p_reason: reason, ...(expect ? { p_expect: expect } : {}) }),
     })
     return (await res.json()) as Row
@@ -118,7 +135,14 @@ describe('two phones on one card (REL-05)', () => {
       { player_id: 'p4', fields: played(4), base: {}, auto: true },
     ])
     // Meanwhile the other phone saved p3 and p4 as they really went.
-    expect((await otherPhoneSaves(4, [{ player_id: 'p3', fields: played(7, 3), base: {} }, { player_id: 'p4', fields: played(6), base: {} }])).status).toBe('ok')
+    expect(
+      (
+        await otherPhoneSaves(4, [
+          { player_id: 'p3', fields: played(7, 3), base: {} },
+          { player_id: 'p4', fields: played(6), base: {} },
+        ])
+      ).status,
+    ).toBe('ok')
     phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'the hole to go out')
     await settle(useOutbox)
@@ -135,11 +159,15 @@ describe('two phones on one card (REL-05)', () => {
   })
 
   it('each changing a different field of one player: both changes stand', async () => {
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p2', hole: 6, strokes: 5, putts: 2, picked_up: false, entered_by: 'p2' }])
+    server.seed('scores', [
+      { round_id: 'r1', player_id: 'p2', hole: 6, strokes: 5, putts: 2, picked_up: false, entered_by: 'p2' },
+    ])
     await useTournament.getState().reload()
     phone.goOffline()
     await saveHole(6, [{ player_id: 'p2', fields: { strokes: 4 }, base: { strokes: 5, putts: 2, picked_up: false } }])
-    await otherPhoneSaves(6, [{ player_id: 'p2', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } }])
+    await otherPhoneSaves(6, [
+      { player_id: 'p2', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } },
+    ])
     phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'the hole to go out')
     expect(server.score('p2', 6)).toMatchObject({ strokes: 4, putts: 1 })
@@ -167,7 +195,13 @@ describe('two phones on one card (REL-05)', () => {
     // Each phone's typed values stand; the defaults they replaced are kept as a discrepancy, for the card's signature.
     expect(server.score('p1', 4)).toMatchObject({ strokes: 6, entered_by: 'p3', disputed: false })
     expect(server.score('p2', 4)).toMatchObject({ strokes: 5, putts: 1, entered_by: 'p3' })
-    expect(server.score('p3', 4)).toMatchObject({ strokes: 7, putts: 3, entered_by: 'p1', disputed: true, previous: { strokes: 4, entered_by: 'p3' } })
+    expect(server.score('p3', 4)).toMatchObject({
+      strokes: 7,
+      putts: 3,
+      entered_by: 'p1',
+      disputed: true,
+      previous: { strokes: 4, entered_by: 'p3' },
+    })
     expect(server.score('p4', 4)).toMatchObject({ strokes: 5, entered_by: 'p1', disputed: true })
     expect(onBoards('p3', 4)).toMatchObject({ strokes: 7, putts: 3 })
     expect(onBoards('p1', 4)).toMatchObject({ strokes: 6 })
@@ -192,12 +226,18 @@ describe('two phones on one card (REL-05)', () => {
     const inbox = await comiteInbox()
     expect(inbox).toEqual([])
     const d = useTournament.getState().data!
-    expect(closeCheck(d.snapshot, d.settings, { finishLiveRounds: true, openRejected: inbox.length }).blockers.map((b) => b.kind)).not.toContain('rejectedWrites')
+    expect(
+      closeCheck(d.snapshot, d.settings, { finishLiveRounds: true, openRejected: inbox.length }).blockers.map(
+        (b) => b.kind,
+      ),
+    ).not.toContain('rejectedWrites')
   })
 
   it('a value the other phone typed (not par and 2 putts) is never gone over: this phone is asked', async () => {
     await otherPhoneSaves(4, [{ player_id: 'p3', fields: played(5), base: {} }])
-    await saveHole(4, [{ player_id: 'p3', fields: played(7, 3), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } }])
+    await saveHole(4, [
+      { player_id: 'p3', fields: played(7, 3), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } },
+    ])
     await until(() => useOutbox.getState().conflicts.length === 1, 'the question')
     expect(server.score('p3', 4)).toMatchObject({ strokes: 5, entered_by: 'p3' })
     expect(calls()).toHaveLength(1)
@@ -215,10 +255,18 @@ describe('two phones on one card (REL-05)', () => {
     // The server's row is on the boards, and the phone holds what it had, to ask.
     expect(onBoards('p2', 4)).toMatchObject({ strokes: 6 })
     const [c] = useOutbox.getState().conflicts
-    expect(c).toMatchObject({ player_id: 'p2', hole: 4, fields: { strokes: 5, putts: 2 }, clash: ['strokes'], server: { strokes: 6, entered_by: 'p3' } })
+    expect(c).toMatchObject({
+      player_id: 'p2',
+      hole: 4,
+      fields: { strokes: 5, putts: 2 },
+      clash: ['strokes'],
+      server: { strokes: 6, entered_by: 'p3' },
+    })
     expect(useOutbox.getState().rejected).toEqual([])
     // Kept for the Comité too (REL-08).
-    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p2', reason: 'conflict', auth_user_id: me })])
+    expect(server.tables.rejected_writes).toEqual([
+      expect.objectContaining({ player_id: 'p2', reason: 'conflict', auth_user_id: me }),
+    ])
   })
 
   it('«Guardar el mío» sends this phone’s value again over the row it now sees, and it lands', async () => {
@@ -263,7 +311,11 @@ describe('a mutation id: a retry is answered, never applied twice', () => {
       if (req.target !== 'rpc/save_hole' || !lose) return 'answer'
       lose = false
       // The server takes it (the same request, as it arrived), and the answer never reaches the phone.
-      await server.fetch(`${server.url}/rest/v1/rpc/save_hole`, { method: 'POST', headers: { apikey: server.anonKey, Authorization: req.authorization ?? '', 'Content-Type': 'application/json' }, body: JSON.stringify(req.body) })
+      await server.fetch(`${server.url}/rest/v1/rpc/save_hole`, {
+        method: 'POST',
+        headers: { apikey: server.anonKey, Authorization: req.authorization ?? '', 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+      })
       return 'offline'
     }
     await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }])
@@ -299,21 +351,45 @@ describe('a mutation id: a retry is answered, never applied twice', () => {
   })
 
   it('a refusal of the call itself (22023) goes to the rejected list, and is not sent again', async () => {
-    server.decide = (req) => (req.target === 'rpc/save_hole' ? { status: 400, body: { code: '22023', details: null, hint: null, message: 'Ese guardado ya llegó antes con otros datos; vuelve a guardarlo' } } : 'answer')
-    await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }, { player_id: 'p2', fields: played(4), base: {} }])
+    server.decide = (req) =>
+      req.target === 'rpc/save_hole'
+        ? {
+            status: 400,
+            body: {
+              code: '22023',
+              details: null,
+              hint: null,
+              message: 'Ese guardado ya llegó antes con otros datos; vuelve a guardarlo',
+            },
+          }
+        : 'answer'
+    await saveHole(4, [
+      { player_id: 'p1', fields: played(5), base: {} },
+      { player_id: 'p2', fields: played(4), base: {} },
+    ])
     await until(() => useOutbox.getState().rejected.length === 2, 'the refusal')
     await settle(useOutbox)
     expect(useOutbox.getState().pending).toBe(0)
     expect(useOutbox.getState().rejected.map((r) => r.message)).toEqual([t.sync.errInvalid, t.sync.errInvalid])
     // Kept as the whole row the phone meant, under the hole's key.
-    expect(useOutbox.getState().rejected[0]).toMatchObject({ key: 'score:r1:p1:4', kind: 'score', payload: { player_id: 'p1', hole: 4, strokes: 5, putts: 2, picked_up: false } })
+    expect(useOutbox.getState().rejected[0]).toMatchObject({
+      key: 'score:r1:p1:4',
+      kind: 'score',
+      payload: { player_id: 'p1', hole: 4, strokes: 5, putts: 2, picked_up: false },
+    })
     expect(calls()).toHaveLength(1)
   })
 })
 
 describe('refusals by code', () => {
   it('a privilege the server refuses (42501) is for good: rejected, not sent again', async () => {
-    server.decide = (req) => (req.target === 'rpc/save_hole' ? { status: 403, body: { code: '42501', details: null, hint: null, message: 'permission denied for function save_hole' } } : 'answer')
+    server.decide = (req) =>
+      req.target === 'rpc/save_hole'
+        ? {
+            status: 403,
+            body: { code: '42501', details: null, hint: null, message: 'permission denied for function save_hole' },
+          }
+        : 'answer'
     await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }])
     await until(() => useOutbox.getState().rejected.length === 1, 'the refusal')
     await settle(useOutbox)
@@ -335,7 +411,11 @@ describe('the queue', () => {
 
   it('nine holes saved with no signal go out in order when it returns, one call each', async () => {
     phone.goOffline()
-    for (let h = 1; h <= 9; h++) await saveHole(h, [{ player_id: 'p1', fields: played(4 + (h % 3)), base: {} }, { player_id: 'p2', fields: played(5), base: {} }])
+    for (let h = 1; h <= 9; h++)
+      await saveHole(h, [
+        { player_id: 'p1', fields: played(4 + (h % 3)), base: {} },
+        { player_id: 'p2', fields: played(5), base: {} },
+      ])
     expect(useOutbox.getState().pendingHoles).toBe(9)
     expect(calls()).toHaveLength(0)
     phone.goOnline()
@@ -348,9 +428,15 @@ describe('the queue', () => {
 
   it('a hole corrected before it went out is one call, field by field over what was queued', async () => {
     phone.goOffline()
-    await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }, { player_id: 'p2', fields: played(4), base: {} }])
+    await saveHole(4, [
+      { player_id: 'p1', fields: played(5), base: {} },
+      { player_id: 'p2', fields: played(4), base: {} },
+    ])
     // A correction of p1's putts, and p3 added: the boards show the queued hole, and that is what it was typed over.
-    await saveHole(4, [{ player_id: 'p1', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } }, { player_id: 'p3', fields: played(6), base: {} }])
+    await saveHole(4, [
+      { player_id: 'p1', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } },
+      { player_id: 'p3', fields: played(6), base: {} },
+    ])
     expect(_outboxTest.queue()).toHaveLength(1)
     expect(onBoards('p1', 4)).toMatchObject({ strokes: 5, putts: 1 })
     phone.goOnline()
@@ -396,13 +482,17 @@ describe('the queue', () => {
     await until(() => calls().length === 1, 'the first call to go out')
     // The other phone saves p2 first; then this phone corrects only his putts, typed over its own 5.
     await otherPhoneSaves(4, [{ player_id: 'p2', fields: played(6), base: {} }])
-    await saveHole(4, [{ player_id: 'p2', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false }, dflt }])
+    await saveHole(4, [
+      { player_id: 'p2', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false }, dflt },
+    ])
     held.open()
     await until(() => useOutbox.getState().pending === 0, 'both')
     await settle(useOutbox)
     // Neither the 5 nor the 1 went over the other phone's 6: one question, with both of this phone's values.
     expect(server.score('p2', 4)).toMatchObject({ strokes: 6, putts: 2, entered_by: 'p3' })
-    expect(useOutbox.getState().conflicts).toMatchObject([{ player_id: 'p2', fields: { strokes: 5, putts: 1 }, base: {} }])
+    expect(useOutbox.getState().conflicts).toMatchObject([
+      { player_id: 'p2', fields: { strokes: 5, putts: 1 }, base: {} },
+    ])
     const second = (calls()[1]!.body as { p: { entries: unknown[] } }).p.entries
     expect(second).toEqual([{ player_id: 'p2', fields: { strokes: 5, putts: 1 }, base: {} }])
   })
@@ -410,7 +500,16 @@ describe('the queue', () => {
   it('a hole the previous build queued (one direct write per player) still goes out as it was written', async () => {
     phone.goOffline()
     // As the previous build left it on the phone: a `score` item, under this phone's session.
-    const legacy = { key: 'score:r1:p2:7', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p2', 7, 6), attempts: 1, createdAt: 1, seq: 1000, actingUid: me }
+    const legacy = {
+      key: 'score:r1:p2:7',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p2', 7, 6),
+      attempts: 1,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: me,
+    }
     await _outboxTest.db()!.items.put(legacy)
     await _outboxTest.load()
     // And one this build queued after it.
@@ -418,7 +517,10 @@ describe('the queue', () => {
     expect(useOutbox.getState().pendingHoles).toBe(2)
     phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'both to go out')
-    expect(server.wire.filter((r) => r.method !== 'GET' && r.target !== 'auth/token').map((r) => r.target)).toEqual(['scores', 'rpc/save_hole'])
+    expect(server.wire.filter((r) => r.method !== 'GET' && r.target !== 'auth/token').map((r) => r.target)).toEqual([
+      'scores',
+      'rpc/save_hole',
+    ])
     expect(server.score('p2', 7)).toMatchObject({ strokes: 6, entered_by: 'p1' })
     expect(server.score('p2', 8)).toMatchObject({ strokes: 5, entered_by: 'p1' })
     expect(useOutbox.getState().rejected).toEqual([])
@@ -428,15 +530,22 @@ describe('the queue', () => {
 describe('what the server did not take', () => {
   it('a player whose card is signed is refused with the reason; the rest of the hole lands', async () => {
     server.seed('card_signatures', [{ round_id: 'r1', pair_id: 'pb', signed_by: 'p1' }])
-    await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }, { player_id: 'p3', fields: played(4), base: {} }])
+    await saveHole(4, [
+      { player_id: 'p1', fields: played(5), base: {} },
+      { player_id: 'p3', fields: played(4), base: {} },
+    ])
     await until(() => useOutbox.getState().pending === 0, 'the hole')
     await settle(useOutbox)
     expect(server.score('p1', 4)).toMatchObject({ strokes: 5 })
     expect(server.score('p3', 4)).toBeUndefined()
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned, atServer: true })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned, atServer: true }),
+    ])
     expect(onBoards('p3', 4)).toBeUndefined()
     // REL-08: kept on the server too, for the Comité's «Pendientes de revisar»; the phone's line says so.
-    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p3', hole: 4, reason: 'card_signed', status: 'open' })])
+    expect(server.tables.rejected_writes).toEqual([
+      expect.objectContaining({ player_id: 'p3', hole: 4, reason: 'card_signed', status: 'open' }),
+    ])
     // A value a person typed: the Comité is asked about it.
     expect((await comiteInbox()).map((r) => [r.player_id, r.reason])).toEqual([['p3', 'card_signed']])
   })
@@ -450,13 +559,24 @@ describe('what the server did not take', () => {
     await until(() => useOutbox.getState().pending === 0, 'the hole')
     await settle(useOutbox)
     expect(server.score('p1', 5)).toMatchObject({ strokes: 5 })
-    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p4', hole: 5, reason: 'card_signed', payload: expect.objectContaining({ auto: true }) })])
+    expect(server.tables.rejected_writes).toEqual([
+      expect.objectContaining({
+        player_id: 'p4',
+        hole: 5,
+        reason: 'card_signed',
+        payload: expect.objectContaining({ auto: true }),
+      }),
+    ])
     // p4's 5th is empty: nobody sent anything else for it, so the Comité decides it, and the phone says so.
     const inbox = await comiteInbox()
-    expect(inbox.map((r) => [r.player_id, r.hole, r.reason, (r.payload as Row).auto])).toEqual([['p4', 5, 'card_signed', true]])
+    expect(inbox.map((r) => [r.player_id, r.hole, r.reason, (r.payload as Row).auto])).toEqual([
+      ['p4', 5, 'card_signed', true],
+    ])
     expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p4:5', atServer: true })])
     // Applied as the hole was seen, empty.
-    expect(await comiteResolve(String(inbox[0]!.id), 'apply', 'Firmada antes del par', {})).toMatchObject({ status: 'applied' })
+    expect(await comiteResolve(String(inbox[0]!.id), 'apply', 'Firmada antes del par', {})).toMatchObject({
+      status: 'applied',
+    })
     expect(server.score('p4', 5)).toMatchObject({ strokes: 4, putts: 2, reason: 'Firmada antes del par' })
   })
 
@@ -474,15 +594,31 @@ describe('what the server did not take', () => {
     // Refused (the day is closed), the 6 stands, and the phone's line says where the 5 went.
     expect(server.score('p2', 9)).toMatchObject({ strokes: 6, entered_by: 'p3' })
     expect(useOutbox.getState().conflicts).toEqual([])
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p2:9', message: t.sync.errNotLive, atServer: true })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p2:9', message: t.sync.errNotLive, atServer: true }),
+    ])
     // The Comité's «Pendientes de revisar» has it, as typed: the 5 the player chose over the 6 he saw.
     const inbox = await comiteInbox()
     expect(inbox).toEqual([
-      expect.objectContaining({ player_id: 'p2', hole: 9, reason: 'round_not_live', payload: expect.objectContaining({ fields: { strokes: 5, putts: 2 }, base: { strokes: 6, putts: 2, picked_up: false } }) }),
+      expect.objectContaining({
+        player_id: 'p2',
+        hole: 9,
+        reason: 'round_not_live',
+        payload: expect.objectContaining({
+          fields: { strokes: 5, putts: 2 },
+          base: { strokes: 6, putts: 2, picked_up: false },
+        }),
+      }),
     ])
     expect((inbox[0]!.payload as Row).auto).toBeUndefined()
     // And can apply it, against the 6 it saw.
-    expect(await comiteResolve(String(inbox[0]!.id), 'apply', 'El jugador eligió el suyo', { strokes: 6, putts: 2, picked_up: false })).toMatchObject({ status: 'applied' })
+    expect(
+      await comiteResolve(String(inbox[0]!.id), 'apply', 'El jugador eligió el suyo', {
+        strokes: 6,
+        putts: 2,
+        picked_up: false,
+      }),
+    ).toMatchObject({ status: 'applied' })
     expect(server.score('p2', 9)).toMatchObject({ strokes: 5, putts: 2, reason: 'El jugador eligió el suyo' })
   })
 
@@ -498,7 +634,9 @@ describe('what the server did not take', () => {
     await settle(useOutbox)
     const sent = calls().map((r) => (r.body as { p: { entries: Array<Record<string, unknown>> } }).p.entries)
     expect(sent).toEqual([[{ player_id: 'p2', fields: { strokes: 6, putts: 2 }, base: {} }]])
-    expect((await comiteInbox()).map((r) => [r.player_id, r.hole, (r.payload as Row).auto ?? null])).toEqual([['p2', 10, null]])
+    expect((await comiteInbox()).map((r) => [r.player_id, r.hole, (r.payload as Row).auto ?? null])).toEqual([
+      ['p2', 10, null],
+    ])
   })
 
   it('a phone that holds no player any more: the hole waits for the PIN, and goes once the player is back', async () => {

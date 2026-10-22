@@ -33,9 +33,15 @@ describe('the Comité’s labels ask for what the setting is (COPY-25)', () => {
   })
 
   it('the next-day groups hint counts this tournament’s pairs', () => {
-    expect(G.standingsHint(order(6))).toBe('Por la tabla de parejas: salen primero las parejas 5.ª y 6.ª, luego 3.ª y 4.ª, y cierran 1.ª y 2.ª.')
-    expect(G.standingsHint(order(4))).toBe('Por la tabla de parejas: salen primero las parejas 3.ª y 4.ª, y cierran 1.ª y 2.ª.')
-    expect(G.standingsHint(order(5))).toBe('Por la tabla de parejas: salen primero las parejas 4.ª y 5.ª, luego 2.ª y 3.ª, y cierra la 1.ª.')
+    expect(G.standingsHint(order(6))).toBe(
+      'Por la tabla de parejas: salen primero las parejas 5.ª y 6.ª, luego 3.ª y 4.ª, y cierran 1.ª y 2.ª.',
+    )
+    expect(G.standingsHint(order(4))).toBe(
+      'Por la tabla de parejas: salen primero las parejas 3.ª y 4.ª, y cierran 1.ª y 2.ª.',
+    )
+    expect(G.standingsHint(order(5))).toBe(
+      'Por la tabla de parejas: salen primero las parejas 4.ª y 5.ª, luego 2.ª y 3.ª, y cierra la 1.ª.',
+    )
     expect(G.standingsHint(order(2))).toBe('Por la tabla de parejas: las parejas 1.ª y 2.ª salen juntas.')
   })
 })

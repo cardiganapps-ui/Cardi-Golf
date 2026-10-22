@@ -68,7 +68,12 @@ describe('prize pool check (§5.8)', () => {
   it('an unbalanced pool says so, with the breakdown (the engine flags it live: livePool.test.ts)', () => {
     const s = structuredClone(FIRST_TOURNAMENT_SETTINGS)
     s.prizes.fewestPutts = 900
-    expect(checkPrizePool(s, { players: 12 })).toMatchObject({ balanced: false, entryPot: 30000, prizesTotal: 29900, difference: 100 })
+    expect(checkPrizePool(s, { players: 12 })).toMatchObject({
+      balanced: false,
+      entryPot: 30000,
+      prizesTotal: 29900,
+      difference: 100,
+    })
   })
 
   it('a minimal tournament balances: 8 players, 1 round, individual only', () => {

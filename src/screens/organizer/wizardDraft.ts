@@ -41,8 +41,15 @@ export function readDraft(key: string): WizardDraft | null {
     const d = JSON.parse(raw) as Partial<WizardDraft> & { v?: unknown }
     const settings = safeParseSettings(d.settings)
     const players = d.players
-    if (d.v !== VERSION || typeof d.name !== 'string' || typeof d.tagline !== 'string' || typeof d.pristine !== 'boolean') throw new Error('shape')
-    if (typeof players !== 'number' || !Number.isInteger(players) || players < 2 || players > 200 || !settings.success) throw new Error('shape')
+    if (
+      d.v !== VERSION ||
+      typeof d.name !== 'string' ||
+      typeof d.tagline !== 'string' ||
+      typeof d.pristine !== 'boolean'
+    )
+      throw new Error('shape')
+    if (typeof players !== 'number' || !Number.isInteger(players) || players < 2 || players > 200 || !settings.success)
+      throw new Error('shape')
     return { name: d.name, tagline: d.tagline, players, settings: settings.data, pristine: d.pristine }
   } catch {
     clearDraft(key)

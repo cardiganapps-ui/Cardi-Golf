@@ -81,7 +81,8 @@ describe('one list row', () => {
         if (!/text-overflow:\s*ellipsis/.test(body)) continue
         const hidden = /overflow:\s*hidden/.test(body)
         const bounded = /white-space:\s*nowrap/.test(body) || /line-clamp/.test(body)
-        if (!hidden || !bounded) offenders.push(`${path} ${selector}: ellipsis without ${!hidden ? 'overflow:hidden' : 'white-space:nowrap'}`)
+        if (!hidden || !bounded)
+          offenders.push(`${path} ${selector}: ellipsis without ${!hidden ? 'overflow:hidden' : 'white-space:nowrap'}`)
       }
     }
     expect(offenders).toEqual([])
@@ -113,13 +114,15 @@ describe('one list row', () => {
       const composed = new Map<string, string[]>()
       for (const { selector, body } of all) {
         const composes = decls(body).get('composes')
-        if (/^\.[\w-]+$/.test(selector) && composes?.includes('primitives.module.css')) composed.set(selector, composes.split(/\s+from\s+/)[0]!.split(/\s+/))
+        if (/^\.[\w-]+$/.test(selector) && composes?.includes('primitives.module.css'))
+          composed.set(selector, composes.split(/\s+from\s+/)[0]!.split(/\s+/))
       }
       for (const { selector, body } of all) {
         for (const name of composed.get(selector) ?? []) {
           for (const [prop, value] of decls(body)) {
             const base = primitives.get(name)?.get(prop)
-            if (prop !== 'composes' && base !== undefined && base !== value) offenders.push(`${path} ${selector}: ${prop}: ${value} re-declares ${name} (${prop}: ${base})`)
+            if (prop !== 'composes' && base !== undefined && base !== value)
+              offenders.push(`${path} ${selector}: ${prop}: ${value} re-declares ${name} (${prop}: ${base})`)
           }
         }
       }
