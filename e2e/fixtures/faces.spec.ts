@@ -41,7 +41,7 @@ for (const [width, height] of [
     // Twelve monograms, not one grey: at least five fills among them.
     expect(new Set(looks.map((l) => l.fill)).size).toBeGreaterThanOrEqual(5)
     // A11Y-24: the face is named by its name, its category and the honoree.
-    await expect(faces.first()).toHaveAccessibleName(/^[^,]+, categoría [A-Z]/)
+    await expect(faces.first()).toHaveAccessibleName(/^[^,]+ ?, Categoría [A-Z]/)
     expect(await page.getByRole('button', { name: /homenajeado$/ }).count()).toBeGreaterThanOrEqual(1)
   })
 }

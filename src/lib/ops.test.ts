@@ -11,6 +11,8 @@
  *   2026-10-16 production's deploy of main was refused («rate limited, retry
  *   in 24 hours»). Working branches (claude/**, dependabot/**) build no
  *   preview; main deploys, and a preview is made on demand (CLAUDE.md §0.4).
+ * - React Router 8 needs Node 22.22 (2026-10-22), above the 22.12 `engines` said: `engines` is now held to every
+ *   direct dependency's own floor.
  * - ARCH-17: lint read no types, nothing formatted the code and the scripts
  *   were never type-checked. The preflight now runs typed lint, a format check
  *   and a typecheck that covers the scripts.
@@ -86,9 +88,39 @@ describe('ops', () => {
       engines: { node: string }
       devDependencies: Record<string, string>
     }
-    // The major only: `engines` holds the toolchain's floor too (Vite 8 and Vitest 5 need 22.12).
+    // The major only: `engines` holds the toolchain's floor too (React Router 8 needs 22.22, Vite 8 and Vitest 5 22.12).
     const major = (range: string) => range.replace(/^\D*/, '').split('.')[0]
     expect(major(pkg.devDependencies['@types/node']!)).toBe(major(pkg.engines.node))
+  })
+
+  it('the oldest Node in `engines` runs every direct dependency', () => {
+    const pkg = JSON.parse(read('package.json')) as {
+      engines: { node: string }
+      dependencies: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+    const version = (v: string) => v.trim().split('.').map(Number).concat(0, 0).slice(0, 3)
+    const atLeast = (a: number[], b: number[]) => {
+      for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i]! > b[i]!
+      return true
+    }
+    expect(pkg.engines.node).toMatch(/^>=\d+\.\d+$/)
+    const floor = version(pkg.engines.node.slice(2))
+    // A range as packages write it: alternatives of `>=x.y.z` (open) or `^x.y.z` (that major).
+    const runs = (range: string) =>
+      range.split('||').some((alt) => {
+        const m = /^\s*(>=|\^)\s*([\d.]+)\s*$/.exec(alt)
+        if (!m) throw new Error(`a Node range this test cannot read: ${range}`)
+        const want = version(m[2]!)
+        return atLeast(floor, want) && (m[1] === '>=' || floor[0] === want[0])
+      })
+    const behind: string[] = []
+    for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+      const own = JSON.parse(read(`node_modules/${name}/package.json`)) as { engines?: { node?: string } }
+      const range = own.engines?.node
+      if (range && !runs(range)) behind.push(`${name} needs Node ${range}`)
+    }
+    expect(behind).toEqual([])
     const ci = read('.github/workflows/ci.yml')
     // scripts/audit.mjs runs `npm audit --omit=dev --audit-level=high` (src/lib/audit.test.ts holds its command).
     expect(ci).toContain('run: node scripts/audit.mjs')

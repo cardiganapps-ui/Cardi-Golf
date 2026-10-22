@@ -16,6 +16,8 @@ const clipped = (page: Page) =>
         const s = getComputedStyle(e)
         return (
           own &&
+          // Words only a screen reader hears (a board row's, LeaderRow) sit in a 1 px box on purpose.
+          !e.closest('.sr-only') &&
           s.display !== 'inline' &&
           s.display !== 'none' &&
           e.clientWidth > 0 &&

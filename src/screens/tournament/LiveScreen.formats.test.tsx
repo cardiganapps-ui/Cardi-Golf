@@ -17,6 +17,7 @@ import { fillRound, makeGroup, makeRound, PAR_72, score } from '../../engine/tes
 import type { Snapshot } from '../../engine/types'
 import { LiveScreen } from './LiveScreen'
 import { TournamentContext } from './tournamentContext'
+import { shownText, spokenName } from '../testing/spoken'
 
 type Individual = TournamentSettings['modules']['individual']
 
@@ -127,18 +128,18 @@ describe("En vivo: the honoree's card in each format (STRAT-03)", () => {
     expect(document.querySelector('[class*="spotlightName"]')?.textContent).toBe('El novio: Gael H.')
     expect(spotlight()).toBe('6.º con 0 puntos, hoy perdió 1 abajo, hoyo 9: par')
     // His row on the board says it the same way, and so does the winner's.
-    expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe(
+    expect(spokenName(screen.getByRole('button', { name: /^6\.º, Gael H\., / }))).toBe(
       '6.º, Gael H., El novio, 0 puntos, hoy perdió 1 abajo, terminó',
     )
-    expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe(
+    expect(spokenName(screen.getByRole('button', { name: /, Julián, / }))).toBe(
       '3.º, Julián, 1 punto, hoy ganó 1 arriba, terminó',
     )
     // And the day cell you see says it too: his «1 abajo», not the match's «1 arriba».
-    const gael = screen.getByRole('button', { name: /^6\.º, Gael H\., / }).textContent
+    const gael = shownText(screen.getByRole('button', { name: /^6\.º, Gael H\., / }))
     expect(gael).toContain('1 abajo')
     expect(gael).not.toContain('1 arriba')
     // And the winner's cell keeps his «1 arriba».
-    const julian = screen.getByRole('button', { name: /, Julián, / }).textContent
+    const julian = shownText(screen.getByRole('button', { name: /, Julián, / }))
     expect(julian).toContain('1 arriba')
     expect(julian).not.toContain('abajo')
   })

@@ -523,15 +523,21 @@ export function LeaderRow({
   const figureRef = useRef<HTMLSpanElement>(null)
   useWash(todayRef, today ?? '', seenToday, reading)
   useWash(figureRef, figure, seenFigure, reading)
+  /*
+   * The row is named by its content (WCAG 2.5.3, axe 4.14): the cells as drawn, hidden from a screen reader, and the
+   * words, visually hidden. As an `aria-label` over the cells the name held every figure the row shows,
+   * but not in the order it shows them («1 Camilo $12,200 25 11 60» against «1.º, Camilo, 60 puntos, hoy 25 puntos,
+   * hoyo 11, ganaría $12,200»), which Label in Name reads as a visible label the name leaves out. The words are
+   * still `t.live.rowLabel`'s, each figure said with its unit (A11Y-11).
+   */
   return (
     <button
       type="button"
       className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`}
       {...PRESS}
       onClick={onClick}
-      aria-label={label}
     >
-      <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>
+      <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`} aria-hidden="true">
         {pos}
         {/* Since the last look, with how far (MOT-06): a 6 px triangle for half a second said neither. */}
         {movedBy ? (
@@ -540,7 +546,7 @@ export function LeaderRow({
           </span>
         ) : null}
       </span>
-      <span className={s.name}>
+      <span className={s.name} aria-hidden="true">
         <span className={s.nameMain}>
           {name}
           {honoree && <span className={s.honoreeDot} aria-hidden="true" />}
@@ -555,13 +561,21 @@ export function LeaderRow({
        * were ringed and the mark stopped meaning anything. It stays on the
        * Tarjeta, where the figure it rings is a hole score.
        */}
-      <span ref={todayRef} className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>
+      <span
+        ref={todayRef}
+        className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}
+        aria-hidden="true"
+      >
         {today ?? ''}
       </span>
-      <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
-      <span ref={figureRef} className={`${s.fig} ${s.figure} ${s[tone]}`}>
+      <span className={`${s.fig} ${s.thru}`} aria-hidden="true">
+        {thru ?? ''}
+      </span>
+      <span ref={figureRef} className={`${s.fig} ${s.figure} ${s[tone]}`} aria-hidden="true">
         {figure}
       </span>
+      {/* Last, so the cells keep their places among the row's children (the figures' tests count them). */}
+      <span className="sr-only">{label}</span>
     </button>
   )
 }
