@@ -195,7 +195,6 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                 type="button"
                 className={styles.face}
                 data-player={p.id}
-                aria-label={t.enter.faceSpoken(p.displayName, p.tier, p.isHonoree, !!p.pendingMe)}
                 onClick={() => {
                   lastFace.current = p.id
                   setSelected(p)
@@ -208,12 +207,26 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                   honoree={p.isHonoree}
                   seed={p.id}
                 />
+                {/*
+                 * Named by what it shows (WCAG 2.5.3, axe 4.14): «Diego A., Categoría A, homenajeado». An aria-label
+                 * left out the avatar's initials, which a face without a photo shows before the name; the avatar is
+                 * hidden from a screen reader, and the commas and the honoree's ring are said in hidden words.
+                 */}
                 <span className={styles.faceText}>
-                  <span className={styles.faceName}>{p.displayName}</span>
+                  <span className={styles.faceName}>
+                    {p.displayName}
+                    {(p.pendingMe || p.tier || p.isHonoree) && <span className="sr-only">,</span>}
+                  </span>
                   {p.pendingMe ? (
                     <span className={styles.faceAsk}>{t.enter.isThisYou}</span>
                   ) : (
                     p.tier && <span className={styles.faceTier}>{t.enter.faceTier(p.tier)}</span>
+                  )}
+                  {p.isHonoree && (
+                    <span className="sr-only">
+                      {p.pendingMe || p.tier ? ', ' : ' '}
+                      {t.enter.honoreeSpoken}
+                    </span>
                   )}
                 </span>
               </button>

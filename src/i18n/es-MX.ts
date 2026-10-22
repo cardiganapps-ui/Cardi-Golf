@@ -2269,17 +2269,15 @@ export const t = {
       `Hubo demasiados intentos con este PIN desde teléfonos nuevos. ${time ? `Vuelve a intentar a las ${time}` : 'Espera unos minutos'} o pídele al Comité que lo desbloquee. Donde ya entraste antes, sigue funcionando.`,
     playerGone: 'Ese jugador ya no está en el torneo. Elige tu nombre otra vez.',
     isThisYou: '¿Eres tú?',
-    /**
-     * A11Y-23: what a screen reader hears for a face: «Diego A., categoría A, homenajeado». It heard «Diego A. A» (the
-     * tier glued to the name) and nothing of the honoree's ring. The lookup carries no settings, so the honoree is
-     * the platform's word, not the tournament's label; a face the Comité proposed for this profile asks «¿Eres tú?».
-     */
     /** Under a face's name (VIS-18): its category, in words; the boxed letter read as noise. */
     faceTier: (tier: string) => `Categoría ${tier}`,
-    faceSpoken: (name: string, tier: string | null, honoree: boolean, askMe: boolean) =>
-      [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : '']
-        .filter(Boolean)
-        .join(', '),
+    /**
+     * A11Y-23: a face is heard as what it shows, then the honoree's ring in words: «Diego A., Categoría A,
+     * homenajeado». It heard «Diego A. A» (the tier glued to the name) and nothing of the ring. The lookup carries no
+     * settings, so the honoree is the platform's word, not the tournament's label; a face the Comité proposed for this
+     * profile asks «¿Eres tú?».
+     */
+    honoreeSpoken: 'homenajeado',
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
     alreadyLinked: (name: string) =>
       `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,

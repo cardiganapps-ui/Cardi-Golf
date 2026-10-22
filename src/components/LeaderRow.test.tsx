@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { LeaderRow, type LeaderRowProps } from './primitives'
 import s from './primitives.module.css'
+import { spokenName } from '../screens/testing/spoken'
 
 afterEach(() => cleanup())
 
@@ -25,6 +26,28 @@ const row = () => screen.getByRole('button')
 const cell = (cls: string) => row().querySelector<HTMLElement>(`.${cls}`)!
 const washOf = (cls: string) => cell(cls).dataset.wash
 
+describe('the row is named by its words, and says every figure it shows (WCAG 2.5.3)', () => {
+  it('no aria-label over the cells (axe 4.14 read it as a label missing what the row shows): the cells are hidden, the words name it', () => {
+    render(<LeaderRow {...BASE} pos="T4" mine />)
+    expect(row().hasAttribute('aria-label')).toBe(false)
+    // The name as a screen reader computes it from the content.
+    expect(screen.getByRole('button', { name: 'empatado en 4.º, Camilo (tú), 40 puntos, hoy 12 puntos, hoyo 9' })).toBe(
+      row(),
+    )
+    for (const cls of [s.pos!, s.name!, s.today!, s.thru!, s.figure!])
+      expect(cell(cls).getAttribute('aria-hidden')).toBe('true')
+    // The cells keep their places among the row's children: position, name, today, holes, total, then the words.
+    expect(Array.from(row().children, (c) => c.className.split(' ')[0])).toEqual([
+      s.fig,
+      s.name,
+      s.fig,
+      s.fig,
+      s.fig,
+      'sr-only',
+    ])
+  })
+})
+
 describe('how far the row moved since the last look (MOT-06)', () => {
   it('up three: «3» with the up mark under the position, said with its size', () => {
     render(<LeaderRow {...BASE} movedBy={3} />)
@@ -34,16 +57,16 @@ describe('how far the row moved since the last look (MOT-06)', () => {
     expect(mark.getAttribute('aria-hidden')).toBe('true')
     // Under the position, inside its cell: not a speck at the row's edge.
     expect(mark.parentElement!.classList.contains(s.pos!)).toBe(true)
-    expect(row().getAttribute('aria-label')).toBe('4.º, Camilo, 40 puntos, hoy 12 puntos, hoyo 9, subió 3 lugares')
+    expect(spokenName(row())).toBe('4.º, Camilo, 40 puntos, hoy 12 puntos, hoyo 9, subió 3 lugares')
   })
 
   it('down one, and nothing at all when it did not move', () => {
     const { rerender } = render(<LeaderRow {...BASE} movedBy={-1} />)
     expect(cell(s.moved!).classList.contains(s.movedDown!)).toBe(true)
-    expect(row().getAttribute('aria-label')).toMatch(/, bajó 1 lugar$/)
+    expect(spokenName(row())).toMatch(/, bajó 1 lugar$/)
     rerender(<LeaderRow {...BASE} movedBy={0} />)
     expect(row().querySelector(`.${s.moved}`)).toBeNull()
-    expect(row().getAttribute('aria-label')).not.toMatch(/lugar/)
+    expect(spokenName(row())).not.toMatch(/lugar/)
   })
 })
 

@@ -75,7 +75,7 @@ for (const f of FORMATS) {
       page.getByRole('button', { name: t.share.leaderboard }).first().click(),
     ])
     // The first row's sheet, and that player's card.
-    await page.locator('main button[aria-label]').filter({ hasText: /\S/ }).first().click()
+    await page.locator('main button[class*="_leaderRow_"]').first().click()
     const sheet = page.getByRole('dialog')
     await expect(sheet).toBeVisible()
     const sheetText = await sheet.innerText()
@@ -122,13 +122,16 @@ for (const f of FORMATS) {
 
 test('match play: a decided match reads the same for both sides, and says who won it', async ({ page }) => {
   await open(page, '/t/_/match8')
-  const rows = page.locator('main button[aria-label]')
-  // Each row's day, read off its third column from the end (day, thru, total).
+  const rows = page.locator('main button[class*="_leaderRow_"]')
+  // Each row's day, read off its day column; the row is named by its hidden words (LeaderRow).
   const days = await rows.evaluateAll((els) =>
-    els.map((e) => ({
-      label: e.getAttribute('aria-label') ?? '',
-      color: e.children.length >= 3 ? getComputedStyle(e.children[e.children.length - 3]).color : '',
-    })),
+    els.map((e) => {
+      const day = e.querySelector('[class*="_today_"]')
+      return {
+        label: e.querySelector(':scope > .sr-only')?.textContent ?? '',
+        color: day ? getComputedStyle(day).color : '',
+      }
+    }),
   )
   const won = days.filter((d) => /ganó \d+&\d+/.test(d.label)).map((d) => d.color)
   const lost = days.filter((d) => /perdió \d+&\d+/.test(d.label)).map((d) => d.color)

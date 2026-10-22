@@ -320,9 +320,10 @@ export const scoredPart = (label: string) =>
 
 /** The leaderboard, one string per row as a screen reader hears it, its scored parts only: «empatado en 1.º, Ana, 3 puntos, hoy 3 puntos, hoyo 1». */
 export function boardRows(page: Page): Promise<string[]> {
+  // A row is named by its content: the cells are hidden from a screen reader, its words visually hidden (LeaderRow).
   return page
     .locator('button[class*="leaderRow"]')
-    .evaluateAll((rows) => rows.map((r) => r.getAttribute('aria-label') ?? ''))
+    .evaluateAll((rows) => rows.map((r) => r.querySelector(':scope > .sr-only')?.textContent ?? ''))
     .then((labels) => labels.map(scoredPart))
 }
 
@@ -365,7 +366,7 @@ export async function watchEach(page: Page, shown: Record<string, Shown>) {
             .map((part) => part.replace(/ \(tú\)$/, ''))
             .join(', ')
         const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) =>
-          scored(b.getAttribute('aria-label') ?? ''),
+          scored(b.querySelector(':scope > .sr-only')?.textContent ?? ''),
         )
         return s.board.every((want) => labels.some((l) => l === want || l.endsWith(`, ${want}`)))
       }

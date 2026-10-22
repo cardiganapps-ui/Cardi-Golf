@@ -16,6 +16,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
+import { spokenName } from '../testing/spoken'
 
 interface Answer {
   data: unknown
@@ -411,7 +412,7 @@ describe('polling', () => {
     open()
     await waitFor(() => expect(rows().length).toBe(12))
     const before = Array.from(rows())
-      .map((r) => r.getAttribute('aria-label'))
+      .map((r) => spokenName(r))
       .join('|')
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000)
@@ -419,7 +420,7 @@ describe('polling', () => {
     await waitFor(() =>
       expect(
         Array.from(rows())
-          .map((r) => r.getAttribute('aria-label'))
+          .map((r) => spokenName(r))
           .join('|'),
       ).not.toBe(before),
     )

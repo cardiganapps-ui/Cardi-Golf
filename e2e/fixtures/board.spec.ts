@@ -31,7 +31,7 @@ function misaligned(page: Page) {
           measured++
           if (Math.abs(fig - label) > 1)
             off.push(
-              `${row.getAttribute('aria-label')?.slice(0, 24)} column ${i}: ${fig.toFixed(1)} vs ${label.toFixed(1)}`,
+              `${row.querySelector(':scope > .sr-only')?.textContent.slice(0, 24)} column ${i}: ${fig.toFixed(1)} vs ${label.toFixed(1)}`,
             )
         }
       }
@@ -93,7 +93,7 @@ test('back from the Tarjeta: who moved, by how much, and which figures changed (
   await page.getByRole('link', { name: new RegExp(`^${t.nav.live}`) }).click()
   const second = await rowAt(page, 2)
   await expect(second.locator('[class*="_moved_"]')).toHaveText('3')
-  await expect(second).toHaveAttribute('aria-label', new RegExp(`${t.live.movedSpoken(3)}$`))
+  await expect(second).toHaveAccessibleName(new RegExp(`${t.live.movedSpoken(3)}$`))
   await expect((await rowAt(page, 4)).locator('[class*="_moved_"]')).toHaveText('1')
   // The 2nd's figure washes, and nobody else's: it is the only one that changed.
   const washing = () =>

@@ -15,6 +15,7 @@ import { t } from '../../i18n/es-MX'
 import s from '../../components/primitives.module.css'
 import { LiveScreen } from './LiveScreen'
 import { TournamentContext, type TournamentCtx } from './tournamentContext'
+import { spokenName } from '../testing/spoken'
 
 const NAME = 'full12-live'
 const fx = getFixture(NAME)!
@@ -48,8 +49,7 @@ function show(snap: Snapshot, spectator?: TournamentCtx['spectator']) {
 }
 const rowsNow = () => useTournament.getState().data!.state.modules.individual!.rows
 const nameOf = (id: string) => fx.snapshot.players.find((p) => p.id === id)!.displayName
-const rowOf = (id: string) =>
-  screen.getAllByRole('button').find((b) => b.getAttribute('aria-label')?.includes(`, ${nameOf(id)}`))!
+const rowOf = (id: string) => screen.getAllByRole('button').find((b) => spokenName(b).includes(`, ${nameOf(id)}`))!
 const markOf = (id: string) => rowOf(id).querySelector(`.${s.moved}`)
 const washOf = (id: string) => rowOf(id).querySelector<HTMLElement>(`.${s.figure}`)!.dataset.wash
 
@@ -80,7 +80,7 @@ describe('the board counts from the last look (MOT-06, MOT-18)', () => {
     expect(by).toBeGreaterThan(1)
     expect(markOf(who)!.textContent).toBe(String(by))
     expect(markOf(who)!.classList.contains(s.movedUp!)).toBe(true)
-    expect(rowOf(who).getAttribute('aria-label')).toContain(t.live.movedSpoken(by))
+    expect(spokenName(rowOf(who))).toContain(t.live.movedSpoken(by))
     expect(washOf(who)).toBeDefined()
     // Those he passed went down one place each and say so; their figures did not change.
     const passed = rowsNow().filter((r) => r.playerId !== who && r.position > before.get(r.playerId)!.position)

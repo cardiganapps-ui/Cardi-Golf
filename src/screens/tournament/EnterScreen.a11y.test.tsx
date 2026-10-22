@@ -117,23 +117,24 @@ describe('Entrar for a screen reader', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /René/ }))
   })
 
-  it('each face is said as a name, its category and the honoree, never «Diego A. A» (A11Y-23)', () => {
+  it('each face is said as what it shows, then the honoree, never «Diego A. A» (A11Y-23)', () => {
     open()
-    const names = screen
-      .getAllByRole('button')
-      .filter((b) => b.hasAttribute('data-player'))
-      .map((b) => b.getAttribute('aria-label'))
-    expect(names).toEqual([
-      'Mauricio, categoría B',
-      'René, categoría C',
-      'Diego A., categoría A, homenajeado',
+    const faces = screen.getAllByRole('button').filter((b) => b.hasAttribute('data-player'))
+    // Named by its content (WCAG 2.5.3, axe 4.14): an aria-label left out the initials a face without a photo shows.
+    for (const b of faces) expect(b.hasAttribute('aria-label')).toBe(false)
+    for (const name of [
+      'Mauricio, Categoría B',
+      'René, Categoría C',
+      'Diego A., Categoría A, homenajeado',
       'Jugador 12',
-      'Iván, ¿eres tú?',
+      'Iván, ¿Eres tú?',
     ])
-    // The name a sighted person reads starts the spoken one (WCAG 2.5.3), so a voice command by name still works.
-    for (const b of screen.getAllByRole('button').filter((x) => x.hasAttribute('data-player'))) {
-      const shown = b.querySelector('[class*="faceName"]')!.textContent
-      expect(b.getAttribute('aria-label')!.startsWith(shown)).toBe(true)
+      // The hidden comma is a box of its own, so the name has a space before it, which a voice never says.
+      expect(faces).toContain(screen.getByRole('button', { name: (said) => said.replace(/ ,/g, ',') === name }))
+    // The name a sighted person reads starts the spoken one, so a voice command by name still works.
+    for (const b of faces) {
+      const shown = b.querySelector('[class*="faceName"]')!.firstChild!.textContent!
+      expect(screen.getByRole('button', { name: new RegExp(`^${shown.replace(/[.?]/g, '\\$&')}`) })).toBe(b)
     }
   })
 

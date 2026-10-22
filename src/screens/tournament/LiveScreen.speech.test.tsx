@@ -11,6 +11,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { LiveScreen } from './LiveScreen'
 import { TournamentContext } from './tournamentContext'
+import { shownText, spokenName } from '../testing/spoken'
 
 function mount(fixture: string) {
   const fx = getFixture(fixture)!
@@ -48,7 +49,7 @@ describe('En vivo rows say what they show (A11Y-11)', () => {
     const { fx, data } = mount('full12-live')
     const labels = screen
       .getAllByRole('button')
-      .map((b) => b.getAttribute('aria-label') ?? '')
+      .map((b) => spokenName(b))
       .filter((l) => /^(empatado en )?\d+\.º, /.test(l))
     expect(labels.length).toBeGreaterThan(5)
     // Someone wins money if it ended now, and the board says how much.
@@ -62,8 +63,8 @@ describe('En vivo rows say what they show (A11Y-11)', () => {
     expect(mine).toMatch(new RegExp(`dueños?: [^,]*${owner}`))
     expect(labels.filter((l) => /dueños?: /.test(l))).toEqual([mine])
     expect(labels.filter((l) => /categoría/.test(l))).toEqual([])
-    const shown = screen.getAllByRole('button').find((b) => b.getAttribute('aria-label') === mine)!
-    expect(shown.textContent).toMatch(/dueños?: /)
+    const shown = screen.getAllByRole('button').find((b) => spokenName(b) === mine)!
+    expect(shownText(shown)).toMatch(/dueños?: /)
     expect(document.querySelectorAll('.tierBadge')).toHaveLength(0)
     // Points are said as points.
     expect(labels.every((l) => !/, \d+$/.test(l))).toBe(true)
