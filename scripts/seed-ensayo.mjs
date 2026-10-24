@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Seeds (or re-seeds) the "Ensayo" rehearsal tournament (CLAUDE.md §13, §17):
-// the first tournament's settings, the 12 players in tiers with placeholder
+// the first tournament's settings, 12 made-up players in tiers with placeholder
 // handicaps, a par-72 placeholder course, two rounds with the real dates, the
-// pairs and groups of the fixture, the logo, and PIN 1234 for everyone.
+// pairs and groups of the fixture, and the logo. It sets no PIN: the Comité
+// generates them in the app (Comité › Jugadores › Generar PINs), so no PIN is
+// ever in the repo (CHAIR-02) and a re-seed keeps the ones already handed out.
 //   node scripts/seed-ensayo.mjs --owner <email> [--reset]
 // The owner account is created if it does not exist (a random password is
 // set; the owner signs in with "Olvidé mi contraseña" or a magic link).
@@ -190,23 +192,28 @@ const { data: tees } = await sb.from('tees').select('id, name').eq('course_id', 
 const blue = tees.find((x) => x.name === 'Azules')?.id
 const red = tees.find((x) => x.name === 'Rojas')?.id
 
-// Players (§15): 11 known + the 12th to be confirmed. Tiers/handicaps are placeholders.
+// Players: made-up names, never the real ones (those live in the tournament itself, CHAIR-02); two share a
+// first name, as the first tournament's do, so the short names tell them apart. Tiers/handicaps are placeholders.
 const PLAYERS = [
-  ['Andrés Gutierrez', 'Andrés', 'A', 6],
-  ['Diego Arámburu', 'Diego A.', 'A', 8],
-  ['Diego Ortiz Tirado', 'Diego O.', 'A', 10],
-  ['Emiliano Garzón', 'Emiliano', 'B', 12],
-  ['Justo Fernández Del Valle', 'Justo', 'B', 14],
-  ['Martín Álvarez', 'Martín', 'B', 16],
-  ['Mateo Castro', 'Mateo', 'C', 18],
-  ['Mauricio Lozano', 'Mauricio', 'C', 20],
-  ['Nicolás Castro', 'Nico', 'C', 22],
-  ['René Nosti', 'René', 'D', 25],
-  ['Rodrigo Vega', 'Rodrigo', 'D', 28],
+  ['Lorenzo Lizárraga', 'Lorenzo', 'A', 6],
+  ['Santiago Arreola', 'Santiago A.', 'A', 8],
+  ['Santiago Olvera', 'Santiago O.', 'A', 10],
+  ['Gonzalo Zavala', 'Gonzalo', 'B', 12],
+  ['Federico Macías', 'Federico', 'B', 14],
+  ['Rafael Olguín', 'Rafael', 'B', 16],
+  ['Héctor Izaguirre', 'Héctor', 'C', 18],
+  ['Pablo Rentería', 'Pablo', 'C', 20],
+  ['Ernesto Villarreal', 'Ernesto', 'C', 22],
+  ['Álvaro Quintero', 'Álvaro', 'D', 25],
+  ['Marcelo Carrasco', 'Marcelo', 'D', 28],
   ['Jugador 12 (por confirmar)', 'Jugador 12', 'D', 33],
 ]
-const { data: existing } = await sb.from('players').select('id, full_name').eq('tournament_id', t.id)
+const { data: existing } = await sb.from('players').select('id, full_name, sort_order').eq('tournament_id', t.id)
+// A player is found by name, else by position: a re-seed that renames one updates his row (his PIN, scores and
+// pairs stay) instead of adding a thirteenth.
 const byName = new Map(existing.map((p) => [p.full_name, p.id]))
+const byOrder = new Map(existing.map((p) => [p.sort_order, p.id]))
+const used = new Set()
 const ids = []
 for (const [i, [full, short, tier, hcp]] of PLAYERS.entries()) {
   const row = {
@@ -217,12 +224,14 @@ for (const [i, [full, short, tier, hcp]] of PLAYERS.entries()) {
     base_hcp: hcp,
     handicap_source: 'manual',
     default_tee_id: tier === 'D' ? red : blue,
-    is_honoree: full === 'Diego Arámburu' ? false : false,
+    is_honoree: false,
     is_admin: i === 8,
     sort_order: i,
   }
-  const id = byName.get(full)
+  let id = byName.get(full) ?? byOrder.get(i)
+  if (id && used.has(id)) id = undefined
   if (id) {
+    used.add(id)
     await sb.from('players').update(row).eq('id', id)
     ids.push(id)
   } else {
@@ -231,15 +240,9 @@ for (const [i, [full, short, tier, hcp]] of PLAYERS.entries()) {
     ids.push(data.id)
   }
 }
-// PIN 1234 for everyone (rehearsal only).
-for (const id of ids) {
-  const { error } = await sb.rpc('set_player_pin_admin', { p_player_id: id, p_pin: '1234' })
-  if (error) {
-    // Fallback: direct upsert with crypt() through SQL is not available here; use the RPC via a service call.
-    die(error, 'set pin')
-  }
-}
-console.log('players ready:', ids.length, '(PIN 1234)')
+// No PIN here: the Comité generates one per player in the app, so none is ever in the repo (CHAIR-02), and a
+// re-seed leaves the ones already handed out as they are.
+console.log('players ready:', ids.length)
 // The admin player is also the banker (§11) so Dinero has someone to settle through.
 // Nacho is not marked as honoree until Diego confirms who he is (§15).
 {
@@ -330,3 +333,4 @@ for (const rid of rounds) {
 console.log('groups ready')
 
 console.log(`\n✓ Ensayo ready → /t/ensayo (code ENSAYO), owner ${owner}`)
+console.log('Genera y reparte los PIN desde Comité › Jugadores › Generar PINs')

@@ -102,11 +102,11 @@ describe('Rondas › Teléfonos del torneo', () => {
   })
 
   it('names two or more phones in one sentence', () => {
-    expect(R.devicesBeforeFinish(5, ['Justo', 'Diego'])).toBe(
-      'Los teléfonos de Justo y Diego reportan 5 hoyos sin mandar (Teléfonos del torneo, abajo).',
+    expect(R.devicesBeforeFinish(5, ['Federico', 'Santiago'])).toBe(
+      'Los teléfonos de Federico y Santiago reportan 5 hoyos sin mandar (Teléfonos del torneo, abajo).',
     )
-    expect(R.devicesBeforeFinish(1, ['Justo'])).toBe(
-      'El teléfono de Justo reporta un hoyo sin mandar (Teléfonos del torneo, abajo).',
+    expect(R.devicesBeforeFinish(1, ['Federico'])).toBe(
+      'El teléfono de Federico reporta un hoyo sin mandar (Teléfonos del torneo, abajo).',
     )
   })
 })

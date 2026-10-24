@@ -96,18 +96,18 @@ const BOTH = ['/terminos', '/privacidad']
 const NOTICE = ['/privacidad']
 
 const NAMES = [
-  'Andrés',
-  'Diego',
-  'Emiliano',
-  'Justo',
-  'Martín',
-  'Mateo',
-  'Mauricio',
-  'Nicolás',
-  'René',
-  'Rodrigo',
-  'Ignacio',
+  'Lorenzo',
+  'Santiago',
+  'Gonzalo',
+  'Federico',
+  'Rafael',
+  'Héctor',
   'Pablo',
+  'Ernesto',
+  'Álvaro',
+  'Marcelo',
+  'Ignacio',
+  'Bruno',
 ]
 const field = (names: string[]): LookupResult => ({
   id: 't1',
@@ -169,7 +169,7 @@ describe('the face grid and the PIN step (TRUST-05, P1)', () => {
 
   it('the PIN step says it above the field, and the field, which takes focus, is described by it', () => {
     enter()
-    fireEvent.click(faces(['Andrés'])[0]!)
+    fireEvent.click(faces(['Lorenzo'])[0]!)
     const pin = screen.getByLabelText(t.enter.pin)
     const line = consentLine(ENTER_LINE, BOTH)
     expect(before(line, pin)).toBe(true)

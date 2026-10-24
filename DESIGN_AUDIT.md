@@ -71,7 +71,7 @@ Shots: `full12-live--live.jpg`, `large60--live.jpg`, `longnames--live.jpg`, `min
   4. The honoree spotlight is a dark teal block with a crown emoji and a 10-word sentence joined by middle dots ("10° · 44 pts · Hoy 8 · Hoyo 9: 0 pts") above the board, so the board starts below the fold on a 844px phone.
   5. Chips row ("Día 2 · En juego", "Grupo puntero en el hoyo 11", coral "4 víboras pendientes") is three pills of three different colors before the content.
   6. No "updated N min ago", no live indicator other than the header chip; movement arrows are 0.6rem glyphs (`▲▼`) hidden under the position.
-  7. The feed below the board uses a bird emoji per line and exclamation marks ("¡Rodrigo hizo águila en el 6!", four in a row in `full12-live--live.jpg`).
+  7. The feed below the board uses a bird emoji per line and exclamation marks ("¡Marcelo hizo águila en el 6!", four in a row in `full12-live--live.jpg`).
   8. 4-player state (`minimal4-live--live.jpg`) looks like an empty page: four rows, then the feed.
 - **Keep:** `T3` tie labels, the row tap → player sheet, animated re-sorting (but only once, not springs).
 

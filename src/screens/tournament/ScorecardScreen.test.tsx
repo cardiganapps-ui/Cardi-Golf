@@ -528,10 +528,10 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
     mount((s) => {
       const p1 = s.players.find((p) => p.id === 'p1')!
       const p3 = s.players.find((p) => p.id === 'p3')!
-      Object.assign(p1, { displayName: 'Diego', fullName: 'Diego Arámburu' })
-      Object.assign(p3, { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' })
+      Object.assign(p1, { displayName: 'Santiago', fullName: 'Santiago Arreola' })
+      Object.assign(p3, { displayName: 'Santiago', fullName: 'Santiago Olvera' })
     })
-    for (const full of ['Diego Arámburu', 'Diego Ortiz Tirado']) {
+    for (const full of ['Santiago Arreola', 'Santiago Olvera']) {
       const row = screen.getByRole('group', { name: full })
       expect(within(row).getByRole('button', { name: `${S.strokesOf(full)}: ${t.common.stepUp}` })).toBeTruthy()
       expect(within(row).getByRole('button', { name: S.pickedUpOf(full) })).toBeTruthy()

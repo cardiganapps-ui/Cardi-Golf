@@ -4,7 +4,7 @@
  * a plain line under it, so the person heard the digits vanish and nothing
  * else. A11Y-12: «No soy yo» dropped focus to <body>. A11Y-13: the event name
  * was no heading, and the page was titled «Polo». A11Y-23: a face was heard as
- * «Diego A. A» (the tier glued to the name) and the honoree's ring as nothing.
+ * «Santiago A. A» (the tier glued to the name) and the honoree's ring as nothing.
  */
 import 'fake-indexeddb/auto'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
@@ -37,8 +37,8 @@ const lookup: LookupResult = {
   players: [
     {
       id: 'p1',
-      displayName: 'Mauricio',
-      fullName: 'Mauricio Lozano',
+      displayName: 'Pablo',
+      fullName: 'Pablo Rentería',
       tier: 'B',
       avatarUrl: null,
       isHonoree: false,
@@ -46,14 +46,14 @@ const lookup: LookupResult = {
     },
     {
       id: 'p2',
-      displayName: 'René',
-      fullName: 'René Nosti',
+      displayName: 'Álvaro',
+      fullName: 'Álvaro Quintero',
       tier: 'C',
       avatarUrl: null,
       isHonoree: false,
       hasPin: true,
     },
-    { id: 'p3', displayName: 'Diego A.', fullName: null, tier: 'A', avatarUrl: null, isHonoree: true, hasPin: true },
+    { id: 'p3', displayName: 'Santiago A.', fullName: null, tier: 'A', avatarUrl: null, isHonoree: true, hasPin: true },
     {
       id: 'p4',
       displayName: 'Jugador 12',
@@ -94,7 +94,7 @@ describe('Entrar for a screen reader', () => {
   it('a wrong PIN is an alert the field points to, said as it shows (A11Y-14)', async () => {
     vi.mocked(claimPlayer).mockResolvedValueOnce({ ok: false, reason: 'wrong_pin', attemptsLeft: 3 } as never)
     open()
-    fireEvent.click(screen.getByRole('button', { name: /René/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Álvaro/ }))
     const pin = screen.getByLabelText(t.enter.pin)
     expect(pin.getAttribute('aria-invalid')).toBeNull()
     await act(async () => {
@@ -108,24 +108,24 @@ describe('Entrar for a screen reader', () => {
 
   it('«No soy yo» goes back to the face that was tapped, not to the top of the page (A11Y-12)', () => {
     open()
-    const face = screen.getByRole('button', { name: /René/ })
+    const face = screen.getByRole('button', { name: /Álvaro/ })
     face.focus()
     fireEvent.click(face)
     const notMe = screen.getByRole('button', { name: t.enter.notMe })
     notMe.focus()
     fireEvent.click(notMe)
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /René/ }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Álvaro/ }))
   })
 
-  it('each face is said as what it shows, then the honoree, never «Diego A. A» (A11Y-23)', () => {
+  it('each face is said as what it shows, then the honoree, never «Santiago A. A» (A11Y-23)', () => {
     open()
     const faces = screen.getAllByRole('button').filter((b) => b.hasAttribute('data-player'))
     // Named by its content (WCAG 2.5.3, axe 4.14): an aria-label left out the initials a face without a photo shows.
     for (const b of faces) expect(b.hasAttribute('aria-label')).toBe(false)
     for (const name of [
-      'Mauricio, Categoría B',
-      'René, Categoría C',
-      'Diego A., Categoría A, homenajeado',
+      'Pablo, Categoría B',
+      'Álvaro, Categoría C',
+      'Santiago A., Categoría A, homenajeado',
       'Jugador 12',
       'Iván, ¿Eres tú?',
     ])

@@ -326,7 +326,7 @@ These are the root-cause fixes. Each one closes a whole cluster of findings. The
   - **Returns** the new rows and versions, and the client reconciles its optimistic copy with them (REL-07).
 - **Tarjeta.**
   - GroupCard tracks touched fields per player and sends only those. It already computes "untouched" (`ScorecardScreen.tsx:542`).
-  - A remote save that lands on the open hole merges into untouched drafts: «Diego ya capturó a Justo: 6».
+  - A remote save that lands on the open hole merges into untouched drafts: «Santiago ya capturó a Federico: 6».
   - A conflict asks which value is right.
   - Undo, contests and the tiebreak go through the same call.
   - The signed-card Comité path stays on `admin_save_score` with its reason. It gains the same per-hole batching and base-version check, and when offline it queues through the outbox instead of failing (REL-22).

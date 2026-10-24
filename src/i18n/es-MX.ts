@@ -2272,8 +2272,8 @@ export const t = {
     /** Under a face's name (VIS-18): its category, in words; the boxed letter read as noise. */
     faceTier: (tier: string) => `Categoría ${tier}`,
     /**
-     * A11Y-23: a face is heard as what it shows, then the honoree's ring in words: «Diego A., Categoría A,
-     * homenajeado». It heard «Diego A. A» (the tier glued to the name) and nothing of the ring. The lookup carries no
+     * A11Y-23: a face is heard as what it shows, then the honoree's ring in words: «Santiago A., Categoría A,
+     * homenajeado». It heard «Santiago A. A» (the tier glued to the name) and nothing of the ring. The lookup carries no
      * settings, so the honoree is the platform's word, not the tournament's label; a face the Comité proposed for this
      * profile asks «¿Eres tú?».
      */
@@ -4428,7 +4428,7 @@ export const t = {
           ? toParWords(v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`)
           : `${v} ${Math.abs(v) === 1 ? 'punto' : 'puntos'}`,
       /**
-       * What the chart says to a screen reader: «Carrera de puntos: 12 jugadores, 36 hoyos. Va al frente Diego A.
+       * What the chart says to a screen reader: «Carrera de puntos: 12 jugadores, 36 hoyos. Va al frente Santiago A.
        * con 72 puntos; tomó la punta en el hoyo 5 del día 2.»
        */
       summary: (s: {

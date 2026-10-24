@@ -208,7 +208,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                   seed={p.id}
                 />
                 {/*
-                 * Named by what it shows (WCAG 2.5.3, axe 4.14): «Diego A., Categoría A, homenajeado». An aria-label
+                 * Named by what it shows (WCAG 2.5.3, axe 4.14): «Santiago A., Categoría A, homenajeado». An aria-label
                  * left out the avatar's initials, which a face without a photo shows before the name; the avatar is
                  * hidden from a screen reader, and the commas and the honoree's ring are said in hidden words.
                  */}

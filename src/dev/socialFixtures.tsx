@@ -25,13 +25,16 @@ const person = (displayName: string, handle: string, extra: Partial<FriendCard> 
 
 const friends: MyFriends = {
   friends: [
-    person('Diego Ortiz', 'diego.ortiz', { homeClub: 'Bosque Real', index: 9.8 }),
-    person('Mauricio Lozano', 'mau', { index: 21.3 }),
-    person('René Nosti', 'rene.n', { homeClub: 'Chapultepec', index: 14.0 }),
+    person('Santiago Olvera', 'santiago.olvera', { homeClub: 'Bosque Real', index: 9.8 }),
+    person('Pablo Rentería', 'pablo', { index: 21.3 }),
+    person('Álvaro Quintero', 'alvaro.q', { homeClub: 'Chapultepec', index: 14.0 }),
   ],
-  incoming: [person('Justo Fernández', 'justo', { homeClub: 'Club Campestre', index: 17.2 })],
-  outgoing: [person('Rodrigo Vega', 'rodrigo.v')],
-  suggestions: [person('Martín Álvarez', 'martin.a', { shared: 2 }), person('Emiliano Garzón', 'emi.g', { shared: 1 })],
+  incoming: [person('Federico Macías', 'federico', { homeClub: 'Club Campestre', index: 17.2 })],
+  outgoing: [person('Marcelo Carrasco', 'marcelo.c')],
+  suggestions: [
+    person('Rafael Olguín', 'rafael.o', { shared: 2 }),
+    person('Gonzalo Zavala', 'gonzalo.z', { shared: 1 }),
+  ],
 }
 
 const ago = (h: number) => new Date(Date.UTC(2026, 8, 28, 18) - h * 3_600_000).toISOString()
@@ -43,7 +46,7 @@ const notices: Notice[] = [
     data: {},
     read: false,
     createdAt: ago(1),
-    actor: actor('Justo Fernández', 'justo'),
+    actor: actor('Federico Macías', 'federico'),
   },
   {
     id: 'n2',
@@ -51,7 +54,7 @@ const notices: Notice[] = [
     data: { rivalryId: 'r1' },
     read: false,
     createdAt: ago(5),
-    actor: actor('Diego Ortiz', 'diego.ortiz'),
+    actor: actor('Santiago Olvera', 'santiago.olvera'),
   },
   {
     id: 'n3',
@@ -69,7 +72,14 @@ const notices: Notice[] = [
     createdAt: ago(50),
     actor: null,
   },
-  { id: 'n5', kind: 'friend_accepted', data: {}, read: true, createdAt: ago(80), actor: actor('René Nosti', 'rene.n') },
+  {
+    id: 'n5',
+    kind: 'friend_accepted',
+    data: {},
+    read: true,
+    createdAt: ago(80),
+    actor: actor('Álvaro Quintero', 'alvaro.q'),
+  },
 ]
 
 const round = (i: number, myAgs: number, theirAgs: number, myCh: number, theirCh: number, pickup = false) => ({
@@ -179,24 +189,24 @@ const crewPageFixture: CrewPage = {
       joinedAt: '2025-06-01T12:00:00Z',
     },
     {
-      handle: 'diego.ortiz',
-      displayName: 'Diego Ortiz',
+      handle: 'santiago.olvera',
+      displayName: 'Santiago Olvera',
       avatarUrl: null,
       index: 9.8,
       role: 'member',
       joinedAt: '2025-06-02T12:00:00Z',
     },
     {
-      handle: 'mau',
-      displayName: 'Mauricio Lozano',
+      handle: 'pablo',
+      displayName: 'Pablo Rentería',
       avatarUrl: null,
       index: 21.3,
       role: 'member',
       joinedAt: '2025-06-03T12:00:00Z',
     },
     {
-      handle: 'rene.n',
-      displayName: 'René Nosti',
+      handle: 'alvaro.q',
+      displayName: 'Álvaro Quintero',
       avatarUrl: null,
       index: 14.0,
       role: 'member',
@@ -237,13 +247,13 @@ const crewPageFixture: CrewPage = {
   ],
   results: [
     res('o1', '2026-08-22', 'andrea.solis', 1),
-    res('o1', '2026-08-22', 'diego.ortiz', 2),
-    res('o1', '2026-08-22', 'mau', 3),
-    res('o1', '2026-08-22', 'rene.n', 4),
+    res('o1', '2026-08-22', 'santiago.olvera', 2),
+    res('o1', '2026-08-22', 'pablo', 3),
+    res('o1', '2026-08-22', 'alvaro.q', 4),
     res('o2', '2026-09-19', 'andrea.solis', 1),
-    res('o2', '2026-09-19', 'diego.ortiz', 1),
-    res('o2', '2026-09-19', 'rene.n', 3),
-    res('o0', '2025-11-08', 'mau', 1),
+    res('o2', '2026-09-19', 'santiago.olvera', 1),
+    res('o2', '2026-09-19', 'alvaro.q', 3),
+    res('o0', '2025-11-08', 'pablo', 1),
     res('o0', '2025-11-08', 'andrea.solis', 2),
   ],
 }
@@ -265,8 +275,8 @@ export function VersusFixtureScreen() {
   const me = PROFILE_FIXTURES.yo!.card
   const them = {
     ...PROFILE_FIXTURES.extrano!.card,
-    displayName: 'Diego Ortiz',
-    handle: 'diego.ortiz',
+    displayName: 'Santiago Olvera',
+    handle: 'santiago.olvera',
     related: true,
     isMe: false,
   }

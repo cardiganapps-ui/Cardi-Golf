@@ -363,10 +363,10 @@ export function DesignScreen() {
                 <LiveStatus text="Guardado" />
               </div>
               {[
-                ['Diego A.', 1, 4, 2],
+                ['Santiago A.', 1, 4, 2],
                 ['Ignacio S.', 2, 4, 2],
-                ['Martín Á.', 1, 4, 2],
-                ['Nicolás C.', 1, 4, 2],
+                ['Rafael O.', 1, 4, 2],
+                ['Ernesto V.', 1, 4, 2],
               ].map(([name, dots, st, pt], i) => (
                 <div key={name as string} className={s.entryRow}>
                   <span className={s.entryName}>
@@ -386,7 +386,7 @@ export function DesignScreen() {
                 </div>
               ))}
               <div className={s.row}>
-                <Stepper label="Putts de Diego" value={putts} onChange={setPutts} min={0} max={6} />
+                <Stepper label="Putts de Santiago" value={putts} onChange={setPutts} min={0} max={6} />
                 <Button variant="ghost" size="sm">
                   Levantó
                 </Button>
@@ -583,9 +583,9 @@ export function DesignScreen() {
           <h2 className={s.h2}>Sheet, toast, esqueleto, vacío</h2>
           <SheetFrame title="¿Quién embocó al último?">
             <div className={s.stack}>
-              <span className={s.cap}>Diego A. e Ignacio S. hicieron 3 putts en el 12.</span>
+              <span className={s.cap}>Santiago A. e Ignacio S. hicieron 3 putts en el 12.</span>
               <div className={s.row}>
-                <Button>Diego A.</Button>
+                <Button>Santiago A.</Button>
                 <Button>Ignacio S.</Button>
               </div>
             </div>

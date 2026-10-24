@@ -7,7 +7,7 @@
  * generic refusal, the copy promised the Comité could resend from its own
  * phone (the list lives on this one), and «Terminar ronda» never mentioned
  * phones still holding holes. The second half pins what the PR's verifier
- * found: two players called «Diego», reasons said as fact about the past,
+ * found: two players called «Santiago», reasons said as fact about the past,
  * a reopened day, a deleted one, the list hidden when not in a group, and
  * «Descartar» deleting the only copy in one tap.
  */
@@ -445,17 +445,17 @@ describe('the refused list says what stands in the way now, and who can send it 
       edit: (s) => {
         finishDay2(s)
         const camilo = s.players.find((p) => p.id === CAMILO)!
-        Object.assign(camilo, { displayName: 'Diego', fullName: 'Diego Arámburu' })
+        Object.assign(camilo, { displayName: 'Santiago', fullName: 'Santiago Arreola' })
         Object.assign(
           s.players.find((p) => p.id === 'p4')!,
-          { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' },
+          { displayName: 'Santiago', fullName: 'Santiago Olvera' },
         )
       },
     })
-    expect(list().getByText('Diego Arámburu, día 2, hoyo 11: 5 golpes, 2 putts')).toBeTruthy()
+    expect(list().getByText('Santiago Arreola, día 2, hoyo 11: 5 golpes, 2 putts')).toBeTruthy()
     await send()
     expect(share).toHaveBeenCalledWith({
-      text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Diego Arámburu')),
+      text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Santiago Arreola')),
     })
   })
 })

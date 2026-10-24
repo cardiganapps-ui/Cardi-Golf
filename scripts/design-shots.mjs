@@ -249,7 +249,8 @@ if (!process.env.SKIP_REAL) {
   await p.goto(`${base}/t/ensayo`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Elige tu nombre', { timeout: T }).catch(() => undefined)
   await shot(p, `entrar--faces`)
-  const face = p.locator('button', { hasText: 'Nico' }).first()
+  // Any face: the PIN screen is the same for all of them, and no name of a real tournament lives in the repo.
+  const face = p.locator('button[data-player]').first()
   if (await face.count()) {
     await face.click()
     await p.waitForTimeout(400)

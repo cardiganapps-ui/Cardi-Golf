@@ -4,10 +4,10 @@ import { initials, monogramTone, MONOGRAM_TONES } from './monogram'
 
 describe('initials (VIS-18)', () => {
   it.each([
-    ['Diego A.', 'DA'],
-    ['Justo Fernández Del Valle', 'JF'],
+    ['Santiago A.', 'SA'],
+    ['Federico Macías de la Peña', 'FM'],
     ['Ángel', 'Á'],
-    ['  rené   nosti ', 'RN'],
+    ['  marcelo   carrasco ', 'MC'],
     ['Jugador 12', '12'],
     ['Jugador 3', '3'],
     ['(Invitado) Iván', 'II'],

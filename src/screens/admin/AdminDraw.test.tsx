@@ -165,7 +165,7 @@ describe('the Matrimonios draw is saved as it is drawn (UX-17)', () => {
       fireEvent.click(within(screen.getByRole('dialog', { name: D.redraw })).getByRole('button', { name: D.redraw })),
     )
     expect(api.saveDraw).toHaveBeenCalledTimes(1)
-    // The groom's pick stays his: Mateo (p7) again.
+    // The groom's pick stays his: p7 again.
     expect(api.saveDraw.mock.calls[0]![1].filter((p) => p.picked_by_honoree)).toEqual([
       expect.objectContaining({ player1_id: 'p4', player2_id: 'p7' }),
     ])

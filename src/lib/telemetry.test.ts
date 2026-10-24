@@ -59,11 +59,11 @@ describe('telemetry', () => {
     class UserError extends Error {
       name = 'UserError'
     }
-    tel.reportError('unhandledrejection', new UserError('El hoyo 4 de Justo quedó para el Comité'))
-    tel.reportError('unhandledrejection', Object.assign(new Error('Diego no está en el grupo'), { code: '42501' }))
-    tel.reportError('unhandledrejection', 'Mateo')
-    // A JSON SyntaxError quotes its input («"Diego Ará"... is not valid JSON»).
-    tel.reportError('unhandledrejection', new SyntaxError('Unexpected token D, "Diego Ará"... is not valid JSON'))
+    tel.reportError('unhandledrejection', new UserError('El hoyo 4 de Federico quedó para el Comité'))
+    tel.reportError('unhandledrejection', Object.assign(new Error('Santiago no está en el grupo'), { code: '42501' }))
+    tel.reportError('unhandledrejection', 'Héctor')
+    // A JSON SyntaxError quotes its input («"Santiago Arr"... is not valid JSON»).
+    tel.reportError('unhandledrejection', new SyntaxError('Unexpected token S, "Santiago Arr"... is not valid JSON'))
     expect(tel.queuedEvents().map((e) => e.data?.message)).toEqual([
       'UserError',
       'Error (42501)',

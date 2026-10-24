@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 /**
  * STRAT-11: the first tournament leaked into every tournament. Any champion
- * «se lleva el Putter» (Golfbreaks' trophy for Nacho's trip), and the snake
+ * «se lleva el Putter» (the travel agency's trophy for Nacho's trip), and the snake
  * was «la víbora» on the Tarjeta, the boards, the feed, the awards and the
  * Comité whatever the organizer called it. Names are copy, not code (§0.5):
  * here the first tournament plays under other names and no trophy, and no

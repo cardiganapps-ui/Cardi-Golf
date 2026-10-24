@@ -88,11 +88,13 @@ describe('the feed’s lines (COPY-15)', () => {
       },
     })
     for (const v of [0, 1, 2]) {
-      const line = feedText(e, () => 'René', words, v)
+      const line = feedText(e, () => 'Álvaro', words, v)
       expect(line).not.toMatch(/víbora/i)
       expect(line).toMatch(/Tres Putts/)
     }
-    expect(feedText(e, () => 'René', feedWords(FIRST_TOURNAMENT_SETTINGS), 1)).toBe('René se lleva la Víbora en el 14')
+    expect(feedText(e, () => 'Álvaro', feedWords(FIRST_TOURNAMENT_SETTINGS), 1)).toBe(
+      'Álvaro se lleva la Víbora en el 14',
+    )
   })
 
   it('the honoree is called by his role only when the organizer named one', () => {

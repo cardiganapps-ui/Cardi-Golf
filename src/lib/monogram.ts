@@ -7,7 +7,7 @@
 export const MONOGRAM_TONES = 6
 
 /**
- * The letters a face shows: the first letter of each of the first two words («Diego A.» is «DA»), or the
+ * The letters a face shows: the first letter of each of the first two words («Santiago A.» is «SA»), or the
  * number of a placeholder name («Jugador 12» is «12», never «J1»).
  */
 export function initials(name: string): string {

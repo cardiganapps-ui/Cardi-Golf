@@ -33,19 +33,20 @@ describe('profile helpers', () => {
   })
 
   it('checks handles like handle_ok() in the database (format; reserved words are the server’s)', () => {
-    for (const ok of ['nico', 'nicolas.castro', 'diego_a', 'a1b', 'x'.repeat(20)]) expect(handleOk(ok), ok).toBe(true)
+    for (const ok of ['beto', 'ernesto.villarreal', 'santiago_a', 'a1b', 'x'.repeat(20)])
+      expect(handleOk(ok), ok).toBe(true)
     for (const bad of [
       'ab',
       'x'.repeat(21),
-      '.nico',
-      'nico.',
-      '_nico',
-      'ni..co',
-      'ni._co',
-      'Nico',
-      'ni co',
+      '.beto',
+      'beto.',
+      '_beto',
+      'be..to',
+      'be._to',
+      'Beto',
+      'be to',
       'niño',
-      '@nico',
+      '@beto',
     ])
       expect(handleOk(bad), bad).toBe(false)
   })

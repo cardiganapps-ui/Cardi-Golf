@@ -72,12 +72,12 @@ describe('what a hole opens on', () => {
 
   it('two players with the same short name are told apart by their full names (A11Y-01)', () => {
     const players = [
-      { id: 'a', displayName: 'Diego', fullName: 'Diego Arámburu' },
-      { id: 'b', displayName: 'Diego', fullName: 'Diego Ortiz' },
-      { id: 'c', displayName: 'René', fullName: 'René Nosti' },
+      { id: 'a', displayName: 'Santiago', fullName: 'Santiago Arreola' },
+      { id: 'b', displayName: 'Santiago', fullName: 'Santiago Olvera' },
+      { id: 'c', displayName: 'Álvaro', fullName: 'Álvaro Quintero' },
     ]
     const name = cardNameIn(players)
-    expect(players.map(name)).toEqual(['Diego Arámburu', 'Diego Ortiz', 'René'])
+    expect(players.map(name)).toEqual(['Santiago Arreola', 'Santiago Olvera', 'Álvaro'])
   })
 })
 

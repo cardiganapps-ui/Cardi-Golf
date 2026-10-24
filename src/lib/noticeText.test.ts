@@ -2,23 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { t } from '../i18n/es-MX'
 import { noticeLine } from './noticeText'
 
-const actor = { handle: 'diego.ortiz', displayName: 'Diego Ortiz' }
+const actor = { handle: 'santiago.olvera', displayName: 'Santiago Olvera' }
 
 describe('noticeLine (inbox and push share it)', () => {
   it('names who did it and links where it happened', () => {
     expect(noticeLine({ kind: 'friend_request', data: {}, actor })).toEqual({
-      text: 'Diego Ortiz te quiere agregar como amigo',
+      text: 'Santiago Olvera te quiere agregar como amigo',
       to: '/amigos',
     })
-    expect(noticeLine({ kind: 'rivalry_round', data: { rivalryId: 'r' }, actor }).to).toBe('/p/diego.ortiz/vs')
+    expect(noticeLine({ kind: 'rivalry_round', data: { rivalryId: 'r' }, actor }).to).toBe('/p/santiago.olvera/vs')
     expect(noticeLine({ kind: 'crew_join', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor })).toEqual({
-      text: 'Diego Ortiz entró a Los del sábado',
+      text: 'Santiago Olvera entró a Los del sábado',
       to: '/c/los-del-sabado',
     })
     // A crew that approves who enters (0071, TRUST-11).
     expect(
       noticeLine({ kind: 'crew_request', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor }),
-    ).toEqual({ text: 'Diego Ortiz quiere entrar a Los del sábado', to: '/c/los-del-sabado' })
+    ).toEqual({ text: 'Santiago Olvera quiere entrar a Los del sábado', to: '/c/los-del-sabado' })
     expect(
       noticeLine({ kind: 'crew_accepted', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor }),
     ).toEqual({ text: 'Ya eres de Los del sábado', to: '/c/los-del-sabado' })

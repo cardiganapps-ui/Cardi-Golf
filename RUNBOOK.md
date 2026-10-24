@@ -29,6 +29,7 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 - [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
 - [ ] **Hoja de la Calcutta impresa.** En la misma página, «Hoja de la Calcutta» (o desde la consola de la Calcutta): el orden de los lotes, las reglas y renglones para el comprador, el precio, la recompra y el pago. Por si se va el servidor esa noche (sección 5).
 - [ ] **Dos personas con acceso** a Supabase y a Cloudflare (R2) en el viaje (sección 5, docs/handoff.md).
+- [ ] **El repo de GitHub está privado** (candado «Private» arriba del nombre, en github.com/cardiganapps-ui/Cardi-Golf). Si no, los pasos están en docs/handoff.md, punto 1.
 - [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
 
 ## 1. Noche de Calcutta (la víspera del día 1)

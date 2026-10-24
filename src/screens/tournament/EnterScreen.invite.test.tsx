@@ -36,8 +36,8 @@ const lookup: LookupResult = {
   players: [
     {
       id: 'p1',
-      displayName: 'Mauricio',
-      fullName: 'Mauricio Lozano',
+      displayName: 'Pablo',
+      fullName: 'Pablo Rentería',
       tier: 'B',
       avatarUrl: null,
       isHonoree: false,
@@ -45,8 +45,8 @@ const lookup: LookupResult = {
     },
     {
       id: 'p2',
-      displayName: 'René',
-      fullName: 'René Nosti',
+      displayName: 'Álvaro',
+      fullName: 'Álvaro Quintero',
       tier: 'C',
       avatarUrl: null,
       isHonoree: false,
@@ -71,7 +71,7 @@ afterEach(() => {
 describe('the invite opens the player’s face (UX-20)', () => {
   it('straight to his PIN pad', () => {
     open('/t/bachelor?soy=p2')
-    expect(screen.getByText(t.enter.enterAs('René'))).toBeTruthy()
+    expect(screen.getByText(t.enter.enterAs('Álvaro'))).toBeTruthy()
     expect(screen.getByLabelText(t.enter.pin)).toBeTruthy()
     expect(screen.queryByText(t.enter.tapYourFace)).toBeNull()
   })

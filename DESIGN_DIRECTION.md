@@ -46,12 +46,12 @@ HOME (player, returning)                 EN VIVO (leaderboard)
 │ Cardi-Golf                   │         │ Nacho's Bachelor Invitational│  ← event name, Fraunces
 │──────────────────────────────│         │ Día 2 · en juego   ● hace 1 m│  ← live dot, updated
 │ Nacho's Bachelor Invitational│         │──────────────────────────────│
-│ Día 2 en juego · vas 6.º     │  ┃      │  1  Diego A.        25  11  60│  ← pos · name · hoy · thru · TOTAL
-│ [ Entrar ]                   │  ┃      │  2  Rodrigo V.      19   8  54│
+│ Día 2 en juego · vas 6.º     │  ┃      │  1  Santiago A.     25  11  60│  ← pos · name · hoy · thru · TOTAL
+│ [ Entrar ]                   │  ┃      │  2  Marcelo C.      19   8  54│
 │──────────────────────────────│         │ T3  Ignacio S.      15  11  54│
-│ ¿Te invitaron?               │         │ T3  Mauricio L.     14   8  51│
-│ [ CÓDIGO       ] [ Entrar ]  │         │▌ 5  Nicolás C.      22   9  50│  ← my row: 2px accent rule + tint
-│──────────────────────────────│         │  6  Justo F.        11   8  48│
+│ ¿Te invitaron?               │         │ T3  Pablo R.        14   8  51│
+│ [ CÓDIGO       ] [ Entrar ]  │         │▌ 5  Ernesto V.      22   9  50│  ← my row: 2px accent rule + tint
+│──────────────────────────────│         │  6  Federico M.     11   8  48│
 │ Organizas uno · Mis torneos  │         │ …                            │
 └──────────────────────────────┘         │──────────────────────────────│
                                          │ En vivo                       │
@@ -64,10 +64,10 @@ TARJETA (score entry, one hole)
 │ Hoyo 12       Par 4 · SI 2   │  ← the hole number is the biggest text
 │──────────────────────────────│
 │                 Golpes  Putts│  ← the columns named once, over the four players (COPY-18)
-│ Diego •      [−]  4  [+]  2  │  ← strokes (huge) · putts (small), one line per player
+│ Santiago •   [−]  4  [+]  2  │  ← strokes (huge) · putts (small), one line per player
 │ Ignacio ••   [−]  4  [+]  2  │
-│ Martín •     [−]  4  [+]  2  │
-│ Nicolás •    [−]  4  [+]  2  │
+│ Rafael •     [−]  4  [+]  2  │
+│ Ernesto •    [−]  4  [+]  2  │
 │──────────────────────────────│
 │ [        Guardar hoyo 12    ]│  ← one tap; auto-advances; "Deshacer" in the toast
 └──────────────────────────────┘

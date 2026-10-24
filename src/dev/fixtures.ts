@@ -62,7 +62,7 @@ const LONG_NAMES = [
   'Juan Francisco Rodríguez Echeverría',
   'José María Fernández de Córdoba',
   'Ignacio Sebastián Villaseñor Ruiz',
-  'Cristóbal Andrés Gutiérrez Mendoza',
+  'Cristóbal Andrés Gastélum Mendoza',
   'Enrique Guillermo Ortega y Gasset',
   'Bernardo Alonso Castellanos Peña',
   'Rodrigo Antonio Cervantes Zúñiga',
@@ -317,7 +317,7 @@ function draw12(): Fixture {
       soldAt: new Date(Date.UTC(2027, 3, 8, 21, lot.lotNumber)).toISOString(),
     })
   }
-  // A with D, B with C; the groom (p4, B) picked Mateo (p7, C).
+  // A with D, B with C; the groom (p4, B) picked p7 (C).
   const pairs: Array<[string, string, string]> = [
     ['p1', 'p10', 'AD'],
     ['p2', 'p11', 'AD'],

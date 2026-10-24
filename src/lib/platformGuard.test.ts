@@ -11,9 +11,10 @@
  *     authenticated too, since only other definer functions call them).
  *
  * It also checks the platform tables have RLS on and no policies (nothing
- * reads them except through those functions), and that the admin's email
- * appears in exactly one place: the seed in the migration that created the
- * table.
+ * reads them except through those functions), and that an admin is seeded in
+ * exactly one place: the migration that created the table, which named him by
+ * his email. No later migration may seed one, by email or otherwise; this test
+ * spells no address (CHAIR-02).
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -108,8 +109,11 @@ describe('platform tables', () => {
     expect(bad).toEqual([])
   })
 
-  it('the admin is named in one place only: the seed', () => {
-    const hits = files.filter((f) => /gaxioladiego@/i.test(f.sql)).map((f) => f.name)
-    expect(hits).toEqual(['0021_platform_admin.sql'])
+  it('the admin is seeded in one place only: migration 0021, never again by email', () => {
+    const seeds = files.filter((f) => /insert into public\.platform_admins\b/i.test(f.sql)).map((f) => f.name)
+    expect(seeds).toEqual(['0021_platform_admin.sql'])
+    // The one seed picks the account by its address; nothing after it may look an admin up that way.
+    const byEmail = files.filter((f) => /platform_admins[\s\S]{0,300}?lower\(email\)/i.test(f.sql)).map((f) => f.name)
+    expect(byEmail).toEqual(['0021_platform_admin.sql'])
   })
 })

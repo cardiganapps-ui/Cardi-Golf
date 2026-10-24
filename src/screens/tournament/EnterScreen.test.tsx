@@ -38,8 +38,8 @@ const lookup: LookupResult = {
   players: [
     {
       id: 'p1',
-      displayName: 'Mauricio',
-      fullName: 'Mauricio Lozano',
+      displayName: 'Pablo',
+      fullName: 'Pablo Rentería',
       tier: 'B',
       avatarUrl: null,
       isHonoree: false,
@@ -55,7 +55,7 @@ async function typePin(error: unknown) {
       <EnterScreen lookup={lookup} onEntered={vi.fn()} />
     </MemoryRouter>,
   )
-  fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Pablo/ }))
   fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
 }
 
@@ -86,7 +86,7 @@ describe('the PIN field takes a PIN, not a code (PWA-16)', () => {
         <EnterScreen lookup={lookup} onEntered={vi.fn()} />
       </MemoryRouter>,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Pablo/ }))
     return screen.getByLabelText(t.enter.pin) as HTMLInputElement
   }
 
@@ -113,7 +113,7 @@ describe('a wrong PIN is felt (MOT-10)', () => {
         <EnterScreen lookup={lookup} onEntered={vi.fn()} />
       </MemoryRouter>,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Pablo/ }))
     fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
     expect(await screen.findByText(new RegExp(t.enter.wrongPin))).toBeTruthy()
     expect(navigator.vibrate).toHaveBeenCalledWith(PATTERNS.error)
@@ -173,7 +173,7 @@ describe("entering with a PIN while another tournament's writes are still on the
         <EnterScreen lookup={lookup} onEntered={vi.fn()} />
       </MemoryRouter>,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Pablo/ }))
     fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
   }
   beforeEach(async () => {
@@ -213,7 +213,7 @@ describe('one message per refusal (COPY-13)', () => {
         <EnterScreen lookup={lookup} onEntered={vi.fn()} />
       </MemoryRouter>,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Pablo/ }))
     fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
   }
 

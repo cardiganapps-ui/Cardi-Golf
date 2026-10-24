@@ -50,7 +50,7 @@ export function EntrarScreen() {
   }
   const [info, setInfo] = useState<string | null>(null)
   const [google, setGoogle] = useState(false)
-  /** "Lo que jugaste como Nico en Ensayo": shown when this device holds a player. */
+  /** "Lo que jugaste como Ernesto en Ensayo": shown when this device holds a player. */
   const [claimed, setClaimed] = useState<{ name: string; tournament: string } | null>(null)
   const [finishing, setFinishing] = useState(false)
   /** «Confirmo que tengo 18 años o más» (TRUST-13): every way in waits for it, and the acceptance after the sign-in records it. */
